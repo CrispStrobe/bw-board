@@ -144,6 +144,9 @@ BUILD_READER_ENABLED = True
 REFERENCE_READER_ENABLED = True
 BUILD_CURRENT_V2_READER_ENABLED = True
 REFERENCE_CURRENT_V2_READER_ENABLED = True
+TOOLCHAIN_V3_READER_ENABLED = False
+BUILD_CURRENT_V3_READER_ENABLED = False
+REFERENCE_CURRENT_V3_READER_ENABLED = False
 
 
 class Refusal(ValueError):
@@ -6889,6 +6892,2050 @@ def cli_regular(path, cap):
             raise CliReadRefusal(stage, primary, close_error) from primary
 
 
+
+# Distinct metadata V3 and current Build/Reference V3 readers.
+GCC_INTERNAL_V2 = tuple(path for path in REQUIRED_TOOL_PATHS
+                        if path.startswith('/usr/lib/gcc/x86_64-linux-gnu/13/'))
+GCC_INTERNAL_V3 = tuple(path.replace('/usr/lib/gcc/', '/usr/libexec/gcc/', 1)
+                        for path in GCC_INTERNAL_V2)
+REQUIRED_TOOL_PATHS_V3 = tuple(
+    path.replace('/usr/lib/gcc/', '/usr/libexec/gcc/', 1)
+    if path in GCC_INTERNAL_V2 else path for path in REQUIRED_TOOL_PATHS)
+require(len(GCC_INTERNAL_V2) == len(GCC_INTERNAL_V3) == 5,
+        'fixed five GCC13 internal role constants')
+
+
+def service_status_v3_profile(raw, *, route):
+    """Join the manager's actual child command to the selected V3 route."""
+    value = parse_json(raw, 524288, canonical_wire=True)
+    argv = value['client']['process']['argv']
+    require(type(argv) is list and all(type(item) is str for item in argv),
+            'typed retained manager argv')
+    if route == 'toolchain-v3':
+        require(argv[-3:] == ['--work', '--route', 'toolchain-v3'] and
+                '--profile' not in argv and
+                not any(item.startswith('--profile=') for item in argv),
+                'metadata V3 manager work has no current execution profile')
+    else:
+        require(route in ('build', 'reference') and
+                argv[-5:] == ['--work', '--route', route,
+                              '--profile', 'current-v3'] and
+                argv.count('--profile') == 1,
+                'current V3 manager work carries the explicit profile')
+
+def tool_graph_v3(graph, *, reported_only=True):
+    """Validate selected file facts without pretending tool bytes were retained."""
+    fields(graph, 'files aliases directoryAliases')
+    files = graph['files']
+    require(type(files) is dict and 0 < len(files) <= 128 and
+            NODE_CACHE_PATH not in files and
+            type(graph['aliases']) is dict and len(graph['aliases']) <= 128 and
+            type(graph['directoryAliases']) is dict and
+            len(graph['directoryAliases']) <= 32 and
+            not (set(graph['aliases']) & set(graph['directoryAliases'])),
+            'finite selected tool graph')
+    total = 0
+    for path, row in files.items():
+        require(type(path) is str and path.startswith('/') and
+                len(path) <= 512 and '\0' not in path and
+                all(part not in ('', '.', '..') for part in path[1:].split('/')) and
+                path.startswith(('/usr/bin/', '/usr/lib/', '/usr/libexec/', '/bin/', '/lib/',
+                                 '/lib64/', '/opt/hostedtoolcache/node/22.23.3/x64/',
+                                 '/usr/share/doc/', '/usr/share/common-licenses/')),
+                'closed selected tool roots')
+        file_fact(row)
+        require(row['before']['uid'] == row['before']['gid'] == 0 and
+                row['bytes'] <= 128 << 20,
+                'reported root-owned finite selected tool')
+        total += row['bytes']
+        if row['elf'] is not None:
+            require(row['elf']['rpath'] is None and row['elf']['runpath'] is None,
+                    'selected tool has no injected ELF search path')
+    require(total <= 256 << 20, 'bounded reported one-pass tool inventory')
+    for group in ('aliases', 'directoryAliases'):
+        for path, row in graph[group].items():
+            require(type(path) is str and path.startswith('/') and len(path) <= 512,
+                    'selected lexical alias path')
+            alias_fact(row)
+            require(row['before']['uid'] == row['before']['gid'] == 0,
+                    'root-owned selected lexical alias')
+    require({path for path in files if path.startswith('/usr/libexec/')} ==
+            set(GCC_INTERNAL_V3) and
+            not set(GCC_INTERNAL_V2) & (set(files) | set(graph['aliases']) |
+                                        set(graph['directoryAliases'])),
+            'exact five fixed GCC13 internal files; no old path or extra libexec')
+    for source_path in REQUIRED_TOOL_PATHS_V3:
+        require(resolve_reported_alias(source_path, graph) in files,
+                'complete fixed source-selected tool/notice path roster')
+    for row in files.values():
+        if row['elf'] is None:
+            continue
+        elf = row['elf']
+        required = ([elf['interpreter']] if elf['interpreter'] else []) + [
+            '/usr/lib/x86_64-linux-gnu/' + name for name in elf['needed']]
+        for path in required:
+            require(resolve_reported_alias(path, graph) in files,
+                    'reported ELF dependency and interpreter graph closure')
+    return {'selectedFiles': len(files), 'selectedBytes': total,
+            'reportedReadbackOnly': reported_only}
+
+
+def selected_tool_projection_v3(graph):
+    """Remove only host-local inode/timestamp facts for cross-job comparison."""
+    tool_graph_v3(graph)
+    result = {'files': {}, 'aliases': {}, 'directoryAliases': {}}
+    for path, row in graph['files'].items():
+        result['files'][path] = {'bytes': row['bytes'],
+                                 'sha256': row['sha256'],
+                                 'mode': row['before']['mode'],
+                                 'uid': row['before']['uid'],
+                                 'gid': row['before']['gid'],
+                                 'elf': row['elf']}
+    for group in ('aliases', 'directoryAliases'):
+        for path, row in graph[group].items():
+            result[group][path] = {'linkText': row['linkText'],
+                                   'target': row['target']}
+    return result
+
+
+def manual_cleanup_toolchain_v3_expanded(raw, *, route, unit, outside, inner):
+    """Independently grade finite, source-owned cgroup removal observations."""
+    value = parse_json(raw, 16384, canonical_wire=True)
+    fields(value, 'schema route unit rootPath limits startedNs endedNs known '
+           'before parentIdentity parentIdentityAfter samples journal after '
+           'lastPath firstFailure secondary complete')
+    require(value['schema'] == 'bw.bochs-ring3.manual-cleanup.v1' and
+            value['route'] == route and value['unit'] == unit and
+            value['rootPath'] == '/sys/fs/cgroup/system.slice/' + unit and
+            value['limits'] == {'samples': 6, 'seconds': 5, 'bytes': 16384} and
+            value['complete'] is True,
+            'selected exact finite manual cleanup identity')
+    started = integer(value['startedNs'], 0)
+    ended = integer(value['endedNs'], started)
+    require(ended - started < 5000000000 and
+            type(value['lastPath']) is str and
+            value['lastPath'].startswith(value['rootPath']),
+            'bounded cleanup time and source-owned final read path')
+    failures(value['firstFailure'], value['secondary'], complete=True)
+    expected = {'unit': inner['resources']['before']['unitRoot']['directory'],
+                'controller': inner['resources']['before']['controller']['directory']}
+    phases = {'toolchain': (), 'toolchain-v3': (), 'build': ('configure', 'make'),
+              'reference': ('js', 'bochs')}[route]
+    require(len(inner['phases']) == len(phases),
+            'complete known phase roster for manual cleanup')
+    for name, process in zip(phases, inner['phases']):
+        require(process['name'] == name,
+                'source-owned child cleanup phase identity')
+        expected[name] = process['cgroupBefore']['identity']
+    known = fields(value['known'], ' '.join(expected))
+    identities = []
+    for name, stat_row in expected.items():
+        row = fields(known[name], 'path identity')
+        selected_path = value['rootPath'] + ('' if name == 'unit' else '/' + name)
+        require(row['path'] == selected_path and
+                strict_equal(row['identity'], stat_row),
+                'source-bound known selected cleanup group')
+        stat_fact(row['identity'], kind='directory')
+        identities.append((row['identity']['dev'], row['identity']['ino']))
+    require(len(identities) == len(set(identities)),
+            'distinct held unit/controller/child group identities')
+    def first_five(row):
+        return tuple(row[key] for key in ('dev', 'ino', 'mode', 'uid', 'gid'))
+    def counter(text, key):
+        require(type(text) is str and len(text.encode('utf-8')) <= 4096,
+                'bounded raw cleanup counter source')
+        values = [line.split(' ', 1)[1] for line in text.splitlines()
+                  if line.startswith(key + ' ')]
+        require(len(values) == 1 and
+                re.fullmatch(r'0|[1-9][0-9]{0,18}', values[0]) is not None,
+                'single canonical raw cleanup counter')
+        return int(values[0])
+    def snapshot(row, role, *, absent=False, children=None, dying=False):
+        fields(row, 'path exists errno identity files children')
+        selected = value['rootPath'] + ('' if role == 'unit' else '/' + role)
+        require(row['path'] == selected and len(canonical(row)) <= 768,
+                'bounded fixed cleanup snapshot path')
+        if absent:
+            require(row['exists'] is False and row['errno'] == 2 and
+                    row['identity'] is None and row['files'] == {} and
+                    row['children'] == [], 'selected group absent at readback')
+            return
+        require(row['exists'] is True and row['errno'] is None and
+                first_five(stat_fact(row['identity'], kind='directory')) ==
+                first_five(expected[role]) and
+                row['identity']['uid'] == row['identity']['gid'] == 0 and
+                row['identity']['mode'] & 0o022 == 0 and
+                type(row['children']) is list and
+                row['children'] == ([] if children is None else children),
+                'stable source-selected held cleanup group')
+        files = fields(row['files'], 'cgroup.procs cgroup.events cgroup.stat')
+        require(files['cgroup.procs'] == '' and
+                counter(files['cgroup.events'], 'populated') == 0 and
+                counter(files['cgroup.stat'], 'nr_descendants') ==
+                len(row['children']), 'empty group and exact selected descendants')
+        if dying:
+            require(counter(files['cgroup.stat'], 'nr_dying_descendants') == 0,
+                    'no dying descendant before selected rmdir')
+    require(type(value['before']) is dict and 'unit' in value['before'],
+            'one retained initial selected unit snapshot')
+    before = value['before']
+    top = before['unit']
+    if top['exists'] is False:
+        require(value['parentIdentity'] is None and
+                value['parentIdentityAfter'] is None and
+                value['samples'] == [] and value['journal'] == [] and
+                set(before) == {'unit'},
+                'already-absent branch never mutates or invents a sample')
+        snapshot(top, 'unit', absent=True)
+        snapshot(value['after'], 'unit', absent=True)
+        require(strict_equal(value['after'], top),
+                'same exact initial and terminal absent unit observation')
+    else:
+        require(type(value['journal']) is list and
+                type(value['samples']) is list and
+                1 <= len(value['samples']) <= 6,
+                'finite held-parent selected removal branch')
+        parent = stat_fact(value['parentIdentity'], kind='directory')
+        parent_after = stat_fact(value['parentIdentityAfter'],
+                                 kind='directory')
+        require(parent['uid'] == parent['gid'] == 0 and
+                parent['mode'] & 0o022 == 0 and
+                first_five(parent_after) == first_five(parent) and
+                first_five(parent) != first_five(expected['unit']),
+                'separate stable held parent directory before and after cleanup')
+        names = top['children']
+        require(type(names) is list and names == sorted(set(names)) and
+                set(names) <= (set(phases) | {'controller'}) and
+                set(before) == {'unit', *names},
+                'only selected known child groups were present')
+        snapshot(top, 'unit', children=names)
+        for name in names:
+            snapshot(before[name], name, dying=True)
+        order = names + ['unit']
+        require(len(value['journal']) == len(order),
+                'one ordered removal for every observed child and unit')
+        previous = started
+        for sample in value['samples']:
+            fields(sample, 'ns root')
+            moment = integer(sample['ns'], previous, ended)
+            snapshot(sample['root'], 'unit')
+            previous = moment
+        require(counter(value['samples'][-1]['root']['files']['cgroup.stat'],
+                        'nr_dying_descendants') == 0,
+                'final root census has no dying descendants')
+        for index, role in enumerate(order):
+            row = fields(value['journal'][index],
+                         'role path before parentHeld childHeld parentNamed '
+                         'childNamed attempted after firstFailure childClosed')
+            selected = value['rootPath'] + ('' if role == 'unit' else '/' + role)
+            require(row['role'] == role and row['path'] == selected and
+                    row['attempted'] is True and
+                    row['firstFailure'] is None and row['childClosed'] is True,
+                    'one source-selected successful held-FD removal')
+            snapshot(row['before'], role, dying=True)
+            snapshot(row['after'], role, absent=True)
+            selected_parent = parent if role == 'unit' else expected['unit']
+            for key, selected_row in (('parentHeld', selected_parent),
+                                      ('parentNamed', selected_parent),
+                                      ('childHeld', expected[role]),
+                                      ('childNamed', expected[role])):
+                raw_stat = row[key]
+                require(type(raw_stat) is list and len(raw_stat) == 9,
+                        'complete held and named directory stat')
+                stat_row = dict(zip(('dev', 'ino', 'mode', 'uid', 'gid', 'nlink',
+                                     'size', 'mtimeNs', 'ctimeNs'), raw_stat))
+                stat_fact(stat_row, kind='directory')
+                require(first_five(stat_row) == first_five(selected_row),
+                        'pre-removal held/named first-five authority')
+            require(len(canonical(row)) <= 1536,
+                    'bounded complete selected removal row')
+        snapshot(value['after'], 'unit', absent=True)
+        require(strict_equal(value['after'], value['journal'][-1]['after']),
+                'unit removal readback agrees with terminal selected absence')
+    unit_fact(value['after'], unit, absent=True)
+    require(strict_equal(outside['after'], value['after']),
+            'outside terminal unit census joins selected cleanup')
+    if outside['before']['exists']:
+        first = stat_fact(outside['before']['identity'], kind='directory')
+        held = expected['unit']
+        require(all(first[key] == held[key] for key in
+                    ('dev', 'ino', 'mode', 'uid', 'gid')),
+                'earlier present unit matches selected held identity')
+    else:
+        require(strict_equal(outside['before'], value['after']),
+                'earlier absent unit agrees with cleanup sample')
+    return value
+
+
+def node_cleanup_v3_plan(stage, authority, *, route, run_id):
+    """Reconstruct the V2 reservation from fresh held/named observations."""
+    require(route in ('toolchain-v3', 'build', 'reference'),
+            'closed V2 Node cleanup route')
+    root = (f'/run/bw-bochs-toolchain-v3-{run_id}-1-node' if
+            route == 'toolchain-v3' else
+            f'/run/bw-bochs-{route}-v1-{run_id}-1-node')
+    fields(authority, 'stageState parentHeld parentNamed directoryHeld '
+           'directoryNamed members names')
+    require(stage['stagePath'] == root + '/node' and
+            stage['recordPath'] == root + '/stage.json' and
+            authority['stageState'] == 'published' and
+            authority['names'] == ['node', 'stage.json'],
+            'published source-created V2 stage and complete known census')
+
+    def row(raw, kind):
+        require(type(raw) is list and len(raw) == 9 and
+                all(type(item) is int and item >= 0 for item in raw),
+                'complete V2 held/named stat array')
+        value = dict(zip(MANUAL_V2_STAT_FIELDS, raw))
+        stat_fact(value, kind=kind)
+        require(value['uid'] == value['gid'] == 0 and
+                value['mode'] & 0o022 == 0,
+                'owned fixed V2 staged node graph')
+        return value
+
+    def five(value):
+        return tuple(value[key] for key in ('dev', 'ino', 'mode', 'uid', 'gid'))
+
+    parent = row(authority['parentHeld'], 'directory')
+    require(five(parent) == five(row(authority['parentNamed'], 'directory')) and
+            five(parent) == five(row(stage['parents']['/run']['after'],
+                                      'directory')),
+            'same protected /run parent before cleanup effects')
+    directory = row(authority['directoryHeld'], 'directory')
+    require(five(directory) ==
+            five(row(authority['directoryNamed'], 'directory')) and
+            five(directory) == five(row(stage['directory'], 'directory')) and
+            directory['mode'] == stat.S_IFDIR | 0o555,
+            'fresh held/named published V2 directory')
+    require(type(authority['members']) is dict and
+            set(authority['members']) == {'node', 'stage.json'},
+            'only source-created staged Node members')
+    members = {}
+    selected = {'node': stage['file'],
+                'stage.json': stage['record']['metadata']}
+    for name in ('node', 'stage.json'):
+        member = fields(authority['members'][name], 'held named')
+        held = row(member['held'], 'regular')
+        require(five(held) == five(row(member['named'], 'regular')) and
+                five(held) == five(row(selected[name], 'regular')) and
+                held['mode'] == stat.S_IFREG |
+                    (0o555 if name == 'node' else 0o444) and
+                held['nlink'] == 1,
+                'fresh held/named source-created V2 member identity')
+        members[name] = held
+
+    def future(value):
+        return {**value, 'size': max(value['size'], 2**64 - 1),
+                'nlink': max(value['nlink'], 2**64 - 1),
+                'mtimeNs': max(value['mtimeNs'], 2**96 - 1),
+                'ctimeNs': max(value['ctimeNs'], 2**96 - 1)}
+
+    gone = {'exists': False, 'errno': 2, 'identity': None}
+    parent_future = future(parent)
+    private = future({**directory, 'mode': stat.S_IFDIR | 0o700})
+    prototype = {'schema': 'bw.bochs-ring3.node-cleanup.v2',
+                 'route': route, 'path': root, 'stageState': 'published',
+                 'authority': authority, 'planSha256': 'f' * 64,
+                 'parentBefore': parent_future,
+                 'parentAfter': parent_future,
+                 'before': {'exists': True, 'errno': None,
+                            'identity': directory},
+                 'members': members, 'journal': [], 'after': gone,
+                 'heldBefore': directory, 'heldBeforeRmdir': private,
+                 'namedBeforeRmdir': private, 'complete': True,
+                 'firstFailure': None, 'secondary': []}
+    prototype['journal'].append({
+        'operation': 'chmod-private', 'path': root, 'before': directory,
+        'attempted': True,
+        'after': {'exists': True, 'errno': None, 'identity': private},
+        'firstFailure': None})
+    for name in ('node', 'stage.json'):
+        prototype['journal'].append({
+            'operation': 'unlink', 'path': root + '/' + name,
+            'before': members[name], 'attempted': True,
+            'after': gone, 'firstFailure': None})
+    prototype['journal'].append({
+        'operation': 'rmdir', 'path': root, 'before': private,
+        'attempted': True, 'after': gone, 'firstFailure': None})
+    def compact(value):
+        if (type(value) is dict and set(value) == set(MANUAL_V2_STAT_FIELDS)
+                and all(type(item) is int for item in value.values())):
+            return [value[key] for key in MANUAL_V2_STAT_FIELDS]
+        if type(value) is dict:
+            return {key: compact(item) for key, item in value.items()}
+        if type(value) is list:
+            return [compact(item) for item in value]
+        return value
+    prototype = compact(prototype)
+    success = len(canonical(prototype))
+    failure = success + 3 * 1024 + 512
+    plan = {'schema': 'bw.bochs-ring3.node-cleanup-plan.v2',
+            'nodePath': root, 'stageSha256': sha(canonical(stage)),
+            'stageState': 'published', 'authority': authority,
+            'projectionSha256': sha(canonical(prototype)),
+            'successBytes': success, 'failureBytes': failure,
+            'reservedBytes': max(success + 1024, failure)}
+    require(plan['reservedBytes'] <= 16384,
+            'V2 Node all-outcome reserve fits unchanged bound')
+    return plan
+
+
+def manual_cleanup_toolchain_v3_fact(raw, *, unit, outside, inner, stage):
+    """Grade truthful V2 unit cleanup and independent staged-input plan."""
+    value = parse_json(raw, 16384, canonical_wire=True)
+    fields(value, 'schema identityFields route unit rootPath limits startedNs '
+           'endedNs known before parentIdentity parentIdentityAfter inputPlan '
+           'samples journal after lastPath firstFailure secondary complete')
+    require(value['schema'] == 'bw.bochs-ring3.manual-cleanup.v2' and
+            value['identityFields'] == list(MANUAL_V2_STAT_FIELDS) and
+            value['route'] == 'toolchain-v3' and value['unit'] == unit and
+            value['complete'] is True,
+            'closed V2 compact cleanup for its actual unit')
+    run_id = outside['runId']
+    plan = node_cleanup_v3_plan(stage, outside['nodeCleanup']['authority'],
+                                route='toolchain-v3', run_id=run_id)
+    require(strict_equal(value['inputPlan'], plan) and
+            len(canonical(outside['nodeCleanup'])) <= plan['reservedBytes'],
+            'genuine V2 pre-effect Node all-outcome plan and actual extent')
+    node_cleanup_v2_fact(outside['nodeCleanup'], route='toolchain-v3',
+                         run_id=run_id, stage=stage, plan=plan)
+
+    def expand(item, key=None):
+        if key in ('identity', 'parentIdentity', 'parentIdentityAfter'):
+            if item is None:
+                return None
+            require(type(item) is list and len(item) == 9 and
+                    all(type(number) is int for number in item),
+                    'complete compact V2 cgroup stat')
+            return dict(zip(MANUAL_V2_STAT_FIELDS, item))
+        if type(item) is dict:
+            return {name: expand(child, name) for name, child in item.items()}
+        if type(item) is list:
+            return [expand(child) for child in item]
+        return item
+
+    expanded = expand(value)
+    expanded.pop('identityFields')
+    expanded.pop('inputPlan')
+    expanded['schema'] = 'bw.bochs-ring3.manual-cleanup.v1'
+    manual_cleanup_toolchain_v3_expanded(
+        canonical(expanded), route='toolchain-v3', unit=unit,
+        outside=outside, inner=inner)
+    return value
+
+
+def request_event_current_v3(route, request_raw, event_raw, *, selected_head=None):
+    """Independent local join; source/W/official API admission stays external."""
+    require(route in ('build', 'reference'), 'closed current Bochs route')
+    request = parse_json(request_raw, 32768, canonical_wire=True)
+    event = parse_json(event_raw, 1048576)
+    base = 'schema repository pullRequest source policySha256 limits'
+    if route == 'build':
+        base += ' bochs toolchain'
+    elif route == 'reference':
+        base += ' build'
+    fields(request, base)
+    require(request['schema'] == f'bw.bochs-ring3.{route}-request.v1' and
+            request['repository'] == REPOSITORY and
+            integer(request['pullRequest'], 1, 1000000) and
+            digest(request['policySha256']), 'selected fixed request identity')
+    source = fields(request['source'], 'head tree files')
+    digest(source['head'], 40)
+    digest(source['tree'], 40)
+    if selected_head is not None:
+        require(source['head'] == selected_head, 'selected checkout head')
+    require(type(source['files']) is dict and len(source['files']) == 12,
+            'complete twelve-source role roster')
+    expected = tuple('scripts/i80386-bochs-ring3-reference/' + name for name in
+                     ('run.py', 'reader.py', 'controls.py', 'README.md')) + (
+        '.github/workflows/i80386-bochs-ring3-reference.yml',
+        'test/i80386-bochs-ring3-reference.test.mjs',
+        'src/experimental/i80386.js',
+        'scripts/i80386-ring3-int-iret/fixture.mjs',
+        'scripts/i80386-ring3-int-iret/probe.mjs',
+        'package.json', 'package-lock.json', 'LICENSE')
+    require(set(source['files']) == set(expected), 'exact source twelve paths')
+    for row in source['files'].values():
+        fields(row, 'mode gitBlob bytes sha256')
+        require(row['mode'] in ('100644', '100755') and
+                digest(row['gitBlob'], 40) and digest(row['sha256']) and
+                integer(row['bytes'], 1, 1048576), 'bounded typed source role')
+    label = ('x86-bochs-ring3-toolchain-inventory-v1' if route == 'toolchain'
+             else f'x86-bochs-ring3-{route}-v1')
+    require(type(event) is dict and
+            type(event.get('label')) is dict and
+            type(event.get('sender')) is dict and
+            type(event.get('pull_request')) is dict,
+            'typed owner-selected route event')
+    require(type(event) is dict and event.get('action') == 'labeled' and
+            event.get('label', {}).get('name') == label and
+            event.get('sender', {}).get('login') == 'CrispStrobe',
+            'owner-selected exact route event')
+    pr = event.get('pull_request')
+    require(type(pr.get('base')) is dict and
+            type(pr.get('head')) is dict and
+            type(pr['base'].get('repo')) is dict and
+            type(pr['head'].get('repo')) is dict,
+            'typed ready owned source PR')
+    require(type(pr) is dict and
+            event.get('number') == request['pullRequest'] == pr.get('number') and
+            pr.get('state') == 'open' and pr.get('draft') is False and
+            pr.get('base', {}).get('ref') == 'master' and
+            pr.get('base', {}).get('repo', {}).get('full_name') == REPOSITORY and
+            pr.get('head', {}).get('sha') == source['head'] and
+            pr.get('head', {}).get('repo', {}).get('full_name') == REPOSITORY and
+            pr.get('head', {}).get('repo', {}).get('fork') is False,
+            'exact owned ready PR and selected source')
+    prefix = f'BW_BOCHS_RING3_{route.upper()}_REQUEST'
+    body = pr.get('body')
+    require(type(body) is str and
+            body.count('<!-- ' + prefix + '_SHA256=') == 1 and
+            re.findall(r'<!-- ' + re.escape(prefix) +
+                       r'_SHA256=([0-9a-f]{64}) -->', body) == [sha(request_raw)],
+            'exact selected event body transport')
+    if route == 'build':
+        fields(request['bochs'],
+               'repository commit tree sourceSelectionSha256 vga')
+        require(request['bochs']['repository'] == 'bochs-emu/Bochs' and
+                request['bochs']['commit'] == BOCHS_COMMIT and
+                request['bochs']['tree'] == BOCHS_TREE and
+                request['bochs']['sourceSelectionSha256'] ==
+                SOURCE_SELECTION_SHA256, 'pinned selected upstream source')
+        vga = fields(request['bochs']['vga'],
+                     'path gitBlob bytes noticePath noticeGitBlob '
+                     'correspondingSource')
+        require(vga['path'] == VGA_PATH and vga['gitBlob'] == VGA_BLOB and
+                vga['bytes'] == VGA_SELECTED_BYTES and
+                vga['noticePath'] == 'bochs/bios/VGABIOS-lgpl-README' and
+                vga['noticeGitBlob'] == VGA_NOTICE_BLOB,
+                'fixed reviewed LGPL VGA resource and notice')
+        correspondence = fields(vga['correspondingSource'],
+                                'url bytes sha256 licensePath licenseSha256 '
+                                'version selectedResourceGitBlob')
+        require(correspondence['url'] ==
+                'https://download-mirror.savannah.gnu.org/releases/vgabios/vgabios-0.8a.tgz'
+                and correspondence['bytes'] == VGA_SOURCE_BYTES and
+                correspondence['sha256'] == VGA_SOURCE_SHA256 and
+                correspondence['licensePath'] == 'vgabios-0.8a/COPYING' and
+                correspondence['licenseSha256'] == VGA_COPYING_SHA256 and
+                correspondence['version'] == '0.8a' and
+                correspondence['selectedResourceGitBlob'] == VGA_BLOB,
+                'exact selected corresponding LGPL source and license bytes')
+        selected_toolchain = fields(request['toolchain'],
+                                    'files aliases directoryAliases inventory node')
+        inventory = fields(selected_toolchain['inventory'],
+                           'runId jobId artifactId archiveBytes archiveSha256 '
+                           'requestSha256 reportSha256 sourceHead sourceTree '
+                           'workflowCommit schema jobName version')
+        require(inventory['schema'] == 'bw.bochs-ring3.toolchain-inventory-reference.v3' and
+                inventory['jobName'] == 'bochs-ring3-toolchain-inventory-v3' and
+                type(inventory['version']) is int and inventory['version'] == 3,
+                'explicit current V2 metadata reference, no legacy downgrade')
+        require(type(inventory['runId']) is str and
+                re.fullmatch('[1-9][0-9]{0,19}', inventory['runId']) and
+                integer(inventory['jobId'], 1) and
+                integer(inventory['artifactId'], 1) and
+                integer(inventory['archiveBytes'], 1, 8 << 20) and
+                all(digest(inventory[name]) for name in
+                    ('archiveSha256', 'requestSha256', 'reportSha256')) and
+                digest(inventory['workflowCommit'], 40) and
+                inventory['sourceHead'] == source['head'] and
+                inventory['sourceTree'] == source['tree'],
+                'immutable independently selected pre-Build inventory reference')
+        selected_tool_graph_v3(selected_toolchain)
+    if route == 'reference':
+        selected_build = fields(request['build'],
+            'runId jobId artifactId name bytes sha256 checkoutHead checkoutTree '
+            'workflowCommit workflowFileSha256 compactManifest buildLog metadata')
+        metadata = fields(selected_build['metadata'], 'schema jobName version')
+        require(metadata == {'schema': 'bw.bochs-ring3.toolchain-inventory-reference.v3',
+                             'jobName': 'bochs-ring3-toolchain-inventory-v3',
+                             'version': 3} and type(metadata['version']) is int,
+                'explicit selected Build dependency on metadata V2')
+    return request, event
+
+
+def request_event_v3(request_raw, event_raw, *, selected_head=None):
+    """Independent local join; source/W/official API admission stays external."""
+    request = parse_json(request_raw, 32768, canonical_wire=True)
+    event = parse_json(event_raw, 1048576)
+    base = 'schema repository pullRequest source policySha256 limits'
+    fields(request, base)
+    require(request['schema'] == 'bw.bochs-ring3.toolchain-request.v3' and
+            request['repository'] == REPOSITORY and
+            integer(request['pullRequest'], 1, 1000000) and
+            digest(request['policySha256']), 'selected fixed request identity')
+    source = fields(request['source'], 'head tree files')
+    digest(source['head'], 40)
+    digest(source['tree'], 40)
+    if selected_head is not None:
+        require(source['head'] == selected_head, 'selected checkout head')
+    require(type(source['files']) is dict and len(source['files']) == 12,
+            'complete twelve-source role roster')
+    expected = tuple('scripts/i80386-bochs-ring3-reference/' + name for name in
+                     ('run.py', 'reader.py', 'controls.py', 'README.md')) + (
+        '.github/workflows/i80386-bochs-ring3-reference.yml',
+        'test/i80386-bochs-ring3-reference.test.mjs',
+        'src/experimental/i80386.js',
+        'scripts/i80386-ring3-int-iret/fixture.mjs',
+        'scripts/i80386-ring3-int-iret/probe.mjs',
+        'package.json', 'package-lock.json', 'LICENSE')
+    require(set(source['files']) == set(expected), 'exact source twelve paths')
+    for row in source['files'].values():
+        fields(row, 'mode gitBlob bytes sha256')
+        require(row['mode'] in ('100644', '100755') and
+                digest(row['gitBlob'], 40) and digest(row['sha256']) and
+                integer(row['bytes'], 1, 1048576), 'bounded typed source role')
+    label = 'x86-bochs-ring3-toolchain-inventory-v3'
+    require(type(event) is dict and
+            type(event.get('label')) is dict and
+            type(event.get('sender')) is dict and
+            type(event.get('pull_request')) is dict,
+            'typed owner-selected route event')
+    require(type(event) is dict and event.get('action') == 'labeled' and
+            event.get('label', {}).get('name') == label and
+            event.get('sender', {}).get('login') == 'CrispStrobe',
+            'owner-selected exact route event')
+    pr = event.get('pull_request')
+    require(type(pr.get('base')) is dict and
+            type(pr.get('head')) is dict and
+            type(pr['base'].get('repo')) is dict and
+            type(pr['head'].get('repo')) is dict,
+            'typed ready owned source PR')
+    require(type(pr) is dict and
+            event.get('number') == request['pullRequest'] == pr.get('number') and
+            pr.get('state') == 'open' and pr.get('draft') is False and
+            pr.get('base', {}).get('ref') == 'master' and
+            pr.get('base', {}).get('repo', {}).get('full_name') == REPOSITORY and
+            pr.get('head', {}).get('sha') == source['head'] and
+            pr.get('head', {}).get('repo', {}).get('full_name') == REPOSITORY and
+            pr.get('head', {}).get('repo', {}).get('fork') is False,
+            'exact owned ready PR and selected source')
+    prefix = 'BW_BOCHS_RING3_TOOLCHAIN_V3_REQUEST'
+    body = pr.get('body')
+    require(type(body) is str and
+            body.count('<!-- ' + prefix + '_SHA256=') == 1 and
+            re.findall(r'<!-- ' + re.escape(prefix) +
+                       r'_SHA256=([0-9a-f]{64}) -->', body) == [sha(request_raw)],
+            'exact selected event body transport')
+    return request, event
+
+
+def selected_tool_graph_v3(selected):
+    fields(selected, 'files aliases directoryAliases inventory node')
+    node = fields(selected['node'],
+                  'cachePath bytes sha256 elf stageMode stageUid stageGid')
+    require(node['cachePath'] == NODE_CACHE_PATH and
+            node['bytes'] == NODE_BYTES and node['sha256'] == NODE_SHA256 and
+            node['stageMode'] == (stat.S_IFREG | 0o555) and
+            type(node['stageUid']) is int and node['stageUid'] == 0 and
+            type(node['stageGid']) is int and node['stageGid'] == 0,
+            'source-selected immutable staged Node expectation')
+    elf = fields(node['elf'], 'class machine type interpreter needed '
+                 'rpath runpath')
+    require(elf['class'] == 'ELF64' and elf['machine'] == 'x86-64' and
+            elf['type'] in ('EXEC', 'DYN') and
+            elf['interpreter'] in (None,
+                                   '/lib64/ld-linux-x86-64.so.2') and
+            type(elf['needed']) is list and len(elf['needed']) <= 64 and
+            all(type(name) is str and
+                re.fullmatch(r'[A-Za-z0-9+_.-]+', name)
+                for name in elf['needed']) and
+            len(set(elf['needed'])) == len(elf['needed']) and
+            elf['rpath'] is None and elf['runpath'] is None,
+            'bounded selected staged Node ELF dependency facts')
+    require(type(selected['files']) is dict and
+            1 <= len(selected['files']) <= 128 and
+            NODE_CACHE_PATH not in selected['files'] and
+            type(selected['aliases']) is dict and
+            len(selected['aliases']) <= 128 and
+            type(selected['directoryAliases']) is dict and
+            len(selected['directoryAliases']) <= 32 and
+            not (set(selected['aliases']) &
+                 set(selected['directoryAliases'])),
+            'finite externally selected toolchain graph')
+    aggregate = 0
+    for path, row in selected['files'].items():
+        fields(row, 'bytes sha256 mode uid gid elf')
+        require(type(path) is str and path.startswith('/') and
+                len(path) <= 512 and posixpath.normpath(path) == path and
+                all(part not in ('', '.', '..') for part in path[1:].split('/')) and
+                path.startswith(('/usr/bin/', '/usr/lib/', '/usr/libexec/', '/bin/', '/lib/',
+                                 '/lib64/', '/opt/hostedtoolcache/node/22.23.3/x64/',
+                                 '/usr/share/doc/', '/usr/share/common-licenses/')) and
+                integer(row['bytes'], 1, 128 << 20) and
+                digest(row['sha256']) and
+                integer(row['mode'], 0) and
+                stat.S_ISREG(row['mode']) and
+                row['mode'] & 0o022 == 0 and
+                integer(row['uid'], 0) == 0 and
+                integer(row['gid'], 0) == 0,
+                'bounded selected cross-job tool byte identity')
+        aggregate += row['bytes']
+        if row['elf'] is not None:
+            elf = fields(row['elf'],
+                         'class machine type interpreter needed rpath runpath')
+            require(elf['class'] == 'ELF64' and
+                    elf['machine'] == 'x86-64' and
+                    elf['type'] in ('EXEC', 'DYN') and
+                    (elf['interpreter'] is None or
+                     elf['interpreter'] == '/lib64/ld-linux-x86-64.so.2') and
+                    type(elf['needed']) is list and len(elf['needed']) <= 64 and
+                    all(type(name) is str and
+                        re.fullmatch('[A-Za-z0-9._+-]+', name)
+                        for name in elf['needed']) and
+                    len(set(elf['needed'])) == len(elf['needed']) and
+                    elf['rpath'] is None and elf['runpath'] is None,
+                    'closed static selected ELF dependency summary')
+    require(aggregate <= 256 << 20,
+            'bounded selected one-pass tool byte graph')
+    for group in ('aliases', 'directoryAliases'):
+        for path, row in selected[group].items():
+            require(type(path) is str and path.startswith('/') and
+                    len(path) <= 512 and posixpath.normpath(path) == path and
+                    all(part not in ('', '.', '..') for part in path[1:].split('/')),
+                    'selected lexical tool alias path')
+            fields(row, 'linkText target')
+            require(type(row['linkText']) is str and
+                    0 < len(row['linkText']) <= 256 and
+                    '\0' not in row['linkText'] and
+                    type(row['target']) is str and
+                    row['target'] == posixpath.normpath(
+                        row['linkText'] if row['linkText'].startswith('/') else
+                        posixpath.join(posixpath.dirname(path),
+                                       row['linkText'])) and
+                    row['target'].startswith('/') and
+                    len(row['target']) <= 512,
+                    'bounded selected alias target derived from text')
+    require({path for path in selected['files'] if path.startswith('/usr/libexec/')} ==
+            set(GCC_INTERNAL_V3) and
+            not set(GCC_INTERNAL_V2) & (set(selected['files']) |
+                set(selected['aliases']) | set(selected['directoryAliases'])) and
+            all(resolve_selected_alias(path, selected) == path
+                for path in GCC_INTERNAL_V3),
+            'source-selected exact five internal roles without alias substitution')
+    for source_path in REQUIRED_TOOL_PATHS_V3:
+        require(resolve_selected_alias(source_path, selected) in
+                selected['files'], 'complete externally selected fixed tool roster')
+    for row in selected['files'].values():
+        if row['elf'] is None:
+            continue
+        required = ([row['elf']['interpreter']] if
+                    row['elf']['interpreter'] else []) + [
+            '/usr/lib/x86_64-linux-gnu/' + name
+            for name in row['elf']['needed']]
+        for path in required:
+            require(resolve_selected_alias(path, selected) in
+                    selected['files'],
+                    'externally selected ELF dependency graph closure')
+    node_elf = node['elf']
+    for path in ([node_elf['interpreter']] if node_elf['interpreter'] else []) + [
+            '/usr/lib/x86_64-linux-gnu/' + name
+            for name in node_elf['needed']]:
+        require(resolve_selected_alias(path, selected) in selected['files'],
+                'staged Node ELF dependencies in selected readonly tool graph')
+    return selected
+
+
+def node_stage_fact_v3(raw, *, route, run_id, expected_invoker,
+                       expected_bootstrap, expected=None):
+    """Grade reported cache DATA and a separate readonly staged executable."""
+    require(route in ('toolchain-v3', 'build', 'reference') and
+            type(run_id) is str and re.fullmatch(r'[1-9][0-9]{0,19}', run_id),
+            'closed selected Node-stage route and run')
+    value = parse_json(raw, 65536, canonical_wire=True)
+    fields(value, 'schema sourcePath stagePath recordPath invoker bootstrapCredentials '
+           'metadataFields created sourceBefore sourceAfter sourceNamedAfter '
+           'sourceBytesRead bytesCopied writeUncertain copiedSha256 '
+           'readbackBytes readbackSha256 elfReadBytes elf '
+           'fileBeforePublication parents directoryInitial fileInitial '
+           'targetAfterFailure directoryAfterFailure lastOperation file '
+           'fileNamed directoryBeforePublication directory directoryNamed '
+           'filePublicationAttempted directoryPublicationAttempted '
+           'filePublished directoryPublished record checkedAfter '
+           'firstFailure secondary')
+    directory = (f'/run/bw-bochs-toolchain-v3-{run_id}-1-node' if route == 'toolchain-v3'
+                 else f'/run/bw-bochs-{route}-v1-{run_id}-1-node')
+    require(value['schema'] == 'bw.bochs-ring3.node-stage.v2' and
+            value['sourcePath'] == NODE_CACHE_PATH and
+            value['stagePath'] == directory + '/node' and
+            value['recordPath'] == directory + '/stage.json' and
+            value['metadataFields'] == list(NODE_METADATA_FIELDS) and
+            value['created'] == [directory, directory + '/node',
+                                 directory + '/stage.json'],
+            'one source-derived per-run Node stage and fixed metadata fields')
+    invoker = fields(value['invoker'], 'uid gid')
+    integer(invoker['uid'], 1, 2**31 - 1)
+    integer(invoker['gid'], 1, 2**31 - 1)
+    require(strict_equal(invoker, fields(expected_invoker, 'uid gid')),
+            'stage invoker matches separately admitted protected caller facts')
+    require(strict_equal(value['bootstrapCredentials'], expected_bootstrap) and
+            strict_equal(invoker, bootstrap_caller_v2(value['bootstrapCredentials'])),
+            'stage invoker matches sealed source-admitted bootstrap scalars')
+
+    def identity(row):
+        require(type(row) is list and len(row) == 9 and
+                all(type(item) is int and item >= 0 for item in row) and
+                row[1] > 0, 'typed nine-field held/named Node identity')
+        return row
+
+    source = identity(value['sourceBefore'])
+    require(source == identity(value['sourceAfter']) ==
+            identity(value['sourceNamedAfter']) and
+            source[2:7] == [stat.S_IFREG | 0o777, 1001, 1000, 1, NODE_BYTES],
+            'fixed complete cache DATA byte extent and stable source identity')
+    first_file = identity(value['fileInitial'])
+    private_file = identity(value['fileBeforePublication'])
+    published_file = identity(value['file'])
+    require(first_file[2:7] == [stat.S_IFREG | 0o600, 0, 0, 1, 0] and
+            private_file[2:7] == [stat.S_IFREG | 0o600, 0, 0, 1,
+                                   NODE_BYTES] and
+            published_file[2:7] == [stat.S_IFREG | 0o555, 0, 0, 1,
+                                     NODE_BYTES] and
+            first_file[:2] == private_file[:2] == published_file[:2] and
+            published_file == identity(value['fileNamed']),
+            'one fresh private Node output becomes same readonly executable')
+    first_dir = identity(value['directoryInitial'])
+    private_dir = identity(value['directoryBeforePublication'])
+    published_dir = identity(value['directory'])
+    require(first_dir[2:5] == private_dir[2:5] ==
+            [stat.S_IFDIR | 0o700, 0, 0] and
+            published_dir[2:5] == [stat.S_IFDIR | 0o555, 0, 0] and
+            first_dir[:2] == private_dir[:2] == published_dir[:2] and
+            published_dir == identity(value['directoryNamed']),
+            'one root-private stage directory becomes readonly and traversable')
+    require(type(value['parents']) is dict and
+            set(value['parents']) == {'/', '/run'},
+            'fixed root-owned stage parent roster')
+    for parent in value['parents'].values():
+        fields(parent, 'before namedBefore after namedAfter')
+        rows = [identity(parent[key]) for key in
+                ('before', 'namedBefore', 'after', 'namedAfter')]
+        require(all(row[:5] == rows[0][:5] for row in rows) and
+                stat.S_ISDIR(rows[0][2]) and
+                rows[0][3:5] == [0, 0] and
+                rows[0][2] & 0o022 == 0,
+                'stable held and named root parent directory identity')
+    require(value['sourceBytesRead'] == value['bytesCopied'] ==
+            value['readbackBytes'] == NODE_BYTES and
+            value['copiedSha256'] == value['readbackSha256'] == NODE_SHA256 and
+            value['writeUncertain'] is False and
+            all(value[name] is True for name in
+                ('filePublicationAttempted',
+                 'directoryPublicationAttempted', 'filePublished',
+                 'directoryPublished')) and
+            value['firstFailure'] is None and value['secondary'] == [] and
+            value['targetAfterFailure'] is None and
+            value['directoryAfterFailure'] is None,
+            'complete one-attempt copied and independently rehashed Node')
+    integer(value['elfReadBytes'], 1, 2097152)
+    elf = fields(value['elf'], 'class machine type interpreter needed '
+                 'rpath runpath')
+    require(elf['class'] == 'ELF64' and elf['machine'] == 'x86-64' and
+            elf['type'] in ('EXEC', 'DYN') and
+            elf['interpreter'] in (None,
+                                   '/lib64/ld-linux-x86-64.so.2') and
+            type(elf['needed']) is list and len(elf['needed']) <= 64 and
+            all(type(name) is str and
+                re.fullmatch(r'[A-Za-z0-9+_.-]+', name)
+                for name in elf['needed']) and
+            len(set(elf['needed'])) == len(elf['needed']) and
+            elf['rpath'] is None and elf['runpath'] is None,
+            'bounded reported staged Node ELF graph without injected search')
+    record = fields(value['record'], 'bytes sha256 metadata text')
+    installation = canonical({
+        'schema': 'bw.bochs-ring3.node-installation.v2',
+        'sourcePath': NODE_CACHE_PATH, 'stagePath': directory + '/node',
+        'bytes': NODE_BYTES, 'sha256': NODE_SHA256,
+        'uid': 0, 'gid': 0, 'mode': stat.S_IFREG | 0o555})
+    require(type(record['text']) is str and
+            record['text'].encode('utf-8') == installation and
+            record['bytes'] == len(installation) and
+            record['sha256'] == sha(installation) and
+            identity(record['metadata'])[2:7] ==
+            [stat.S_IFREG | 0o444, 0, 0, 1, len(installation)],
+            'exact root-readonly canonical staged Node installation record')
+    checked = fields(value['checkedAfter'],
+                     'hashRead bytesRead sha256 before after named elf '
+                     'elfReadBytes')
+    require(identity(checked['before']) ==
+            identity(checked['after']) ==
+            identity(checked['named']) == published_file,
+            'same immutable staged Node after route work')
+    if route == 'toolchain-v3':
+        require(checked['hashRead'] is False and
+                checked['bytesRead'] == 0 and checked['sha256'] is None and
+                checked['elf'] is None and checked['elfReadBytes'] == 0,
+                'metadata route only reports after identity, without Node exec')
+    else:
+        require(checked['hashRead'] is True and
+                checked['bytesRead'] == NODE_BYTES and
+                checked['sha256'] == NODE_SHA256 and
+                strict_equal(checked['elf'], elf),
+                'Build/reference route fully rehashes staged Node after work')
+        integer(checked['elfReadBytes'], 1, 2097152)
+    projection = {'cachePath': NODE_CACHE_PATH, 'bytes': NODE_BYTES,
+                  'sha256': NODE_SHA256, 'elf': elf,
+                  'stageMode': stat.S_IFREG | 0o555,
+                  'stageUid': 0, 'stageGid': 0}
+    if expected is not None:
+        require(strict_equal(expected, projection),
+                'external selected Node expectation equals staged data')
+    return value, projection
+
+
+def common_toolchain_original_v3(raw, request_raw, event_raw):
+    """Independently admit the new metadata original without a V1 projection."""
+    value = parse_json(raw, 4 << 20)
+    fields(value, 'schema requestSha256 eventSha256 sourceBefore sourceAfter '
+           'phases resources firstFailure secondary failurePartial complete '
+           'authority observations')
+    require(value['schema'] == 'bw.bochs-ring3.toolchain-original.v3' and
+            value['requestSha256'] == sha(request_raw) and
+            value['eventSha256'] == sha(event_raw) and
+            type(value['complete']) is bool,
+            'distinct bounded V2 metadata original identity')
+    failures(value['firstFailure'], value['secondary'], complete=value['complete'])
+    if value['complete']:
+        require(value['failurePartial'] is None,
+                'complete V2 original has no failed file partial')
+    authority = fields(value['authority'], 'compilerExecuted guestExecuted '
+                       'actualRunApproved guestApproved wholeHostAttested '
+                       'physicalTimingProved')
+    require(all(authority[key] is False for key in authority),
+            'metadata V2 never claims compiler, guest or external approval')
+    fields(value['observations'], 'inventoryBefore inventoryAfter status '
+           'sourceSelection reportedReadbackOnly notices nodeStage runtimeElfMetadata')
+    require(type(value['phases']) is list and len(value['phases']) <= 32 and
+            type(value['resources']) is dict,
+            'finite selected V2 metadata phase and resource facts')
+    return value
+
+
+def toolchain_original_v3(packet, request_raw, event_raw):
+    require(set(packet) == INVENTORY_ROLES,
+            'exact sixteen retained inventory roles')
+    artifact_manifest(packet, required=INVENTORY_ROLES)
+    request, _event = request_event_v3(request_raw, event_raw)
+    require(packet['request.original.json'] == request_raw and
+            packet['event.original.json'] == event_raw,
+            'selected exact raw inventory request/event')
+    value = common_toolchain_original_v3(packet['original.json'],
+                            request_raw, event_raw)
+    require(value['complete'] is True and
+            value['observations']['reportedReadbackOnly'] is True and
+            value['observations']['sourceSelection'] ==
+            SOURCE_SELECTION_SHA256,
+            'read-only selected tool inventory completion')
+    before = source_facts(parse_json(packet['source.before.json'], 4 << 20,
+                                     canonical_wire=True), request['source'])
+    after = source_facts(parse_json(packet['source.after.json'], 4 << 20,
+                                    canonical_wire=True), request['source'])
+    require(strict_equal(before, after) and
+            strict_equal(value['sourceBefore'], before) and
+            strict_equal(value['sourceAfter'], after),
+            'independent source before/after original joins')
+    g_before = parse_json(packet['inventory.before.json'], 4 << 20,
+                          canonical_wire=True)
+    g_after = parse_json(packet['inventory.after.json'], 4 << 20,
+                         canonical_wire=True)
+    before_fact = tool_graph_v3(g_before)
+    tool_graph_v3(g_after)
+    require(strict_equal(g_before, g_after) and
+            strict_equal(value['observations']['inventoryBefore'], g_before) and
+            strict_equal(value['observations']['inventoryAfter'], g_after),
+            'unchanged reported finite tool identities')
+    require(len(packet['outside.original.json']) <= 16384,
+            'source-bounded complete outside inventory envelope')
+    outside = parse_json(packet['outside.original.json'], 65536,
+                         canonical_wire=True)
+    observer = parse_json(packet['process.original.json'], 65536,
+                          canonical_wire=True)
+    fields(observer, 'schema pid uid gid startedNs endedNs requestSha256 '
+           'sourceHead plannedExitCode firstFailure secondary invoker '
+           'bootstrapCredentials')
+    bootstrap_invoker = bootstrap_caller_v2(observer['bootstrapCredentials'])
+    require(strict_equal(fields(observer['invoker'], 'uid gid'),
+                         bootstrap_invoker),
+            'observer source-bound bootstrap scalar readback')
+    node_stage, node_projection = node_stage_fact_v3(
+        packet['node-stage.original.json'], route='toolchain-v3',
+        run_id=outside['runId'],
+        expected_invoker=bootstrap_invoker,
+        expected_bootstrap=observer['bootstrapCredentials'])
+    require(strict_equal(value['observations']['nodeStage'], node_stage) and
+            NODE_CACHE_PATH not in g_before['files'],
+            'separate staged Node original and cache DATA boundary')
+    sparse_raw = packet['runtime-elf-ranges.original.json']
+    selected_sparse_elf_fact(sparse_raw, g_before, node_projection)
+    require(value['observations']['runtimeElfMetadata'] == {
+                'path': 'runtime-elf-ranges.original.json',
+                'bytes': len(sparse_raw), 'sha256': sha(sparse_raw)},
+            'toolchain sparse role byte/SHA reference joins the original')
+    notice_summary = notice_facts(packet['notices.original.json'], g_before)
+    require(strict_equal(value['observations']['notices'],
+                         parse_json(packet['notices.original.json'], 4 << 20,
+                                    canonical_wire=True)) and
+            notice_summary['noticeCount'] == 7,
+            'exact seven source-selected retained notice observations')
+    status = fields(value['observations']['status'],
+                    'bytes sha256 packages observation')
+    raw_status = packet['dpkg-status.original']
+    require(integer(status['bytes'], 1, 4 << 20) == len(raw_status) and
+            digest(status['sha256']) == sha(raw_status) and
+            strict_equal(status['packages'], debian_status(raw_status)),
+            'independently parsed selected raw Debian status')
+    file_fact(status['observation'], raw=raw_status)
+    require(status['observation']['before']['uid'] == 0 and
+            status['observation']['before']['gid'] == 0,
+            'root-owned bounded Debian status readback')
+    require(before_fact['selectedBytes'] * 2 +
+            node_stage['sourceBytesRead'] + node_stage['readbackBytes'] +
+            node_stage['elfReadBytes'] +
+            sum(row['bytes'] for row in
+                parse_json(packet['notices.original.json'], 4 << 20,
+                           canonical_wire=True).values()) <= 536870912,
+            'complete selected tool, staged Node and notice read budget')
+    require(observer['schema'] == 'bw.bochs-ring3.toolchain-observer.v2' and
+            integer(observer['pid'], 1, 2**31 - 1) and
+            observer['uid'] == observer['gid'] == 0 and
+            integer(observer['startedNs'], 0) <=
+            integer(observer['endedNs'], 0) and
+            observer['requestSha256'] == sha(request_raw) and
+            observer['sourceHead'] == request['source']['head'] and
+            observer['plannedExitCode'] == 0 and
+            strict_equal(observer['firstFailure'], value['firstFailure']) and
+            strict_equal(observer['secondary'], value['secondary']),
+            'source-bound finite metadata observer facts')
+    failures(observer['firstFailure'], observer['secondary'], complete=True)
+    outside = parse_json(packet['outside.original.json'], 65536,
+                         canonical_wire=True)
+    fields(outside, 'schema route runId runAttempt unit serviceExitCode '
+           'clientExitCode cleanupExitCode innerComplete innerFirstFailure '
+           'before after manual nodeCleanup firstFailure secondary')
+    require(outside['schema'] == 'bw.bochs-ring3.outside.v1' and
+            outside['route'] == 'toolchain-v3' and
+            type(outside['runId']) is str and
+            re.fullmatch('[1-9][0-9]*', outside['runId']) and
+            outside['runAttempt'] == 1 and
+            type(outside['runAttempt']) is int and
+            outside['unit'] == ('bw-bochs-toolchain-v3-' +
+                                outside['runId'] + '-1.service') and
+            all(outside[name] == 0 and type(outside[name]) is int
+                for name in ('serviceExitCode', 'clientExitCode',
+                             'cleanupExitCode')) and
+            outside['innerComplete'] is True and
+            outside['innerFirstFailure'] is None,
+            'complete source-owned inventory service/outer status')
+    unit_fact(outside['before'], outside['unit'])
+    unit_fact(outside['after'], outside['unit'], absent=True)
+    failures(outside['firstFailure'], outside['secondary'], complete=True)
+    manual_raw = packet['cleanup.original.json']
+    require(strict_equal(outside['manual'],
+                         manual_cleanup_toolchain_v3_fact(
+                             manual_raw, unit=outside['unit'], outside=outside,
+                             inner=value, stage=node_stage)),
+            'exact retained V2 cgroup and staged-input cleanup originals')
+    service_status_fact(packet['service-status.original.json'], route='toolchain-v3',
+                        unit=outside['unit'], outer_seconds=120)
+    service_status_v3_profile(packet['service-status.original.json'],
+                              route='toolchain-v3')
+    observed_resources = fields(value['resources'], 'before after')
+    limits = {'cpu.max': '100000 100000\n',
+              'memory.max': '536870912\n',
+              'memory.swap.max': '0\n', 'pids.max': '32\n'}
+    resources_v2_fact(observed_resources['before'], unit=outside['unit'],
+                      limits=limits)
+    resources_v2_fact(observed_resources['after'], unit=outside['unit'],
+                      limits=limits)
+    first_directory = observed_resources['before']['unitRoot']['directory']
+    last_directory = observed_resources['after']['unitRoot']['directory']
+    require(all(first_directory[key] == last_directory[key] for key in
+                ('dev', 'ino', 'mode', 'uid', 'gid')) and
+            observed_resources['before']['pid'] ==
+            observed_resources['after']['pid'] == observer['pid'],
+            'same owned service cgroup and observer before/after')
+    require(value['authority']['compilerExecuted'] is False and
+            value['authority']['guestExecuted'] is False,
+            'inventory does not execute compiler or guest')
+    return {'schema': 'bw.bochs-ring3.toolchain-admission.v3',
+            'selectedToolchainReadbackObserved': True,
+            'selectedFileCount': before_fact['selectedFiles'],
+            'sourceHead': before['head'], 'sourceTree': before['tree'],
+            'officialMetadataBound': False,
+            'compilerExecuted': False, 'guestExecuted': False,
+            'actualRunApproved': False, 'guestApproved': False}
+
+
+def build_original_current_v3(packet, request_raw, event_raw, *, job_log=None,
+                      budget=None):
+    """Current no-library Build, independently bound to every retained role."""
+    require(set(packet) == BUILD_FIXED_ROLES,
+            'closed current Build 31-role artifact')
+    artifact_manifest(packet, required=BUILD_FIXED_ROLES)
+    request, _event = request_event_current_v3('build', request_raw, event_raw)
+    require(packet['request.original.json'] == request_raw and
+            packet['event.original.json'] == event_raw,
+            'exact current Build request and selected event bytes')
+    value = parse_json(packet['build.original.json'], 4 << 20,
+                       canonical_wire=True)
+    fields(value, 'schema requestSha256 eventSha256 sourceBefore sourceAfter '
+           'phases resources firstFailure secondary failurePartial complete '
+           'authority observations')
+    authority = fields(value['authority'], 'compilerExecuted guestExecuted '
+                       'actualRunApproved guestApproved wholeHostAttested '
+                       'physicalTimingProved')
+    observations = fields(value['observations'],
+                          'upstream sourceSelection toolchainBefore toolchainAfter '
+                          'configure configHeader compilerCommands binary '
+                          'runtimeManifest notices compactManifest '
+                          'correspondingSource nodeStage runtimeElfMetadata hostRuntime')
+    require(value['schema'] == 'bw.bochs-ring3.build-original.v1' and
+            value['requestSha256'] == sha(request_raw) and
+            value['eventSha256'] == sha(event_raw) and
+            value['complete'] is True and value['firstFailure'] is None and
+            value['secondary'] == [] and value['failurePartial'] is None and
+            authority == {'compilerExecuted': True, 'guestExecuted': False,
+                          'actualRunApproved': False, 'guestApproved': False,
+                          'wholeHostAttested': False,
+                          'physicalTimingProved': False} and
+            type(value['phases']) is list and len(value['phases']) == 2,
+            'complete observed Build with all approval flags false')
+    source_before = source_facts(parse_json(
+        packet['source.before.json'], 4 << 20, canonical_wire=True),
+        request['source'])
+    source_after = source_facts(parse_json(
+        packet['source.after.json'], 4 << 20, canonical_wire=True),
+        request['source'])
+    require(source_before == source_after ==
+            value['sourceBefore'] == value['sourceAfter'],
+            'exact selected Build checkout before/after')
+    upstream_before = parse_json(packet['upstream.before.json'], 4 << 20,
+                                 canonical_wire=True)
+    upstream_after = parse_json(packet['upstream.after.json'], 4 << 20,
+                                canonical_wire=True)
+    selected_rows, selection = source_selection(
+        packet['source-selection.original.json'])
+    require(upstream_before == upstream_after == observations['upstream'] and
+            selection == observations['sourceSelection'],
+            'held selected upstream source and row equality')
+    selected_source_tar(packet['source-selected.original.tar.gz'],
+                        selected_rows, budget=budget)
+    vga_corresponding_source(
+        packet['notices/vgabios-corresponding-source.tar.gz'],
+        budget=budget)
+    tool_before = parse_json(packet['toolchain.before.json'], 4 << 20,
+                             canonical_wire=True)
+    tool_after = parse_json(packet['toolchain.after.json'], 4 << 20,
+                            canonical_wire=True)
+    tool_graph_v3(tool_before)
+    tool_graph_v3(tool_after)
+    require(tool_before == tool_after ==
+            observations['toolchainBefore'] == observations['toolchainAfter'] and
+            selected_tool_projection_v3(tool_before) ==
+            {key: request['toolchain'][key] for key in
+             ('files', 'aliases', 'directoryAliases')},
+            'exact selected Build tool graph before/after')
+    require(len(packet['outside.original.json']) <= 16384,
+            'complete bounded Build outside original')
+    outside = parse_json(packet['outside.original.json'], 65536,
+                         canonical_wire=True)
+    fields(outside, 'schema route runId runAttempt unit serviceExitCode '
+           'clientExitCode cleanupExitCode innerComplete innerFirstFailure '
+           'before after manual nodeCleanup hostRuntimePlan '
+           'hostRuntimeCleanup firstFailure secondary')
+    require(outside['schema'] == 'bw.bochs-ring3.outside.v1' and
+            outside['route'] == 'build' and
+            type(outside['runId']) is str and
+            re.fullmatch(r'[1-9][0-9]{0,19}', outside['runId']) and
+            outside['runAttempt'] == 1 and
+            outside['unit'] ==
+            f"bw-bochs-build-v1-{outside['runId']}-1.service" and
+            all(type(outside[key]) is int and outside[key] == 0
+                for key in ('serviceExitCode', 'clientExitCode',
+                            'cleanupExitCode')) and
+            outside['innerComplete'] is True and
+            outside['innerFirstFailure'] is None and
+            outside['firstFailure'] is None and
+            outside['secondary'] == [],
+            'observed selected Build service and outside terminal')
+    stage_wire = parse_json(packet['node-stage.original.json'], 65536,
+                            canonical_wire=True)
+    bootstrap = stage_wire['bootstrapCredentials']
+    selected_invoker = bootstrap_caller_v2(bootstrap)
+    node, _node_projection = node_stage_fact_v3(
+        packet['node-stage.original.json'], route='build',
+        run_id=outside['runId'], expected_invoker=selected_invoker,
+        expected_bootstrap=bootstrap, expected=request['toolchain']['node'])
+    require(observations['nodeStage'] == node and
+            NODE_CACHE_PATH not in tool_before['files'],
+            'one separate fully rehashed staged Node')
+    config = generated_config(packet['config.h.original'],
+                              packet['bxversion.h.original'])
+    require(observations['configure'] == config and
+            observations['configHeader'] == {
+                'path': 'config.h.original',
+                'bytes': len(packet['config.h.original']),
+                'sha256': sha(packet['config.h.original'])},
+            'current generated CPU3 configuration and raw header')
+    for index, (name, argv) in enumerate((
+            ('configure', ['/bin/sh', './configure', '--enable-cpu-level=3',
+                           '--with-nogui', '--disable-plugins',
+                           '--disable-debugger',
+                           '--enable-all-optimizations']),
+            ('make', ['/usr/bin/make', '-j1', 'bochs']))):
+        phase = parse_json(packet[name + '.process.json'], 262144,
+                           canonical_wire=True)
+        phase_fact(phase, packet[name + '.stdout'],
+                   packet[name + '.stderr'], name=name,
+                   wall_seconds=900, unit=outside['unit'],
+                   service_pid=value['resources']['before']['pid'],
+                   uid=node['invoker']['uid'], gid=node['invoker']['gid'])
+        require(phase['argv'] == argv and value['phases'][index] == phase,
+                'fixed Configure/Make process and bounded streams')
+    require(value['phases'][0]['endedNs'] <= value['phases'][1]['startedNs'],
+            'actual Make spawn follows Configure terminal reap')
+    manifest = parse_json(packet['build-manifest.json'], 4 << 20,
+                          canonical_wire=True)
+    fields(manifest, 'schema source bochsSource sourceInventory '
+           'toolchainInventory configure configHeader compilerCommands elf '
+           'runtimeMembers notices sourceAfter firstFailure secondary '
+           'buildCompleted guestExecuted')
+    require(manifest['schema'] == 'bw.bochs-ring3.build-manifest.v1' and
+            manifest['buildCompleted'] is True and
+            manifest['guestExecuted'] is False and
+            manifest['firstFailure'] is None and
+            manifest['secondary'] == [] and
+            manifest['source'] == request['source'] and
+            manifest['sourceAfter'] == source_after and
+            manifest['bochsSource'] == upstream_before and
+            manifest['compilerCommands'] ==
+            observations['compilerCommands'] and
+            manifest['notices'] == observations['notices'] ==
+            [row for row in manifest['runtimeMembers']
+             if type(row) is dict and row.get('role') == 'notice'],
+            'complete selected Build manifest facts')
+    source_inventory = fields(manifest['sourceInventory'],
+                              'selection before after archive')
+    archive = fields(source_inventory['archive'], 'path bytes sha256')
+    require(source_inventory['selection'] == selection and
+            source_inventory['before'] == upstream_before and
+            source_inventory['after'] == upstream_after and
+            archive == {'path': 'source-selected.original.tar.gz',
+                        'bytes': len(packet['source-selected.original.tar.gz']),
+                        'sha256': sha(packet['source-selected.original.tar.gz'])},
+            'selected complete source TAR manifest join')
+    tool_inventory = fields(manifest['toolchainInventory'],
+                            'selected before after')
+    require(tool_inventory['selected'] == request['toolchain'] and
+            tool_inventory['before'] == tool_before and
+            tool_inventory['after'] == tool_after,
+            'selected full tool graph manifest join')
+    configure = fields(manifest['configure'],
+                       'argv makeArgv facts versionHeader')
+    require(configure['facts'] == config and
+            configure['argv'] == value['phases'][0]['argv'] and
+            configure['makeArgv'] == value['phases'][1]['argv'] and
+            configure['versionHeader'] == {
+                'path': 'bxversion.h.original',
+                'bytes': len(packet['bxversion.h.original']),
+                'sha256': sha(packet['bxversion.h.original'])} and
+            manifest['configHeader'] == observations['configHeader'],
+            'exact generated headers and process argv in manifest')
+    try:
+        make_text = packet['make.stdout'].decode('utf-8')
+    except UnicodeError as error:
+        raise Refusal('UTF-8 retained Make stdout') from error
+    observed_commands = [line for line in make_text.splitlines()
+                         if '/usr/bin/x86_64-linux-gnu-gcc-13' in line or
+                         '/usr/bin/x86_64-linux-gnu-g++-13' in line]
+    require(1 <= len(observed_commands) <= 8192 and
+            all(len(line) <= 8192 for line in observed_commands) and
+            observed_commands == manifest['compilerCommands'],
+            'actual retained Make stdout independently yields command summary')
+    members, stage, budget = build_transient_assets_v2(
+        packet, value, manifest, request, tool_before, outside['runId'],
+        budget=budget)
+    compact_raw = packet['compact-manifest.json']
+    compact = parse_json(compact_raw, 16384, canonical_wire=True)
+    frame = b'BW_BOCHS_RING3_BUILD_MANIFEST_V1=' + (
+        base64.b64encode(compact_raw)) + b'\n'
+    require(compact_build_log(frame, request,
+            full_manifest=packet['build-manifest.json'],
+            runtime_zip=packet['runtime.original.zip'],
+            binary=members['bin/bochs'],
+            config_header=packet['config.h.original']) == compact and
+            observations['compactManifest'] == compact,
+            'retained compact Build frame and full raw role joins')
+    if job_log is not None:
+        require(compact_build_log(job_log, request,
+                full_manifest=packet['build-manifest.json'],
+                runtime_zip=packet['runtime.original.zip'],
+                binary=members['bin/bochs'],
+                config_header=packet['config.h.original']) == compact,
+                'official Build log frame matches retained artifact')
+    unit_fact(outside['before'], outside['unit'])
+    unit_fact(outside['after'], outside['unit'], absent=True)
+    require(outside['manual'] == manual_cleanup_current_v2_fact(
+                packet['cleanup.original.json'], route='build',
+                unit=outside['unit'], outside=outside, inner=value, stage=node),
+            'exact delegated cgroup cleanup original')
+    host_raw = packet['host-runtime.original.json']
+    host = parse_json(host_raw, 1048576, canonical_wire=True)
+    require(host['stage'] == stage and
+            host_runtime_cleanup_fact(host['cleanup'], stage, route='build',
+                                      run_id=outside['runId']) ==
+            host['cleanup'],
+            'same selected transient host input cleanup')
+    plan_ref = fields(outside['hostRuntimePlan'],
+                      'stageSha256 planSha256 roleReservedBytes')
+    cleanup_ref = fields(outside['hostRuntimeCleanup'],
+                         'role bytes sha256')
+    require(plan_ref == {
+                'stageSha256': sha(canonical(stage)),
+                'planSha256': sha(canonical(host['cleanup']['plan'])),
+                'roleReservedBytes':
+                    host['cleanup']['plan']['roleReservedBytes']} and
+            cleanup_ref == {'role': 'host-runtime.original.json',
+                            'bytes': len(host_raw), 'sha256': sha(host_raw)} and
+            len(host_raw) <= plan_ref['roleReservedBytes'],
+            'outside exact read-only plan and retained final library role')
+    service_status_fact(packet['service-status.original.json'],
+                        route='build', unit=outside['unit'],
+                        outer_seconds=960)
+    service_status_v3_profile(packet['service-status.original.json'],
+                              route='build')
+    limits = {'cpu.max': '100000 100000\n',
+              'memory.max': '2147483648\n',
+              'memory.swap.max': '0\n', 'pids.max': '64\n'}
+    resources = fields(value['resources'], 'before after')
+    resources_v2_fact(resources['before'], unit=outside['unit'],
+                      limits=limits)
+    resources_v2_fact(resources['after'], unit=outside['unit'],
+                      limits=limits)
+    require(all(resources['before']['unitRoot']['directory'][key] ==
+                resources['after']['unitRoot']['directory'][key]
+                for key in ('dev', 'ino', 'mode', 'uid', 'gid')) and
+            resources['before']['pid'] == resources['after']['pid'],
+            'same selected finite Build service resource envelope')
+    return {'schema': 'bw.bochs-ring3.build-admission.v2',
+            'selectedBuildBytesObserved': True,
+            'runtimeMemberCount': len(members),
+            'officialMetadataBound': False,
+            'compilerExecuted': True, 'guestExecuted': False,
+            'actualRunApproved': False, 'guestApproved': False}
+
+
+def official_expectation_current_v3(value, route, request, event, source, archive_raw,
+                         run, jobs, artifacts, job_log, observed_source):
+    """Join retained metadata; the caller separately authenticates API intake."""
+    fields(value, 'schema repository pullRequest runId runAttempt jobId jobName '
+           'eventName actor head tree workflowCommit workflowTree '
+           'workflowFileSha256 requestSha256 eventSha256 artifactId '
+           'archiveBytes archiveSha256 conclusion steps')
+    require(value['schema'] == f'bw.bochs-ring3.{route}-expectation.v1' and
+            value['repository'] == REPOSITORY and
+            value['eventName'] == 'pull_request' and
+            value['actor'] == 'CrispStrobe' and
+            value['conclusion'] == 'success' and
+            type(value['runId']) is str and
+            re.fullmatch('[1-9][0-9]*', value['runId']) and
+            integer(value['runAttempt'], 1, 1) and
+            integer(value['pullRequest'], 1) and
+            integer(value['jobId'], 1) and
+            integer(value['artifactId'], 1),
+            'closed reviewed official route identity')
+    for key in ('head', 'tree', 'workflowCommit', 'workflowTree'):
+        digest(value[key], 40)
+    for key in ('workflowFileSha256', 'requestSha256', 'eventSha256',
+                'archiveSha256'):
+        digest(value[key])
+    require(value['requestSha256'] == sha(request) and
+            value['eventSha256'] == sha(event) and
+            value['head'] == source['head'] and
+            value['tree'] == source['tree'] and
+            value['workflowFileSha256'] == source['files'][
+                '.github/workflows/i80386-bochs-ring3-reference.yml']['sha256'] and
+            integer(value['archiveBytes'], 1, 96 << 20) == len(archive_raw) and
+            value['archiveSha256'] == sha(archive_raw),
+            'selected exact source, event and archive bytes')
+    source_facts(observed_source, source)
+    require(value['workflowCommit'] == observed_source['workflowCommit'] and
+            value['workflowTree'] == observed_source['workflowTree'],
+            'exact executed workflow identity in held source observation')
+    require(type(job_log) is bytes and 0 < len(job_log) <= 8 << 20,
+            'bounded selected official job log')
+    for obj in (run, jobs, artifacts):
+        require(type(obj) is dict, 'bounded retained official API JSON')
+    require(type(run.get('repository')) is dict and
+            type(run.get('head_repository')) is dict and
+            type(run.get('actor')) is dict,
+            'typed official run repository/actor')
+    require(run.get('id') == int(value['runId']) and
+            type(run.get('run_attempt')) is int and
+            run.get('run_attempt') == 1 and
+            run.get('head_sha') == value['head'] and
+            run.get('event') == 'pull_request' and
+            run.get('status') == 'completed' and
+            run.get('conclusion') == 'success' and
+            run.get('repository', {}).get('full_name') == REPOSITORY and
+            run.get('head_repository', {}).get('full_name') == REPOSITORY and
+            run.get('actor', {}).get('login') == 'CrispStrobe' and
+            run.get('path') == '.github/workflows/i80386-bochs-ring3-reference.yml',
+            'selected official run identity and terminal success')
+    job_rows = jobs.get('jobs')
+    require(type(job_rows) is list and
+            jobs.get('total_count') == len(job_rows) and
+            len(job_rows) <= 128 and
+            all(type(j) is dict for j in job_rows) and
+            all(type(j.get('id')) is int and j['id'] > 0 for j in job_rows) and
+            len({j.get('id') for j in job_rows}) == len(job_rows),
+            'complete bounded unique official job roster')
+    selected = [j for j in job_rows if j.get('id') == value['jobId']]
+    job_name = {'toolchain': 'bochs-ring3-toolchain-inventory-v1',
+                'build': 'bochs-ring3-build-v1',
+                'reference': 'bochs-ring3-reference-v1'}[route]
+    require(value['jobName'] == job_name and
+            len(selected) == 1 and selected[0].get('run_id') == int(value['runId'])
+            and selected[0].get('head_sha') == value['head']
+            and selected[0].get('name') == value['jobName'] and
+            selected[0].get('status') == 'completed' and
+            selected[0].get('conclusion') == 'success',
+            'selected official job terminal identity')
+    step_rows = selected[0].get('steps')
+    require(type(step_rows) is list and len(step_rows) <= 64 and
+            all(type(row) is dict for row in step_rows) and
+            strict_equal(step_rows, value['steps']),
+            'selected official exact step roster')
+    current_official_steps(step_rows)
+    required = {'toolchain': INVENTORY_USER_STEPS,
+                'build': BUILD_USER_STEPS,
+                'reference': REFERENCE_USER_STEPS}[route]
+    names = [row['name'] for row in step_rows]
+    indexes = [names.index(name) for name in required if names.count(name) == 1]
+    require(len(indexes) == len(required) and indexes == sorted(indexes) and
+            all(step_rows[index]['conclusion'] == 'success' for index in indexes),
+            'exact source ordered successful official steps')
+    rows = artifacts.get('artifacts')
+    require(type(rows) is list and
+            artifacts.get('total_count') == len(rows) and len(rows) <= 128 and
+            all(type(row) is dict for row in rows),
+            'complete bounded official artifact roster')
+    selected_artifact = [a for a in rows if a.get('id') == value['artifactId']]
+    artifact_name = 'i80386-bochs-ring3-' + (
+        'toolchain-inventory' if route == 'toolchain' else route) + '-v1-originals'
+    require(len(selected_artifact) == 1 and
+            type(selected_artifact[0].get('workflow_run')) is dict and
+            selected_artifact[0].get('name') == artifact_name and
+            selected_artifact[0].get('size_in_bytes') == len(archive_raw) and
+            selected_artifact[0].get('digest') == 'sha256:' + sha(archive_raw) and
+            selected_artifact[0].get('expired') is False and
+            selected_artifact[0].get('workflow_run', {}).get('id') ==
+            int(value['runId']), 'selected official artifact identity/digest')
+    return {'runId': value['runId'], 'jobId': value['jobId'],
+            'artifactId': value['artifactId'], 'officialMetadataJoined': True,
+            'officiallyAuthenticatedByLocalFiles': False}
+
+
+def official_expectation_toolchain_v3(value, request, event, source, archive_raw,
+                         run, jobs, artifacts, job_log, observed_source):
+    """Join retained metadata; the caller separately authenticates API intake."""
+    selected_request = parse_json(request, 32768, canonical_wire=True)
+    fields(value, 'schema repository pullRequest runId runAttempt jobId jobName '
+           'eventName actor head tree workflowCommit workflowTree '
+           'workflowFileSha256 requestSha256 eventSha256 artifactId '
+           'archiveBytes archiveSha256 conclusion steps')
+    require(value['schema'] == 'bw.bochs-ring3.toolchain-expectation.v3' and
+            value['repository'] == REPOSITORY and
+            value['eventName'] == 'pull_request' and
+            value['actor'] == 'CrispStrobe' and
+            value['conclusion'] == 'success' and
+            value['pullRequest'] == selected_request['pullRequest'] and
+            type(value['runId']) is str and
+            re.fullmatch('[1-9][0-9]*', value['runId']) and
+            integer(value['runAttempt'], 1, 1) and
+            integer(value['pullRequest'], 1) and
+            integer(value['jobId'], 1) and
+            integer(value['artifactId'], 1),
+            'closed reviewed official route identity')
+    for key in ('head', 'tree', 'workflowCommit', 'workflowTree'):
+        digest(value[key], 40)
+    for key in ('workflowFileSha256', 'requestSha256', 'eventSha256',
+                'archiveSha256'):
+        digest(value[key])
+    require(value['requestSha256'] == sha(request) and
+            value['eventSha256'] == sha(event) and
+            value['head'] == source['head'] and
+            value['tree'] == source['tree'] and
+            value['workflowFileSha256'] == source['files'][
+                '.github/workflows/i80386-bochs-ring3-reference.yml']['sha256'] and
+            integer(value['archiveBytes'], 1, 96 << 20) == len(archive_raw) and
+            value['archiveSha256'] == sha(archive_raw),
+            'selected exact source, event and archive bytes')
+    source_facts(observed_source, source)
+    require(value['workflowCommit'] == observed_source['workflowCommit'] and
+            value['workflowTree'] == observed_source['workflowTree'],
+            'exact executed workflow identity in held source observation')
+    require(type(job_log) is bytes and 0 < len(job_log) <= 8 << 20,
+            'bounded selected official job log')
+    for obj in (run, jobs, artifacts):
+        require(type(obj) is dict, 'bounded retained official API JSON')
+    require(type(run.get('repository')) is dict and
+            type(run.get('head_repository')) is dict and
+            type(run.get('actor')) is dict,
+            'typed official run repository/actor')
+    require(run.get('id') == int(value['runId']) and
+            type(run.get('run_attempt')) is int and
+            run.get('run_attempt') == 1 and
+            run.get('head_sha') == value['head'] and
+            run.get('event') == 'pull_request' and
+            run.get('status') == 'completed' and
+            run.get('conclusion') == 'success' and
+            run.get('repository', {}).get('full_name') == REPOSITORY and
+            run.get('head_repository', {}).get('full_name') == REPOSITORY and
+            run.get('actor', {}).get('login') == 'CrispStrobe' and
+            run.get('path') == '.github/workflows/i80386-bochs-ring3-reference.yml',
+            'selected official run identity and terminal success')
+    job_rows = jobs.get('jobs')
+    require(type(job_rows) is list and
+            jobs.get('total_count') == len(job_rows) and
+            len(job_rows) <= 128 and
+            all(type(j) is dict for j in job_rows) and
+            all(type(j.get('id')) is int and j['id'] > 0 for j in job_rows) and
+            len({j.get('id') for j in job_rows}) == len(job_rows),
+            'complete bounded unique official job roster')
+    require({row.get('name'): row.get('conclusion') for row in job_rows} == {
+                'bochs-ring3-toolchain-inventory-v1': 'skipped',
+                'bochs-ring3-toolchain-inventory-v2': 'skipped',
+                'bochs-ring3-toolchain-inventory-v3': 'success',
+                'bochs-ring3-build-v1': 'skipped',
+                'bochs-ring3-reference-v1': 'skipped'} and
+            all(row.get('status') == 'completed' and
+                row.get('run_id') == int(value['runId']) and
+                row.get('head_sha') == value['head'] for row in job_rows),
+            'one active V2 metadata job and three declared inactive jobs')
+    selected = [j for j in job_rows if j.get('id') == value['jobId']]
+    job_name = 'bochs-ring3-toolchain-inventory-v3'
+    require(value['jobName'] == job_name and
+            len(selected) == 1 and selected[0].get('run_id') == int(value['runId'])
+            and selected[0].get('head_sha') == value['head']
+            and selected[0].get('name') == value['jobName'] and
+            selected[0].get('status') == 'completed' and
+            selected[0].get('conclusion') == 'success',
+            'selected official job terminal identity')
+    step_rows = selected[0].get('steps')
+    require(type(step_rows) is list and len(step_rows) <= 64 and
+            all(type(row) is dict for row in step_rows) and
+            strict_equal(step_rows, value['steps']),
+            'selected official exact step roster')
+    current_official_steps(step_rows)
+    required = INVENTORY_USER_STEPS
+    names = [row['name'] for row in step_rows]
+    indexes = [names.index(name) for name in required if names.count(name) == 1]
+    require(len(indexes) == len(required) and indexes == sorted(indexes) and
+            all(step_rows[index]['conclusion'] == 'success' for index in indexes),
+            'exact source ordered successful official steps')
+    rows = artifacts.get('artifacts')
+    require(type(rows) is list and
+            artifacts.get('total_count') == len(rows) and len(rows) <= 128 and
+            all(type(row) is dict for row in rows),
+            'complete bounded official artifact roster')
+    selected_artifact = [a for a in rows if a.get('id') == value['artifactId']]
+    artifact_name = 'i80386-bochs-ring3-toolchain-inventory-v3-originals'
+    require(len(selected_artifact) == 1 and
+            type(selected_artifact[0].get('workflow_run')) is dict and
+            selected_artifact[0].get('name') == artifact_name and
+            selected_artifact[0].get('size_in_bytes') == len(archive_raw) and
+            selected_artifact[0].get('digest') == 'sha256:' + sha(archive_raw) and
+            selected_artifact[0].get('expired') is False and
+            selected_artifact[0].get('workflow_run', {}).get('id') ==
+            int(value['runId']), 'selected official artifact identity/digest')
+    return {'runId': value['runId'], 'jobId': value['jobId'],
+            'artifactId': value['artifactId'], 'officialMetadataJoined': True,
+            'officiallyAuthenticatedByLocalFiles': False}
+
+
+def reference_original_current_v3(packet, request_raw, event_raw, *, budget=None):
+    """Grade a complete mock or retained current Reference original; no local approval."""
+    require(set(packet) == REFERENCE_ROLES,
+            'closed current 32-role Reference artifact')
+    artifact_manifest(packet, required=REFERENCE_ROLES)
+    if budget is None:
+        budget = ExpandedBudget(REFERENCE_CAPS['expanded'],
+                                REFERENCE_CAPS['members'])
+        for raw in packet.values():
+            budget.add(len(raw))
+    require(budget.expanded <= REFERENCE_CAPS['expanded'] and
+            budget.members <= REFERENCE_CAPS['members'],
+            'cumulative Reference outer/Build/runtime extent')
+    request, _event = request_event_current_v3('reference', request_raw, event_raw)
+    require(packet['request.original.json'] == request_raw and
+            packet['event.original.json'] == event_raw,
+            'exact selected Reference request and event raw bytes')
+    selected = fields(request['build'], 'runId jobId artifactId name bytes sha256 '
+                      'checkoutHead checkoutTree workflowCommit workflowFileSha256 '
+                      'compactManifest buildLog metadata')
+    require(selected['name'] == 'i80386-bochs-ring3-build-v1-originals' and
+            selected['checkoutHead'] == request['source']['head'] and
+            selected['checkoutTree'] == request['source']['tree'] and
+            selected['workflowFileSha256'] == request['source']['files'][
+                '.github/workflows/i80386-bochs-ring3-reference.yml']['sha256'] and
+            integer(selected['bytes'], 1, 64 << 20) ==
+                len(packet['inputs/build.original.zip']) and
+            digest(selected['sha256']) ==
+                sha(packet['inputs/build.original.zip']),
+            'one exact same-source selected Build archive')
+    fields(selected['buildLog'], 'bytes sha256')
+    integer(selected['buildLog']['bytes'], 1, 8 << 20)
+    digest(selected['buildLog']['sha256'])
+    build, _nested_budget = archive_members(packet['inputs/build.original.zip'],
+                                           BUILD_CAPS, budget=budget,
+                                           allowed=BUILD_FIXED_ROLES)
+    build_request_raw, build_event_raw = (build['request.original.json'],
+                                           build['event.original.json'])
+    build_request, _ = request_event_current_v3('build', build_request_raw,
+                                                build_event_raw)
+    require(strict_equal(build_request['toolchain']['inventory']['schema'],
+                         selected['metadata']['schema']) and
+            strict_equal(build_request['toolchain']['inventory']['jobName'],
+                         selected['metadata']['jobName']) and
+            strict_equal(build_request['toolchain']['inventory']['version'],
+                         selected['metadata']['version']),
+            'nested Build repeats the explicit V2 metadata identity')
+    require(strict_equal(build_request['source'], request['source']) and
+            strict_equal(parse_json(build['compact-manifest.json'], 16384,
+                                    canonical_wire=True),
+                         selected['compactManifest']),
+            'same-source independently selected full Build and compact bytes')
+    build_grade = build_original_current_v3(build, build_request_raw,
+                                            build_event_raw, budget=budget)
+    require(build_grade['selectedBuildBytesObserved'] is True and
+            build_grade['compilerExecuted'] is True and
+            build_grade['guestExecuted'] is False,
+            'independently complete selected Build original')
+    runtime, _runtime_budget = archive_members(build['runtime.original.zip'],
+                                               RUNTIME_CAPS, budget=budget)
+    asset = parse_json(runtime['asset-manifest.json'], 4 << 20,
+                       canonical_wire=True)
+    require(asset['schema'] == 'bw.bochs-ring3.runtime-assets.v2' and
+            not any(name.startswith('lib/') for name in runtime),
+            'current transient-library distribution boundary')
+    value = parse_json(packet['original.json'], 4 << 20,
+                       canonical_wire=True)
+    fields(value, 'schema requestSha256 eventSha256 sourceBefore sourceAfter '
+           'phases resources firstFailure secondary failurePartial complete '
+           'authority observations')
+    require(value['schema'] == 'bw.bochs-ring3.reference-original.v1' and
+            value['requestSha256'] == sha(request_raw) and
+            value['eventSha256'] == sha(event_raw) and
+            value['complete'] is True and value['firstFailure'] is None and
+            value['secondary'] == [] and value['failurePartial'] is None and
+            value['authority'] == {'compilerExecuted': False,
+                'guestExecuted': True, 'actualRunApproved': False,
+                'guestApproved': False, 'wholeHostAttested': False,
+                'physicalTimingProved': False},
+            'complete Reference observation cannot self-approve')
+    observations = fields(value['observations'],
+        'build assetsBefore assetsAfter fixture config js bochs stop outside '
+        'cleanup nodeStage runtimeElfMetadata hostRuntime')
+    require(observations['outside'] is None and
+            observations['cleanup'] is None,
+            'inner original cannot invent outside cleanup authority')
+    outside = parse_json(packet['outside.original.json'], 16384,
+                         canonical_wire=True)
+    require(outside['schema'] == 'bw.bochs-ring3.outside.v1' and
+            outside['route'] == 'reference' and outside['runAttempt'] == 1 and
+            type(outside['runId']) is str and
+            re.fullmatch('[1-9][0-9]*', outside['runId']) and
+            outside['unit'] ==
+                f"bw-bochs-reference-v1-{outside['runId']}-1.service" and
+            outside['serviceExitCode'] == outside['clientExitCode'] ==
+                outside['cleanupExitCode'] == 0 and
+            outside['innerComplete'] is True and
+            outside['innerFirstFailure'] is None and
+            outside['firstFailure'] is None and outside['secondary'] == [] and
+            len(packet['outside.original.json']) <= 16384,
+            'terminal selected Reference outside original')
+    source_facts(value['sourceBefore'], request['source'])
+    source_facts(value['sourceAfter'], request['source'])
+    require(strict_equal(value['sourceBefore'], value['sourceAfter']) and
+            strict_equal(parse_json(packet['source.before.json'], 65536,
+                                    canonical_wire=True), value['sourceBefore']) and
+            strict_equal(parse_json(packet['source.after.json'], 65536,
+                                    canonical_wire=True), value['sourceAfter']),
+            'unchanged source and workflow readback in both raw roles')
+    stage_wire = parse_json(packet['node-stage.original.json'], 65536,
+                            canonical_wire=True)
+    bootstrap = stage_wire['bootstrapCredentials']
+    selected_invoker = bootstrap_caller_v2(bootstrap)
+    node, node_projection = node_stage_fact_v3(
+        packet['node-stage.original.json'], route='reference',
+        run_id=outside['runId'], expected_invoker=selected_invoker,
+        expected_bootstrap=bootstrap, expected=asset['hostNode'])
+    require(strict_equal(observations['nodeStage'], node),
+            'same full rehashed current staged Node role')
+    structural_raw = packet['runtime-elf-ranges.original.json']
+    structural = selected_sparse_elf_fact(
+        structural_raw,
+        {key: build_request['toolchain'][key] for key in
+         ('files', 'aliases', 'directoryAliases')}, node_projection)
+    require(observations['runtimeElfMetadata'] ==
+            {'path': 'runtime-elf-ranges.original.json',
+             'bytes': len(structural_raw), 'sha256': sha(structural_raw)},
+            'exact retained sparse runtime role byte reference')
+    stage_raw = packet['host-runtime.original.json']
+    selected_hosts = asset['hostRuntime']['files']
+    host = parse_json(stage_raw, 1048576, canonical_wire=True)
+    stage = host_runtime_stage_fact(
+        stage_raw, route='reference', run_id=outside['runId'],
+        selected=selected_hosts,
+        structural={path: structural['files'][path]['structure']
+                    for path in selected_hosts})
+    require(strict_equal(stage, host['stage']),
+            'same selected transient host stage wire')
+    require(observations['hostRuntime'] ==
+            {'stageBytes': len(canonical(stage)),
+             'stageSha256': sha(canonical(stage))} and
+            host_runtime_cleanup_fact(host['cleanup'], stage,
+                route='reference', run_id=outside['runId']) == host['cleanup'],
+            'same transient host runtime stage and terminal removal')
+    require(packet['inputs/fixture.rom'] == runtime['inputs/fixture.rom'] and
+            packet['inputs/fixture.json'] == runtime['inputs/fixture.json'] and
+            observations['fixture'] == {
+                'rom': {'path': 'inputs/fixture.rom',
+                        'bytes': len(packet['inputs/fixture.rom']),
+                        'sha256': sha(packet['inputs/fixture.rom'])},
+                'manifest': {'path': 'inputs/fixture.json',
+                             'bytes': len(packet['inputs/fixture.json']),
+                             'sha256': sha(packet['inputs/fixture.json'])}},
+            'exact selected immutable authored fixture bytes')
+    runtime_root = f"/run/bw-bochs-reference-v1-{outside['runId']}-1-work/runtime"
+    config = _REFERENCE_CONFIG_V1.replace(b'@ROOT@',
+                                           runtime_root.encode('ascii'))
+    require(packet['bochsrc.original'] == config and
+            observations['config'] == {'path': 'bochsrc.original',
+                'bytes': len(config), 'sha256': sha(config)},
+            'source-fixed no-GUI Reference configuration bytes')
+    before = parse_json(packet['asset.before.json'], 4 << 20,
+                        canonical_wire=True)
+    after = parse_json(packet['asset.after.json'], 4 << 20,
+                       canonical_wire=True)
+    require(strict_equal(before, after) and
+            set(before) == set(runtime) and
+            strict_equal(before, observations['assetsBefore']) and
+            strict_equal(after, observations['assetsAfter']),
+            'all selected runtime members retained before/after')
+    for name, raw in runtime.items():
+        file_fact(before[name], raw=raw)
+        require(before[name]['before']['mode'] ==
+                (stat.S_IFREG | (0o555 if name == 'bin/bochs' else 0o444)),
+                'selected current runtime member mode')
+    require(type(value['phases']) is list and len(value['phases']) == 2,
+            'exactly two serial owned Reference children')
+    unit = outside['unit']
+    invoker = fields(node['invoker'], 'uid gid')
+    for name, process, checkpoint in zip(('js', 'bochs'), value['phases'],
+                                         (False, True)):
+        require(strict_equal(parse_json(packet[name + '/process.json'],
+                        262144, canonical_wire=True), process),
+                'same retained child process role and original')
+        phase_fact(process, packet[name + '/stdout'],
+                   packet[name + '/stderr'], name=name, wall_seconds=60,
+                   unit=unit, service_pid=value['resources']['before']['pid'],
+                   uid=invoker['uid'], gid=invoker['gid'],
+                   checkpoint=checkpoint)
+    js, bochs = value['phases']
+    require(js['endedNs'] <= bochs['startedNs'] and
+            js['argv'] == [next(row['member'] for row in stage['files'].values()
+                 if row['member'].endswith('/ld-linux-x86-64.so.2')),
+                '--inhibit-cache', '--library-path',
+                f"/run/bw-bochs-reference-v1-{outside['runId']}-1-host-runtime/lib",
+                node['stagePath'], '--max-old-space-size=512',
+                f"/run/bw-bochs-reference-v1-{outside['runId']}-1-work/js-driver.mjs"] and
+            bochs['argv'] == js['argv'][:4] +
+                [runtime_root + '/bin/bochs', '-q', '-f',
+                 f"/run/bw-bochs-reference-v1-{outside['runId']}-1-work/bochsrc.original"],
+            'same staged loader and finite serial JS/Bochs commands')
+    arch = authored_architecture(packet)
+    frame = packet['bochs/frame.original']
+    stop_fact(observations['stop'], bochs, frame)
+    require(observations['js'] == parse_json(packet['js/report.json'], 131072,
+                                             canonical_wire=True) and
+            observations['bochs']['definedBytesEqual'] is True and
+            observations['bochs']['selectorPaddingBytes'] == 12 and
+            observations['bochs']['stdout'] == {'path': 'bochs/stdout',
+                'bytes': len(packet['bochs/stdout']),
+                'sha256': sha(packet['bochs/stdout'])} and
+            observations['bochs']['frame'] == {'path': 'bochs/frame.original',
+                'bytes': len(frame), 'sha256': sha(frame)} and
+            observations['bochs']['log'] == {'path': 'bochs/log',
+                'bytes': len(packet['bochs/log']),
+                'sha256': sha(packet['bochs/log'])},
+            'same bounded raw architecture and Bochs diagnostic references')
+    census = fields(observations['bochs']['outputCensus'],
+                    'path directory files aggregateBytes quotaEnforced')
+    output_root = runtime_root + '/outputs'
+    require(census['path'] == output_root and
+            census['quotaEnforced'] is False and
+            type(packet['bochs/log']) is bytes and
+            1 <= len(packet['bochs/log']) <= 4194304 and
+            set(census['files']) == {'report.json', 'observations.json',
+                'writes.json', 'memory.before.bin', 'memory.after.bin',
+                'bochs.log'},
+            'actual finite six-file output roster without inferred quota')
+    directory = stat_fact(census['directory'], kind='directory')
+    require(directory['mode'] == stat.S_IFDIR | 0o700 and
+            directory['uid'] == invoker['uid'] and
+            directory['gid'] == invoker['gid'],
+            'source-selected private invoker output directory')
+    output_total = 0
+    for name, row in census['files'].items():
+        fact = stat_fact(row, kind='regular')
+        raw = packet['bochs/log' if name == 'bochs.log' else 'js/' + name]
+        cap = (4194304 if name == 'bochs.log' else 131072 if name ==
+               'report.json' else 1048576)
+        require(fact['mode'] & 0o022 == 0 and fact['nlink'] == 1 and
+                fact['uid'] == invoker['uid'] and
+                fact['gid'] == invoker['gid'] and
+                1 <= fact['size'] == len(raw) <= cap,
+                'exact retained selected output file stat/byte extent')
+        output_total += len(raw)
+    require(census['aggregateBytes'] == output_total,
+            'complete bounded generated-output byte census')
+    service_status_fact(packet['service-status.original.json'],
+                        route='reference', unit=unit, outer_seconds=240)
+    service_status_v3_profile(packet['service-status.original.json'],
+                              route='reference')
+    resources = fields(value['resources'], 'before after')
+    limits = {'cpu.max': '100000 100000\n',
+              'memory.max': '1073741824\n',
+              'memory.swap.max': '0\n', 'pids.max': '64\n'}
+    for row in resources.values():
+        resources_v2_fact(row, unit=unit, limits=limits)
+    require(resources['before']['pid'] == resources['after']['pid'] and
+            all(resources['before']['unitRoot']['directory'][key] ==
+                resources['after']['unitRoot']['directory'][key]
+                for key in ('dev', 'ino', 'mode', 'uid', 'gid')),
+            'same selected Reference service resource identity')
+    unit_fact(outside['before'], unit)
+    unit_fact(outside['after'], unit, absent=True)
+    require(outside['manual'] == manual_cleanup_current_v2_fact(
+            packet['cleanup.original.json'], route='reference',
+            unit=unit, outside=outside, inner=value, stage=node),
+            'same bounded delegated Reference cleanup raw role')
+    plan = fields(outside['hostRuntimePlan'],
+                  'stageSha256 planSha256 roleReservedBytes')
+    cleanup = fields(outside['hostRuntimeCleanup'], 'role bytes sha256')
+    require(plan == {'stageSha256': sha(canonical(stage)),
+                     'planSha256': sha(canonical(host['cleanup']['plan'])),
+                     'roleReservedBytes': host['cleanup']['plan']['roleReservedBytes']} and
+            cleanup == {'role': 'host-runtime.original.json',
+                        'bytes': len(stage_raw), 'sha256': sha(stage_raw)} and
+            len(stage_raw) <= plan['roleReservedBytes'],
+            'outside independently retained host cleanup plan and raw result')
+    build_observation = fields(observations['build'],
+                               'schema selected readback officialAuthenticatedByReader')
+    readback = fields(build_observation['readback'],
+        'runId runAttempt event actor head workflowPath jobId jobName steps '
+        'artifactId artifactName archiveBytes archiveSha256 repository '
+        'headRepository pullRequest artifactRepositoryId artifactHeadRepositoryId')
+    repository = fields(readback['repository'], 'id full_name fork')
+    head_repository = fields(readback['headRepository'], 'id full_name fork')
+    selected_pr = fields(readback['pullRequest'],
+                         'number head baseRef headRepositoryId baseRepositoryId')
+    build_names = ('Checkout selected producer source',
+        'Checkout executing workflow source',
+        'Admit Bochs build source and request',
+        'Prepare pinned Node input cache',
+        'Build pinned Bochs CPU3 and retain originals',
+        'Retain Bochs build originals')
+    observed_names = ([row.get('name') if type(row) is dict else None
+                       for row in readback['steps']]
+                      if type(readback['steps']) is list else [])
+    positions = ([observed_names.index(name) for name in build_names]
+                 if all(observed_names.count(name) == 1 for name in build_names)
+                 else [])
+    require(build_observation['schema'] == 'bw.bochs-ring3.build-intake.v1' and
+            build_observation['selected'] == selected and
+            build_observation['officialAuthenticatedByReader'] is False and
+            readback['runId'] == int(selected['runId']) and
+            readback['runAttempt'] == 1 and
+            readback['event'] == 'pull_request' and
+            readback['actor'] == 'CrispStrobe' and
+            readback['head'] == request['source']['head'] and
+            repository == head_repository and
+            repository['id'] == integer(repository['id'], 1) and
+            repository['full_name'] == REPOSITORY and
+            repository['fork'] is False and
+            selected_pr == {'number': request['pullRequest'],
+                'head': request['source']['head'], 'baseRef': 'master',
+                'headRepositoryId': repository['id'],
+                'baseRepositoryId': repository['id']} and
+            readback['workflowPath'] ==
+                '.github/workflows/i80386-bochs-ring3-reference.yml' and
+            readback['jobId'] == selected['jobId'] and
+            readback['jobName'] == 'bochs-ring3-build-v1' and
+            type(readback['steps']) is list and
+            6 <= len(readback['steps']) <= 32 and
+            all(type(row) is dict and
+                set(row) == {'number', 'name', 'status', 'conclusion'} and
+                type(row['number']) is int and
+                row['number'] == index and row['status'] == 'completed' and
+                row['conclusion'] == 'success'
+                for index, row in enumerate(readback['steps'], 1)) and
+            len(positions) == len(build_names) and
+            positions == sorted(positions) and
+            readback['artifactId'] == selected['artifactId'] and
+            readback['artifactName'] == selected['name'] and
+            readback['artifactRepositoryId'] ==
+                readback['artifactHeadRepositoryId'] == repository['id'] and
+            readback['archiveBytes'] == len(packet['inputs/build.original.zip']) and
+            readback['archiveSha256'] == sha(packet['inputs/build.original.zip']),
+            'selected Build intake reports only retained metadata facts')
+    return {'schema': 'bw.bochs-ring3.reference-admission.v2',
+            'buildOriginalJoined': True,
+            'architectureObserved': arch['definedByteAgreementObserved'],
+            'officialMetadataBound': False,
+            'guestExecutedReported': True,
+            'actualRunApproved': False,
+            'guestApproved': False}
+
+
+def toolchain_official_v3(archive_raw, expectation_raw, run, jobs,
+                          artifacts, job_log):
+    """Join the distinct metadata V2 original to retained official facts."""
+    packet, _ = archive_members(archive_raw, INVENTORY_CAPS,
+                                allowed=INVENTORY_ROLES)
+    request_raw, event_raw = (packet['request.original.json'],
+                              packet['event.original.json'])
+    local = toolchain_original_v3(packet, request_raw, event_raw)
+    request, _ = request_event_v3(request_raw, event_raw)
+    expectation = parse_json(expectation_raw, 65536, canonical_wire=True)
+    observed_source = parse_json(packet['source.before.json'], 4 << 20,
+                                 canonical_wire=True)
+    bound = official_expectation_toolchain_v3(
+        expectation, request_raw, event_raw, request['source'], archive_raw,
+        run, jobs, artifacts, job_log, observed_source)
+    current_official_five_jobs(jobs, expectation, 'toolchain-v3')
+    official_owner_join('toolchain-v3', request, expectation, run, artifacts)
+    return {**local, 'officialMetadataBound': bound['officialMetadataJoined'],
+            'officiallyAuthenticatedByLocalFiles': False,
+            'actualRunApproved': False, 'guestApproved': False}
+
+
+def current_official_five_jobs(jobs, expectation, selected_route):
+    """Bind every declared job in the current metadata, Build or Reference event."""
+    require(selected_route in ('toolchain-v3', 'build', 'reference'),
+            'current official route')
+    rows = jobs.get('jobs') if type(jobs) is dict else None
+    require(type(rows) is list and jobs.get('total_count') == 5 and len(rows) == 5,
+            'exact current official four-job roster')
+    names = ('bochs-ring3-toolchain-inventory-v1',
+             'bochs-ring3-toolchain-inventory-v2',
+             'bochs-ring3-toolchain-inventory-v3',
+             'bochs-ring3-build-v1', 'bochs-ring3-reference-v1')
+    selected_name = {'toolchain-v3':'bochs-ring3-toolchain-inventory-v3',
+                     'build':'bochs-ring3-build-v1',
+                     'reference':'bochs-ring3-reference-v1'}[selected_route]
+    required = {name: 'success' if name == selected_name else 'skipped'
+                for name in names}
+    require(all(type(row) is dict and type(row.get('id')) is int and
+                row['id'] > 0 and
+                type(row.get('name')) is str for row in rows) and
+            len({row['id'] for row in rows}) == 5 and
+            len({row['name'] for row in rows}) == 5 and
+            {row['name']: row.get('conclusion') for row in rows} == required and
+            all(row.get('status') == 'completed' and
+                type(row.get('run_id')) is int and row['run_id'] > 0 and
+                row.get('run_id') == int(expectation['runId']) and
+                type(row.get('run_attempt')) is int and
+                row['run_attempt'] == 1 and
+                row.get('head_sha') == expectation['head'] for row in rows),
+            'one selected current job and four terminal declared skips')
+
+
+def build_official_current_v3(archive_raw, expectation_raw, run, jobs,
+                      artifacts, job_log):
+    packet, budget = archive_members(archive_raw, BUILD_CAPS,
+                                     allowed=BUILD_FIXED_ROLES)
+    local = build_original_current_v3(packet, packet['request.original.json'],
+                              packet['event.original.json'], budget=budget)
+    request_raw, event_raw = (packet['request.original.json'],
+                              packet['event.original.json'])
+    request, _ = request_event_current_v3('build', request_raw, event_raw)
+    expectation = parse_json(expectation_raw, 65536, canonical_wire=True)
+    observed_source = parse_json(packet['source.before.json'], 4 << 20,
+                                 canonical_wire=True)
+    bound = official_expectation_current_v3(expectation, 'build', request_raw,
+        event_raw, request['source'], archive_raw, run, jobs, artifacts,
+        job_log, observed_source)
+    current_official_five_jobs(jobs, expectation, 'build')
+    official_owner_join('build', request, expectation, run, artifacts)
+    return {**local, 'officialMetadataBound': bound['officialMetadataJoined'],
+            'officiallyAuthenticatedByLocalFiles': False,
+            'actualRunApproved': False, 'guestApproved': False}
+
+
+def reference_archive_current_v3(raw):
+    """Read one exact current Reference ZIP with one cumulative nested budget."""
+    budget = ExpandedBudget(REFERENCE_CAPS['expanded'],
+                            REFERENCE_CAPS['members'])
+    budget.charge_bytes(len(raw))
+    packet, budget = archive_members(raw, REFERENCE_CAPS,
+                                     budget=budget, allowed=REFERENCE_ROLES)
+    return reference_original_current_v3(packet, packet['request.original.json'],
+                                 packet['event.original.json'], budget=budget)
+
+
+def reference_official_current_v3(archive_raw, expectation_raw, run, jobs, artifacts,
+                          job_log):
+    """Join retained official metadata to local evidence; API auth is external."""
+    local = reference_archive_current_v3(archive_raw)
+    packet, _ = archive_members(archive_raw, REFERENCE_CAPS,
+                                allowed=REFERENCE_ROLES)
+    request_raw, event_raw = (packet['request.original.json'],
+                              packet['event.original.json'])
+    request, event = request_event_current_v3('reference', request_raw, event_raw)
+    original = parse_json(packet['original.json'], 4 << 20,
+                          canonical_wire=True)
+    expectation = parse_json(expectation_raw, 65536, canonical_wire=True)
+    bound = official_expectation_current_v3(expectation, 'reference', request_raw,
+        event_raw, request['source'], archive_raw, run, jobs, artifacts,
+        job_log, original['sourceBefore'])
+    current_official_five_jobs(jobs, expectation, 'reference')
+    repository = official_repository(run['repository'])
+    head_repository = official_repository(run['head_repository'])
+    require(repository == head_repository and
+            integer(repository['id'], 1) == repository['id'] and
+            repository['full_name'] == REPOSITORY and
+            repository['fork'] is False,
+            'selected nonfork official Reference repository IDs')
+    prs = run.get('pull_requests')
+    require(type(prs) is list and len(prs) == 1 and
+            type(prs[0]) is dict and prs[0].get('number') ==
+                request['pullRequest'] and
+            prs[0].get('head', {}).get('sha') == request['source']['head'] and
+            prs[0].get('base', {}).get('ref') == 'master' and
+            prs[0].get('head', {}).get('repo', {}).get('id') ==
+                repository['id'] and
+            prs[0].get('base', {}).get('repo', {}).get('id') ==
+                repository['id'],
+            'sole source-bound same-repository official Reference PR')
+    selected_artifact = [row for row in artifacts['artifacts']
+                         if row.get('id') == expectation['artifactId']]
+    require(len(selected_artifact) == 1 and
+            selected_artifact[0]['workflow_run']['repository_id'] ==
+                selected_artifact[0]['workflow_run']['head_repository_id'] ==
+                repository['id'] and
+            selected_artifact[0]['workflow_run']['head_sha'] ==
+                request['source']['head'],
+            'exact official artifact owner/repository/head')
+    return {**local, 'officialMetadataBound': bound['officialMetadataJoined'],
+            'officiallyAuthenticatedByLocalFiles': False,
+            'actualRunApproved': False, 'guestApproved': False}
+
+
+
 def cli_grade(route, files):
     """Local readers remain separate from external official authentication."""
     enabled = {'toolchain': TOOLCHAIN_READER_ENABLED,
@@ -6896,14 +8943,20 @@ def cli_grade(route, files):
                'build': BUILD_READER_ENABLED,
                'reference': REFERENCE_READER_ENABLED,
                'build-current-v2': BUILD_CURRENT_V2_READER_ENABLED,
-               'reference-current-v2': REFERENCE_CURRENT_V2_READER_ENABLED}
+               'reference-current-v2': REFERENCE_CURRENT_V2_READER_ENABLED,
+               'toolchain-v3': TOOLCHAIN_V3_READER_ENABLED,
+               'build-current-v3': BUILD_CURRENT_V3_READER_ENABLED,
+               'reference-current-v3': REFERENCE_CURRENT_V3_READER_ENABLED}
     require(route in enabled and enabled[route] is True,
             'reader route inactive')
     caps = {'toolchain': INVENTORY_CAPS,
             'toolchain-v2': INVENTORY_CAPS, 'build': BUILD_CAPS,
             'reference': REFERENCE_CAPS,
             'build-current-v2': BUILD_CAPS,
-            'reference-current-v2': REFERENCE_CAPS}[route]
+            'reference-current-v2': REFERENCE_CAPS,
+            'toolchain-v3': INVENTORY_CAPS,
+            'build-current-v3': BUILD_CAPS,
+            'reference-current-v3': REFERENCE_CAPS}[route]
     archive = cli_regular(files['archive'], caps['compressed'])
     if files.get('official'):
         expectation = cli_regular(files['expectation'], 65536)
@@ -6916,8 +8969,15 @@ def cli_grade(route, files):
                   'build': build_official_v2,
                   'reference': reference_official_v2,
                   'build-current-v2': build_official_current_v2,
-                  'reference-current-v2': reference_official_current_v2}[route]
+                  'reference-current-v2': reference_official_current_v2,
+                  'toolchain-v3': toolchain_official_v3,
+                  'build-current-v3': build_official_current_v3,
+                  'reference-current-v3': reference_official_current_v3}[route]
         grade = grader(archive, expectation, run, jobs, artifacts, job_log)
+    elif route == 'toolchain-v3':
+        packet, _ = archive_members(archive, caps, allowed=INVENTORY_ROLES)
+        grade = toolchain_original_v3(packet, packet['request.original.json'],
+                                      packet['event.original.json'])
     elif route == 'toolchain-v2':
         packet, _ = archive_members(archive, caps, allowed=INVENTORY_ROLES)
         grade = toolchain_original_v2(packet, packet['request.original.json'],
@@ -6937,6 +8997,14 @@ def cli_grade(route, files):
         grade = build_original_current_v2(
             packet, packet['request.original.json'],
             packet['event.original.json'], budget=budget)
+    elif route == 'build-current-v3':
+        packet, budget = archive_members(archive, caps,
+                                         allowed=BUILD_FIXED_ROLES)
+        grade = build_original_current_v3(
+            packet, packet['request.original.json'],
+            packet['event.original.json'], budget=budget)
+    elif route == 'reference-current-v3':
+        grade = reference_archive_current_v3(archive)
     elif route == 'reference-current-v2':
         grade = reference_archive_current_v2(archive)
     else:
@@ -6953,7 +9021,9 @@ def main(argv=None):
     parser.add_argument('--route', choices=('toolchain', 'toolchain-v2',
                                             'build', 'reference',
                                             'build-current-v2',
-                                            'reference-current-v2'),
+                                            'reference-current-v2',
+                                            'toolchain-v3', 'build-current-v3',
+                                            'reference-current-v3'),
                         required=True)
     parser.add_argument('--archive', required=True)
     parser.add_argument('--expectation')

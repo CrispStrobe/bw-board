@@ -159,6 +159,31 @@ with mock.patch.object(reader,flag,False),mock.patch.object(reader.os,'open',sid
   }
 });
 
+test('new V3 reader routes refuse before opening any input while inactive', () => {
+  for (const route of ['toolchain-v3', 'build-current-v3', 'reference-current-v3']) {
+    const program = `import importlib.util,sys
+from unittest import mock
+spec=importlib.util.spec_from_file_location('checked_reader',sys.argv[1])
+reader=importlib.util.module_from_spec(spec);spec.loader.exec_module(reader)
+route=sys.argv[2]
+flag={'toolchain-v3':'TOOLCHAIN_V3_READER_ENABLED','build-current-v3':'BUILD_CURRENT_V3_READER_ENABLED','reference-current-v3':'REFERENCE_CURRENT_V3_READER_ENABLED'}[route]
+assert getattr(reader,flag) is False
+with mock.patch.object(reader.os,'open',side_effect=AssertionError('inactive input IO')):
+    sys.exit(reader.main(['--route',route,'--archive','/definitely-absent-v3-original.zip']))
+`;
+    const result = spawnSync('/usr/bin/python3', ['-I', '-B', '-c', program, readerPath, route], {
+      cwd: root, encoding: 'utf8', timeout: 5000, maxBuffer: 1 << 16,
+      env: {PATH: '/usr/bin:/bin', PYTHONDONTWRITEBYTECODE: '1'},
+    });
+    assert.equal(result.error, undefined, `${route}: ${result.error}`);
+    assert.equal(result.status, 1, `${route}: ${result.stdout}`);
+    const refusal = JSON.parse(result.stderr.trim());
+    assert.equal(refusal.actualRunApproved, false);
+    assert.equal(refusal.guestApproved, false);
+    assert.equal(refusal.reason.message, 'reader route inactive');
+  }
+});
+
 test('genuine Bochs pure controls run with bounded system Python and no guest', () => {
   const result = spawnSync('/usr/bin/python3', ['-I', '-B', controlsPath], {
     cwd: root, encoding: 'utf8', timeout: 60_000, maxBuffer: 2 << 20,
