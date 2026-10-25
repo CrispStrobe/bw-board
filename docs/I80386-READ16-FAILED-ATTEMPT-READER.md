@@ -16,7 +16,8 @@ also refused the final inactive-unit status. Neither refusal may be changed
 into a passed performance or cleanup grade.
 
 Own only new `scripts/i80386-read16-failure/reader.py` and
-`scripts/i80386-read16-failure/controls.py`, this task leaf, the own x86
+`scripts/i80386-read16-failure/controls.py`, an automatic
+`test/i80386-read16-failure.test.mjs` wrapper, this task leaf, the own x86
 claim section of `LANES.md`, and own status prose in `docs/X86-NEXT-LANES.md`
 if needed. The new module is standalone and producer-free; do not copy the
 old candidate CPU arm or import its controller. It receives the old reader
@@ -50,3 +51,5 @@ A longer paired workload, parent-host capture and profiled replacement CPU
 arm remain separate future claims. Keep the old seven-pair median CPU >=1.03,
 every CPU ratio >1 and median wall B/A <=1.02 gates when those tasks are
 reviewed. This failure-only reader grants no adoption.
+
+The Node test wrapper must invoke the standalone Python controls through the existing automatic test discovery, retaining a finite 60-second child deadline, 4 MiB captured-output bound, complete test accounting and nonzero-exit propagation. A Python controls file that no hosted check invokes is not qualification. This amendment adds only the test entry point; it changes no workflow, original, threshold or CPU source.
