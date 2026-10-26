@@ -323,6 +323,23 @@ jobs:
             fs.appendFileSync(process.env.GITHUB_OUTPUT,"present="+present+"\n");
             if(!present) console.log("Historical engine has no SAMD software profile; no SAMD adoption claim.");
           '
+      - name: Build fresh public source game with the exact Core recipe
+        if: steps.profile.outputs.present == 'true'
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends gcc-arm-none-eabi libnewlib-arm-none-eabi
+          node --input-type=module -e '
+            import fs from "node:fs";
+            import {execFileSync as run} from "node:child_process";
+            const {ref}=JSON.parse(fs.readFileSync("lw/BUILD-INFO.json"));
+            if(!/^[0-9a-f]{40}$/.test(ref)) throw new Error("immutable Core source required");
+            run("git",["init","-q","samd-game-supplier"],{stdio:"inherit"});
+            run("git",["-C","samd-game-supplier","fetch","--depth=1","https://github.com/CrispStrobe/labwired-core.git",ref],{stdio:"inherit"});
+            run("git",["-C","samd-game-supplier","checkout","--detach","FETCH_HEAD"],{stdio:"inherit"});
+            if(run("git",["-C","samd-game-supplier","rev-parse","HEAD"],{encoding:"utf8"}).trim()!==ref) throw new Error("source mismatch");
+          '
+          python3 -B samd-game-supplier/scripts/ci/build_samd_native_game.py --work samd-game-source --out test/fixtures/labwired/samd-native-game
       - name: Three actual game samples on the exact production WASM and config inputs
         if: steps.profile.outputs.present == 'true'
         run: node scripts/qualify-samd-native-game.mjs lw test/fixtures/labwired/samd-native-game samd-game-results
@@ -334,6 +351,7 @@ jobs:
             samd-game-results/
             lw/BUILD-INFO.json
             lw/samd-no-asf-profile.json
+            test/fixtures/labwired/samd-native-game/
           if-no-files-found: error
           retention-days: 14
 

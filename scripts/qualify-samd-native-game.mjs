@@ -54,10 +54,12 @@ export function qualify ({engineDir, fixtureDir, outDir}) {
         need(raw.length === binding.bytes && sha(raw) === binding.sha256, 'exact production Node engine output');
     }
     const manifest = JSON.parse(readFileSync(join(fixtureDir, 'MANIFEST.json')));
-    need(manifest.schema === 1 && manifest.kind === 'source-built-samd-game' && manifest.physical_capture === false, 'authored native guest fixture');
-    need(manifest.engine_source === info.ref, 'same qualified fixture/production engine source');
-    need(manifest.codal.repository === 'CrispStrobe/codal-samd' && /^[0-9a-f]{40}$/.test(manifest.codal.source) && /^[0-9a-f]{64}$/.test(manifest.codal.artifact_sha256), 'source-bound original campaign');
-    need(Number.isSafeInteger(manifest.codal.workflow_run) && Number.isSafeInteger(manifest.codal.artifact_id), 'official original identities');
+    need(manifest.schema === 2 && manifest.kind === 'source-built-samd-game' && manifest.physical_capture === false && manifest.bootloader_code === false && manifest.actual_guest_qualified === false, 'fresh authored source build, before actual qualification');
+    need(manifest.builder.source === info.ref, 'same source recipe and production engine');
+    need(manifest.sources.samd.repository === 'CrispStrobe/codal-samd' && manifest.sources.samd.source === '5d3f7e4a704006ef2acbe0be3dd0e59f9be1ef0a', 'qualified public runtime source');
+    const reference = manifest.qualified_reference;
+    need(reference.repository === 'CrispStrobe/codal-samd' && reference.source === '8e4781e3a455d616f48780bd70fc7b587e917a3c' && reference.workflow_run === 40334385377 && reference.artifact_id === 12660811276 && reference.artifact_sha256 === '3fab3e5b45476c75893bfe9b3ff6f508ec9d56dbe3a374000ac6f0e45ce786ea', 'original reference retained separately from fresh compiler outputs');
+    need(manifest.files['wasm.mjs']?.sha256 === 'df863d7a452da703cbcd3d0bfa48ba540cdd1599e4e4daf848eae2e326598d12' && manifest.files['game.ts']?.sha256 === '54239e1d794c13f6ae674037f3e1f218082fb203c611d5ec103a9a3f9742dfdb', 'exact qualified guest/observer source; fresh binary has its own identity');
     const members = walk(fixtureDir).filter(n => n !== 'MANIFEST.json');
     exact(manifest.files, members);
     for (const name of members) {
