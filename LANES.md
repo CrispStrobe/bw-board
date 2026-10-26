@@ -1,3 +1,29 @@
+## SAMD active-game engine/config producer — claim, 2026-10-26
+
+CLAIMED — Codex SAMD continuation, owned isolated checkout on branch
+`lane/samd-engine-producer-20261026`, exact base
+`490bd162ef94a570966824c4d804164c00d1746a`.
+
+Own this section; the exact qualified Core PIN in `scripts/build-labwired-wasm.mjs`;
+a pure `scripts/lib/labwired-samd-profile.mjs` config-asset writer and focused
+metadata controls; `.github/workflows/labwired-wasm.yml` config determinism,
+required active-game qualification and immutable asset publication; a separately
+source-bound `test/fixtures/labwired/samd-native-game/` input packet and its
+`scripts/qualify-samd-native-game.mjs` driver. Source/model work lands in the
+owned Core/Codal forks first; the same owner carries the qualified package to
+Lite's existing adoption claim. No board/compiler/NPM pins or chip-catalog edits.
+
+Require two independent matching engine/config builds, the unchanged complete
+legacy suite and numerical bounds, actual source-built native game on the built
+WASM, all enabled exact-head producer checks, and independent original admission
+before release. The opt-in software profile includes exact Core config sources
+and explicitly authored calibration inputs; no inferred physical module, glass,
+reference firmware or silicon ACK change. Preserve prior failures, immutable
+releases and other owners' lanes. New actual guest inputs must retain source,
+compiler, notices and file identities; no private logs or operator data are
+published. Engine/config publication does not by itself qualify browser or
+installed Lite adoption; those remain mandatory consumer checks.
+
 2026-10-24 literal-PULSE oracle census registration — DONE (source candidate), Codex circuit owner.
 
 ## Meter terminal-current authority — claim, 2026-10-25
