@@ -1,3 +1,47 @@
+## Explicit Shockley junction DC reachability — CLAIM, 2026-10-26
+
+Owner: Codex circuit/instrument campaign owner. Isolated branch
+`claim/junction-dc-anchors-20261026`, exact initial master
+`131beeacf09d24415af953a3b62618f1cb08b6a5`. Merge this claim before
+implementation. This is the supplier repair for two retained, pre-solve
+DC-floating refusals in a separately admitted teaching-circuit study; it
+neither changes those originals nor turns them into successful measurements.
+
+Own exactly five paths: this registry section; `src/board.js` only the
+`dcFloatingNets` reachability helper; `test/diode-operating-point.test.mjs`;
+`test/npn-operating-point.test.mjs`; and the shared test-only helper
+`test/helpers/junction-dc-source-mutation.mjs`. Recognize only the structural
+conductances already present in admitted explicit Shockley stamps: diode/LED
+anode–cathode and NPN base–emitter/base–collector. These are real parallel
+junction conductances in the current model, including cutoff. Model validation
+must precede their admission. The NPN base is a conducting junction terminal;
+MOS gates and ideal control pins retain their existing insulating semantics.
+
+Preserve implicit/PWL semiconductor refusals, disconnected terminals, floating
+capacitor/current-source/control networks, MOS gate/bulk boundaries, observational
+state, convergence/KCL requirements and every numerical/work bound. No generic
+semiconductor or region-dependent collector–emitter edge. Do not add resistors
+to the authored circuits to bypass a model boundary. No `src/mna.js`, transient,
+meter, CPU/firmware, workflow, oracle census, package/pin or unrelated-doc edits.
+Existing MNA/transient and meter owners retain their sections and files.
+
+Qualification: self-authored bridge (positive/zero/negative excitation) and
+constant-current-tail differential pair, plus a distinct base–collector
+reachability witness; original source must refuse each corresponding topology
+before the repair. Afterward require finite converged operating points,
+observational-state preservation, signed currents, KCL and independently
+executed SPICE under explicit matched model/junction-conductance conditions.
+Freeze expectations before numerical observations. Each junction-edge omission
+must load a buildable actual Board module, preserve a grounded positive
+control, and restore its own named refusal; retain current-source/capacitor/ideal-control
+and MOS-gate negatives. Correct the existing explicit-diode refusal assertion
+into a load-bearing model-law positive, preserving invalid-model negatives.
+Use the existing hosted required-ngspice tests and all enabled exact-head CI;
+no local solver/oracle experiment or unchanged failed rerun. Normal matched-head
+integration only after qualification. Any CUI/Lite package adoption is a later
+explicitly scoped return leg with a genuinely new study intent and identity.
+No physical-device, full-domain, deployment or release claim follows.
+
 ## SAMD active-game engine/config producer — claim, 2026-10-26
 
 CLAIMED — Codex SAMD continuation, owned isolated checkout on branch
