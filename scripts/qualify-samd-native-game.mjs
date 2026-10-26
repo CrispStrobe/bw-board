@@ -46,13 +46,18 @@ function walk (root, prefix = '') {
     }
     return files;
 }
-export function qualify ({engineDir, fixtureDir, outDir}) {
-    const info = JSON.parse(readFileSync(join(engineDir, 'BUILD-INFO.json')));
-    const profile = admitProfile(readFileSync(join(engineDir, 'samd-no-asf-profile.json')), info);
+export function admitProductionNodeEngine (engineDir, info) {
+    exact(info.targets.nodejs, ['labwired_wasm.js', 'labwired_wasm_bg.wasm', 'package.json']);
     for (const [name, binding] of Object.entries(info.targets.nodejs)) {
         const raw = readFileSync(join(engineDir, 'nodejs', name));
         need(raw.length === binding.bytes && sha(raw) === binding.sha256, 'exact production Node engine output');
     }
+    need(readFileSync(join(engineDir, 'nodejs/package.json'), 'utf8') === '{"type":"commonjs"}\n', 'exact production loader marker');
+}
+export function qualify ({engineDir, fixtureDir, outDir}) {
+    const info = JSON.parse(readFileSync(join(engineDir, 'BUILD-INFO.json')));
+    const profile = admitProfile(readFileSync(join(engineDir, 'samd-no-asf-profile.json')), info);
+    admitProductionNodeEngine(engineDir, info);
     const manifest = JSON.parse(readFileSync(join(fixtureDir, 'MANIFEST.json')));
     need(manifest.schema === 2 && manifest.kind === 'source-built-samd-game' && manifest.physical_capture === false && manifest.bootloader_code === false && manifest.actual_guest_qualified === false, 'fresh authored source build, before actual qualification');
     need(manifest.builder.source === info.ref, 'same source recipe and production engine');

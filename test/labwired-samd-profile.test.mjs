@@ -3,10 +3,25 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createHash} from 'node:crypto';
 import {makeSamdProfile, writeSamdProfile, SAMD_PROFILE_ASSET, SAMD_PROFILE_SOURCES} from '../scripts/lib/labwired-samd-profile.mjs';
-import {admitProfile} from '../scripts/qualify-samd-native-game.mjs';
+import {admitProfile,admitProductionNodeEngine} from '../scripts/qualify-samd-native-game.mjs';
 const ref = '0123456789abcdef0123456789abcdef01234567';
 const sources = () => Object.fromEntries(Object.values(SAMD_PROFILE_SOURCES).map((p, i) => [p, Buffer.from(`# authored source ${i}\n`)]));
 const sha = b => createHash('sha256').update(b).digest('hex');
+test('production admission cannot omit glue WASM or loader identity bindings', async () => {
+    const {mkdtempSync,mkdirSync,writeFileSync,rmSync}=await import('node:fs');
+    const {tmpdir}=await import('node:os');const {join}=await import('node:path');
+    const root=mkdtempSync(join(tmpdir(),'samd-engine-binding-'));
+    try {
+        mkdirSync(join(root,'nodejs'));
+        const members={'labwired_wasm.js':Buffer.from('// authored metadata control; never executed\n'),'labwired_wasm_bg.wasm':Buffer.from([0,97,115,109,1,0,0,0]),'package.json':Buffer.from('{"type":"commonjs"}\n')};
+        const info={targets:{nodejs:{}}};
+        for(const [name,raw] of Object.entries(members)) {writeFileSync(join(root,'nodejs',name),raw);info.targets.nodejs[name]={bytes:raw.length,sha256:sha(raw)};}
+        admitProductionNodeEngine(root,info);
+        for(const name of Object.keys(members)) {const bad=structuredClone(info);delete bad.targets.nodejs[name];assert.throws(()=>admitProductionNodeEngine(root,bad),/closed field/);}
+        const extra=structuredClone(info);extra.targets.nodejs.foreign=info.targets.nodejs['package.json'];assert.throws(()=>admitProductionNodeEngine(root,extra),/closed field/);
+        writeFileSync(join(root,'nodejs/labwired_wasm.js'),'changed bytes');assert.throws(()=>admitProductionNodeEngine(root,info),/exact production/);
+    } finally {rmSync(root,{recursive:true,force:true});}
+});
 test('exact source bytes and synthetic input packet survive serialisation', () => {
     const input = sources();
     const result = JSON.parse(JSON.stringify(makeSamdProfile(ref, input)));
