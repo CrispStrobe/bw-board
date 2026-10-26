@@ -7,9 +7,10 @@ implementation. This is the supplier repair for two retained, pre-solve
 DC-floating refusals in a separately admitted teaching-circuit study; it
 neither changes those originals nor turns them into successful measurements.
 
-Own exactly four paths: this registry section; `src/board.js` only the
+Own exactly five paths: this registry section; `src/board.js` only the
 `dcFloatingNets` reachability helper; `test/diode-operating-point.test.mjs`;
-and `test/npn-operating-point.test.mjs`. Recognize only the structural
+`test/npn-operating-point.test.mjs`; and the shared test-only helper
+`test/helpers/junction-dc-source-mutation.mjs`. Recognize only the structural
 conductances already present in admitted explicit Shockley stamps: diode/LED
 anode–cathode and NPN base–emitter/base–collector. These are real parallel
 junction conductances in the current model, including cutoff. Model validation
@@ -31,7 +32,8 @@ before the repair. Afterward require finite converged operating points,
 observational-state preservation, signed currents, KCL and independently
 executed SPICE under explicit matched model/junction-conductance conditions.
 Freeze expectations before numerical observations. Each junction-edge omission
-must restore its own named refusal; retain current-source/capacitor/ideal-control
+must load a buildable actual Board module, preserve a grounded positive
+control, and restore its own named refusal; retain current-source/capacitor/ideal-control
 and MOS-gate negatives. Correct the existing explicit-diode refusal assertion
 into a load-bearing model-law positive, preserving invalid-model negatives.
 Use the existing hosted required-ngspice tests and all enabled exact-head CI;
