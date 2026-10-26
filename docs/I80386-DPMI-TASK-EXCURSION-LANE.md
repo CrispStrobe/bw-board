@@ -1,5 +1,12 @@
 # Owned DPMI task excursion: next bounded gate
 
+**Source-status refresh — 2026-10-26:** [PR480](https://github.com/CrispStrobe/bw-board/pull/480)
+and [PR483](https://github.com/CrispStrobe/bw-board/pull/483) closed without PR
+merges. Their exact final heads `6191a70650142ea46552c2d417eb7eb62aa08e38`
+and `72d0b32e8bd7d658447745129119e2300ad6bec1` are integrated into master history.
+The dated draft/stack checkpoints below describe their original publication;
+this note does not assert unchanged current code, frame return or a new guest pass.
+
 Status: a task-switch destination was observed, but the owned INT 31h frame
 has **not** returned. This is a proposed, separately named diagnostic and
 qualification lane. It changes no existing journal acceptance rule.

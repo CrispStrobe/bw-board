@@ -3,7 +3,9 @@
 The first [QEMU attempt](https://github.com/CrispStrobe/bw-board/actions/runs/37764261886),
 attempt 1, passed at source
 [`6ec767b`](https://github.com/CrispStrobe/bw-board/tree/6ec767b50008beb53b012dafcf55361de3ffb146/scripts/i80386-cwsdpmi-highmem-timer).
-[PR458](https://github.com/CrispStrobe/bw-board/pull/458) remains a draft.
+**Source status — 2026-10-26:** [PR458](https://github.com/CrispStrobe/bw-board/pull/458)
+closed without a PR merge; its exact source head above is integrated into master
+history. This changes neither the retained result nor its finite scope.
 Root and peer independently audited the original report-only artifact using
 standard-library parsing and Git source checks, without importing producer
 helpers or replaying the guest. The [selected receipt](receipts/2026-10-08-i80386-highmem-qemu.json)
