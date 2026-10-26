@@ -130,6 +130,17 @@ function dcFloatingNets(parts, nets) {
       if (n) anchored.add(n);
     } else if (part.kind === 'resistor' || part.kind === 'inductor') {
       join(netFor(part, 'a'), netFor(part, 'b'));
+    } else if ((part.kind === 'diode' || part.kind === 'led')
+        && part.params?.model === 'shockley') {
+      // operatingPoint validates this explicit model before reachability.
+      // Its actual junction stamp carries real parallel JUNCTION_GMIN current
+      // and conductance even in reverse bias, so it propagates a DC reference.
+      join(netFor(part, 'anode'), netFor(part, 'cathode'));
+    } else if (part.kind === 'npn' && part.params?.model === 'shockley') {
+      // The admitted Ebers-Moll stamp has two conducting junctions. Neither
+      // is an ideal control input, and no collector-emitter shortcut is added.
+      join(netFor(part, 'base'), netFor(part, 'emitter'));
+      join(netFor(part, 'base'), netFor(part, 'collector'));
     } else if ((part.kind === 'nmos' || part.kind === 'pmos')
         && part.params?.model === 'level1') {
       // The admitted Level-1 stamp always carries MOS_GDS_FLOOR between
