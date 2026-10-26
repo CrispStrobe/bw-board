@@ -3,7 +3,9 @@
 The first [AT attempt](https://github.com/CrispStrobe/bw-board/actions/runs/37776895780),
 attempt 1, passed the finite owned-client gate at
 [`41db7ba4`](https://github.com/CrispStrobe/bw-board/tree/41db7ba4a0c96076aa6a5e5c74cd70be2a0ad0d7/scripts/i80386-cwsdpmi-highmem-at).
-[PR459](https://github.com/CrispStrobe/bw-board/pull/459) remains a draft.
+**Source status — 2026-10-26:** [PR459](https://github.com/CrispStrobe/bw-board/pull/459)
+closed without a PR merge; its exact source head above is integrated into master
+history. This changes neither the retained result nor its finite scope.
 Root and peer independently audited the original report-only packet with
 standard-library parsing and Git checks, without producer-helper imports or
 guest replay. The [selected receipt](receipts/2026-10-08-i80386-highmem-at.json)

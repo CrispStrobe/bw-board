@@ -1,12 +1,14 @@
 # Ring-changing INT/IRETD qualification status
 
-[Draft PR645](https://github.com/CrispStrobe/bw-board/pull/645) is a source
-checkpoint. No hosted guest execution or QEMU comparison has qualified this
-fixture. Its actual command remains closed.
+**Source status — 2026-10-26:** [PR645](https://github.com/CrispStrobe/bw-board/pull/645)
+merged as `b51be2c62ee57214350bd00db667c147a25748f3`; the source and inactive
+same-job V3 cleanup route are on the default branch. The V2 actual failure below
+remains refused. No passing guest/QEMU comparison or whole-386 qualification
+follows from the source merge; V3 execution remains disabled.
 
 The MIT-authored reset ROM tests one 32-bit software INT80 from CPL3 through a
 CPL0 interrupt gate and TSS stack, followed by IRETD back to the original user
-stack. The ordinary JavaScript CPU uses `strict386`; the planned independent
+stack. The ordinary JavaScript CPU uses `strict386`; the independent
 QEMU control uses `pc`/`486` TCG as a compatibility oracle for these instructions.
 Neither this fixture nor that comparison establishes a complete 386DX.
 
@@ -18,6 +20,9 @@ and their current boundaries. Passing these controls establishes no actual
 privilege transition, resource cleanup or runtime identity result.
 
 ## Remaining qualification work
+
+The list below is the historical source plan, before the selected V2 result.
+The current next steps follow that retained result at the end of this page.
 
 1. Finish and independently review the dedicated controller entry and outside
    owner. Establish child wait ownership before any probe, retain the finite
@@ -101,11 +106,14 @@ The [V3 claim](../LANES.md) proposes a new, separately admitted same-job route
 with exact four-role manual-cgroup census and bounded descriptor-relative
 cleanup, plus an optional negative-only audit of the V2 failure. It does not
 change the fixture, expected bytes, CPU model, QEMU output or the V2 reader's
-refusal. V3 implementation, exact-head checks and one fresh independently
-audited event remain future work; clean cleanup alone would not resolve the
-observed JavaScript/QEMU disagreement.
+refusal. The V3 implementation has landed with execution disabled. Its mocked
+cleanup and guest controls are source evidence; no V3 event has been selected.
 
-The V3 claim has since merged. An inactive source candidate is being reviewed
-with mocked cleanup and guest edges; no V3 event has been selected. The V2
-positive refusal and its original guest and cleanup facts remain the actual
-result. A source control pass does not settle the QEMU access-byte difference.
+Next establish the exact reference-emulator source/build provenance and review
+the two descriptor-access-bit differences against the architecture. Preserve the
+original expected bytes and V2 refusal until that review justifies a separately
+scoped correction. Qualify the existing V3 cleanup and affected guest route with
+fresh exact-head checks and an independently admitted event, rather than
+recreating its source. Clean cleanup alone would not resolve the observed
+JavaScript/QEMU disagreement. The comparison and outside-cleanup refusals
+remain independent, and a source control pass settles neither.
