@@ -106,25 +106,27 @@ boot -l c
 
 Use `--dosbox-conf path/to/config.conf` instead of the direct image/geometry options; the BIOS/VGA/HDD hash environment is still required. Image paths resolve relative to the config directory. `-size` is bytes-per-sector, sectors, heads, cylinders, unlike CLI `--geometry`. This parser accepts HDD `-fs none` or `fat`, checks boot references, and does not execute arbitrary DOSBox commands. It does not mount an ISO.
 
-## Bounded ZIP package CLI candidate
+## Bounded ZIP package CLI
 
-[Draft PR644](https://github.com/CrispStrobe/bw-board/pull/644) publishes the
-separate `scripts/run-dos-package.mjs` candidate. It is not yet a merged loader
-or a guest-qualified route. Its initial scope is a bounded STORED ZIP with one
-supported config-relative raw HDD and exact CHS; COM/MZ virtual files, DEFLATE,
-ISO/CD, host mounts, arbitrary autoexec and network fallback are refused.
-The preceding [PR640 actual](https://github.com/CrispStrobe/bw-board/actions/runs/38906622594)
-reached the authored keyboard response and budget report, then failed because
-the process remained alive until its deadline. The subsequent
-[PR641 actual](https://github.com/CrispStrobe/bw-board/actions/runs/38913512631)
-completed all four hosted cases and its official workflow succeeded, but the
-frozen standalone reader refused the manifest row ordering. That result is not
-accepted. PR644 preserves the input-ownership repair and sorts the manifest by
-relative POSIX path strings to match the unchanged reader. Its new source
-checks and distinct four-case hosted qualification remain pending; source
-controls alone do not establish acceptance.
-Use the [package lane](X86-NEXT-LANES.md#bounded-dos-package-admission) for the
-source/actual boundary; existing runners above retain their own grammars.
+The current source includes [scripts/run-dos-package.mjs](../scripts/run-dos-package.mjs), with its separate [package policy](../src/dos-package-policy.js) and [Node ZIP adapter](../scripts/lib/dos-package-zip.mjs). This is a bounded STORED ZIP route for one config-relative raw HDD with explicit CHS, not a general DOSBox implementation. The archive and decoded total are at most 16 MiB, with at most 32 entries and a 16 KiB ASCII config. It admits the closed optional `[cpu] cputype=386|auto`, one HDD `imgmount ... -size 512,S,H,C`, and `boot -l c` grammar. COM/MZ virtual-file execution, DEFLATE, ISO/CD/ATAPI, host directory mounts, arbitrary autoexec and network fallback remain refused.
+
+From a checkout containing this source, use your freely licensed/authored package and ROM files:
+
+```sh
+node scripts/run-dos-package.mjs --package media/package.zip \
+  --bios media/bios.bin --bios-sha256 BIOS_SHA256 \
+  --vga media/vgabios.bin --vga-sha256 VGA_SHA256 --live
+```
+
+Replace the SHA placeholders with exact 64-digit hashes. Use `--config ARCHIVE/PATH` when explicitly selecting a supported config; otherwise selection must be unambiguous. Paths inside the archive resolve relative to that config. This runner does not execute package scripts or unpack files onto the host.
+
+The live package interface requires a raw-capable TTY, displays 80×25 **text VGA**, and delivers keyboard scan codes. **Ctrl-]** quits; focus loss ends the bounded session and terminal settings are restored. Its profile disables the emulated mouse and its renderer does not display graphics-mode pixels. This differs from the raw-HDD console's terminal-scaled VGA/SGR-mouse path above and from Lite's pixel VGA canvas, Controller full-screen pane and mouse route. It is not a DOSBox-style graphical window.
+
+The fixed authored-package result is recorded in [PR646's hosted CLI acceptance](https://github.com/CrispStrobe/bw-board/actions/runs/38937680307), at source `cbcfff7e3b143dc07af9c2807055d0ca5556ce9d`, with the unchanged standalone reader and an independent original-byte audit. The two authored response sessions exited zero at the fixed step budget; malformed-package and focus-loss sessions refused, with terminal restoration. This qualifies that finite authored package and CLI boundary, not a FreeDOS kernel, arbitrary package, installed GUI, guest completion, performance or physical timing.
+
+Preserve the earlier failures: [PR640](https://github.com/CrispStrobe/bw-board/actions/runs/38906622594) reached the authored keyboard response/budget report but failed its terminal deadline; [PR641](https://github.com/CrispStrobe/bw-board/actions/runs/38913512631) completed four cases but its reader refused manifest ordering. [PR644](https://github.com/CrispStrobe/bw-board/pull/644) carried the ordering repair, subsequently integrated by [PR646](https://github.com/CrispStrobe/bw-board/pull/646). Do not relabel those failed or consumed attempts as current qualification or repeat their event/acquisition.
+
+Use the [package lane](X86-NEXT-LANES.md#bounded-dos-package-admission) for the exact source/actual boundary. Same-package installed GUI acceptance is separate. If package-CLI graphics or mouse is needed, claim the extension at `scripts/run-dos-package.mjs`, `scripts/lib/i80386-at-terminal.mjs` and the package acceptance controls. Done requires bounded graphics/input/refusal controls and an actual freely licensed/authored graphics/mouse fixture with terminal restoration; the old text-only result cannot supply that new evidence. Existing runners retain their own grammars.
 
 ## Browser GUI
 
