@@ -53,8 +53,15 @@ model-law witness; disconnected/invalid-model and existing ideal-control/MOS
 negatives remain. The shared helper loads actual buildable Board modules in
 owned temporary mirrors without changing the canonical source. NPN state
 checks now compare copied values as well as identities. Syntax and whitespace
-checks passed; numerical/oracle outcomes are still pending hosted qualification.
-The candidate must not land on these source-only checks.
+checks passed. Hosted fast qualification then reported 9554 tests: 9248 pass,
+one failure and 305 declared skips. The new tail-pair reference comparison
+failed at the first 0.68 V input's output-voltage assertion (unchanged 1e-8 V
+bound); other new bridge/collector controls passed. The initial assertion named
+only the case, so its original does not establish the discrepancy's magnitude
+or cause. A forward test-only diagnostic now includes actual native node/current
+values and the reference vectors on failure. No source law, fixture, bound or
+oracle setting changed. Supplier adoption remains held; this is not a qualified
+repair or an unchanged rerun.
 
 ## SAMD active-game engine/config producer — claim, 2026-10-26
 

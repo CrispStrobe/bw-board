@@ -439,11 +439,17 @@ Q2 other bref tail QP
 ${junctionPairCard}`, names);
       const { board, nets } = junctionTailPair(volts), op = board.operatingPoint();
       assert.equal(op.converged, true);
+      // Failure-only diagnostics retain both instruments' actual numbers;
+      // a bare case label cannot distinguish a model error from oracle setup.
+      const comparison = JSON.stringify({ inputVolts: volts,
+        nativeNodes: Object.fromEntries(op.nodeVoltages),
+        nativeCurrents: Object.fromEntries([...op.branchCurrents].map(([id, values]) => [id, Object.fromEntries(values)])),
+        reference: expected });
       for (const net of ['out', 'other', 'tail']) assert.ok(Math.abs(op.nodeVoltages.get(net) - expected[`v(${net})`]) < 1e-8,
-        `${volts} V ${net}`);
+        `${volts} V ${net}: ${comparison}`);
       for (const id of ['Q1', 'Q2']) for (const [terminal, vector] of [['base', 'ib'], ['collector', 'ic'], ['emitter', 'ie']]) {
         assert.ok(Math.abs(op.branchCurrents.get(id).get(terminal) - expected[`@${id.toLowerCase()}[${vector}]`]) < 1e-10,
-          `${volts} V ${id}.${terminal}`);
+          `${volts} V ${id}.${terminal}: ${comparison}`);
       }
       assertNpnNetKcl(op, nets);
     }
