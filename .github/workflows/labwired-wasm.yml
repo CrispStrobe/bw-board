@@ -136,8 +136,9 @@ jobs:
           # job failed on a missing path instead of on a real difference —
           # a gate that breaks when the thing it guards changes shape is a gate
           # nobody will trust the next time it goes red.
-          files=$(cd a && find . -type f \( -name '*.js' -o -name '*.wasm' \) | sort)
+          files=$(cd a && find . -type f \( -name '*.js' -o -name '*.wasm' -o -name 'package.json' -o -name 'samd-no-asf-profile.json' \) | sort)
           [ -n "$files" ] || { echo "::error::no build outputs to compare"; exit 1; }
+          diff -u <(cd a && find . -type f \( -name '*.js' -o -name '*.wasm' -o -name 'package.json' -o -name 'samd-no-asf-profile.json' \) | sort) <(cd b && find . -type f \( -name '*.js' -o -name '*.wasm' -o -name 'package.json' -o -name 'samd-no-asf-profile.json' \) | sort)
           echo "comparing:"
           while IFS= read -r file; do printf '    %s\n' "$file"; done <<< "$files"
           for f in $files; do
@@ -297,11 +298,50 @@ jobs:
             lw/BUILD-INFO.json
           if-no-files-found: error
 
+  samd-game:
+    needs: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with: { name: labwired-wasm-a, path: lw }
+      - name: Profile package refusal controls
+        run: node --test test/labwired-samd-profile.test.mjs
+      - name: Admit profile presence without an optional qualification bypass
+        id: profile
+        run: |
+          node --input-type=module -e '
+            import fs from "node:fs";
+            const info=JSON.parse(fs.readFileSync("lw/BUILD-INFO.json"));
+            const declared=Object.hasOwn(info.configAssets || {},"samd-no-asf-profile.json");
+            const present=fs.existsSync("lw/samd-no-asf-profile.json");
+            if(declared !== present) throw new Error("profile declaration/file mismatch");
+            fs.appendFileSync(process.env.GITHUB_OUTPUT,"present="+present+"\n");
+            if(!present) console.log("Historical engine has no SAMD software profile; no SAMD adoption claim.");
+          '
+      - name: Three actual game samples on the exact production WASM and config inputs
+        if: steps.profile.outputs.present == 'true'
+        run: node scripts/qualify-samd-native-game.mjs lw test/fixtures/labwired/samd-native-game samd-game-results
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        if: ${{ always() && steps.profile.outputs.present == 'true' }}
+        with:
+          name: samd-production-wasm-game
+          path: |
+            samd-game-results/
+            lw/BUILD-INFO.json
+            lw/samd-no-asf-profile.json
+          if-no-files-found: error
+          retention-days: 14
+
   publish:
-    needs: [determinism, test, motion]
+    needs: [determinism, test, motion, samd-game]
     # An explicitly requested motion qualification must succeed, never skip.
     # Optional legacy builds still publish only after their original gates.
-    if: ${{ always() && inputs.publish && needs.determinism.result == 'success' && needs.test.result == 'success' && ((inputs.qualify_motion && needs.motion.result == 'success') || (!inputs.qualify_motion && needs.motion.result == 'skipped')) }}
+    if: ${{ always() && inputs.publish && needs.determinism.result == 'success' && needs.test.result == 'success' && needs.samd-game.result == 'success' && ((inputs.qualify_motion && needs.motion.result == 'success') || (!inputs.qualify_motion && needs.motion.result == 'skipped')) }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
@@ -340,6 +380,7 @@ jobs:
           # last wins — silently, and only one of them works in a browser.
           mkdir -p flat
           cp out/BUILD-INFO.json flat/
+          if [ -f out/samd-no-asf-profile.json ]; then cp out/samd-no-asf-profile.json flat/; fi
           if [ -f out/RETAINED-BUILD.json ]; then cp out/RETAINED-BUILD.json flat/; fi
           # package.json travels too. wasm-bindgen's nodejs glue is CommonJS and
           # says so ONLY in the package.json it emits beside it; without that
