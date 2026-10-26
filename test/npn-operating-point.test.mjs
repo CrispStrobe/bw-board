@@ -152,7 +152,7 @@ print ${names.join(' ')}
   return Object.fromEntries(names.map(name => {
     const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     const match = run.stdout.match(new RegExp(`${escaped}\\s*=\\s*([-+0-9.e]+)`, 'i'));
-    assert.ok(match, `${name} absent from:\n${run.stdout}`);
+    assert.ok(match, `${name} absent from:\n${run.stdout}\nstderr:\n${run.stderr}`);
     return [name, Number(match[1])];
   }));
 }
@@ -356,6 +356,18 @@ Q1 collector base emitter QN
 });
 
 const JUNCTION_PAIR_PARAMS = Object.freeze({ model: 'shockley', is: 1e-15, beta: 100, br: 1, n: 1, rb: 0, rc: 0 });
+// ngspice-42 grounds an omitted fourth BJT (substrate) node, then connects the
+// default vertical NPN substrate branch to collector-prime.  Its DC load adds
+// gmin through that otherwise implicit branch:
+// https://github.com/imr/ngspice/blob/ngspice-42/src/spicelib/parser/inp2q.c
+// https://github.com/imr/ngspice/blob/ngspice-42/src/spicelib/devices/bjt/bjtsetup.c
+// https://github.com/imr/ngspice/blob/ngspice-42/src/spicelib/devices/bjt/bjtload.c
+// These new fixtures have rb=rc=0 and no substrate device law, so naming the
+// collector as the fourth node represents their three-terminal topology.  Keep
+// gmin because Board stamps the same physical B-E/B-C JUNCTION_GMIN paths, but
+// require the direct Newton method so fallback-only diagonal padding cannot
+// become part of the reference topology.
+const junctionDirectOptions = `.options gmin=${JUNCTION_GMIN} gshunt=0 gminsteps=0 srcsteps=0`;
 const junctionTerminal = (part, terminal) => ({ part, terminal });
 function junctionTailPair(volts, BoardType = BoardImpl) {
   const board = new BoardType(5), t = junctionTerminal;
@@ -407,6 +419,28 @@ function assertNpnNetKcl(op, nets) {
   }
 }
 const junctionPairCard = '.model QP NPN(IS=1e-15 BF=100 BR=1 NF=1 NR=1 RB=0 RC=0)';
+function junctionTailReferenceDeck(volts, { groundedSubstrate = false } = {}) {
+  const q1 = groundedSubstrate ? 'Q1 out in tail QP' : 'Q1 out in tail out QP';
+  const q2 = groundedSubstrate ? 'Q2 other bref tail QP' : 'Q2 other bref tail other QP';
+  return `${junctionDirectOptions}
+VCC vcc 0 5
+VB bref 0 .7
+VS in 0 ${volts}
+RC1 vcc out 10000
+RC2 vcc other 10000
+IT tail 0 100u
+${q1}
+${q2}
+${junctionPairCard}`;
+}
+
+function junctionCollectorReferenceDeck(baseVolts) {
+  return `${junctionDirectOptions}
+VB base 0 ${baseVolts}
+Q1 collector base 0 collector QP
+RLEAF collector leaf 1000
+${junctionPairCard}`;
+}
 
 describe('explicit Ebers-Moll junction DC reference propagation', () => {
   it('solves the constant-current tail through actual base-emitter junctions without state adoption', () => {
@@ -427,16 +461,7 @@ describe('explicit Ebers-Moll junction DC reference propagation', () => {
   }, () => {
     const names = ['v(out)', 'v(other)', 'v(tail)', '@q1[ib]', '@q1[ic]', '@q1[ie]', '@q2[ib]', '@q2[ic]', '@q2[ie]'];
     for (const volts of [.68, .69, .70, .71, .72]) {
-      const expected = ngspice(`.options gmin=${JUNCTION_GMIN}
-VCC vcc 0 5
-VB bref 0 .7
-VS in 0 ${volts}
-RC1 vcc out 10000
-RC2 vcc other 10000
-IT tail 0 100u
-Q1 out in tail QP
-Q2 other bref tail QP
-${junctionPairCard}`, names);
+      const expected = ngspice(junctionTailReferenceDeck(volts), names);
       const { board, nets } = junctionTailPair(volts), op = board.operatingPoint();
       assert.equal(op.converged, true);
       // Failure-only diagnostics retain both instruments' actual numbers;
@@ -455,15 +480,42 @@ ${junctionPairCard}`, names);
     }
   });
 
+  it('isolates ngspice grounded-substrate gmin from the matched tail-pair topology', {
+    skip: spawnSync('ngspice', ['--version'], { encoding: 'utf8' }).status !== 0,
+  }, () => {
+    const names = ['v(out)', 'v(other)', 'v(tail)', '@q1[ib]', '@q1[ic]', '@q1[ie]'];
+    const grounded = ngspice(junctionTailReferenceDeck(.68, { groundedSubstrate: true }), names);
+    const matched = ngspice(junctionTailReferenceDeck(.68), names);
+    const loadResidual = result => (5 - result['v(out)']) / 10000 - result['@q1[ic]'];
+    const terminalSum = result => result['@q1[ib]'] + result['@q1[ic]'] + result['@q1[ie]'];
+    const causalCurrentBound = 1e-15;
+
+    // These signs and magnitudes are predicted by ngspice's cdsub=gmin*vsub
+    // source law, not obtained by correcting or normalizing its output.
+    assert.ok(Math.abs(loadResidual(grounded) - JUNCTION_GMIN * grounded['v(out)']) < causalCurrentBound);
+    assert.ok(Math.abs(terminalSum(grounded) + JUNCTION_GMIN * grounded['v(out)']) < causalCurrentBound);
+    assert.ok(Math.abs(loadResidual(matched)) < causalCurrentBound);
+    assert.ok(Math.abs(terminalSum(matched)) < causalCurrentBound);
+
+    const op = junctionTailPair(.68).board.operatingPoint();
+    const comparison = JSON.stringify({
+      inputVolts: .68,
+      nativeNodes: Object.fromEntries(op.nodeVoltages),
+      groundedReference: grounded,
+      matchedReference: matched,
+    });
+    for (const net of ['out', 'other', 'tail']) {
+      assert.ok(Math.abs(op.nodeVoltages.get(net) - matched[`v(${net})`]) < 1e-8,
+        `${net}: ${comparison}`);
+    }
+  });
+
   it('independently checks a collector referenced only through its base-collector junction', {
     skip: spawnSync('ngspice', ['--version'], { encoding: 'utf8' }).status !== 0,
   }, () => {
     for (const base of [.60, .65, .70]) {
-      const expected = ngspice(`.options gmin=${JUNCTION_GMIN}
-VB base 0 ${base}
-Q1 collector base 0 QP
-RLEAF collector leaf 1000
-${junctionPairCard}`, ['v(collector)', 'v(leaf)', '@q1[ib]', '@q1[ic]', '@q1[ie]']);
+      const expected = ngspice(junctionCollectorReferenceDeck(base),
+        ['v(collector)', 'v(leaf)', '@q1[ib]', '@q1[ic]', '@q1[ie]']);
       const { board, nets } = junctionCollector(base), before = stateWitness(board), op = board.operatingPoint();
       assert.equal(op.converged, true);
       for (const net of ['collector', 'leaf']) assert.ok(Math.abs(op.nodeVoltages.get(net) - expected[`v(${net})`]) < 1e-8,

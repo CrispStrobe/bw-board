@@ -56,12 +56,28 @@ checks now compare copied values as well as identities. Syntax and whitespace
 checks passed. Hosted fast qualification then reported 9554 tests: 9248 pass,
 one failure and 305 declared skips. The new tail-pair reference comparison
 failed at the first 0.68 V input's output-voltage assertion (unchanged 1e-8 V
-bound); other new bridge/collector controls passed. The initial assertion named
-only the case, so its original does not establish the discrepancy's magnitude
-or cause. A forward test-only diagnostic now includes actual native node/current
-values and the reference vectors on failure. No source law, fixture, bound or
-oracle setting changed. Supplier adoption remains held; this is not a qualified
-repair or an unchanged rerun.
+bound); other new bridge/collector controls passed. A forward diagnostic exposed
+a 46.874 nV collector discrepancy while both raw native collector currents agreed
+within 3e-16 A. Primary ngspice-42 source review explains the red: its parser
+grounds an omitted fourth BJT substrate node, the default vertical NPN connects
+that branch to collector-prime, and its load contributes gmin through the hidden
+grounded-substrate branch. The retained raw reference obeys both the predicted
+load-line residual `gmin * Vcollector` and terminal-current sum
+`-gmin * Vcollector`; it does not establish a Board model-law defect. Whether
+ngspice used a fallback source-Newton path, or retained fallback diagonal
+padding, was not established by that original.
+
+The forward test-only reference declares each new fixture's fourth substrate
+node at its collector (their explicit Board cards have no substrate law and
+rb=rc=0), retains the physical B-E/B-C `JUNCTION_GMIN`, and requires a direct
+operating point with gshunt, gmin stepping and source stepping disabled. A
+same-input causal control compares the legacy grounded-substrate deck with that
+matched topology and requires the source-predicted residuals to disappear; it
+does not normalize reference output. The original five tail-pair bias points,
+three base–collector points, three buildable edge mutants, raw native/reference
+diagnostics and every 1e-8 V, 1e-10 A and KCL bound remain. Production board/MNA bytes and the diode/mutation-helper tests are unchanged. Hosted qualification and
+supplier adoption remain pending; this is not a qualified repair or an unchanged
+rerun.
 
 ## SAMD active-game engine/config producer — claim, 2026-10-26
 
