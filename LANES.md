@@ -1,9 +1,11 @@
-## Explicit Shockley junction DC reachability — CLAIM, 2026-10-26
+## Explicit Shockley junction DC reachability — DONE candidate, 2026-10-26
 
 Owner: Codex circuit/instrument campaign owner. Isolated branch
 `claim/junction-dc-anchors-20261026`, exact initial master
-`131beeacf09d24415af953a3b62618f1cb08b6a5`. Merge this claim before
-implementation. This is the supplier repair for two retained, pre-solve
+`131beeacf09d24415af953a3b62618f1cb08b6a5`. Claim PR709 merged at
+`69c728b36295219ee7ddf04653655d40f37674d4` before implementation. The
+implementation branch is `lane/junction-dc-anchors-20261026`; its commit
+containing this section identifies the candidate without a self-hash. This is the supplier repair for two retained, pre-solve
 DC-floating refusals in a separately admitted teaching-circuit study; it
 neither changes those originals nor turns them into successful measurements.
 
@@ -41,6 +43,41 @@ no local solver/oracle experiment or unchanged failed rerun. Normal matched-head
 integration only after qualification. Any CUI/Lite package adoption is a later
 explicitly scoped return leg with a genuinely new study intent and identity.
 No physical-device, full-domain, deployment or release claim follows.
+
+Candidate checkpoint: only the three admitted junction edges were added to
+reachability; no MNA stamp changed. Tests cover D/LED bridge polarity and zero,
+all five tail-pair bias points, a distinct base–collector witness, actual-source
+edge omissions with grounded positive controls, signed KCL and copied-state
+preservation. The old explicit-diode false-negative assertion is now a positive
+model-law witness; disconnected/invalid-model and existing ideal-control/MOS
+negatives remain. The shared helper loads actual buildable Board modules in
+owned temporary mirrors without changing the canonical source. NPN state
+checks now compare copied values as well as identities. Syntax and whitespace
+checks passed. Hosted fast qualification then reported 9554 tests: 9248 pass,
+one failure and 305 declared skips. The new tail-pair reference comparison
+failed at the first 0.68 V input's output-voltage assertion (unchanged 1e-8 V
+bound); other new bridge/collector controls passed. A forward diagnostic exposed
+a 46.874 nV collector discrepancy while both raw native collector currents agreed
+within 3e-16 A. Primary ngspice-42 source review explains the red: its parser
+grounds an omitted fourth BJT substrate node, the default vertical NPN connects
+that branch to collector-prime, and its load contributes gmin through the hidden
+grounded-substrate branch. The retained raw reference obeys both the predicted
+load-line residual `gmin * Vcollector` and terminal-current sum
+`-gmin * Vcollector`; it does not establish a Board model-law defect. Whether
+ngspice used a fallback source-Newton path, or retained fallback diagonal
+padding, was not established by that original.
+
+The forward test-only reference declares each new fixture's fourth substrate
+node at its collector (their explicit Board cards have no substrate law and
+rb=rc=0), retains the physical B-E/B-C `JUNCTION_GMIN`, and requires a direct
+operating point with gshunt, gmin stepping and source stepping disabled. A
+same-input causal control compares the legacy grounded-substrate deck with that
+matched topology and requires the source-predicted residuals to disappear; it
+does not normalize reference output. The original five tail-pair bias points,
+three base–collector points, three buildable edge mutants, raw native/reference
+diagnostics and every 1e-8 V, 1e-10 A and KCL bound remain. Production board/MNA bytes and the diode/mutation-helper tests are unchanged. Hosted qualification and
+supplier adoption remain pending; this is not a qualified repair or an unchanged
+rerun.
 
 ## SAMD active-game engine/config producer — claim, 2026-10-26
 

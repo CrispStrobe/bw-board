@@ -3,14 +3,15 @@ import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import { BoardImpl } from '../src/board.js';
 import { JUNCTION_THERMAL_VOLTAGE, JUNCTION_GMIN } from '../src/mna.js';
+import { withJunctionEdgeOmitted } from './helpers/junction-dc-source-mutation.mjs';
 
 const K_OVER_Q = 8.617333262145e-5;
 const MATCHED_TEMP_C = JUNCTION_THERMAL_VOLTAGE / K_OVER_Q - 273.15;
 const PARAMS = Object.freeze({ model: 'shockley', is: 2e-12, n: 1.3, rs: 4 });
 const gnd = { id: 'G1', kind: 'gnd', params: {}, terminals: ['gnd'] };
 
-function diodeBench(volts, params = PARAMS, { capacitor = false } = {}) {
-  const board = new BoardImpl(5);
+function diodeBench(volts, params = PARAMS, { capacitor = false, BoardType = BoardImpl } = {}) {
+  const board = new BoardType(5);
   const parts = [
     { id: 'V1', kind: 'vsource', params: { volts }, terminals: ['pos', 'neg'] },
     { id: 'R1', kind: 'resistor', params: { ohms: 1000 }, terminals: ['a', 'b'] },
@@ -201,7 +202,7 @@ describe('BoardImpl.operatingPoint explicit Shockley diode domain', () => {
     }
   });
 
-  it('requires both terminal nets and does not use a diode as a DC anchor', () => {
+  it('requires both terminal nets and admits an explicit junction as a DC anchor', () => {
     const disconnected = new BoardImpl(5);
     disconnected.setNetlist([
       { id: 'D1', kind: 'diode', params: { ...PARAMS }, terminals: ['anode', 'cathode'] }, gnd,
@@ -225,7 +226,12 @@ describe('BoardImpl.operatingPoint explicit Shockley diode domain', () => {
         { part: 'D1', terminal: 'cathode' }, { part: 'G1', terminal: 'gnd' },
       ] },
     ]);
-    assert.throws(() => floating.operatingPoint(), /DC-floating nets? .*float/);
+    const before = stateWitness(floating);
+    const op = floating.operatingPoint();
+    assert.equal(op.converged, true);
+    assert.ok(Math.abs(op.nodeVoltages.get('float')) < 1e-12);
+    assert.ok(Math.abs(op.nodeVoltages.get('float2')) < 1e-12);
+    assertUnchanged(floating, before);
   });
 
   it('reports a contradictory-source non-solution without adopting its diode iterate', () => {
@@ -365,5 +371,112 @@ describe('operating point: LED on the diode terms', () => {
     assert.ok(analysis.supportedKinds.includes('led'));
     assert.deepEqual(analysis.diodes.kinds, ['diode', 'led']);
     assert.deepEqual(analysis.diodes.ledNonElectricalParameters, ['vf', 'color']);
+  });
+});
+
+const BRIDGE_PARAMS = Object.freeze({ model: 'shockley', is: 1e-12, n: 1, rs: 0 });
+function junctionBridge(volts, { BoardType = BoardImpl, kind = 'diode' } = {}) {
+  const board = new BoardType(5);
+  const parts = [
+    { id: 'V1', kind: 'vsource', params: { volts }, terminals: ['pos', 'neg'] },
+    { id: 'E1', kind: 'vcvs', params: { gain: -1 }, terminals: ['outp', 'outn', 'inp', 'inn'] },
+    ...['D1', 'D2', 'D3', 'D4'].map(id => ({ id, kind, params: { ...BRIDGE_PARAMS }, terminals: ['anode', 'cathode'] })),
+    { id: 'RL', kind: 'resistor', params: { ohms: 2000 }, terminals: ['a', 'b'] }, gnd,
+  ];
+  const t = (part, terminal) => ({ part, terminal });
+  const nets = [
+    { id: 'in', terminals: [t('V1', 'pos'), t('E1', 'inp'), t('D1', 'anode'), t('D3', 'cathode')] },
+    { id: 'acn', terminals: [t('E1', 'outp'), t('D2', 'anode'), t('D4', 'cathode')] },
+    { id: 'out', terminals: [t('D1', 'cathode'), t('D2', 'cathode'), t('RL', 'a')] },
+    { id: 'ret', terminals: [t('D3', 'anode'), t('D4', 'anode'), t('RL', 'b')] },
+    { id: 'gnd', terminals: [t('V1', 'neg'), t('E1', 'outn'), t('E1', 'inn'), t('G1', 'gnd')] },
+  ];
+  board.setNetlist(parts, nets);
+  return { board, nets };
+}
+function assertJunctionKcl(op, nets) {
+  for (const net of nets) {
+    let total = 0;
+    for (const terminal of net.terminals) {
+      if (terminal.part === 'G1') continue;
+      const current = op.branchCurrents.get(terminal.part)?.get(terminal.terminal);
+      assert.ok(Number.isFinite(current), `finite ${terminal.part}.${terminal.terminal}`);
+      total += current;
+    }
+    assert.ok(Math.abs(total) < 1e-10, `${net.id} terminal KCL ${total} A`);
+  }
+}
+function ngspiceBridge(volts) {
+  const names = ['v(out)', 'v(ret)', '@v1[i]', '@e1[i]'];
+  const deck = `* self-authored junction-referenced bridge
+.temp ${MATCHED_TEMP_C}
+.options tnom=${MATCHED_TEMP_C} gmin=${JUNCTION_GMIN} reltol=1e-12 abstol=1e-18 vntol=1e-15
+V1 in 0 ${volts}
+E1 acn 0 in 0 -1
+D1 in out SELF
+D2 acn out SELF
+D3 ret in SELF
+D4 ret acn SELF
+RL out ret 2000
+.model SELF D(IS=1e-12 N=1 RS=0)
+.control
+set numdgt=17
+op
+print ${names.join(' ')}
+.endc
+.end
+`;
+  const run = spawnSync('ngspice', ['-b'], { input: deck, encoding: 'utf8' });
+  assert.equal(run.status, 0, run.stderr || run.stdout);
+  return Object.fromEntries(names.map(name => {
+    const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const match = run.stdout.match(new RegExp(`${escaped}\\s*=\\s*([-+0-9.e]+)`, 'i'));
+    assert.ok(match, `${name} absent from oracle output`);
+    const value = Number(match[1]);
+    assert.ok(Number.isFinite(value));
+    return [name, value];
+  }));
+}
+
+describe('explicit Shockley junction DC reference propagation', () => {
+  it('solves diode and LED bridges through their actual junction paths without state adoption', () => {
+    assert.ok(JUNCTION_GMIN > 0, 'reachability requires the admitted real parallel junction law');
+    for (const kind of ['diode', 'led']) for (const volts of [-2, 0, 2]) {
+      const { board, nets } = junctionBridge(volts, { kind });
+      const before = stateWitness(board), op = board.operatingPoint();
+      assert.equal(op.converged, true, `${kind} bridge ${volts} V`);
+      for (const value of op.nodeVoltages.values()) assert.ok(Number.isFinite(value));
+      assertJunctionKcl(op, nets);
+      assertUnchanged(board, before);
+    }
+  });
+
+  it('matches independent bridge DC voltages and signed source currents at both polarities and zero', {
+    skip: spawnSync('ngspice', ['--version'], { encoding: 'utf8' }).status !== 0,
+  }, () => {
+    for (const volts of [-2, 0, 2]) {
+      const expected = ngspiceBridge(volts);
+      for (const kind of ['diode', 'led']) {
+        const { board, nets } = junctionBridge(volts, { kind });
+        const op = board.operatingPoint();
+        assert.equal(op.converged, true);
+        for (const [net, vector] of [['out', 'v(out)'], ['ret', 'v(ret)']]) {
+          assert.ok(Math.abs(op.nodeVoltages.get(net) - expected[vector]) < 2e-6, `${kind} ${volts} V ${net}`);
+        }
+        for (const [id, terminal, vector] of [['V1', 'pos', '@v1[i]'], ['E1', 'outp', '@e1[i]']]) {
+          assert.ok(Math.abs(op.branchCurrents.get(id).get(terminal) - expected[vector]) < 1e-8,
+            `${kind} ${volts} V signed ${id} current`);
+        }
+        assertJunctionKcl(op, nets);
+      }
+    }
+  });
+
+  it('omitting the actual diode edge restores the bridge refusal while a grounded control still solves', async () => {
+    await withJunctionEdgeOmitted('diode', async BoardType => {
+      assert.equal(diodeBench(2, PARAMS, { BoardType }).operatingPoint().converged, true);
+      const { board } = junctionBridge(2, { BoardType });
+      assert.throws(() => board.operatingPoint(), /DC-floating nets? .*out.*ret/);
+    });
   });
 });
