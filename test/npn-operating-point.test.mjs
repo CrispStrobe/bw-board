@@ -2,6 +2,8 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import { BoardImpl } from '../src/board.js';
+import { JUNCTION_GMIN } from '../src/mna.js';
+import { withJunctionEdgeOmitted } from './helpers/junction-dc-source-mutation.mjs';
 
 // Measured against ngspice 42 itself.  Its internal k/q is not the modern
 // CODATA quotient used by our earlier oracle conversion; this is the
@@ -10,8 +12,8 @@ import { BoardImpl } from '../src/board.js';
 const NGSPICE_MATCHED_TEMP_C = 26.826895261366076;
 const PARAMS = Object.freeze({ model: 'shockley', is: 1e-14, beta: 100, vaf: 100 });
 
-function activeBench(params = PARAMS, { disconnect = null, kind = 'npn' } = {}) {
-  const board = new BoardImpl(5);
+function activeBench(params = PARAMS, { disconnect = null, kind = 'npn', BoardType = BoardImpl } = {}) {
+  const board = new BoardType(5);
   const nets = [
     { id: 'gnd', terminals: [
       { part: 'VCC', terminal: 'neg' }, { part: 'R2', terminal: 'b' },
@@ -160,6 +162,8 @@ function stateWitness(board) {
     timeNs: board.timeNs, nodeVoltages: board.nodeVoltages, capVoltages: board.capVoltages,
     capCurrents: board.capCurrents, deviceStates: board._deviceStates, controls: board.controls,
     cache: board._mnaCache, parts: JSON.stringify(board._solveParts),
+    values: structuredClone({ nodes: board.nodeVoltages, capV: board.capVoltages,
+      capI: board.capCurrents, devices: board._deviceStates, controls: board.controls }),
   };
 }
 
@@ -168,6 +172,8 @@ function assertUnchanged(board, before) {
     assert.equal(key === 'deviceStates' ? board._deviceStates : key === 'cache' ? board._mnaCache : board[key], before[key]);
   }
   assert.equal(JSON.stringify(board._solveParts), before.parts);
+  assert.deepEqual({ nodes: board.nodeVoltages, capV: board.capVoltages,
+    capI: board.capCurrents, devices: board._deviceStates, controls: board.controls }, before.values);
 }
 
 describe('BoardImpl.operatingPoint explicit NPN domain', () => {
@@ -346,5 +352,137 @@ Q1 collector base emitter QN
       /terminal collector is not connected/);
     assert.throws(() => activeBench(PARAMS, { kind: 'pnp' }).operatingPoint(),
       /unsupported part Q1 \(pnp\)/);
+  });
+});
+
+const JUNCTION_PAIR_PARAMS = Object.freeze({ model: 'shockley', is: 1e-15, beta: 100, br: 1, n: 1, rb: 0, rc: 0 });
+const junctionTerminal = (part, terminal) => ({ part, terminal });
+function junctionTailPair(volts, BoardType = BoardImpl) {
+  const board = new BoardType(5), t = junctionTerminal;
+  const parts = [
+    ...[['VCC', 5], ['VB', .7], ['VS', volts]].map(([id, volts]) => ({ id, kind: 'vsource', params: { volts }, terminals: ['pos', 'neg'] })),
+    ...['RC1', 'RC2'].map(id => ({ id, kind: 'resistor', params: { ohms: 10000 }, terminals: ['a', 'b'] })),
+    { id: 'IT', kind: 'isource', params: { amps: -1e-4 }, terminals: ['pos', 'neg'] },
+    ...['Q1', 'Q2'].map(id => ({ id, kind: 'npn', params: { ...JUNCTION_PAIR_PARAMS }, terminals: ['collector', 'base', 'emitter'] })),
+    { id: 'G1', kind: 'gnd', params: {}, terminals: ['gnd'] },
+  ];
+  const nets = [
+    { id: 'gnd', terminals: [t('VCC', 'neg'), t('VB', 'neg'), t('VS', 'neg'), t('IT', 'neg'), t('G1', 'gnd')] },
+    { id: 'vcc', terminals: [t('VCC', 'pos'), t('RC1', 'a'), t('RC2', 'a')] },
+    { id: 'in', terminals: [t('VS', 'pos'), t('Q1', 'base')] },
+    { id: 'bref', terminals: [t('VB', 'pos'), t('Q2', 'base')] },
+    { id: 'out', terminals: [t('RC1', 'b'), t('Q1', 'collector')] },
+    { id: 'other', terminals: [t('RC2', 'b'), t('Q2', 'collector')] },
+    { id: 'tail', terminals: [t('IT', 'pos'), t('Q1', 'emitter'), t('Q2', 'emitter')] },
+  ];
+  board.setNetlist(parts, nets);
+  return { board, nets };
+}
+function junctionCollector(baseVolts, BoardType = BoardImpl) {
+  const board = new BoardType(5), t = junctionTerminal;
+  const nets = [
+    { id: 'gnd', terminals: [t('VB', 'neg'), t('Q1', 'emitter'), t('G1', 'gnd')] },
+    { id: 'base', terminals: [t('VB', 'pos'), t('Q1', 'base')] },
+    { id: 'collector', terminals: [t('Q1', 'collector'), t('RLEAF', 'a')] },
+    { id: 'leaf', terminals: [t('RLEAF', 'b')] },
+  ];
+  board.setNetlist([
+    { id: 'VB', kind: 'vsource', params: { volts: baseVolts }, terminals: ['pos', 'neg'] },
+    { id: 'Q1', kind: 'npn', params: { ...JUNCTION_PAIR_PARAMS }, terminals: ['collector', 'base', 'emitter'] },
+    { id: 'RLEAF', kind: 'resistor', params: { ohms: 1000 }, terminals: ['a', 'b'] },
+    { id: 'G1', kind: 'gnd', params: {}, terminals: ['gnd'] },
+  ], nets);
+  return { board, nets };
+}
+function assertNpnNetKcl(op, nets) {
+  for (const net of nets) {
+    let total = 0;
+    for (const t of net.terminals) {
+      if (t.part === 'G1') continue;
+      const current = op.branchCurrents.get(t.part)?.get(t.terminal);
+      assert.ok(Number.isFinite(current), `finite current ${t.part}.${t.terminal}`);
+      total += current;
+    }
+    assert.ok(Math.abs(total) < 1e-10, `${net.id} signed terminal KCL ${total} A`);
+  }
+}
+const junctionPairCard = '.model QP NPN(IS=1e-15 BF=100 BR=1 NF=1 NR=1 RB=0 RC=0)';
+
+describe('explicit Ebers-Moll junction DC reference propagation', () => {
+  it('solves the constant-current tail through actual base-emitter junctions without state adoption', () => {
+    for (const volts of [.68, .69, .70, .71, .72]) {
+      const { board, nets } = junctionTailPair(volts), before = stateWitness(board);
+      const op = board.operatingPoint();
+      assert.equal(op.converged, true, `${volts} V differential input`);
+      for (const value of op.nodeVoltages.values()) assert.ok(Number.isFinite(value));
+      assert.ok(Math.abs(op.branchCurrents.get('IT').get('pos') - 1e-4) < 1e-12,
+        'native negative injection is a positive into-terminal tail sink');
+      assertNpnNetKcl(op, nets);
+      assertUnchanged(board, before);
+    }
+  });
+
+  it('matches independent tail-pair voltages and all bipolar terminal currents', {
+    skip: spawnSync('ngspice', ['--version'], { encoding: 'utf8' }).status !== 0,
+  }, () => {
+    const names = ['v(out)', 'v(other)', 'v(tail)', '@q1[ib]', '@q1[ic]', '@q1[ie]', '@q2[ib]', '@q2[ic]', '@q2[ie]'];
+    for (const volts of [.68, .69, .70, .71, .72]) {
+      const expected = ngspice(`.options gmin=${JUNCTION_GMIN}
+VCC vcc 0 5
+VB bref 0 .7
+VS in 0 ${volts}
+RC1 vcc out 10000
+RC2 vcc other 10000
+IT tail 0 100u
+Q1 out in tail QP
+Q2 other bref tail QP
+${junctionPairCard}`, names);
+      const { board, nets } = junctionTailPair(volts), op = board.operatingPoint();
+      assert.equal(op.converged, true);
+      for (const net of ['out', 'other', 'tail']) assert.ok(Math.abs(op.nodeVoltages.get(net) - expected[`v(${net})`]) < 1e-8,
+        `${volts} V ${net}`);
+      for (const id of ['Q1', 'Q2']) for (const [terminal, vector] of [['base', 'ib'], ['collector', 'ic'], ['emitter', 'ie']]) {
+        assert.ok(Math.abs(op.branchCurrents.get(id).get(terminal) - expected[`@${id.toLowerCase()}[${vector}]`]) < 1e-10,
+          `${volts} V ${id}.${terminal}`);
+      }
+      assertNpnNetKcl(op, nets);
+    }
+  });
+
+  it('independently checks a collector referenced only through its base-collector junction', {
+    skip: spawnSync('ngspice', ['--version'], { encoding: 'utf8' }).status !== 0,
+  }, () => {
+    for (const base of [.60, .65, .70]) {
+      const expected = ngspice(`.options gmin=${JUNCTION_GMIN}
+VB base 0 ${base}
+Q1 collector base 0 QP
+RLEAF collector leaf 1000
+${junctionPairCard}`, ['v(collector)', 'v(leaf)', '@q1[ib]', '@q1[ic]', '@q1[ie]']);
+      const { board, nets } = junctionCollector(base), before = stateWitness(board), op = board.operatingPoint();
+      assert.equal(op.converged, true);
+      for (const net of ['collector', 'leaf']) assert.ok(Math.abs(op.nodeVoltages.get(net) - expected[`v(${net})`]) < 1e-8,
+        `${base} V ${net}`);
+      for (const [terminal, vector] of [['base', 'ib'], ['collector', 'ic'], ['emitter', 'ie']]) {
+        assert.ok(Math.abs(op.branchCurrents.get('Q1').get(terminal) - expected[`@q1[${vector}]`]) < 1e-10,
+          `${base} V ${terminal}`);
+      }
+      assertNpnNetKcl(op, nets);
+      assertUnchanged(board, before);
+    }
+  });
+
+  it('omitting either actual NPN junction edge restores only its corresponding refusal', async () => {
+    for (const [edge, fixture, refused] of [
+      ['base-emitter', () => junctionTailPair(.7), /DC-floating nets? .*tail/],
+      ['base-collector', () => junctionCollector(.65), /DC-floating nets? .*collector.*leaf/],
+    ]) {
+      assert.equal(fixture().board.operatingPoint().converged, true);
+      await withJunctionEdgeOmitted(edge, async BoardType => {
+        assert.equal(activeBench(PARAMS, { BoardType }).operatingPoint().converged, true,
+          `${edge} mutant preserves the grounded control`);
+        const { board } = edge === 'base-emitter' ? junctionTailPair(.7, BoardType) : junctionCollector(.65, BoardType);
+        assert.throws(() => board.operatingPoint(), refused);
+      });
+    }
   });
 });

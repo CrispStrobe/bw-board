@@ -1,9 +1,11 @@
-## Explicit Shockley junction DC reachability — CLAIM, 2026-10-26
+## Explicit Shockley junction DC reachability — DONE candidate, 2026-10-26
 
 Owner: Codex circuit/instrument campaign owner. Isolated branch
 `claim/junction-dc-anchors-20261026`, exact initial master
-`131beeacf09d24415af953a3b62618f1cb08b6a5`. Merge this claim before
-implementation. This is the supplier repair for two retained, pre-solve
+`131beeacf09d24415af953a3b62618f1cb08b6a5`. Claim PR709 merged at
+`69c728b36295219ee7ddf04653655d40f37674d4` before implementation. The
+implementation branch is `lane/junction-dc-anchors-20261026`; its commit
+containing this section identifies the candidate without a self-hash. This is the supplier repair for two retained, pre-solve
 DC-floating refusals in a separately admitted teaching-circuit study; it
 neither changes those originals nor turns them into successful measurements.
 
@@ -41,6 +43,18 @@ no local solver/oracle experiment or unchanged failed rerun. Normal matched-head
 integration only after qualification. Any CUI/Lite package adoption is a later
 explicitly scoped return leg with a genuinely new study intent and identity.
 No physical-device, full-domain, deployment or release claim follows.
+
+Candidate checkpoint: only the three admitted junction edges were added to
+reachability; no MNA stamp changed. Tests cover D/LED bridge polarity and zero,
+all five tail-pair bias points, a distinct base–collector witness, actual-source
+edge omissions with grounded positive controls, signed KCL and copied-state
+preservation. The old explicit-diode false-negative assertion is now a positive
+model-law witness; disconnected/invalid-model and existing ideal-control/MOS
+negatives remain. The shared helper loads actual buildable Board modules in
+owned temporary mirrors without changing the canonical source. NPN state
+checks now compare copied values as well as identities. Syntax and whitespace
+checks passed; numerical/oracle outcomes are still pending hosted qualification.
+The candidate must not land on these source-only checks.
 
 ## SAMD active-game engine/config producer — claim, 2026-10-26
 
