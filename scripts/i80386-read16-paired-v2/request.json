@@ -1,0 +1,21 @@
+{
+ "arms": {
+  "A": {
+   "head": "e5bf38a5f2936a461be15bed3c568e9090bd4d77",
+   "tree": "f1d349bd98857e57e873e6de9d1678e0b6ce11b3"
+  },
+  "B": {
+   "head": "55917c48dffe0c7c743388024481ef0a47a7c76c",
+   "tree": "086b7f33399b8a7af3fbc1c37ab4be2603b930e4"
+  }
+ },
+ "modes": [
+  "capfit",
+  "paired"
+ ],
+ "nodePath": "/opt/hostedtoolcache/node/22.23.3/x64/bin/node",
+ "nodeVersion": "v22.23.3",
+ "note": "Admits one capfit dispatch, then one paired dispatch only if capfit passes. Each is one-shot; failures are retained, never repeated.",
+ "schema": "bw.read16-paired-v2-request.v1",
+ "sourceRowsSha256": "990748e554285e3d443d0503171b5207b0529871af4ab25a388e7ba99ba4c6c8"
+}
