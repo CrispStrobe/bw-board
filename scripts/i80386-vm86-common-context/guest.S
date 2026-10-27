@@ -13,7 +13,7 @@
         .set TSS1,     0x2000
         .set TSS2,     0x2100
         .set STACK0,   0x9000
-        .set ESP0,     0x8000
+        .set ESP0,     0x8800
         .set STACK2,   0xa000
 
         .code16

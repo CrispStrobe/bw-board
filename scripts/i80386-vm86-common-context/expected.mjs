@@ -31,7 +31,7 @@ export function expectedStream({image, symbols}, {omitAccessedOn = []} = {}) {
     }
   };
   const tss1 = new Uint8Array(TSS_BYTES), tss2 = new Uint8Array(TSS_BYTES);
-  put32(tss1, 0x04, 0x8000); put16(tss1, 0x08, 0x10); put16(tss1, 0x66, 0x68);
+  put32(tss1, 0x04, 0x8800); put16(tss1, 0x08, 0x10); put16(tss1, 0x66, 0x68);
   put32(tss2, 0x20, symbols.task2);
   put32(tss2, 0x24, 2); put32(tss2, 0x28, 0xa5a50000); put32(tss2, 0x38, 0xa000);
   for (const off of [0x48, 0x50, 0x54, 0x58, 0x5c]) put16(tss2, off, 0x38);
@@ -46,7 +46,7 @@ export function expectedStream({image, symbols}, {omitAccessedOn = []} = {}) {
   tables('H40_');
   const vmEflags = 0x00023002;                     // VM | IOPL3 | reserved bit 1
   const handlerEflags = vmEflags & ~(0x20000 | 0x10000 | 0x4000 | 0x100 | 0x200);
-  const frameTop = 0x8000 - 9 * 4;                 // TSS1 ESP0 minus VM86 frame
+  const frameTop = 0x8800 - 9 * 4;                 // TSS1 ESP0 minus VM86 frame
   for (const v of [0, 0, 0, 0,                     // GS FS ES DS: nulled on VM86 exit
     handlerEflags,
     0x88888888, 0x77777777, 0x66666666, frameTop,  // PUSHAD: EDI ESI EBP ESP
