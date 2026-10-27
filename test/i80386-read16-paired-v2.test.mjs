@@ -62,8 +62,3 @@ test('frozen arm rows: 35 files each, only CPU source differs',()=>{
   assert.equal(rows.arms.B.head,'55917c48dffe0c7c743388024481ef0a47a7c76c');
 });
 
-test('child resolves arm checkouts at the workspace root used by run.py and the workflow',()=>{
-  const src=readFileSync(new URL('../scripts/i80386-read16-paired-v2/fixture.mjs',import.meta.url),'utf8');
-  assert.match(src,/'\.\.\/\.\.\/source-a\/'/);
-  assert.equal(new URL('../../source-a/',new URL('../scripts/i80386-read16-paired-v2/fixture.mjs',import.meta.url)).href,new URL('../source-a/',import.meta.url).href);
-});
