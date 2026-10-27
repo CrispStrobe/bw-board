@@ -5,10 +5,18 @@ import {createHash} from 'node:crypto';
 import CPU from '../src/experimental/i80386.js';
 import Machine,{PCAT80386_EXPERIMENTAL as config} from '../src/experimental/i80386-at-machine.js';
 import {make,execute} from '../scripts/i80386-at-profile/fixture.mjs';
-import {EXECUTION_ENABLED,MEASURED_STEPS,WARMUP_STEPS,ORDER,GATE,architecturalGolden,measured} from '../scripts/i80386-read16-paired-v2/fixture.mjs';
+import {existsSync} from 'node:fs';
+import {MEASURED_STEPS,WARMUP_STEPS,ORDER,GATE,architecturalGolden,measured} from '../scripts/i80386-read16-paired-v2/fixture.mjs';
 
-test('guards start false and the predeclared work/gate are unchanged',()=>{
-  assert.equal(EXECUTION_ENABLED,false);
+test('execution is admitted only by a committed request; work/gate are unchanged',()=>{
+  const req=new URL('../scripts/i80386-read16-paired-v2/request.json',import.meta.url);
+  if(existsSync(req)){
+    const r=JSON.parse(readFileSync(req)),rows=readFileSync(new URL('../scripts/i80386-read16-paired-v2/source-rows.json',import.meta.url));
+    assert.equal(r.schema,'bw.read16-paired-v2-request.v1');
+    assert.equal(r.sourceRowsSha256,createHash('sha256').update(rows).digest('hex'));
+    const arms=JSON.parse(rows).arms;
+    for(const k of ['A','B'])assert.deepEqual(r.arms[k],{head:arms[k].head,tree:arms[k].tree});
+  }
   assert.equal(MEASURED_STEPS,10000000);
   assert.equal(WARMUP_STEPS,25000);
   assert.deepEqual(GATE,{cpuMedianMin:1.03,cpuEveryGreaterThan:1,wallMedianMax:1.02});
@@ -42,14 +50,14 @@ test('small authored executions agree with the independent recurrence on both pa
   }
 });
 
-test('frozen arm A runtime rows match this checkout; arms differ only in CPU source',()=>{
+test('frozen arm rows: 35 files each, only CPU source differs',()=>{
+  // Byte checks against the actual arm checkouts happen in the hosted child,
+  // so later runtime edits on master never break this test.
   const rows=JSON.parse(readFileSync(new URL('../scripts/i80386-read16-paired-v2/source-rows.json',import.meta.url)));
   const a=rows.arms.A.files,b=rows.arms.B.files,names=Object.keys(a);
   assert.equal(names.length,35);
+  assert.deepEqual(Object.keys(b),names);
   assert.deepEqual(names.filter(n=>a[n].sha256!==b[n].sha256),['src/experimental/i80386.js']);
-  for(const n of names){
-    const raw=readFileSync(new URL('../'+n,import.meta.url));
-    assert.equal(raw.length,a[n].bytes,n);
-    assert.equal(createHash('sha256').update(raw).digest('hex'),a[n].sha256,n);
-  }
+  assert.equal(rows.arms.A.head,'e5bf38a5f2936a461be15bed3c568e9090bd4d77');
+  assert.equal(rows.arms.B.head,'55917c48dffe0c7c743388024481ef0a47a7c76c');
 });
