@@ -61,3 +61,4 @@ test('frozen arm rows: 35 files each, only CPU source differs',()=>{
   assert.equal(rows.arms.A.head,'e5bf38a5f2936a461be15bed3c568e9090bd4d77');
   assert.equal(rows.arms.B.head,'55917c48dffe0c7c743388024481ef0a47a7c76c');
 });
+

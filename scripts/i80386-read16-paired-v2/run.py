@@ -216,6 +216,7 @@ def main():
         packet['failure'] = packet['failure'] or {'phase': 'capture', 'type': type(error).__name__, 'reason': str(error)[:2048]}
     store(output / ('paired-v2-%s.original.json' % mode), packet)
     print(json.dumps({'mode': mode, 'children': len(packet['children']), 'failure': packet['failure']}))
+    need(packet['failure'] is None, 'capture failed; original retained')
 
 
 if __name__ == '__main__':

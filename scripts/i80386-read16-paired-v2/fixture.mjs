@@ -51,7 +51,7 @@ export function measured(CPU,Machine,config,steps=MEASURED_STEPS,warmSteps=WARMU
 
 async function child(){
   if(process.env.BW_READ16_V2_CHILD!=='1'||process.argv.length!==3||!['A','B'].includes(process.argv[2]))throw Error('fixed paired-v2 child');
-  const arm=process.argv[2],root=new URL(arm==='A'?'../../../source-a/':'../../../source-b/',import.meta.url);
+  const arm=process.argv[2],root=new URL(arm==='A'?'../../source-a/':'../../source-b/',import.meta.url);
   const body=readFileSync(new URL('./source-rows.json',import.meta.url));
   const rows=JSON.parse(body).arms[arm].files;
   for(const [name,row] of Object.entries(rows)){
