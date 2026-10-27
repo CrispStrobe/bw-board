@@ -1,4 +1,4 @@
-## i80386 read16 paired-v2 ten-million-retirement plan — CLAIMED, 2026-10-27
+## i80386 read16 paired-v2 ten-million-retirement plan — CLAIMED (claim PR712 merged; first source slice, guards false), 2026-10-27
 
 Owner: Claude x86 lane (task 2). Claim branch
 `claim/read16-paired-v2-20261027` from master

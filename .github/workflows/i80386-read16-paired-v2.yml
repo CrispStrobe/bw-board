@@ -1,0 +1,94 @@
+name: i80386 read16 paired-v2
+# Default off: the actual job refuses unless master carries a committed
+# scripts/i80386-read16-paired-v2/request.json admitting the dispatched mode.
+on:
+  pull_request:
+    paths:
+      - 'scripts/i80386-read16-paired-v2/**'
+      - 'scripts/i80386-at-profile/fixture.mjs'
+      - 'test/i80386-read16-paired-v2.test.mjs'
+      - '.github/workflows/i80386-read16-paired-v2.yml'
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: capfit or paired (each is a one-shot event)
+        required: true
+        type: choice
+        options: [capfit, paired]
+permissions:
+  contents: read
+jobs:
+  controls:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 22.23.3
+      - name: Manufactured controls and small authored cases
+        run: |
+          /usr/bin/timeout 60s node --test --test-concurrency=1 test/i80386-read16-paired-v2.test.mjs
+          /usr/bin/timeout 30s /usr/bin/python3 -I -B scripts/i80386-read16-paired-v2/controls.py
+  actual:
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/master'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - name: Admission (request present and pins match)
+        id: admission
+        run: |
+          set -euo pipefail
+          req=scripts/i80386-read16-paired-v2/request.json
+          test -f "$req" || { echo "no committed request: execution disabled"; exit 1; }
+          python3 -I -B -c 'import json,sys;r=json.load(open(sys.argv[1]));assert sys.argv[2] in r["modes"];print("A="+r["arms"]["A"]["head"]);print("B="+r["arms"]["B"]["head"])' "$req" "${{ inputs.mode }}" >> "$GITHUB_OUTPUT"
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ steps.admission.outputs.A }}
+          path: source-a
+          persist-credentials: false
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ steps.admission.outputs.B }}
+          path: source-b
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 22.23.3
+      - name: Capture inside one-CPU 1GiB no-swap 64-task service
+        shell: bash
+        run: |
+          set -euo pipefail
+          cpu=$(/usr/bin/python3 -I -B -c 'import os; print(max(os.sched_getaffinity(0)))')
+          unit="bw-read16-paired-v2-$GITHUB_RUN_ID-${{ inputs.mode }}.service"
+          out="$RUNNER_TEMP/read16-paired-v2-$GITHUB_RUN_ID"
+          /usr/bin/sudo -n /usr/bin/timeout --signal=TERM --kill-after=10s 25m \
+            /usr/bin/systemd-run --wait --pipe --unit "$unit" \
+            --property "User=$(id -un)" --property "Group=$(id -gn)" \
+            --property "WorkingDirectory=$GITHUB_WORKSPACE" \
+            --property "AllowedCPUs=$cpu" --property CPUQuota=100% --property CPUQuotaPeriodSec=100ms \
+            --property MemoryMax=1073741824 --property MemorySwapMax=0 --property TasksMax=64 \
+            --property RuntimeMaxSec=23min --property KillMode=control-group --property TimeoutStopSec=5s \
+            --property LimitCORE=0 --property NoNewPrivileges=yes \
+            --setenv LANG=C --setenv LC_ALL=C --setenv GITHUB_ACTIONS=true \
+            --setenv "GITHUB_RUN_ID=$GITHUB_RUN_ID" --setenv "GITHUB_RUN_ATTEMPT=$GITHUB_RUN_ATTEMPT" \
+            --setenv "GITHUB_WORKFLOW_SHA=$GITHUB_WORKFLOW_SHA" --setenv "GITHUB_WORKFLOW_REF=$GITHUB_WORKFLOW_REF" \
+            --setenv "GITHUB_SHA=$GITHUB_SHA" --setenv "GITHUB_REF=$GITHUB_REF" \
+            --setenv "ImageOS=${ImageOS:-}" --setenv "ImageVersion=${ImageVersion:-}" \
+            --setenv "RUNNER_OS=$RUNNER_OS" --setenv "RUNNER_ARCH=$RUNNER_ARCH" \
+            /usr/bin/taskset -c "$cpu" /usr/bin/python3 -I -B \
+            "$GITHUB_WORKSPACE/scripts/i80386-read16-paired-v2/run.py" "${{ inputs.mode }}" "$out"
+      - name: Retain exact original, including failed attempts
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: read16-paired-v2-${{ inputs.mode }}-${{ github.run_id }}
+          path: ${{ runner.temp }}/read16-paired-v2-${{ github.run_id }}
+          if-no-files-found: error
+          retention-days: 30
