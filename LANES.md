@@ -1,3 +1,20 @@
+## i80386 read16 contiguous-page two-byte read adoption — CLAIMED, 2026-10-27
+
+Owner: Claude x86 lane. Claim and change in this one PR (branch
+`lane/read16-adoption-20261027`, base master `2d5e892251290b02585973db7b95413f3ea0c303`).
+Own only this section and the measured five-line `size === 2` arm of
+`_readLinear` in `src/experimental/i80386.js`, byte-identical to unadopted
+`55917c48dffe0c7c743388024481ef0a47a7c76c` (runtime arm B of paired-v2).
+No other CPU, test, fixture, pin or workflow change.
+
+Evidence: paired-v2 run 40531608266 (claim PR712, harness PR714/716) admitted
+by its standalone reader: CPU A/B median 1.0685, minimum 1.0509, wall B/A
+median 0.9365 on one Xeon 8370C hosted runner; gate unchanged. Before merge:
+every enabled exact-head check including the `ci:full` tier, whose
+path-triggered x86-xv6 protected guest and vectors jobs run on this exact
+source. Authored-loop timing only: no physical RTx, general-workload or
+whole-OS claim. The old .999455 failure stays retained.
+
 ## i80386 read16 paired-v2 ten-million-retirement plan — CLAIMED (claim PR712 merged; first source slice, guards false), 2026-10-27
 
 Owner: Claude x86 lane (task 2). Claim branch
