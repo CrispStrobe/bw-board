@@ -79,6 +79,13 @@ are merged. PR645 landed as
 [`b51be2c6`](https://github.com/CrispStrobe/bw-board/commit/b51be2c62ee57214350bd00db667c147a25748f3).
 The current default branch contains the source, independent readers and inactive
 same-job V3 cleanup route. Use those adapters rather than reconstructing them.
+**VM86 common-context fixture — 2026-10-27:** a separate lane owns
+`scripts/i80386-vm86-common-context/` (see [LANES](../LANES.md)). It compares the
+ordinary strict-386 JS core with pinned unmodified Bochs CPU level 3 on one authored
+VM86/interrupt-gate/task-gate guest, byte-exact over the GDT, both TSS images, stacks
+and VM86 RAM. Descriptor accessed bits stay architectural; QEMU 8.2 TCG is not used
+as the oracle for those bytes, and the ring-3 V2 refusal is unchanged.
+
 The [retained V2 result](I80386-RING3-INT-IRET-RESULTS.md#selected-same-job-v2-result-and-proposed-v3-cleanup)
 still refuses on two GDT access-byte differences and outside cleanup. Next review
 the exact reference-emulator provenance and descriptor-access semantics, then

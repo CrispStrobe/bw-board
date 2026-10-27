@@ -1,3 +1,27 @@
+## i80386 VM86 common-context / TSS RAM / current native profile — claim, 2026-10-27
+
+CLAIMED — x86 lane, branch `lane/386-vm86-common-context-20261027`, initial master
+`e5bf38a5f2936a461be15bed3c568e9090bd4d77`. Claim and change travel in one PR.
+Own exactly: `scripts/i80386-vm86-common-context/**`,
+`test/i80386-vm86-common-context.test.mjs`,
+`.github/workflows/i80386-vm86-common-context.yml`, this section and a status
+paragraph in `docs/X86-NEXT-LANES.md`. No edit to `src/experimental/i80386.js`,
+existing VM86/task tests, comparison adapters, ring-3 INT/IRETD source, V3 cleanup,
+native builders/providers/ABI, pins or other workflows.
+
+One authored strict-386 boot sector with explicit GDT, IDT, two TSSs and stacks:
+VM86 entry by IRETD, INT through a DPL3 interrupt gate to CPL0, IRETD back, then
+INT through a task gate into a nested task. Expectations for the whole GDT, both
+TSS images, handler/task stacks and VM86 RAM words are derived without a CPU model.
+The reference profile is pinned upstream Bochs `REL_2_7_FINAL` built unmodified at
+CPU level 3 in the job; it writes CS descriptor accessed bits, which QEMU 8.2 TCG
+omits on gate/task CS loads. No accessed-bit mask, CPU semantic change or reuse
+of the refused ring-3 V2 QEMU authority. Controls: CPU-source mutations
+(accessed-bit write, nested NT) and reader adversaries must fail. The actual job
+runs only for one admitting label event on the exact head and retains originals
+for an independent reader. Finite fixture only: no full-OS, enhanced-mode,
+application, physical-386 or performance claim.
+
 ## Explicit Shockley junction DC reachability — DONE candidate, 2026-10-26
 
 Owner: Codex circuit/instrument campaign owner. Isolated branch
