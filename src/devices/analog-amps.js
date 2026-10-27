@@ -47,7 +47,8 @@
  */
 
 import { registerDevice } from '../devices.js';
-import {LM741_CARD, lm741LinearParameters, assertLm741LinearTopology, assertLm741LinearSolution} from '../lm741-linear-pole.js';
+import {LM741_CARD, lm741LinearParameters, assertLm741LinearTopology, assertLm741LinearSolution,
+    lm741BiasSupply, lm741BiasSupplyTerminalCurrents, assertLm741BiasSupplyConditions} from '../lm741-linear-pole.js';
 
 const R_OUT = 100;          // LM358 output stage, modest drive
 const R_SINK = 50;
@@ -468,6 +469,17 @@ function registerPrecisionOpAmp(kind, specOrResolver, terminalsOverride = null) 
                 throw new Error(`LM741 ${part.id} linear-pole: initialized mode/drive authority changed`);
             }
             if (linear) assertLm741LinearTopology(part, ctx);
+            const bias = lm741BiasSupply(part);
+            if (bias) {
+                // Opt-in nominal typical 25 C domain (see LM741_NOMINAL_25C):
+                // constant currents out of each package lead; the rails are
+                // admitted fixed ideal sources, so these never move a node.
+                assertLm741BiasSupplyConditions(part, ctx);
+                ctx.current('inp', -bias.inpA);
+                ctx.current('inn', -bias.innA);
+                ctx.current('vpos', -bias.quiescentA);
+                ctx.current('vneg', bias.quiescentA + bias.inpA + bias.innA);
+            }
             // This is differential input resistance. Stamping it between the
             // pins avoids inventing either input as ground.
             if (Number.isFinite(spec.inputR)) ctx.conductance('inp', 'inn', 1 / spec.inputR);
@@ -481,7 +493,12 @@ function registerPrecisionOpAmp(kind, specOrResolver, terminalsOverride = null) 
             if (!lm741LinearParameters(part)) return new Map();
             // Map the solver-only output resistor back to the actual package
             // output lead. Supply quiescent/dynamic current is not modelled.
-            return new Map([['out', (read('__linear_pole')-read('out'))/LM741_CARD.rOut]]);
+            const out = (read('__linear_pole')-read('out'))/LM741_CARD.rOut;
+            const bias = lm741BiasSupply(part);
+            if (!bias) return new Map([['out', out]]);
+            // Opt-in domain: rails also carry the load current the hidden
+            // lm741_rail_return element routes from V+ (source) or to V- (sink).
+            return new Map([['out', out], ...lm741BiasSupplyTerminalCurrents(bias, out)]);
         },
 
         update(part, state, read, tNs) {
@@ -816,6 +833,29 @@ export function registerAnalogAmps() {
     registerGroundSensingOpAmp('lm358', ['1', '2'], { legacyUnwiredFiveVoltSupply: true });
     registerGroundSensingOpAmp('lm324', ['1', '2', '3', '4']);
     registerPrecisionOpAmp('lm741', PRECISION_OP_AMPS.lm741);
+    // Solver-only element added by expandLm741LinearPoles only when the opt-in
+    // bias/supply domain is selected. It moves the hidden buffer's output
+    // current from the reference net to V+ (sourcing) or V- (sinking); pole/out
+    // are sense-only. The rails are admitted ideal sources, so no node moves.
+    registerDevice('lm741_rail_return', {
+        terminals: ['pole', 'out', 'vpos', 'vneg', 'ref'],
+        init() { return {drives: {}}; },
+        stamp(ctx, part) {
+            const g = 1 / part.params.ohms;
+            ctx.nonlinearCurrents('rail-return', (read) => {
+                // Linear in voltages within each region: F_s(v) = s F(v/s).
+                const amps = (read('pole') - read('out')) * g;
+                const sourcing = amps >= 0;
+                const slope = factor => new Map([['pole', factor * g], ['out', -factor * g]]);
+                return {
+                    region: sourcing ? 'source-from-vpos' : 'sink-to-vneg',
+                    currents: new Map([['vpos', sourcing ? -amps : 0], ['vneg', sourcing ? 0 : -amps], ['ref', amps]]),
+                    jacobian: new Map([['vpos', slope(sourcing ? -1 : 0)], ['vneg', slope(sourcing ? 0 : -1)], ['ref', slope(1)]]),
+                    residualOhms: part.params.ohms,
+                };
+            });
+        },
+    });
     registerPrecisionOpAmp('ltspice_universal_opamp2', universalOpAmp2Spec,
         ['inp', 'inn', 'vpos', 'vneg', 'out']);
     registerPrecisionOpAmp('lt1001', PRECISION_OP_AMPS.lt1001);
