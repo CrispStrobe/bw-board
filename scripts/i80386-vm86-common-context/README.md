@@ -1,6 +1,6 @@
 # VM86 common-context fixture
 
-One MIT-authored 512-byte boot sector (`guest.S`) exercises a strict-386 common
+One MIT-authored two-sector guest (`guest.S`: boot sector plus two stage-2 sectors, read by INT 13h under the BIOS and preloaded by the bare JS harness) exercises a strict-386 common
 context: real mode → CPL0 protected mode with an explicit GDT, IDT and two TSSs
 → IRETD into VM86 → `INT 40h` through a DPL3 interrupt gate onto the TSS1
 `SS0:ESP0` stack → IRETD back to VM86 → `INT 41h` through a DPL3 task gate into

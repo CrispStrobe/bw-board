@@ -25,7 +25,7 @@ export function buildGuest() {
     execFileSync('ld', ['-m', 'elf_i386', '-Ttext', `0x${LOAD_ADDRESS.toString(16)}`, '-e', '_start', '-o', elf, object]);
     execFileSync('objcopy', ['-O', 'binary', '-j', '.text', elf, bin]);
     const image = readFileSync(bin);
-    if (image.length !== 512) throw new Error(`guest image must be one 512-byte sector, got ${image.length}`);
+    if (image.length !== 1536) throw new Error(`guest image must be three 512-byte sectors, got ${image.length}`);
     if (image[510] !== 0x55 || image[511] !== 0xaa) throw new Error('missing boot signature');
     const symbols = {};
     for (const line of execFileSync('nm', [elf], {encoding: 'utf8'}).split('\n')) {

@@ -1,4 +1,4 @@
-/* MIT-authored strict-386 VM86 common-context guest (one 512-byte boot sector).
+/* MIT-authored strict-386 VM86 common-context guest (boot sector + two stage-2 sectors).
  *
  * Real mode -> protected mode (CPL0) -> IRETD into VM86 -> INT 40h through a
  * DPL3 32-bit interrupt gate onto the TSS1 SS0:ESP0 stack -> IRETD back to
@@ -25,6 +25,25 @@ _start:
         mov     %ax, %ds
         mov     %ax, %ss
         mov     $0x7c00, %sp
+        /* Sector 2 is preloaded by a harness without disk BIOS; otherwise read it. */
+        cmpl    $0x32434d56, stage2_magic
+        je      1f
+        mov     %ax, %es
+        mov     $0x0202, %ax            /* read two sectors */
+        mov     $0x7e00, %bx
+        mov     $0x0002, %cx            /* cylinder 0, sector 2 */
+        xor     %dh, %dh                /* head 0, DL = BIOS boot drive */
+        int     $0x13
+        jc      .
+        cmpl    $0x32434d56, stage2_magic
+        jne     .
+1:      jmp     stage2
+
+        .org 510
+        .word 0xaa55
+stage2_magic:
+        .ascii "VMC2"
+stage2:
         lgdt    gdtr
         mov     %cr0, %eax
         or      $1, %al
@@ -195,5 +214,4 @@ gdtr:   .word gdt_end - gdt - 1
 idtr:   .word 0x41 * 8 + 7
         .long IDT
 
-        .org 510
-        .word 0xaa55
+        .org 1536

@@ -23,8 +23,8 @@ function mutantCore(from, to) {
   return {path, dir};
 }
 
-test('frozen guest is one boot sector and the expectation matches the layout', () => {
-  assert.equal(guest.image.length, 512);
+test('frozen guest is a boot sector plus stage 2 and the expectation matches the layout', () => {
+  assert.equal(guest.image.length, 1536);
   assert.equal(expected.length, layout().length);
   assert.deepEqual([...expected.subarray(0, 4)], [...Buffer.from('VMCC')]);
 });
