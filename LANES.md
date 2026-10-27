@@ -1,3 +1,28 @@
+## i80386 read16 paired-v2 ten-million-retirement plan — CLAIMED, 2026-10-27
+
+Owner: Claude x86 lane (task 2). Claim branch
+`claim/read16-paired-v2-20261027` from master
+`e5bf38a5f2936a461be15bed3c568e9090bd4d77`. This docs-only claim merges
+before any code, as [the plan](docs/I80386-READ16-PAIRED-V2-PLAN.md) requires.
+
+Own only new
+`scripts/i80386-read16-paired-v2/{fixture.mjs,run.py,reader.py,controls.py,source-rows.json,README.md}`,
+`test/i80386-read16-paired-v2.test.mjs`,
+`.github/workflows/i80386-read16-paired-v2.yml`, this registry section and
+matching paired-v2 task prose. Every new execution guard starts false.
+No CPU, producer, existing reader/fixture/workflow, pin or source-policy edit;
+spent event identities and the old one-million failure/refusals stay intact.
+
+Fixed gate, never weakened: ten million actual retired instructions of the
+media-free five-operation loop, 25,000-instruction throwaway warmup per fresh
+child, eighteen children (ABAB warm, then AB BA AB BA BA AB BA), whole-child
+CPU A/B median >= 1.03 AND every pair ratio > 1, wall B/A median <= 1.02.
+One CPU, 1 GiB no swap, 64 tasks, 60 s child deadline. Independent
+architecture/device goldens and cap-fit proof precede activation; the full
+tuple saturates at 16 loops (AX alone 15) and is insufficient on its own.
+The old minimum .999455 stays FAILED/unadopted. No physical RTx, whole-OS
+or general-workload claim from any result.
+
 ## Explicit Shockley junction DC reachability — DONE candidate, 2026-10-26
 
 Owner: Codex circuit/instrument campaign owner. Isolated branch
