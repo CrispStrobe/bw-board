@@ -1,9 +1,31 @@
 # Proposed longer read16 pair and parent-host witness
 
-Status: **PROPOSED and unclaimed**. This plan grants no implementation,
-selection, profiling, guest or CPU-adoption authority. The
-[retained-failure closeout](I80386-READ16-FAILED-ATTEMPT-READER.md) is complete;
-its old one-million-instruction failure and both reader refusals remain intact.
+Status: **DONE, 2026-10-28.** Claimed in PR712, implemented in PR714 with
+the arm-path fix in PR716, admitted by `scripts/i80386-read16-paired-v2/request.json`
+(PR715). Capfit attempt 1 ([run 40490918699](https://github.com/CrispStrobe/bw-board/actions/runs/40490918699))
+failed before measuring (child resolved the arm checkouts outside the
+workspace) and is retained; capfit attempt 2 ([run 40521350218](https://github.com/CrispStrobe/bw-board/actions/runs/40521350218))
+passed (slowest child 1.42 s of the predeclared 30 s). The single paired
+capture, [run 40531608266](https://github.com/CrispStrobe/bw-board/actions/runs/40531608266)
+on one Intel Xeon Platinum 8370C runner (Node v22.23.3), was admitted by the
+standalone reader with every architecture/device golden passing:
+
+| Criterion | Measured | Result |
+|---|---|---|
+| CPU A/B median >= 1.03 | 1.0685 | pass |
+| every CPU A/B > 1 | min 1.0509 | pass |
+| wall B/A median <= 1.02 | 0.9365 | pass |
+
+CPU A/B per pair: 1.0777, 1.0685, 1.0693, 1.0806, 1.0509, 1.0653, 1.0599.
+The arm was adopted in PR718 (merge `8785e4688cc308b34fea434c1734523caa621f74`)
+after all enabled exact-head checks including the full tier and the x86-xv6
+protected guest. Authored-loop result only: no physical RTx, whole-OS or
+general-workload claim. The old .999455 failure and its reader refusals stay
+intact. The text below is the plan as executed.
+
+Not asserted by the v2 reader (recorded only): exact PIT fractional carry,
+RTC phases and 8042 queue progression; deriving them independently is open
+follow-up work and needs a new reader version, not an edit of v2.
 
 ## Source and ownership boundary
 

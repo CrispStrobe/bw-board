@@ -3366,8 +3366,11 @@ preserved. `officialMetadataAuthenticated` and `externalBindingReviewedByAuditor
 remain false; external admission and review supplied the binding separately.
 No paired event or original acquisition was repeated.
 
-The [paired-v2/parent-host plan](I80386-READ16-PAIRED-V2-PLAN.md) is proposed and
-unclaimed. Further work requires separately reviewed tasks. The paired source files are
+The [paired-v2/parent-host plan](I80386-READ16-PAIRED-V2-PLAN.md) is **DONE**:
+one admitted ten-million-retirement capture (run 40531608266) passed the
+unchanged gate (CPU A/B median 1.0685, minimum 1.0509, wall B/A median 0.9365)
+and the five-line arm was adopted in PR718 (`8785e468`) after the full tier and
+the x86-xv6 guest. Lite consumes it via its PR1503 pin bump. Further work requires separately reviewed tasks. The paired source files are
 in [source `55917c48`](https://github.com/CrispStrobe/bw-board/tree/55917c48dffe0c7c743388024481ef0a47a7c76c/scripts/i80386-read16-paired),
 which is not the adopted mainline CPU source. Claim any new paths before
 implementation.
@@ -3376,7 +3379,7 @@ implementation.
    [failed-attempt reader](I80386-READ16-FAILED-ATTEMPT-READER.md) preserves the
    complete eighteen-child failure, old refusal and bounded cleanup facts.
    Its accepted negative readback grants no CPU, guest or physical approval.
-2. **Predeclare a longer authored comparison.** Claim a new versioned fixture,
+2. **Predeclare a longer authored comparison: DONE** (PR712/714/715/716, run 40531608266). Claim a new versioned fixture,
    controller, independent reader, controls and workflow under a new
    `scripts/i80386-read16-paired-v2/` envelope before selecting any event.
    Freeze the larger workload, semantic/device goldens, imports, resources and
@@ -3386,7 +3389,7 @@ implementation.
    one-million-instruction failure; no outlier deletion or same-event replay.
    Ten million instructions is a proposal requiring new independent device
    goldens and a cap-fit proof, not an implemented or selected workload.
-3. **Bind the actual parent host.** In that new controller and independent
+3. **Bind the actual parent host: DONE** (v2 `run.py` host witness, standalone `reader.py`). In that new controller and independent
    reader, collect bounded parent CPU model, effective affinity, CPU quota,
    OS/image and pinned Node identity before child timing, then join them to
    the selected official run. Exclude hostnames and private identifiers from
@@ -3671,7 +3674,7 @@ qualified source [PR #705](https://github.com/CrispStrobe/bw-board/pull/705) and
 a separately admitted `failed-attempt-only` readback, without CPU adoption.
 Its historical terminal refusal and first new auditor's repeated-step refusal
 remain preserved. The [paired-v2/parent-host plan](I80386-READ16-PAIRED-V2-PLAN.md)
-is proposed and unclaimed. Both audit leaves specify the negative scope and
+is DONE and its arm adopted (PR718). Both audit leaves specify the negative scope and
 follow-up boundaries.
 Strict dependency-resolution/licence review remains separate. No replay, new
 original GET, event, allowlist or positive chain is authorized by retirement.
