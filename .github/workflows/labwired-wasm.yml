@@ -214,7 +214,10 @@ jobs:
           # here is the tier COMPARISON. Since 2026-08-30 that comparison also
           # carries OTYPER: an open-drain pad driving 1 must be DARK on both
           # tiers and driving 0 must still sink on both.
-          node --test test/labwired-adapter.test.mjs test/labwired-bridge.test.mjs \
+          # Node 22 V8 crashes (Deoptimizer fatal, not an assertion) when it
+          # inlines JS->WASM calls for the current engine under this parallel
+          # suite; disabling only that inlining keeps Node 22 coverage.
+          node --no-turbo-inline-js-wasm-calls --test test/labwired-adapter.test.mjs test/labwired-bridge.test.mjs \
                       test/labwired-roundtrip.test.mjs \
                       test/pad-drive-parity.test.mjs \
                       test/labwired-firmware-only.test.mjs \
@@ -275,6 +278,16 @@ jobs:
             sha256sum test/fixtures/labwired/microbit-motion/*
           } | tee motion-runner.txt
           cat lw/BUILD-INFO.json
+      - name: Refuse a runner class that cannot judge the 1x floor
+        run: |
+          # Same-runner A/B: old and new engines both >=1.29x on faster hosts;
+          # on EPYC 7763 hosts both engines run well below 1x, so a result
+          # there says nothing about the engine. Fail as inconclusive instead
+          # of reporting a regression or a pass. The floor itself is unchanged.
+          if grep -q 'EPYC 7763' motion-runner.txt; then
+            echo "::error::INCONCLUSIVE_RUNNER: EPYC 7763 cannot judge the unchanged 1x motion floor"
+            exit 1
+          fi
       - name: Actual sensor guest and all five unchanged 1x windows
         env:
           LABWIRED_WASM: ${{ github.workspace }}/lw/nodejs
