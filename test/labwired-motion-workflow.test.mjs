@@ -26,25 +26,28 @@ test('artifact A/B verifies both source commits and original glue/WASM hashes be
     assert.ok(abWorkflow.indexOf('Verify declared sources') < abWorkflow.indexOf('Complete diagnostic'));
 });
 
-test('motion publication is fail-closed for all 250 prerequisite result combinations', () => {
+test('motion publication is fail-closed for all 1250 prerequisite result combinations', () => {
     const expression = workflow.match(/\n    if: \$\{\{ (always\(\) && inputs.publish.*?) \}\}/)?.[1];
     assert.ok(expression, 'actual publish expression must parse');
-    const verdict = new Function('inputs', 'needs', 'always', `return (${expression});`);
+    // GitHub expressions allow hyphenated job ids; JS needs bracket access.
+    const jsExpression = expression.replace(/needs\.([A-Za-z0-9_]+(?:-[A-Za-z0-9_]+)+)\./g, "needs['$1'].");
+    const verdict = new Function('inputs', 'needs', 'always', `return (${jsExpression});`);
     const states = ['success', 'failure', 'cancelled', 'skipped', ''];
     let checked = 0;
     for (const requested of [false, true]) {
-        for (const determinism of states) for (const tests of states) for (const motion of states) {
-            const needs = {determinism: {result: determinism}, test: {result: tests}, motion: {result: motion}};
+        for (const determinism of states) for (const tests of states) for (const motion of states) for (const game of states) {
+            const needs = {determinism: {result: determinism}, test: {result: tests}, motion: {result: motion},
+                'samd-game': {result: game}};
             const inputs = {publish: true, qualify_motion: requested};
-            const expected = determinism === 'success' && tests === 'success' &&
+            const expected = determinism === 'success' && tests === 'success' && game === 'success' &&
                 motion === (requested ? 'success' : 'skipped');
             assert.equal(verdict(inputs, needs, () => true), expected, JSON.stringify({inputs, needs}));
             assert.equal(verdict({...inputs, publish: false}, needs, () => true), false);
             checked++;
         }
     }
-    assert.equal(checked, 250);
-    assert.match(workflow, /needs: \[determinism, test, motion\]/);
+    assert.equal(checked, 1250);
+    assert.match(workflow, /needs: \[determinism, test, motion, samd-game\]/);
 });
 
 test('requested motion cannot report a skipped or zero-test run as qualification', () => {
