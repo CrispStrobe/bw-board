@@ -1,4 +1,4 @@
-## i80386 read16 contiguous-page two-byte read adoption — CLAIMED, 2026-10-27
+## i80386 read16 contiguous-page two-byte read adoption — DONE, 2026-10-28 (PR718 merged 8785e468; Lite pin PR1503)
 
 Owner: Claude x86 lane. Claim and change in this one PR (branch
 `lane/read16-adoption-20261027`, base master `2d5e892251290b02585973db7b95413f3ea0c303`).
@@ -15,7 +15,7 @@ path-triggered x86-xv6 protected guest and vectors jobs run on this exact
 source. Authored-loop timing only: no physical RTx, general-workload or
 whole-OS claim. The old .999455 failure stays retained.
 
-## i80386 read16 paired-v2 ten-million-retirement plan — CLAIMED (claim PR712 merged; first source slice, guards false), 2026-10-27
+## i80386 read16 paired-v2 ten-million-retirement plan — DONE, 2026-10-28 (gate PASS, run 40531608266; see docs/I80386-READ16-PAIRED-V2-PLAN.md)
 
 Owner: Claude x86 lane (task 2). Claim branch
 `claim/read16-paired-v2-20261027` from master
