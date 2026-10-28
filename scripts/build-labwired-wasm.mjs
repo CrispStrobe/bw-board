@@ -73,6 +73,7 @@
  * from this machine rather than a number someone remembers.
  */
 import { execFileSync } from 'node:child_process';
+import {writeSamdProfile} from './lib/labwired-samd-profile.mjs';
 import { mkdirSync, rmSync, existsSync, readFileSync, readdirSync, writeFileSync, statSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { realpathSync } from 'node:fs';
@@ -83,7 +84,7 @@ import { brotliCompressSync, constants as zlibConstants } from 'node:zlib';
 const REPO = 'https://github.com/CrispStrobe/labwired-core.git';
 /** The fork's tested main, including the guarded Cortex-M, RISC-V and Xtensa
  * hot-loop paths. The fleet builds from this immutable source commit. */
-const PIN = 'de14721e4ae1d34a428f91d232e4520d50f1ceba';
+const PIN = '3b655aef4085082152129c84849d4e2ad5004a7f';
 
 const arg = (name, dflt) => {
     const i = process.argv.indexOf(`--${name}`);
@@ -188,13 +189,17 @@ try {
             ['--target', t, '--out-dir', join(outDir, t), rawPath]);
     }
 
+    // Explicit loader scope for the exact CommonJS glue shipped to consumers.
+    writeFileSync(join(outDir, 'nodejs', 'package.json'), '{"type":"commonjs"}\n');
+    const configAssets = writeSamdProfile({sourceDir: src, outDir, ref: head});
+
     // 6. what actually came out
-    const info = { ref: head, wasmBindgen: wbVersion, rustflags, builtAt: new Date().toISOString(), targets: {} };
+    const info = { ref: head, wasmBindgen: wbVersion, rustflags, builtAt: new Date().toISOString(), configAssets, targets: {} };
     info.rawBytes = rawSize;
     for (const t of TARGETS) {
         info.targets[t] = {};
         for (const name of readdirSync(join(outDir, t))) {
-            if (!/\.(js|wasm)$/.test(name)) continue;   // skip the .d.ts
+            if (!/\.(js|wasm)$/.test(name) && name !== 'package.json') continue;   // skip the .d.ts
             const buf = readFileSync(join(outDir, t, name));
             info.targets[t][name] = {
                 bytes: buf.length,

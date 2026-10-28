@@ -59,7 +59,7 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
-          node-version: 22
+          node-version: 22.23.4
       # Only to put `rustup` on PATH. The toolchain that actually builds is
       # labwired's own: their rust-toolchain.toml pins 1.95.0, and the build
       # script adds wasm32 to THAT one from inside the checkout. Installing
@@ -136,8 +136,9 @@ jobs:
           # job failed on a missing path instead of on a real difference —
           # a gate that breaks when the thing it guards changes shape is a gate
           # nobody will trust the next time it goes red.
-          files=$(cd a && find . -type f \( -name '*.js' -o -name '*.wasm' \) | sort)
+          files=$(cd a && find . -type f \( -name '*.js' -o -name '*.wasm' -o -name 'package.json' -o -name 'samd-no-asf-profile.json' \) | sort)
           [ -n "$files" ] || { echo "::error::no build outputs to compare"; exit 1; }
+          diff -u <(cd a && find . -type f \( -name '*.js' -o -name '*.wasm' -o -name 'package.json' -o -name 'samd-no-asf-profile.json' \) | sort) <(cd b && find . -type f \( -name '*.js' -o -name '*.wasm' -o -name 'package.json' -o -name 'samd-no-asf-profile.json' \) | sort)
           echo "comparing:"
           while IFS= read -r file; do printf '    %s\n' "$file"; done <<< "$files"
           for f in $files; do
@@ -166,7 +167,7 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
-          node-version: 22
+          node-version: 22.23.4
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with: { name: labwired-wasm-a, path: lw }
       # The suite reaches the factory, which imports the avr8js and rp2040js
@@ -213,7 +214,10 @@ jobs:
           # here is the tier COMPARISON. Since 2026-08-30 that comparison also
           # carries OTYPER: an open-drain pad driving 1 must be DARK on both
           # tiers and driving 0 must still sink on both.
-          node --test test/labwired-adapter.test.mjs test/labwired-bridge.test.mjs \
+          # Node 22 V8 crashes (Deoptimizer fatal, not an assertion) when it
+          # inlines JS->WASM calls for the current engine under this parallel
+          # suite; disabling only that inlining keeps Node 22 coverage.
+          node --no-turbo-inline-js-wasm-calls --test test/labwired-adapter.test.mjs test/labwired-bridge.test.mjs \
                       test/labwired-roundtrip.test.mjs \
                       test/pad-drive-parity.test.mjs \
                       test/labwired-firmware-only.test.mjs \
@@ -259,7 +263,7 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
-          node-version: 22
+          node-version: 22.23.4
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with: { name: labwired-wasm-a, path: lw }
       - name: Install ARM guest compiler
@@ -272,8 +276,18 @@ jobs:
             node --version
             arm-none-eabi-gcc --version
             sha256sum test/fixtures/labwired/microbit-motion/*
-          } > motion-runner.txt
+          } | tee motion-runner.txt
           cat lw/BUILD-INFO.json
+      - name: Refuse a runner class that cannot judge the 1x floor
+        run: |
+          # Same-runner A/B: old and new engines both >=1.29x on faster hosts;
+          # on EPYC 7763 hosts both engines run well below 1x, so a result
+          # there says nothing about the engine. Fail as inconclusive instead
+          # of reporting a regression or a pass. The floor itself is unchanged.
+          if grep -q 'EPYC 7763' motion-runner.txt; then
+            echo "::error::INCONCLUSIVE_RUNNER: EPYC 7763 cannot judge the unchanged 1x motion floor"
+            exit 1
+          fi
       - name: Actual sensor guest and all five unchanged 1x windows
         env:
           LABWIRED_WASM: ${{ github.workspace }}/lw/nodejs
@@ -297,11 +311,68 @@ jobs:
             lw/BUILD-INFO.json
           if-no-files-found: error
 
+  samd-game:
+    needs: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22.23.4
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with: { name: labwired-wasm-a, path: lw }
+      - name: Profile package refusal controls
+        run: node --test test/labwired-samd-profile.test.mjs
+      - name: Admit profile presence without an optional qualification bypass
+        id: profile
+        run: |
+          node --input-type=module -e '
+            import fs from "node:fs";
+            const info=JSON.parse(fs.readFileSync("lw/BUILD-INFO.json"));
+            const declared=Object.hasOwn(info.configAssets || {},"samd-no-asf-profile.json");
+            const present=fs.existsSync("lw/samd-no-asf-profile.json");
+            if(declared !== present) throw new Error("profile declaration/file mismatch");
+            fs.appendFileSync(process.env.GITHUB_OUTPUT,"present="+present+"\n");
+            if(!present) console.log("Historical engine has no SAMD software profile; no SAMD adoption claim.");
+          '
+      - name: Build fresh public source game with the exact Core recipe
+        if: steps.profile.outputs.present == 'true'
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends gcc-arm-none-eabi libnewlib-arm-none-eabi
+          node --input-type=module -e '
+            import fs from "node:fs";
+            import {execFileSync as run} from "node:child_process";
+            const {ref}=JSON.parse(fs.readFileSync("lw/BUILD-INFO.json"));
+            if(!/^[0-9a-f]{40}$/.test(ref)) throw new Error("immutable Core source required");
+            run("git",["init","-q","samd-game-supplier"],{stdio:"inherit"});
+            run("git",["-C","samd-game-supplier","fetch","--depth=1","https://github.com/CrispStrobe/labwired-core.git",ref],{stdio:"inherit"});
+            run("git",["-C","samd-game-supplier","checkout","--detach","FETCH_HEAD"],{stdio:"inherit"});
+            if(run("git",["-C","samd-game-supplier","rev-parse","HEAD"],{encoding:"utf8"}).trim()!==ref) throw new Error("source mismatch");
+          '
+          python3 -B samd-game-supplier/scripts/ci/build_samd_native_game.py --work samd-game-source --out test/fixtures/labwired/samd-native-game
+      - name: Three actual game samples on the exact production WASM and config inputs
+        if: steps.profile.outputs.present == 'true'
+        run: node scripts/qualify-samd-native-game.mjs lw test/fixtures/labwired/samd-native-game samd-game-results
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        if: ${{ always() && steps.profile.outputs.present == 'true' }}
+        with:
+          name: samd-production-wasm-game
+          path: |
+            samd-game-results/
+            lw/BUILD-INFO.json
+            lw/samd-no-asf-profile.json
+            test/fixtures/labwired/samd-native-game/
+          if-no-files-found: error
+          retention-days: 14
+
   publish:
-    needs: [determinism, test, motion]
+    needs: [determinism, test, motion, samd-game]
     # An explicitly requested motion qualification must succeed, never skip.
     # Optional legacy builds still publish only after their original gates.
-    if: ${{ always() && inputs.publish && needs.determinism.result == 'success' && needs.test.result == 'success' && ((inputs.qualify_motion && needs.motion.result == 'success') || (!inputs.qualify_motion && needs.motion.result == 'skipped')) }}
+    if: ${{ always() && inputs.publish && needs.determinism.result == 'success' && needs.test.result == 'success' && needs.samd-game.result == 'success' && ((inputs.qualify_motion && needs.motion.result == 'success') || (!inputs.qualify_motion && needs.motion.result == 'skipped')) }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
@@ -340,6 +411,7 @@ jobs:
           # last wins — silently, and only one of them works in a browser.
           mkdir -p flat
           cp out/BUILD-INFO.json flat/
+          if [ -f out/samd-no-asf-profile.json ]; then cp out/samd-no-asf-profile.json flat/; fi
           if [ -f out/RETAINED-BUILD.json ]; then cp out/RETAINED-BUILD.json flat/; fi
           # package.json travels too. wasm-bindgen's nodejs glue is CommonJS and
           # says so ONLY in the package.json it emits beside it; without that
