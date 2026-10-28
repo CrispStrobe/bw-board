@@ -3678,3 +3678,34 @@ is DONE and its arm adopted (PR718). Both audit leaves specify the negative scop
 follow-up boundaries.
 Strict dependency-resolution/licence review remains separate. No replay, new
 original GET, event, allowlist or positive chain is authorized by retirement.
+
+
+## Direct disp16 allocation avoidance
+
+The [2026-10-28 claim](../LANES.md#direct-disp16-allocation-avoidance--claim-2026-10-28)
+reserves only the direct sixteen-bit memory displacement subcase of `_decodeEA`
+in `src/experimental/i80386.js` and a dedicated independent regression suite.
+At base `e2dff295ee6b2eca6a1e4173601679ccd20a5658`, this CPU file is unchanged
+from `260126831`: the direct form still constructs an unused outer array and
+eight base/segment pairs. Diagnostic hotspot observations motivate a candidate;
+they do not establish an allocation cost share or predict a speedup.
+
+After the claim lands, move that construction into its existing `else` without
+changing the shared fetch, mask or result path. Preserve direct DS selection,
+ES and other overrides, address-size prefixes, partial displacement faults,
+architectural rollback and all other addressing forms. Test independent address
+values, callback order, boundary faults and neighboring modes, with mutations
+that distinguish each requirement.
+
+PR557's broader scalar-EA candidate remains unadopted with its failed original
+paired result preserved. This lane supersedes only its direct-disp16 subcase.
+Fresh clean freely licensed guest qualification and separately reviewed,
+predeclared paired performance qualification are required before source merge.
+Review the existing path-triggered `.github/workflows/x86-xv6.yml`: it builds
+pinned guests and boots the current CPU on an enabled candidate run. Reuse it
+when its evidence satisfies this scope; separately claim only demonstrated
+missing guest tooling. Historical source-context/debug runs and consumed
+benchmark events are not new candidate qualification. New performance tooling
+and event selection need a separate bounded claim before implementation. No gate or threshold is changed here.
+Keep the candidate unpublished pending independent review, make no Lite pin
+change, and retain current GUI acceptance as the first consumer-adoption task.

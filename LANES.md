@@ -7446,3 +7446,44 @@ false; external admission/review is separate. No benchmark event or original
 acquisition is repeated. The [paired-v2/parent-host plan](docs/I80386-READ16-PAIRED-V2-PLAN.md)
 is proposed and unclaimed; CPU adoption, profiling and any new selection retain
 their separate gates.
+
+
+## Direct disp16 allocation avoidance — claim, 2026-10-28
+
+Owner: Codex x86 profiling, with Sol implementation after this claim lands.
+Base `e2dff295ee6b2eca6a1e4173601679ccd20a5658`. Own only the
+`address32 === false`, `mod === 0`, `rm === 6` memory subcase of `_decodeEA`
+in `src/experimental/i80386.js`, new
+`test/i80386-disp16-allocation.test.mjs`, this entry and the matching
+[task contract](docs/X86-NEXT-LANES.md#direct-disp16-allocation-avoidance).
+This supersedes only that subcase of the retired PR557 scalar-EA proposal;
+its failed paired result, acceptance contract and other addressing forms remain
+held. No implementation before this documentation claim lands.
+
+Move the existing unused `bases` construction into the existing non-direct
+`else`, keeping the direct `_fetchN(2)`, common sixteen-bit mask and result
+object. Preserve ModR/M and displacement fetch order, partial fetch state,
+fault delivery and rollback, DS default, all segment overrides including ES,
+address-size selection, all other address forms, snapshots, traces and bus
+callbacks. No fetch specialization, reusable operand object, cache, backend,
+device, clock, consumer pin or Lite adoption change belongs to this lane.
+
+Require independent direct-address arithmetic and fetch/fault observations,
+neighboring BP/SS, register and 32-bit controls, segment/page/instruction-length
+boundaries and nonvacuous mutations. Existing EA, LEA, fetch, paging and fault
+regressions and all enabled exact-head CI checks remain mandatory.
+
+This is preparation, not optimization adoption. Before any source merge,
+review and require fresh freely licensed clean-guest qualification on the exact
+candidate. The existing `.github/workflows/x86-xv6.yml` builds pinned guests
+and boots the current CPU; use that route when its source, runtime, input and
+cleanup evidence satisfies this scope. Historical debug/source-context runs
+are not fresh qualification. Claim additional guest tooling separately only
+where the existing route has a demonstrated gap. Separately claim and review
+a new paired performance protocol with exact candidate/base, workload, runtime,
+hardware, resource, cleanup and independent-reader bindings. Freeze
+its numerical decision rule before selecting an event; preserve failed pairs
+and do not replay PR557 or ordered-read events or weaken their gates. No
+performance-only adoption without the new semantic, guest and paired gates.
+The current Lite GUI qualification remains the first consumer-adoption priority.
+No app, full-OS, physical timing or RTx claim follows.
