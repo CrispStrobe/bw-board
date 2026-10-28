@@ -2,7 +2,10 @@
 
 [PR711](https://github.com/CrispStrobe/bw-board/pull/711), branch
 `lane/samd-engine-producer-20261026`, head `8ea3767903d5135f4bd1e74914e25663b530d502`,
-is **open and unreleased**. It now pins the qualified Core commit
+is **qualified, merged and released**. The normal merge is
+`1f92a1aa85e808827a4c28b219bf11a572f07882`; parents and predicted tree were
+verified. The composed main changes were four Markdown files only; executable
+bytes matched the qualified head. It now pins the qualified Core commit
 `3b655aef4085082152129c84849d4e2ad5004a7f` (see the
 [Core handoff](https://github.com/CrispStrobe/labwired-core/blob/main/docs/engineering/samd-software-profile-handoff.md)).
 Continue the existing SAMD claim in `LANES.md`; do not open a second producer PR.
@@ -41,42 +44,45 @@ The PR carries the `ci:full` label on purpose (one full run before release).
 - **[40699886470](https://github.com/CrispStrobe/bw-board/actions/runs/40699886470)**:
   the current campaign at head `8ea3767`, `ref=3b655aef…`, `publish=false`,
   `retained_build=false`, `qualify_motion=false` (the operator deferred motion
-  qualification). It was still running at this checkpoint.
+  qualification). It completed successfully: both builds, determinism, the125-test suite and three actual Node game instances passed; motion/publication were declared skips.
 
-## Open tasks, in order
+## Completed release checkpoint — 2026-10-28
 
-1. **Read the result of campaign 40699886470.** Do not dispatch a duplicate while
-   it runs. If it failed, read only the failed job logs, keep them, and diagnose;
-   do not rerun the whole campaign blindly. If it passed, continue.
-2. **Check PR711's exact-head checks** at the final head
-   (`gh pr view 711 --repo CrispStrobe/bw-board --json headRefOid,statusCheckRollup`).
-   Every enabled check must be SUCCESS; only declared skips are allowed. A failed
-   job caused by a network/installer timeout may be rerun once (`gh run rerun
-   <run> --job <job>`), keeping the original log.
-3. **Audit the campaign before any publication.** Download each artifact of the
-   passing campaign once (admit run/job/artifact metadata first). Independently
-   check: both builds byte-identical; `BUILD-INFO.json` binds Core `3b655aef…`
-   and the producer head; config/profile assets present; legacy suite count not
-   below the existing floor (118); the three SAMD game instances (raw frames and
-   press/release). Record SHA-256 of engine `.wasm`, glue, profile, BUILD-INFO.
-4. **Publish an immutable release from those exact bytes.** `publish=true`
-   rebuilds and releases before external audit, so do not use it for this. Create
-   a new release tag (refuse if it already exists) and upload the audited flat
-   assets unchanged, with loader markers, profile and BUILD-INFO. Bind the release
-   notes to the producer head, full Core SHA and campaign run. Never replace an
-   asset or relabel old bytes.
-5. **Merge PR711** normally with `--match-head-commit <final head>` after task 2;
-   verify parents and that the landed tree equals the tested tree. Record the tag
-   and asset SHA-256s in the
-   [Lite handoff](https://github.com/CrispStrobe/brickwright-lite/blob/main/docs/SAMD-NATIVE-GAME-HANDOFF.md).
-6. **Deferred: motion qualification.** When the operator asks for it, dispatch one
-   campaign with `qualify_motion=true`. An `INCONCLUSIVE_RUNNER` result means the
-   job landed on an EPYC 7763; rerun only that job (it is not a regression). Keep
-   the 1× floor.
-7. **Deferred: remove the V8 workaround** once the Node 22 line no longer
-   crashes, or once the suite moves to Node 24. Re-verify radio-pair without the
-   flag; record the result.
+[Immutable release `labwired-wasm-3b655aef-locked`](https://github.com/CrispStrobe/bw-board/releases/tag/labwired-wasm-3b655aef-locked)
+contains the exact retained campaign assets, without rebuilding. All nine
+uploaded asset SHA-256s were checked against the admitted bytes before publishing.
+Core/producer licences and the original profile notices are retained. The API
+confirms `immutable: true`. The earlier unlocked tag `labwired-wasm-3b655aef`
+is preserved unchanged; consumers use the locked tag above.
 
-Node results do not qualify Chromium, an installed package, physical hardware or
-real-time gameplay. Private paths and operational receipts never go into public
-Markdown, release notes or workflow inputs.
+Independent offline review verified both build rosters and bytes (only build
+timestamps differ), all source/profile bindings,565 guest-file bindings,51 raw
+RGB frames across three instances, actual press displacement/release stop, and
+125 suite tests with zero failures/skips. Five altered-input controls were
+rejected. This qualifies those observed boundaries only.
+
+| Consumer asset | SHA-256 |
+|---|---|
+| web glue | `a29729658f267617e7d2539d756bd4dbe0662b25768348ecaeab723a9b032e1f` |
+| web/Node WASM | `1ad2947b99df8a13fce29c9240a79c61fb66e4d57ede26ca50880f141f3e3978` |
+| SAMD profile | `0fe1e72ae684153696efbca5874d2633007b92a9c9144f38cd62fdd28d030750` |
+| Node glue | `747cb78d8118854e87ff728c10c24710d7302c55871d920c2784537afd1f965d` |
+
+## Remaining tasks, in order
+
+1. Complete [Lite adoption](https://github.com/CrispStrobe/brickwright-lite/blob/main/docs/SAMD-NATIVE-GAME-HANDOFF.md)
+   using this tag and the exact hashes above. Proposed isolated branch
+   qualification is coordinated with the native-package owner; main pin
+   publication still requires that coordination. Fresh actual Chromium and
+   installed Tauri/WebKit acceptance remain mandatory. Do not rebuild or replace
+   this release to inspect it.
+2. **Deferred motion qualification:** when requested, dispatch one campaign with
+   `qualify_motion=true`. Retain the1× floor; an `INCONCLUSIVE_RUNNER` result
+   preserves the host limitation rather than qualifying performance.
+3. **Deferred V8 workaround removal:** once Node22 no longer crashes, or the
+   suite moves to Node24, re-verify radio-pair without the narrow inlining flag.
+   Keep the original crash and fixed-source receipts.
+
+Node results do not qualify Chromium, an installed package, physical hardware
+or real-time gameplay. Private paths and operational receipts never go into
+public Markdown, release notes or workflow inputs.

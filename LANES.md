@@ -146,7 +146,7 @@ rerun.
 
 ## SAMD active-game engine/config producer — claim, 2026-10-26
 
-CLAIMED — Codex SAMD continuation, owned isolated checkout on branch
+DONE — qualified producer/exact-byte publication; Codex SAMD continuation, owned isolated checkout on branch
 `lane/samd-engine-producer-20261026`, exact base
 `490bd162ef94a570966824c4d804164c00d1746a`.
 
@@ -169,6 +169,15 @@ releases and other owners' lanes. New actual guest inputs must retain source,
 compiler, notices and file identities; no private logs or operator data are
 published. Engine/config publication does not by itself qualify browser or
 installed Lite adoption; those remain mandatory consumer checks.
+
+Producer closeout2026-10-28: matched PR711 merge
+`1f92a1aa85e808827a4c28b219bf11a572f07882`,12 enabled checks successful.
+Campaign40699886470 passed both builds, determinism,125 suite tests and three
+source-built game instances. Independent original audit preceded publication;
+release `labwired-wasm-3b655aef-locked` has nine verified asset hashes and API
+`immutable: true`. Motion remains explicitly deferred. Continue consumer
+acceptance under its existing Lite claim; see the producer handoff for limits.
+
 
 2026-10-24 literal-PULSE oracle census registration — DONE (source candidate), Codex circuit owner.
 
