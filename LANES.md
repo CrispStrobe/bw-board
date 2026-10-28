@@ -1,3 +1,68 @@
+## i80386 read16 contiguous-page two-byte read adoption — CLAIMED, 2026-10-27
+
+Owner: Claude x86 lane. Claim and change in this one PR (branch
+`lane/read16-adoption-20261027`, base master `2d5e892251290b02585973db7b95413f3ea0c303`).
+Own only this section and the measured five-line `size === 2` arm of
+`_readLinear` in `src/experimental/i80386.js`, byte-identical to unadopted
+`55917c48dffe0c7c743388024481ef0a47a7c76c` (runtime arm B of paired-v2).
+No other CPU, test, fixture, pin or workflow change.
+
+Evidence: paired-v2 run 40531608266 (claim PR712, harness PR714/716) admitted
+by its standalone reader: CPU A/B median 1.0685, minimum 1.0509, wall B/A
+median 0.9365 on one Xeon 8370C hosted runner; gate unchanged. Before merge:
+every enabled exact-head check including the `ci:full` tier, whose
+path-triggered x86-xv6 protected guest and vectors jobs run on this exact
+source. Authored-loop timing only: no physical RTx, general-workload or
+whole-OS claim. The old .999455 failure stays retained.
+
+## i80386 read16 paired-v2 ten-million-retirement plan — CLAIMED (claim PR712 merged; first source slice, guards false), 2026-10-27
+
+Owner: Claude x86 lane (task 2). Claim branch
+`claim/read16-paired-v2-20261027` from master
+`e5bf38a5f2936a461be15bed3c568e9090bd4d77`. This docs-only claim merges
+before any code, as [the plan](docs/I80386-READ16-PAIRED-V2-PLAN.md) requires.
+
+Own only new
+`scripts/i80386-read16-paired-v2/{fixture.mjs,run.py,reader.py,controls.py,source-rows.json,README.md}`,
+`test/i80386-read16-paired-v2.test.mjs`,
+`.github/workflows/i80386-read16-paired-v2.yml`, this registry section and
+matching paired-v2 task prose. Every new execution guard starts false.
+No CPU, producer, existing reader/fixture/workflow, pin or source-policy edit;
+spent event identities and the old one-million failure/refusals stay intact.
+
+Fixed gate, never weakened: ten million actual retired instructions of the
+media-free five-operation loop, 25,000-instruction throwaway warmup per fresh
+child, eighteen children (ABAB warm, then AB BA AB BA BA AB BA), whole-child
+CPU A/B median >= 1.03 AND every pair ratio > 1, wall B/A median <= 1.02.
+One CPU, 1 GiB no swap, 64 tasks, 60 s child deadline. Independent
+architecture/device goldens and cap-fit proof precede activation; the full
+tuple saturates at 16 loops (AX alone 15) and is insufficient on its own.
+The old minimum .999455 stays FAILED/unadopted. No physical RTx, whole-OS
+or general-workload claim from any result.
+## i80386 VM86 common-context / TSS RAM / current native profile — claim, 2026-10-27
+
+CLAIMED — x86 lane, branch `lane/386-vm86-common-context-20261027`, initial master
+`e5bf38a5f2936a461be15bed3c568e9090bd4d77`. Claim and change travel in one PR.
+Own exactly: `scripts/i80386-vm86-common-context/**`,
+`test/i80386-vm86-common-context.test.mjs`,
+`.github/workflows/i80386-vm86-common-context.yml`, this section and a status
+paragraph in `docs/X86-NEXT-LANES.md`. No edit to `src/experimental/i80386.js`,
+existing VM86/task tests, comparison adapters, ring-3 INT/IRETD source, V3 cleanup,
+native builders/providers/ABI, pins or other workflows.
+
+One authored strict-386 boot sector with explicit GDT, IDT, two TSSs and stacks:
+VM86 entry by IRETD, INT through a DPL3 interrupt gate to CPL0, IRETD back, then
+INT through a task gate into a nested task. Expectations for the whole GDT, both
+TSS images, handler/task stacks and VM86 RAM words are derived without a CPU model.
+The reference profile is pinned upstream Bochs `REL_2_7_FINAL` built unmodified at
+CPU level 3 in the job; it writes CS descriptor accessed bits, which QEMU 8.2 TCG
+omits on gate/task CS loads. No accessed-bit mask, CPU semantic change or reuse
+of the refused ring-3 V2 QEMU authority. Controls: CPU-source mutations
+(accessed-bit write, nested NT) and reader adversaries must fail. The actual job
+runs only for one admitting label event on the exact head and retains originals
+for an independent reader. Finite fixture only: no full-OS, enhanced-mode,
+application, physical-386 or performance claim.
+
 ## Explicit Shockley junction DC reachability — DONE candidate, 2026-10-26
 
 Owner: Codex circuit/instrument campaign owner. Isolated branch

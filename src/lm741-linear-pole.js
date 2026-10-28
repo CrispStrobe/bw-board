@@ -6,22 +6,75 @@ export const LM741_CARD = Object.freeze({
     tickNs: 300n, settledV: 1e-6, minSupply: 10, commonHeadroom: 3,
     outputHeadroom: 2, defaultOffsetV: .001,
 });
+// Opt-in nominal 25 C bias/supply domain. Values are TYPICAL entries of the
+// TI LM741 data sheet (SNOSC25D) electrical characteristics for the LM741
+// grade at TA = 25 C and VS = +/-15 V: input bias current 80 nA typ (500 nA
+// max), input offset current 20 nA typ (200 nA max), supply current 1.7 mA
+// typ (2.8 mA max). Typical values are not guaranteed limits; the 2.8 mA
+// rating budget elsewhere is a warning maximum, never this current law.
+// The data sheet states the offset-current magnitude only, so its sign is an
+// explicit caller choice. Bias currents flow INTO both inputs (NPN input
+// stage) and return through V-; quiescent current flows V+ -> V-; sourced
+// output current is drawn from V+ and sunk output current returns to V-.
+export const LM741_NOMINAL_25C = Object.freeze({
+    domain: 'ti-snosc25d-typical-25c', temperatureC: 25, supplyV: 15,
+    inputBiasA: 80e-9, inputOffsetA: 20e-9, supplyCurrentA: 1.7e-3,
+    valueKind: 'typical',
+});
 const CINT = 30e-12; // Internal realization choice; gm/C and gm*Rp are invariant.
 const POLE_PIN = '__linear_pole';
 const fail = (part, detail) => {throw new Error(`LM741 ${part.id} linear-pole: ${detail}`);};
 
 export function lm741LinearParameters(part) {
-    if (part.kind !== 'lm741' || part.params?.transientModel === undefined) return null;
+    if (part.kind !== 'lm741') return null;
+    if (part.params?.transientModel === undefined) {
+        if (part.params && (Object.hasOwn(part.params, 'biasSupplyDomain')
+            || Object.hasOwn(part.params, 'inputOffsetCurrentSign'))) {
+            fail(part, 'bias/supply domain requires transientModel linear-pole');
+        }
+        return null;
+    }
     const p = part.params;
     if (p.transientModel !== 'linear-pole') fail(part, 'unsupported transientModel');
-    if (Object.keys(p).some(key => !['transientModel', 'supplyPositiveV', 'supplyNegativeV', 'inputOffsetV'].includes(key))) {
+    if (Object.keys(p).some(key => !['transientModel', 'supplyPositiveV', 'supplyNegativeV', 'inputOffsetV',
+        'biasSupplyDomain', 'inputOffsetCurrentSign'].includes(key))) {
         fail(part, 'unsupported parameter');
     }
     if (p.inputOffsetV !== 0 || !Object.hasOwn(p, 'inputOffsetV')) fail(part, 'explicit zero inputOffsetV required');
     if (!Number.isFinite(p.supplyPositiveV) || !Number.isFinite(p.supplyNegativeV)
         || p.supplyPositiveV - p.supplyNegativeV < LM741_CARD.minSupply
         || p.supplyPositiveV - p.supplyNegativeV > 36) fail(part, 'fixed 10–36 V supply span required');
+    if (Object.hasOwn(p, 'biasSupplyDomain') || Object.hasOwn(p, 'inputOffsetCurrentSign')) {
+        if (p.biasSupplyDomain !== LM741_NOMINAL_25C.domain) fail(part, 'unsupported bias/supply domain');
+        if (p.inputOffsetCurrentSign !== 1 && p.inputOffsetCurrentSign !== -1) {
+            fail(part, 'explicit inputOffsetCurrentSign +1 or -1 required');
+        }
+        if (p.supplyPositiveV !== LM741_NOMINAL_25C.supplyV || p.supplyNegativeV !== -LM741_NOMINAL_25C.supplyV) {
+            fail(part, 'bias/supply domain requires exactly +/-15 V rails');
+        }
+    }
     return p;
+}
+
+/** Nominal typical bias/supply currents, or null when the domain is off. */
+export function lm741BiasSupply(part) {
+    const p = lm741LinearParameters(part);
+    if (!p || p.biasSupplyDomain === undefined) return null;
+    const n = LM741_NOMINAL_25C, half = p.inputOffsetCurrentSign * n.inputOffsetA / 2;
+    return Object.freeze({inpA: n.inputBiasA + half, innA: n.inputBiasA - half, quiescentA: n.supplyCurrentA});
+}
+
+/** Package terminal currents OUT of the part for a given output-lead current. */
+export function lm741BiasSupplyTerminalCurrents(bias, outA) {
+    return new Map([
+        ['vpos', -(bias.quiescentA + Math.max(outA, 0))],
+        ['vneg', bias.quiescentA + bias.inpA + bias.innA + Math.max(-outA, 0)],
+    ]);
+}
+
+export function assertLm741BiasSupplyConditions(part, ctx) {
+    if (!lm741BiasSupply(part)) return;
+    if (ctx.temperatureC !== LM741_NOMINAL_25C.temperatureC) fail(part, 'bias/supply domain requires 25 C bench temperature');
 }
 
 export function assertLm741LinearTopology(part, ctx) {
@@ -92,7 +145,9 @@ export function expandLm741LinearPoles(parts, nets) {
             if (outNets.some(n => n.terminals.some(t => t.part === part.id && t.terminal === pin))) fail(part, `open ${pin} required`);
         }
         const prefix = `@lm741:${part.id}:`, pole = `${prefix}pole`, drive = `${prefix}drive`;
-        const named = Object.fromEntries(['gm', 'cap', 'rp', 'buffer', 'rout'].map(s => [s, `${prefix}${s}`]));
+        const railed = Boolean(lm741BiasSupply(part));
+        const named = Object.fromEntries(['gm', 'cap', 'rp', 'buffer', 'rout', ...(railed ? ['rails'] : [])]
+            .map(s => [s, `${prefix}${s}`]));
         if (Object.values(named).some(id => ids.has(id)) || [pole, drive].some(id => netIds.has(id))) {
             fail(part, 'hidden identity collision');
         }
@@ -105,11 +160,20 @@ export function expandLm741LinearPoles(parts, nets) {
             {id: named.buffer, kind: 'vcvs', params: {gain:1}, terminals: ['outp','outn','inp','inn']},
             {id: named.rout, kind: 'resistor', params: {ohms:LM741_CARD.rOut}, terminals: ['a','b']},
         );
+        if (railed) {
+            outParts.push({id: named.rails, kind: 'lm741_rail_return', params: {ohms: LM741_CARD.rOut},
+                terminals: ['pole', 'out', 'vpos', 'vneg', 'ref']});
+        }
         const t = (part, terminal) => ({part,terminal});
+        if (railed) {
+            pins.out.terminals.push(t(named.rails,'out')); pins.vpos.terminals.push(t(named.rails,'vpos'));
+            pins.vneg.terminals.push(t(named.rails,'vneg')); reference.terminals.push(t(named.rails,'ref'));
+        }
         pins.inp.terminals.push(t(named.gm,'inp')); pins.inn.terminals.push(t(named.gm,'inn'));
         pins.out.terminals.push(t(named.rout,'b'));
         reference.terminals.push(t(named.gm,'outn'),t(named.cap,'b'),t(named.rp,'b'),t(named.buffer,'inn'),t(named.buffer,'outn'));
-        outNets.push({id:pole,terminals:[t(named.gm,'outp'),t(named.cap,'a'),t(named.rp,'a'),t(named.buffer,'inp'),t(part.id,POLE_PIN)]},
+        outNets.push({id:pole,terminals:[t(named.gm,'outp'),t(named.cap,'a'),t(named.rp,'a'),t(named.buffer,'inp'),t(part.id,POLE_PIN),
+            ...(railed ? [t(named.rails,'pole')] : [])]},
             {id:drive,terminals:[t(named.buffer,'outp'),t(named.rout,'a')]});
     }
     return {parts:outParts,nets:outNets};

@@ -1,0 +1,92 @@
+name: VM86 common-context fixture
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review, labeled]
+    paths:
+      - '.github/workflows/i80386-vm86-common-context.yml'
+      - 'scripts/i80386-vm86-common-context/**'
+      - 'test/i80386-vm86-common-context.test.mjs'
+      - 'src/experimental/i80386.js'
+permissions:
+  contents: read
+concurrency:
+  group: vm86cc-${{ github.event.pull_request.number }}-${{ github.event.pull_request.head.sha }}-${{ github.event.action == 'labeled' && github.event.label.name || 'source' }}
+  cancel-in-progress: false
+jobs:
+  controls:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 22
+      - name: Source controls, CPU mutations and reader adversaries
+        run: |
+          set -euo pipefail
+          python3 -I -m py_compile scripts/i80386-vm86-common-context/reader.py
+          node --test test/i80386-vm86-common-context.test.mjs
+
+  # Separately admitted actual comparison: one labeled event on the exact head.
+  actual:
+    if: ${{ github.event.action == 'labeled' && github.event.label.name == 'x86-vm86-common-context-actual' && github.actor == 'CrispStrobe' && github.run_attempt == '1' && github.event.pull_request.head.repo.full_name == github.repository }}
+    needs: controls
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    env:
+      BW_EXPECTED_HEAD: ${{ github.event.pull_request.head.sha }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 22
+      - name: Record context and build tools
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$BW_EXPECTED_HEAD"
+          git diff --quiet
+          mkdir -p "$RUNNER_TEMP/evidence"
+          sudo apt-get update
+          sudo apt-get install --no-install-recommends -y build-essential libltdl-dev
+          { git rev-parse HEAD 'HEAD^{tree}'; uname -a; lscpu | head -20; g++ --version | head -1
+            as --version | head -1; node --version; python3 --version
+            dpkg-query -W build-essential g++ binutils libc6-dev; } > "$RUNNER_TEMP/evidence/context.txt"
+      - name: Build pinned unmodified Bochs CPU level 3
+        run: |
+          set -euo pipefail
+          root="$RUNNER_TEMP/bochs-src"
+          git init -q "$root"
+          git -C "$root" remote add origin https://github.com/bochs-emu/Bochs.git
+          git -C "$root" fetch --depth=1 --no-tags origin 0e45b736ef9792eb9b752b0a35db49eaf2faea47
+          git -C "$root" checkout -q --detach FETCH_HEAD
+          cd "$root/bochs"
+          ./configure --enable-cpu-level=3 --with-nogui --disable-plugins --disable-debugger \
+            --disable-repeat-speedups --disable-handlers-chaining > "$RUNNER_TEMP/evidence/configure.log" 2>&1
+          make -j4 > "$RUNNER_TEMP/evidence/make.log" 2>&1
+          test -x bochs
+          sha256sum bochs config.h > "$RUNNER_TEMP/evidence/bochs-sha256.txt"
+          cp config.h "$RUNNER_TEMP/evidence/bochs-config.h"
+          git -C "$root" status --porcelain --untracked-files=no > "$RUNNER_TEMP/evidence/bochs-tracked-status.txt"
+          test ! -s "$RUNNER_TEMP/evidence/bochs-tracked-status.txt"
+      - name: Execute JS and Bochs on the frozen guest
+        run: |
+          set -euo pipefail
+          node scripts/i80386-vm86-common-context/run.mjs --out "$RUNNER_TEMP/evidence/originals" \
+            --bochs-root "$RUNNER_TEMP/bochs-src" | tee "$RUNNER_TEMP/evidence/run-stdout.json"
+      - name: Independent original reader
+        run: |
+          set -euo pipefail
+          python3 -I scripts/i80386-vm86-common-context/reader.py "$RUNNER_TEMP/evidence/originals" \
+            > "$RUNNER_TEMP/evidence/reader.json"
+      - name: Retain originals
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: i80386-vm86-common-context-${{ github.event.pull_request.head.sha }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/evidence
