@@ -3749,3 +3749,48 @@ The next agent should complete these separate tasks in order:
 4. Keep the Lite GUI qualification as the first consumer-adoption priority.
    Do not change its engine pin until the source, guest, paired-performance and
    consumer acceptance gates applicable to that adoption have passed.
+
+### Handoff: 386 integration and user-facing work
+
+Refresh the default branches, open PRs and ownership claims before taking a
+lane. [Lite PR1540](https://github.com/CrispStrobe/brickwright-lite/pull/1540)
+is the GUI qualification candidate; [Board PR720](https://github.com/CrispStrobe/bw-board/pull/720)
+is the separate direct-address allocation candidate. Both remain open. Do not
+infer qualification from an older head, a green build alone, or an artifact's
+existence. Preserve existing historical pin profiles and completed studies.
+
+1. **Compose Lite with current main.** Review incoming workflow, consumer and
+   pin changes; resolve the `test/pin-move-chain.test.mjs` conflict by retaining
+   both the x86 historical checks and current main's changes. Coordinate the
+   fast-tier CI policy with its owner. Update only the current x86 profiles
+   whose inputs actually changed, then run focused source and pin controls and
+   all enabled checks for the resulting head. Preserve every failure and
+   declared threshold. Keep the change unpublished until the reviewed source
+   composition is ready for qualification.
+2. **Qualify the actual GUI path.** Bind a successful build job and its source
+   tree, manifest and runtime inputs to the final candidate. On an admitted
+   fresh run with redistributable FreeDOS media, exercise the widget's display
+   and input, disk write, image export and reload, forward debugging, and clean
+   shutdown. Independently check the retained results against the selected run
+   and source. Do not repeat a consumed run or download its originals again.
+   Merge only after the affected guest and enabled CI checks pass for that head.
+3. **Close the CLI and media usability gaps.** Inventory the existing commands
+   and GUI import paths in Lite's x86 handoff. Add or repair only missing paths
+   for interactive console, keyboard, VGA and mouse, and for DOSBox-style
+   configurations, disk images and ISO images. Exercise each supported format
+   with freely licensed fixtures, document exact commands and observable limits,
+   and test import, boot, interaction and persistence where applicable. Clearly
+   distinguish unsupported mounting or boot cases from tested ones.
+4. **Advance protected-mode compatibility.** Use freely licensed protected-mode
+   fixtures and independent processor oracles to identify the first reproducible
+   fault in DOS extender and xv6 workloads. Add a minimal regression with an
+   independent expected result, fix the responsible CPU or device behavior in
+   a claimed lane, and rerun affected clean guest tests. Treat Windows enhanced
+   mode and Doom as separate future guest acceptance goals; do not claim either
+   works until the actual software reaches its defined interaction milestone.
+5. **Measure before adopting optimizations.** Complete the separate PR720
+   guest-evidence and paired-performance tasks above. For further hotspots,
+   profile an actual representative guest, freeze baseline and candidate work,
+   check semantic parity and report host, runtime, workload and timing window.
+   Configured clock ratios are not a calibrated physical 386DX RTx measurement.
+   Do not carry a measured result across workloads, hosts or execution paths.
