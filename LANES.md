@@ -7532,4 +7532,11 @@ its numerical decision rule before selecting an event; preserve failed pairs
 and do not replay PR557 or ordered-read events or weaken their gates. No
 performance-only adoption without the new semantic, guest and paired gates.
 The current Lite GUI qualification remains the first consumer-adoption priority.
+
+Source review checkpoint: the candidate preserves the direct fetch and common
+mask/result path. Independent review, 62 focused tests and five mutation cuts
+pass. Publish it as a draft for exact-head hosted checks and the existing fresh
+xv6 route. Guest and predeclared paired performance acceptance remain pending;
+this is neither source adoption nor a measured speedup.
+
 No app, full-OS, physical timing or RTx claim follows.
