@@ -1,4 +1,4 @@
-## SAMD controller-memory RGB888 display — CLAIM, 2026-10-29
+## SAMD controller-memory RGB888 display — DONE candidate, 2026-10-29
 
 Owner: Codex SAMD continuation, isolated checkout `lego-work/spike-delivery-20261028/bw-board`;
 base `916bfe9ed3c861a5d3d260edcdb9287e2ef7cd25`. Own this section,
@@ -8,6 +8,11 @@ reported channels and refusing incomplete or unknown-pixel frames. Keep all
 existing formats and their behavior. Source and exact-head tests precede a
 normal landing; no `ci:full` label. This is software controller memory, not a
 claim about a physical panel. GUI routing and package adoption are separate.
+
+Focused display and input-boundary controls pass, including the original real
+WASM input tests. An independent byte comparison decoded all 102 retained
+browser and installed RGB frames with every channel preserved; no guest replay.
+The target withholds frames while the engine reports unknown pixels.
 
 ## i80386 read16 contiguous-page two-byte read adoption — DONE, 2026-10-28 (PR718 merged 8785e468; Lite pin PR1503)
 
