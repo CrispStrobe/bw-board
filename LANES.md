@@ -1,4 +1,4 @@
-## Explicit software-profile debugger factory — CLAIM, 2026-10-29
+## Explicit software-profile debugger factory — DONE candidate, 2026-10-29
 
 Owner: Codex SAMD continuation, isolated checkout `lego-work/spike-delivery-20261028/bw-board`;
 base `9c2fb685`. Own this section, the LabWired branch in
@@ -12,7 +12,23 @@ board/catalog behavior and require addressed ELF/UF2 firmware. Qualify reset,
 input and display forwarding and refusal controls before normal landing; no
 `ci:full`. GUI selection and consumer pin adoption remain separate.
 
-## SAMD controller-memory RGB888 display — CLAIM, 2026-10-29
+Focused factory, display and input-boundary tests pass; the retained real
+engine accepts the exact admitted profile through the factory and discovers
+its eight buttons without executing the guest. Input blobs are copied before
+reset. Existing qualified guest originals remain unchanged.
+
+Handoff: [PR721](https://github.com/CrispStrobe/bw-board/pull/721) folds this
+factory and the RGB888 decoder below. Before landing, review the final PR head,
+require the selected hosted checks and a normal matched-head merge, and verify
+the actual parent/tree. At the last status check the runnable checks were
+queued; the unlabelled `full CI requested` administrative check is not a
+passing result. The operator directed no `ci:full` label. After the real
+supplier commit lands, the Lite owner advances its bw-board pin through the
+vendor regime; do not publish an unmerged branch as a pin. The consumer's
+complete pending work is in Lite `lanes/2026-10-29-samd-explicit-debugger-route.md`
+on draft PR1565. Preserve all other owners' lanes and worktrees.
+
+## SAMD controller-memory RGB888 display — DONE candidate, 2026-10-29
 
 Owner: Codex SAMD continuation, isolated checkout `lego-work/spike-delivery-20261028/bw-board`;
 base `916bfe9ed3c861a5d3d260edcdb9287e2ef7cd25`. Own this section,
@@ -22,6 +38,11 @@ reported channels and refusing incomplete or unknown-pixel frames. Keep all
 existing formats and their behavior. Source and exact-head tests precede a
 normal landing; no `ci:full` label. This is software controller memory, not a
 claim about a physical panel. GUI routing and package adoption are separate.
+
+Focused display and input-boundary controls pass, including the original real
+WASM input tests. An independent byte comparison decoded all 102 retained
+browser and installed RGB frames with every channel preserved; no guest replay.
+The target withholds frames while the engine reports unknown pixels.
 
 ## i80386 read16 contiguous-page two-byte read adoption — DONE, 2026-10-28 (PR718 merged 8785e468; Lite pin PR1503)
 

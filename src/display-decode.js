@@ -6,6 +6,7 @@
  *   ssd1306_page / sh1107_page / pcd8544_bank  page-packed mono: byte
  *       page*width + x, bit k is pixel (x, page*8 + k), 1 = lit;
  *   rgb565_be   two bytes per pixel, big-endian, row-major;
+ *   rgb888      three reported RGB channels per pixel, row-major;
  *   gray8       one brightness byte per LED (0 dark .. 255 full), row-major —
  *       a multiplexed LED matrix (`led-matrix-mux`, the micro:bit display),
  *       drawn as red LEDs.
@@ -27,6 +28,30 @@ export function decodeDisplay (d) {
     return { refused: `display ${format} reported no geometry` };
   }
   const bytes = d.bytes;
+  if (format === 'rgb888') {
+    const size = w * h * 3;
+    if (!Number.isSafeInteger(size) || bytes.length !== size) {
+      return { refused: 'rgb888 reported incomplete pixels' };
+    }
+    const unknown = d.meta?.unknown_pixels;
+    if (unknown !== undefined && unknown !== 0) {
+      return { refused: 'rgb888 reported unknown pixels' };
+    }
+    for (let i = 0; i < size; i++) {
+      const value = bytes[i];
+      if (!Number.isInteger(value) || value < 0 || value > 255) {
+        return { refused: 'rgb888 reported an invalid channel' };
+      }
+    }
+    const rgba = new Uint8ClampedArray(w * h * 4);
+    for (let i = 0; i < w * h; i++) {
+      rgba[4 * i] = bytes[3 * i];
+      rgba[4 * i + 1] = bytes[3 * i + 1];
+      rgba[4 * i + 2] = bytes[3 * i + 2];
+      rgba[4 * i + 3] = 255;
+    }
+    return { width: w, height: h, rgba };
+  }
   const rgba = new Uint8ClampedArray(w * h * 4);
   if (MONO_PAGE.has(format)) {
     // An LCD (PCD8544) draws dark ink on a light panel; an OLED lights pixels.
