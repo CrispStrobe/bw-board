@@ -33,6 +33,18 @@ describe('decodeDisplay', () => {
         assert.deepEqual(px(f, 0, 0), [255, 0, 0, 255]);
         assert.deepEqual(px(f, 1, 0), [0, 255, 0, 255]);
     });
+    it('RGB888 preserves the engine\'s reported controller-memory channels', () => {
+        const f = decodeDisplay({format: 'rgb888', width: 2, height: 1,
+            bytes: [255, 138, 48, 0, 48, 170], meta: {unknown_pixels: 0}});
+        assert.deepEqual(px(f, 0, 0), [255, 138, 48, 255]);
+        assert.deepEqual(px(f, 1, 0), [0, 48, 170, 255]);
+    });
+    it('RGB888 refuses unknown, incomplete and invalid pixel data', () => {
+        const d = {format: 'rgb888', width: 1, height: 1, bytes: [1, 2, 3]};
+        assert.match(decodeDisplay({...d, meta: {unknown_pixels: 1}}).refused, /unknown/);
+        assert.match(decodeDisplay({...d, bytes: [1, 2]}).refused, /incomplete/);
+        assert.match(decodeDisplay({...d, bytes: [1, 2, 300]}).refused, /invalid/);
+    });
     it('an undrawable format or missing geometry is refused, never guessed', () => {
         assert.match(decodeDisplay({ format: 'epaper_tricolor_1bpp_planes', width: 8, height: 8, bytes: [0] }).refused, /does not draw/);
         assert.match(decodeDisplay({ format: 'ssd1306_page', width: null, height: 8, bytes: [0] }).refused, /geometry/);
@@ -67,6 +79,19 @@ describe('video() on a labwired target with a board display', () => {
     });
     it('no board display: null, not a black frame', () => {
         assert.equal(make({ gen: 1, bytes: [], calls: [] }, undefined).video(), null);
+    });
+    it('withholds unknown RGB888 pixels until the engine reports them known', () => {
+        let unknown = 1;
+        const sim = {get_pc: () => 0, get_display: (_id, withBytes) => ({
+            format: 'rgb888', width: 1, height: 1,
+            bytes: withBytes ? [255, 138, 48] : undefined,
+            meta: {generation: String(1 - unknown), unknown_pixels: unknown}
+        })};
+        const t = createLabwiredDebugTarget({displays: [{id: 'controller_memory'}],
+            adapter: {sim, clockHz: 120_000_000, timeNs: () => 0n, pump() {}}});
+        assert.equal(t.video(), null);
+        unknown = 0;
+        assert.deepEqual(px(t.video(), 0, 0), [255, 138, 48, 255]);
     });
 });
 

@@ -62,6 +62,38 @@ describe('labwired catalog', () => {
 });
 
 describe('firmware-only construction (no engine)', () => {
+    const softwareProfile = () => ({name: 'samd51-no-asf-simulation', kind: 'authored-software-profile',
+        physicalCapture: false, chipYaml: 'arch: arm', systemYaml: 'name: simulation',
+        clockHz: 120_000_000, blobs: {calibration: Uint8Array.of(3, 4)},
+        displays: [{id: 'controller_memory'}]});
+    it('explicit software profile forwards its own configuration, images and display on reset', async () => {
+        const {wasm, built} = stubWasm();
+        const p = softwareProfile();
+        const {target, adapter, refusals} = await createDebugTarget('labwired', {wasm, firmware: ELF_MAGIC, softwareProfile: p});
+        assert.equal(built[0].sys, p.systemYaml);
+        assert.equal(built[0].chip, p.chipYaml);
+        assert.deepEqual([...built[0].blobs.calibration], [3, 4]);
+        assert.equal(adapter.clockHz, 120_000_000);
+        assert.deepEqual(refusals, []);
+        adapter.sim.get_display = (_id, bytes) => ({format: 'rgb888', width: 1, height: 1,
+            bytes: bytes ? [255, 138, 48] : undefined, meta: {unknown_pixels: 0}});
+        assert.deepEqual([...target.video().rgba], [255, 138, 48, 255]);
+        p.blobs.calibration.fill(0);
+        adapter.resetToProgram();
+        assert.deepEqual([...built[1].blobs.calibration], [3, 4]);
+    });
+    it('software profile rejects circuits, conflicting config, physical relabels and unaddressed firmware', async () => {
+        const {wasm, built} = stubWasm();
+        for (const competing of [{board: {}}, {chip: {}}, {chipKind: 'pybadge'}, {mcuId: 'mcu'}, {systemYaml: 'other'}, {clockHz: 1}]) {
+            await assert.rejects(createDebugTarget('labwired', {wasm, firmware: ELF_MAGIC,
+                softwareProfile: softwareProfile(), ...competing}), /cannot replace/);
+        }
+        await assert.rejects(createDebugTarget('labwired', {wasm, firmware: ELF_MAGIC,
+            softwareProfile: {...softwareProfile(), physicalCapture: true}}), /explicit software identity/);
+        await assert.rejects(createDebugTarget('labwired', {wasm, firmware: Uint8Array.of(1, 2),
+            softwareProfile: softwareProfile()}), /needs an ELF or UF2/);
+        assert.equal(built.length, 0);
+    });
     it('the factory builds from a catalog chip with no board, and no board_io', async () => {
         const { wasm, built } = stubWasm();
         const chip = LABWIRED_CATALOG.nrf52840;

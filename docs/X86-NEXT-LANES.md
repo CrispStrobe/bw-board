@@ -3707,9 +3707,90 @@ when its evidence satisfies this scope; separately claim only demonstrated
 missing guest tooling. Historical source-context/debug runs and consumed
 benchmark events are not new candidate qualification. New performance tooling
 and event selection need a separate bounded claim before implementation. No gate or threshold is changed here.
-Independent source review and 62 focused controls pass, including eight
-specialized groups covering 672 direct-address cases and five detected
-mutations. The prepared candidate is published for hosted CI and fresh freely
-licensed xv6 qualification. No measured speedup, paired performance acceptance,
-source merge or Lite pin adoption is established. Preserve the independent
-paired gate and retain GUI acceptance as the first consumer-adoption task.
+Keep the candidate unpublished pending independent review, make no Lite pin
+change, and retain current GUI acceptance as the first consumer-adoption task.
+
+### Direct disp16 candidate: audited xv6 observations, 2026-10-29
+
+The allocation candidate in [PR720](https://github.com/CrispStrobe/bw-board/pull/720)
+remains unmerged. Its hosted [xv6 job](https://github.com/CrispStrobe/bw-board/actions/runs/40831788697/job/123307446573)
+completed successfully. An independent reader of the retained job log and
+five-report archive confirms the 4 MiB filesystem command sequence, the
+14 MiB boot/command probe and the 4 MiB `forktest` result. Each probe records
+user-mode entries and IDE interrupt progress. The actual checkout is the
+expected merge of the reviewed candidate and its base; all 78 reported source
+hashes and the separately reviewed workflow/probe inputs match that checkout.
+These are bounded xv6 observations with PSE/APIC extensions. They establish no
+strict 386DX, full-OS, enhanced-mode Windows, speed or physical RTx result.
+
+The next agent should complete these separate tasks in order:
+
+1. Finish source-policy admission of the complete exact-head CI cohort. Exact
+   check/run IDs now explain the shorter CLI view: 78 selected PR contexts plus
+   seven branch-push checks. All seven retained cancelled PR checks have
+   successful counterparts in the same workflow/check/head context; the six
+   heavy branch-push skips follow the non-default-branch predicates. Preserve
+   the cancelled originals. This membership reconciliation does not authenticate
+   every event/action/label input or establish whole-workflow enablement; admit
+   those contexts and require every enabled final-head check to succeed.
+2. Close the guest-evidence gaps before calling the candidate qualified. The
+   existing receipts do not independently bind raw disk byte sizes, the kernel
+   used for symbol milestones, runtime/compiler identities, environment/debug
+   settings, process/descriptor cleanup or enforced job resource bounds. Scope
+   any needed producer/reader changes as a separate lane, retain the current
+   successful originals, and never replay a consumed event to improve its
+   evidence. A new run needs its own reviewed inputs and event admission.
+3. Claim and freeze a fresh paired performance protocol for the exact candidate
+   and baseline, with independently checked ordinary-instruction semantics,
+   fixed work, runtime/host/resource/cleanup bindings and a numerical adoption
+   rule declared before measurement. Preserve the failed historical PR557
+   result. This candidate has no measured speedup and must not be adopted from
+   correctness tests alone.
+4. Keep the Lite GUI qualification as the first consumer-adoption priority.
+   Do not change its engine pin until the source, guest, paired-performance and
+   consumer acceptance gates applicable to that adoption have passed.
+
+### Handoff: 386 integration and user-facing work
+
+Refresh the default branches, open PRs and ownership claims before taking a
+lane. [Lite PR1540](https://github.com/CrispStrobe/brickwright-lite/pull/1540)
+is the GUI qualification candidate; [Board PR720](https://github.com/CrispStrobe/bw-board/pull/720)
+is the separate direct-address allocation candidate. Both remain open. Do not
+infer qualification from an older head, a green build alone, or an artifact's
+existence. Preserve existing historical pin profiles and completed studies.
+
+1. **Compose Lite with current main.** Review incoming workflow, consumer and
+   pin changes; resolve the `test/pin-move-chain.test.mjs` conflict by retaining
+   both the x86 historical checks and current main's changes. Coordinate the
+   fast-tier CI policy with its owner. Update only the current x86 profiles
+   whose inputs actually changed, then run focused source and pin controls and
+   all enabled checks for the resulting head. Preserve every failure and
+   declared threshold. Keep the change unpublished until the reviewed source
+   composition is ready for qualification.
+2. **Qualify the actual GUI path.** Bind a successful build job and its source
+   tree, manifest and runtime inputs to the final candidate. On an admitted
+   fresh run with redistributable FreeDOS media, exercise the widget's display
+   and input, disk write, image export and reload, forward debugging, and clean
+   shutdown. Independently check the retained results against the selected run
+   and source. Do not repeat a consumed run or download its originals again.
+   Merge only after the affected guest and enabled CI checks pass for that head.
+3. **Close the CLI and media usability gaps.** Inventory the existing commands
+   and GUI import paths in Lite's x86 handoff. Add or repair only missing paths
+   for interactive console, keyboard, VGA and mouse, and for DOSBox-style
+   configurations, disk images and ISO images. Exercise each supported format
+   with freely licensed fixtures, document exact commands and observable limits,
+   and test import, boot, interaction and persistence where applicable. Clearly
+   distinguish unsupported mounting or boot cases from tested ones.
+4. **Advance protected-mode compatibility.** Use freely licensed protected-mode
+   fixtures and independent processor oracles to identify the first reproducible
+   fault in DOS extender and xv6 workloads. Add a minimal regression with an
+   independent expected result, fix the responsible CPU or device behavior in
+   a claimed lane, and rerun affected clean guest tests. Treat Windows enhanced
+   mode and Doom as separate future guest acceptance goals; do not claim either
+   works until the actual software reaches its defined interaction milestone.
+5. **Measure before adopting optimizations.** Complete the separate PR720
+   guest-evidence and paired-performance tasks above. For further hotspots,
+   profile an actual representative guest, freeze baseline and candidate work,
+   check semantic parity and report host, runtime, workload and timing window.
+   Configured clock ratios are not a calibrated physical 386DX RTx measurement.
+   Do not carry a measured result across workloads, hosts or execution paths.
