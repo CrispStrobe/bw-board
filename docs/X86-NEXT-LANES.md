@@ -3725,10 +3725,14 @@ strict 386DX, full-OS, enhanced-mode Windows, speed or physical RTx result.
 
 The next agent should complete these separate tasks in order:
 
-1. Reconcile the complete exact-head CI cohort. Retained REST metadata contains
-   seven cancelled checks, and a shorter CLI rollup does not explain them.
-   Identify their originating events and workflow concurrency rules; preserve
-   the cancellations and require every enabled final-head check to succeed.
+1. Finish source-policy admission of the complete exact-head CI cohort. Exact
+   check/run IDs now explain the shorter CLI view: 78 selected PR contexts plus
+   seven branch-push checks. All seven retained cancelled PR checks have
+   successful counterparts in the same workflow/check/head context; the six
+   heavy branch-push skips follow the non-default-branch predicates. Preserve
+   the cancelled originals. This membership reconciliation does not authenticate
+   every event/action/label input or establish whole-workflow enablement; admit
+   those contexts and require every enabled final-head check to succeed.
 2. Close the guest-evidence gaps before calling the candidate qualified. The
    existing receipts do not independently bind raw disk byte sizes, the kernel
    used for symbol milestones, runtime/compiler identities, environment/debug
