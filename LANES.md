@@ -1,3 +1,14 @@
+## SAMD controller-memory RGB888 display — CLAIM, 2026-10-29
+
+Owner: Codex SAMD continuation, isolated checkout `lego-work/spike-delivery-20261028/bw-board`;
+base `916bfe9ed3c861a5d3d260edcdb9287e2ef7cd25`. Own this section,
+`src/display-decode.js`, and focused controls in `test/labwired-display.test.mjs`.
+Add only the engine's RGB888 controller-memory format, preserving its three
+reported channels and refusing incomplete or unknown-pixel frames. Keep all
+existing formats and their behavior. Source and exact-head tests precede a
+normal landing; no `ci:full` label. This is software controller memory, not a
+claim about a physical panel. GUI routing and package adoption are separate.
+
 ## i80386 read16 contiguous-page two-byte read adoption — DONE, 2026-10-28 (PR718 merged 8785e468; Lite pin PR1503)
 
 Owner: Claude x86 lane. Claim and change in this one PR (branch
