@@ -1,3 +1,17 @@
+## Explicit software-profile debugger factory — CLAIM, 2026-10-29
+
+Owner: Codex SAMD continuation, isolated checkout `lego-work/spike-delivery-20261028/bw-board`;
+base `9c2fb685`. Own this section, the LabWired branch in
+`src/debug-target-factory.js`, and focused factory controls in
+`test/labwired-firmware-only.test.mjs`. Add an explicit no-circuit software
+profile option carrying caller-admitted system/chip YAML, input blobs, clock
+and display ids to the existing adapter and debug target. Refuse combinations
+with a circuit, catalog board, or competing configuration; never silently
+replace a circuit. The caller owns trusted profile admission. Keep existing
+board/catalog behavior and require addressed ELF/UF2 firmware. Qualify reset,
+input and display forwarding and refusal controls before normal landing; no
+`ci:full`. GUI selection and consumer pin adoption remain separate.
+
 ## SAMD controller-memory RGB888 display — CLAIM, 2026-10-29
 
 Owner: Codex SAMD continuation, isolated checkout `lego-work/spike-delivery-20261028/bw-board`;
