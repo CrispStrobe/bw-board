@@ -3707,5 +3707,9 @@ when its evidence satisfies this scope; separately claim only demonstrated
 missing guest tooling. Historical source-context/debug runs and consumed
 benchmark events are not new candidate qualification. New performance tooling
 and event selection need a separate bounded claim before implementation. No gate or threshold is changed here.
-Keep the candidate unpublished pending independent review, make no Lite pin
-change, and retain current GUI acceptance as the first consumer-adoption task.
+Independent source review and 62 focused controls pass, including eight
+specialized groups covering 672 direct-address cases and five detected
+mutations. The prepared candidate is published for hosted CI and fresh freely
+licensed xv6 qualification. No measured speedup, paired performance acceptance,
+source merge or Lite pin adoption is established. Preserve the independent
+paired gate and retain GUI acceptance as the first consumer-adoption task.
