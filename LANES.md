@@ -17,6 +17,17 @@ engine accepts the exact admitted profile through the factory and discovers
 its eight buttons without executing the guest. Input blobs are copied before
 reset. Existing qualified guest originals remain unchanged.
 
+Handoff: [PR721](https://github.com/CrispStrobe/bw-board/pull/721) folds this
+factory and the RGB888 decoder below. Before landing, review the final PR head,
+require the selected hosted checks and a normal matched-head merge, and verify
+the actual parent/tree. At the last status check the runnable checks were
+queued; the unlabelled `full CI requested` administrative check is not a
+passing result. The operator directed no `ci:full` label. After the real
+supplier commit lands, the Lite owner advances its bw-board pin through the
+vendor regime; do not publish an unmerged branch as a pin. The consumer's
+complete pending work is in Lite `lanes/2026-10-29-samd-explicit-debugger-route.md`
+on draft PR1565. Preserve all other owners' lanes and worktrees.
+
 ## SAMD controller-memory RGB888 display — DONE candidate, 2026-10-29
 
 Owner: Codex SAMD continuation, isolated checkout `lego-work/spike-delivery-20261028/bw-board`;
