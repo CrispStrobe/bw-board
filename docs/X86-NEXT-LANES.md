@@ -3709,3 +3709,39 @@ benchmark events are not new candidate qualification. New performance tooling
 and event selection need a separate bounded claim before implementation. No gate or threshold is changed here.
 Keep the candidate unpublished pending independent review, make no Lite pin
 change, and retain current GUI acceptance as the first consumer-adoption task.
+
+### Direct disp16 candidate: audited xv6 observations, 2026-10-29
+
+The allocation candidate in [PR720](https://github.com/CrispStrobe/bw-board/pull/720)
+remains unmerged. Its hosted [xv6 job](https://github.com/CrispStrobe/bw-board/actions/runs/40831788697/job/123307446573)
+completed successfully. An independent reader of the retained job log and
+five-report archive confirms the 4 MiB filesystem command sequence, the
+14 MiB boot/command probe and the 4 MiB `forktest` result. Each probe records
+user-mode entries and IDE interrupt progress. The actual checkout is the
+expected merge of the reviewed candidate and its base; all 78 reported source
+hashes and the separately reviewed workflow/probe inputs match that checkout.
+These are bounded xv6 observations with PSE/APIC extensions. They establish no
+strict 386DX, full-OS, enhanced-mode Windows, speed or physical RTx result.
+
+The next agent should complete these separate tasks in order:
+
+1. Reconcile the complete exact-head CI cohort. Retained REST metadata contains
+   seven cancelled checks, and a shorter CLI rollup does not explain them.
+   Identify their originating events and workflow concurrency rules; preserve
+   the cancellations and require every enabled final-head check to succeed.
+2. Close the guest-evidence gaps before calling the candidate qualified. The
+   existing receipts do not independently bind raw disk byte sizes, the kernel
+   used for symbol milestones, runtime/compiler identities, environment/debug
+   settings, process/descriptor cleanup or enforced job resource bounds. Scope
+   any needed producer/reader changes as a separate lane, retain the current
+   successful originals, and never replay a consumed event to improve its
+   evidence. A new run needs its own reviewed inputs and event admission.
+3. Claim and freeze a fresh paired performance protocol for the exact candidate
+   and baseline, with independently checked ordinary-instruction semantics,
+   fixed work, runtime/host/resource/cleanup bindings and a numerical adoption
+   rule declared before measurement. Preserve the failed historical PR557
+   result. This candidate has no measured speedup and must not be adopted from
+   correctness tests alone.
+4. Keep the Lite GUI qualification as the first consumer-adoption priority.
+   Do not change its engine pin until the source, guest, paired-performance and
+   consumer acceptance gates applicable to that adoption have passed.
