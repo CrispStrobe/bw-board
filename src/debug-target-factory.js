@@ -181,6 +181,34 @@ async function createLabwiredTarget(opts) {
     throw new Error('labwired boardVariant requires a board-derived manifest, not a firmware-only or explicit manifest override');
   }
 
+  // Explicitly admitted software assemblies are not circuit-derived boards or
+  // catalog chips. The caller owns source/hash admission of these inputs.
+  if (opts.softwareProfile != null) {
+    const p = opts.softwareProfile;
+    const competing = ['board', 'chip', 'chipKind', 'mcuId', 'labwiredBoard', 'boardVariant', 'chipYaml', 'systemYaml',
+      'pins', 'clockHz', 'firmwareAddress', 'extraSegments', 'labAir'];
+    if (competing.some(key => opts[key] != null)) {
+      throw new Error('labwired software profile cannot replace a circuit or competing configuration');
+    }
+    if (!p || p.kind !== 'authored-software-profile' || p.physicalCapture !== false ||
+        typeof p.name !== 'string' || !p.name || typeof p.chipYaml !== 'string' || !p.chipYaml ||
+        typeof p.systemYaml !== 'string' || !p.systemYaml || !Number.isSafeInteger(p.clockHz) || p.clockHz <= 0 ||
+        !p.blobs || typeof p.blobs !== 'object' || Array.isArray(p.blobs) ||
+        !Array.isArray(p.displays) || p.displays.some(d => !d || typeof d.id !== 'string' || !d.id)) {
+      throw new Error('labwired software profile needs explicit software identity, configuration, blobs, clock and displays');
+    }
+    const entries = Object.entries(p.blobs);
+    if (!entries.length || entries.some(([key, bytes]) => !key || !(bytes instanceof Uint8Array) || !bytes.length)) {
+      throw new Error('labwired software profile needs named input bytes');
+    }
+    const blobs = Object.fromEntries(entries.map(([key, bytes]) => [key, Uint8Array.from(bytes)]));
+    const displays = p.displays.map(d => ({id: d.id}));
+    const adapter = createLabwiredAdapter({wasm, chipYaml: p.chipYaml, systemYaml: p.systemYaml,
+      firmware, firmwareOnly: true, blobs, clockHz: p.clockHz, name: p.name});
+    const target = createLabwiredDebugTarget({adapter, elf: firmware, displays});
+    return {target, adapter, refusals: []};
+  }
+
   // FIRMWARE-ONLY: `opts.chip` is a labwired-catalog.js entry and there is no
   // circuit. The user's own ELF on the engine's own chip descriptor; no header
   // map, so no pads and no refusals to report. The bench path below is the

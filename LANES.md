@@ -1,4 +1,4 @@
-## Explicit software-profile debugger factory — CLAIM, 2026-10-29
+## Explicit software-profile debugger factory — DONE candidate, 2026-10-29
 
 Owner: Codex SAMD continuation, isolated checkout `lego-work/spike-delivery-20261028/bw-board`;
 base `9c2fb685`. Own this section, the LabWired branch in
@@ -11,6 +11,11 @@ replace a circuit. The caller owns trusted profile admission. Keep existing
 board/catalog behavior and require addressed ELF/UF2 firmware. Qualify reset,
 input and display forwarding and refusal controls before normal landing; no
 `ci:full`. GUI selection and consumer pin adoption remain separate.
+
+Focused factory, display and input-boundary tests pass; the retained real
+engine accepts the exact admitted profile through the factory and discovers
+its eight buttons without executing the guest. Input blobs are copied before
+reset. Existing qualified guest originals remain unchanged.
 
 ## SAMD controller-memory RGB888 display — DONE candidate, 2026-10-29
 
