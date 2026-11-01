@@ -278,6 +278,12 @@ export function buildLabwiredSystem (opts = {}) {
     return fail();
   }
 
+  if (chip.requiresTrustedBoardId && opts.labwiredBoardId !== chip.requiresTrustedBoardId) {
+    refusals.push({ code: 'trusted-board-required', subject: chipKind,
+      reason: `use labwiredBoardId: '${chip.requiresTrustedBoardId}' to select this complete board` });
+    return fail();
+  }
+
   const boardVariant = opts.boardVariant ?? null;
   if (boardVariant !== null && (typeof boardVariant !== 'string' ||
       !Object.hasOwn(chip.onBoardVariants ?? {}, boardVariant))) {
@@ -297,7 +303,7 @@ export function buildLabwiredSystem (opts = {}) {
   // before the netlist reaches the engine, so this matches BOTH spellings:
   // the generic one a loaded bench carries, and the specific one a netlist
   // built directly against the device registry carries.
-  const isMcu = (p) => p.kind === 'mcu' || (chip.boardKinds || []).includes(p.kind);
+  const isMcu = (p) => (!chip.physicalKindOnly && p.kind === 'mcu') || (chip.boardKinds || []).includes(p.kind);
   const candidates = opts.mcuId
     ? nl.parts.filter((p) => p.id === opts.mcuId)
     : nl.parts.filter(isMcu);
@@ -319,6 +325,11 @@ export function buildLabwiredSystem (opts = {}) {
     return fail();
   }
   const mcu = candidates[0];
+  if (chip.physicalKindOnly && !isMcu(mcu)) {
+    refusals.push({ code: 'mcu-kind-mismatch', subject: mcu.id,
+      reason: `the selected part must retain its ${chipKind} board identity` });
+    return fail();
+  }
 
   // ── index the MCU's terminals onto nets ─────────────────────────────────
   /** @type {Map<string, object>} lowercase terminal → net */
@@ -355,9 +366,12 @@ export function buildLabwiredSystem (opts = {}) {
       id: header, kind: 'button', peripheral: def.peripheral, pin: def.pin,
       signal: 'input', activeHigh: true, role, why: 'pad injection channel',
     };
-    bindings.push(injection);
+    // S040 uses the explicit host external-pad API instead. A board_io Button
+    // eagerly drives its default level during construction, even before the
+    // guest selects GPIO. It must not stand in for an external circuit wire.
+    if (!chip.hostExternalGpio) bindings.push(injection);
 
-    if (role === 'indicator' || role === 'digital') {
+    if (!chip.hostExternalGpio && (role === 'indicator' || role === 'digital')) {
       // Observational only (`read_gpio_output`), named with OUR part id so a
       // consumer joins `get_board_io_states` straight onto the netlist.
       const lead = leaves.find((l) => INDICATOR.has(l.kind)) ?? leaves[0];
@@ -420,10 +434,10 @@ export function buildLabwiredSystem (opts = {}) {
   // ── controller terminals that carry a connection but have no header entry ─
   for (const [terminal, net] of netOfTerminal) {
     if (headerLower.has(terminal)) continue;
-    if (SUPPLY_TERMINALS.has(terminal)) continue;
+    if (SUPPLY_TERMINALS.has(terminal) || chip.supplyTerminals?.includes(terminal)) continue;
     const leaves = reachableLeaves(nl, net.id, mcu.id);
     const signal = leaves.filter((l) => !RAIL.has(l.kind));
-    if (!signal.length) continue;                 // wired to a rail only
+    if (!signal.length && !chip.physicalKindOnly) continue; // a generic supply-only spelling
     refusals.push({
       code: 'pin-unmapped', subject: terminal,
       reason: `${mcu.id}.${terminal} is wired to `
@@ -466,6 +480,7 @@ export function buildLabwiredSystem (opts = {}) {
     onBoardDisplays: onBoard?.displays ?? [],
     onBoardMatrix: onBoard?.matrix ?? null,
     arduinoEsp32: chip.arduinoEsp32 === true,
+    ...(chip.requiresTrustedBoardId ? { labwiredBoardId: chip.requiresTrustedBoardId } : {}),
   };
 }
 
@@ -516,6 +531,10 @@ export function labwiredAdapterOptionsFor (opts = {}) {
     // A classic-ESP32 Arduino image boots on the engine's Arduino-ESP32 boot
     // thunks (`install_arduino_esp32_quirks`), installed by the adapter.
     arduinoEsp32: built.arduinoEsp32,
+    // Do not erase a closed profile's identity when a caller spreads these
+    // derived options into the adapter. That profile refuses raw chip/YAML
+    // options and requires the public factory with the actual Board instead.
+    ...(built.labwiredBoardId ? { labwiredBoardId: built.labwiredBoardId } : {}),
   };
 }
 

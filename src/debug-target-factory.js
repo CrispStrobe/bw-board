@@ -171,6 +171,9 @@ async function createRiscV32Target(opts = {}) {
  * @param {string} [opts.systemYaml] override the generated manifest
  * @param {object} [opts.firmwareBoot] explicit ESP32-S3 merged-flash/ROM profile;
  *   separate from ELF/UF2 and mutually exclusive with other target definitions
+ * @param {string} [opts.labwiredBoardId] closed trusted board identity;
+ *   'esp32-4848s040' accepts Xtensa ELF or explicit merged flash and optional
+ *   bindings from the actual selected esp32_4848s040 circuit part
  * @param {object} [opts.labAir] a labwired-wasm `AirBus` to put an S110
  *   board's radio on (firmware-only, `opts.labwiredBoard` with a SoftDevice);
  *   boards given the same bus hear each other. Give each a different `name`.
@@ -178,6 +181,24 @@ async function createRiscV32Target(opts = {}) {
 async function createLabwiredTarget(opts) {
   const { wasm, board, firmware, name } = opts;
   if (!wasm) throw new Error("labwired target requires opts.wasm (the labwired-wasm module)");
+  if (opts.labwiredBoardId !== undefined) {
+    // The adapter resolves this closed identity from the supplier catalog and
+    // derives any external H1 bindings from the actual selected board part.
+    const adapter = createLabwiredAdapter(opts);
+    try {
+      if (board) adapter.attachBoard(board);
+      const target = createLabwiredDebugTarget({ adapter,
+        elf: opts.firmwareBoot === undefined ? firmware : undefined,
+        displays: adapter.labwiredBoard.displays });
+      return { target, adapter, refusals: adapter.labwiredBoard.refusals };
+    } catch (error) {
+      const failures = [error];
+      try { adapter.releaseBoard?.(); } catch (cleanupError) { failures.push(cleanupError); }
+      try { adapter.sim.free?.(); } catch (cleanupError) { failures.push(cleanupError); }
+      if (failures.length === 1) throw error;
+      throw new AggregateError(failures, failures.map(failure => failure.message || String(failure)).join('; '));
+    }
+  }
   if (opts.firmwareBoot !== undefined) {
     // The adapter validates the complete option envelope before creating a
     // machine. Only this explicit profile admits a merged flash image; the

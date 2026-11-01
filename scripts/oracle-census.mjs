@@ -490,6 +490,28 @@ export const INPUTS = [
             + 'Its result is a separate exact-head qualification.',
     },
     {
+        id: 'labwired-esp32s040-fixtures', kind: 'fixture',
+        what: 'Exact S040 engine glue/WASM, source-owned Xtensa panel/touch guest, '
+            + 'and unchanged M1 ROMs/retained Arduino smoke image for public-factory '
+            + 'display, typed input, reset, five-pin H1 and composed merged-flash proof. '
+            + 'The retained manifest is currently candidate evidence, not a qualified '
+            + 'release or physical capture. Directory presence does not admit bytes; '
+            + 'the test checks length/SHA-256 before importing executable glue and '
+            + 'checks the exact producer system/chip catalog.',
+        env: 'LABWIRED_ESP32S040_INPUTS', paths: [],
+        gates: ['test/labwired-esp32s040-engine.test.mjs'],
+        obtain: 'For provisional local review, manually stage the exact files in '
+            + 'test/fixtures/labwired/esp32s040/manifest.json and the exact candidate '
+            + 'catalog. scripts/fetch-esp32s040-fixtures.mjs refuses remote fetching '
+            + 'until an immutable qualified release and matching source/catalog '
+            + 'identities replace the candidate manifest.',
+        ciAvailable: false,
+        ci: 'no — ordinary CI has no S040 engine/guest inputs. The separate '
+            + 'esp32s040-public-factory.yml workflow requires a qualified release, '
+            + 'LABWIRED_REQUIRE_ESP32S040=1, actual execution and zero skips; '
+            + 'the current candidate manifest deliberately cannot pass that gate.',
+    },
+    {
         id: 'labwired-warmed-window-profile', kind: 'fixture',
         what: 'Opt-in diagnostic capture of five warmed GPIO cycle windows using '
             + 'Node Inspector. Ordinary timing is a separate unchanged process. '

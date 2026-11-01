@@ -39,7 +39,7 @@ export const CATALOG_CHIPS = [
  * A board whose only display is something else (e-paper, 7-segment, text) is
  * left out rather than offered with a blank screen.
  */
-export const DECODABLE_DISPLAY = /(ssd1306|sh1107|pcd8544|ili9341|st7789|st7735|led-matrix-mux)/i;
+export const DECODABLE_DISPLAY = /(ssd1306|sh1107|pcd8544|ili9341|st7789|st7735|st7701-rgb|led-matrix-mux)/i;
 
 /**
  * Systems that run an application under an EMULATED Nordic SoftDevice

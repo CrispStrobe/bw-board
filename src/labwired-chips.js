@@ -16,7 +16,7 @@
  * @module
  */
 
-import { LABWIRED_CATALOG } from './labwired-catalog.js';
+import { LABWIRED_CATALOG, LABWIRED_BOARDS } from './labwired-catalog.js';
 
 /**
  * STM32F0 (F030-class), as the oracle and the browser tier both see it.
@@ -1076,6 +1076,37 @@ export const ESP32_DEVKIT = {
   arduinoEsp32: true,
 };
 
+/** The S040's actual H1 GPIOs; no LCD, touch, SD or memory pin is exposed. */
+export const ESP32_4848S040_LABWIRED_PINS = Object.freeze(Object.fromEntries(
+  [40, 44, 2, 43, 1].map(pin => [`gpio${pin}`, Object.freeze({ peripheral: 'gpio', pin })])));
+
+/**
+ * Exact S040 assembly, resolved from the same catalog as the engine build.
+ * The trusted selector is mandatory: the ordinary raw-bin circuit route
+ * must not silently stand up this display board without its internal devices.
+ */
+export const ESP32_4848S040 = {
+  chipYaml: LABWIRED_CATALOG.esp32s3.chipYaml,
+  pins: ESP32_4848S040_LABWIRED_PINS,
+  adcChannels: {},
+  pwmPins: [],
+  clockHz: LABWIRED_CATALOG.esp32s3.clockHz,
+  name: 'esp32-4848s040',
+  boardKinds: ['esp32_4848s040'],
+  supplyTerminals: ['gnd', 'gnd2', '5v'],
+  physicalKindOnly: true,
+  hostExternalGpio: true,
+  requiresTrustedBoardId: 'esp32-4848s040',
+  get onBoard () {
+    const board = LABWIRED_BOARDS['esp32-4848s040'];
+    if (!board) throw new Error('ESP32-4848S040 requires its qualified supplier catalog entry');
+    const externalDevicesYaml = /^external_devices:\s*\n([\s\S]*?)(?=^\S|$(?![\s\S]))/m
+      .exec(board.systemYaml)?.[1]?.trimEnd();
+    if (!externalDevicesYaml) throw new Error('ESP32-4848S040 catalog has no internal devices');
+    return { externalDevicesYaml, displays: board.displays };
+  },
+};
+
 /** Board-part kind → heavy-tier chip. The one place a new chip gets added. */
 export const LABWIRED_CHIPS = {
   stm32f030: STM32F0,
@@ -1084,4 +1115,5 @@ export const LABWIRED_CHIPS = {
   microbit: MICROBIT_V2,
   pybadge: PYBADGE,
   esp32_devkit: ESP32_DEVKIT,
+  esp32_4848s040: ESP32_4848S040,
 };

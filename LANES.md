@@ -1,12 +1,74 @@
-## ESP32-4848S040 trusted board profile — CLAIMED, 2026-11-01
+## ESP32-4848S040 trusted board profile — DONE candidate, 2026-11-01
 
 Owner: ChatGPT ESP32 board integration lane, requested by CrispStrobe. Base default branch: `90c70755981adb56774f245c1b6ba2ecf2cfbadc`. Companion firmware-boot implementation: PR722. Own this section and additive S040 behavior only.
 
-Add the exact `labwiredBoardId: 'esp32-4848s040'` selector for addressed ELF/UF2 and explicit merged-flash ROM boot. Resolve the canonical internal ST7701/GT911 assembly from the supplier catalog; optional H1 circuit bindings derive from the actual board and selected MCU. Reject custom YAML, competing chip/pin/clock/profile overrides and unsupported electrical functions. Physical kind is `esp32_4848s040`; only H1 GPIO1/2/40/43/44, two grounds and 5V supply are exposed. GPIO uses3.3V logic. Do not manufacture generic DevKit pins, firmware output, native USB access, radio or analog support.
+Add the exact `labwiredBoardId: 'esp32-4848s040'` selector for addressed Xtensa ELF and explicit merged-flash ROM boot. The initial UF2 intent is narrowed after source inspection: the existing converter emits Cortex-M ELF and reads an ARM reset vector, so S040 explicitly refuses UF2 rather than guessing another architecture. Resolve the canonical internal ST7701/GT911 assembly from the supplier catalog; optional H1 circuit bindings derive from the actual board and selected MCU. Reject custom YAML, competing chip/pin/clock/profile overrides and unsupported electrical functions. Physical kind is `esp32_4848s040`; only H1 GPIO1/2/40/43/44, two grounds and 5V supply are exposed. GPIO uses 3.3 V logic. Do not manufacture generic DevKit pins, firmware output, native USB access, radio or analog support.
 
 Own `src/labwired-board-profile.js` (new); narrowly necessary S040 hunks in `src/labwired-{firmware-boot,adapter,debug,bridge,chips,catalog}.js`, `src/debug-target-factory.js`, `src/devices/board-kinds.js`; exact catalog/build-PIN adoption and generated source bindings; focused board/profile/display/input/circuit tests, fixture manifest, workflow and documentation. Preserve the M1 factory/ROM validation, existing SAMD route and every other board. The core companion owns bank-1 public pad access. Pad direction, pulls and open-drain require actual qualified register/driver evidence; unsupported bindings are refused explicitly.
 
 Qualify the real source-owned S040 guest through the public target, display state/generation/RGB565, typed touch down/move/up and redraw, reset/input ownership, exact H1 output/input/direction handling and meaningful negative controls. Local candidate-artifact results are provisional. No consumer production adoption before owning source and its immutable two-build-qualified release land. Keep all existing CI/provenance/performance gates; report silicon drift as pending without inventing a capture or human acknowledgement.
+
+Implementation is isolated on `lane/esp32-4848s040-profile-20261101`. It began
+from PR722 head `2dd15ec3b5669a2ed5a21144697947499f29501e` after claim merge
+`691ff39a8a3c96ae47f747324d1c51dee1f6fd44`, then rebased onto M1 census successor
+`cf42ddbd5a98acac64973e972024376dd72cb80b`. The original M1 ledger and census
+registration remain intact. The production catalog and engine PIN are unchanged;
+the final supplier assembly/release is still a prerequisite for production use.
+
+Source controls pass 28/28 with a separately retained test-only import hook for
+the exact candidate catalog entry. They establish selector/ELF admission,
+complete frames and cache state, typed atomic input, actual H1 net ownership,
+register/mux refusals, singleton isolation and failure cleanup. They use a
+configuration double and are distinguished from real execution. Unchanged
+bridge (20), display (11), chips (9), board-kind (16), device source stamping (2)
+and M1 structural controls (20) also pass. After failure-cleanup changes, the
+existing target surface passes 45/45 and input boundary 11/11, including four
+actual v2 backend cases. Census tree coverage passes 3/3 and
+census contracts 18/18; no debt, detector, existing gate or exemption changed.
+
+Real final v2 qualification passes all three permanent cases with zero skips:
+exact fixture admission; the source-owned S040 guest through the public factory
+with 19 grouped panel/touch/reset/H1 controls; and the retained M1 Arduino image
+boot/reset through the same trusted selector plus merged flash. The latter
+prints real UART0 SMOKE_OK before and after caller buffers are overwritten and
+the target resets; the panel remains pending because this smoke image never
+initializes RGB. The original missing exact-sketch/toolchain provenance is
+preserved. This proves the loading route, not a new compiler or SDK profile.
+
+The five actual H1 pads pass high/low input and output, direction changes with
+no edge, GPIO bank separation, pull-down, open-drain release and detach/remux
+release. A tiny authored Xtensa guest selects GPIO function 1 before bank-1
+coupling starts. S040 creates no synthetic board_io Button bindings because
+they inject a default level during machine construction. Coupling uses the
+separately reviewed `set_gpio_external(peripheral, pin, true/false/null)` seam;
+unsupported mux/matrix/input-buffer configurations stay explicit. A one-pad
+net, duplicate self-reference or nonexistent terminal is not an external wire.
+
+The candidate fixture manifest binds producer base
+`b6a8b2548ee01262001a04117c2d265f66350400` plus complete review patch SHA-256
+`96049ec5b16082c6596fc568f368af85c4b0996a434887bc79590830a4093446`, and the exact
+29,022,073-byte WASM SHA-256
+`ecd690208c5e96f2756a3ffc44d84c39cc6c896f4e6ad6080e11b6bf1a467d0a`.
+The producer's unchanged full-session snapshot regression passes on v2. Its
+original v1 replay failure and passing v1 functional/browser observations remain
+retained separately; they are not relabeled as release evidence.
+The final standalone CUI browser also passes 41/41 with these frozen M2
+modules and exact v2 web/WASM bytes: full frame, actual GT911 down/move/up and
+guest redraw, unbound-part isolation, owner replacement and removal release.
+Its report SHA-256 is
+`01780ffbed4a72c472ff2f563da1888e5d5f76eb31e8d49b61180d2080e19a7a`.
+This is standalone CUI plus the public factory, not a completed Lite S040 route.
+
+The fixture reader hashes all glue/WASM/guest/ROM inputs before executable
+import and preserves M1 artifact identities. A new truthful census row names
+the external input. The dedicated workflow requires a qualified release and
+31 actual cases with zero skips; candidate fetching and required execution
+refuse before any provisional artifact can satisfy it. The current manifest
+is deliberately not release-qualified. Required source/silicon review,
+independently repeated immutable build, catalog adoption and exact-head hosted
+qualification remain pending. Existing M1 CI jobs split across separate runs
+are not combined into a passing prerequisite. The interface, reproduction and
+limits are documented in [ESP32-4848S040.md](docs/ESP32-4848S040.md).
 
 ## ESP32-S3 merged-flash public debugger route — DONE candidate, 2026-11-01
 

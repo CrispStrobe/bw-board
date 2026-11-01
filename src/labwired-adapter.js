@@ -93,6 +93,8 @@ export function plain (v) {
 import { toLoadableElf, isElf } from './bin-to-elf.js';
 import { isUf2, uf2ToElf } from './uf2-to-elf.js';
 import { prepareLabwiredFirmwareBoot } from './labwired-firmware-boot.js';
+import { prepareLabwiredBoardProfile, validateEsp32S040Inputs, readEsp32S040PadConfiguration,
+  validateEsp32S040Elf } from './labwired-board-profile.js';
 
 /** ns per second, as a bigint numerator for cycle→ns without float drift. */
 const NS_PER_S = 1_000_000_000n;
@@ -157,24 +159,31 @@ export function chipArch (chipYaml) {
  *   gives every machine on it a different node name.
  * @param {string} [opts.name]
  * @param {object} [opts.firmwareBoot] explicit ESP32-S3 merged-flash/ROM profile;
- *   firmware-only, mutually exclusive with chip/circuit/config overrides
+ *   firmware-only unless composed with the exact trusted board selector
+ * @param {string} [opts.labwiredBoardId] trusted supplier board identity;
+ *   a closed profile, mutually exclusive with chip/config overrides
  * @returns {object} boundary-A adapter
  */
 export function createLabwiredAdapter (opts) {
   const { wasm } = opts;
   const boot = opts.firmwareBoot !== undefined ? prepareLabwiredFirmwareBoot(opts) : null;
-  if (boot && opts.firmwareOnly !== true) {
+  const boardProfile = boot?.boardProfile ?? (opts.labwiredBoardId !== undefined
+    ? prepareLabwiredBoardProfile(opts) : null);
+  if (boot && !boardProfile && opts.firmwareOnly !== true) {
     throw new Error('labwired-adapter: explicit flash boot requires firmwareOnly');
   }
-  const chipYaml = boot ? boot.chipYaml : opts.chipYaml;
+  if (boardProfile && (!(opts.firmware instanceof Uint8Array) || !opts.firmware.length)) {
+    throw new Error('labwired-adapter: a trusted board requires non-empty firmware bytes');
+  }
+  const chipYaml = boot ? boot.chipYaml : boardProfile ? boardProfile.chipYaml : opts.chipYaml;
   // FIRMWARE-ONLY: a user's own image on a catalog chip, with no circuit. No
   // header map (so no board_io and no pad traffic), and the image must be an
   // ELF: a raw .bin says nothing about where it loads, and the one default
   // binToElf knows (STM32 flash at 0x0800_0000) is wrong for an nRF (flash at
   // 0) or an RP2040 (XIP at 0x1000_0000) — the core would fetch its reset
   // vector from empty memory and look like broken firmware.
-  const firmwareOnly = opts.firmwareOnly === true;
-  const pins = opts.pins ?? (firmwareOnly ? {} : undefined);
+  const firmwareOnly = boardProfile ? boardProfile.firmwareOnly : opts.firmwareOnly === true;
+  const pins = boardProfile ? boardProfile.pins : opts.pins ?? (firmwareOnly ? {} : undefined);
   const arch = chipArch(chipYaml);
   // Accept a raw flash image as readily as an ELF. labwired's ARM path ends in
   // `load_elf_bytes` and takes nothing else, while everything lite compiles is
@@ -184,10 +193,17 @@ export function createLabwiredAdapter (opts) {
   const isAvr = arch === 'avr';
   // A UF2 says where every block loads, so it converts without a guess; a raw
   // .bin does not, and is refused rather than loaded at a made-up origin.
-  const given = firmwareOnly && opts.firmware && isUf2(opts.firmware)
-    ? uf2ToElf(opts.firmware).elf
-    : opts.firmware;
-  if (!boot && firmwareOnly && given && !isElf(given)) {
+  const inputFirmware = boardProfile && !boot ? Uint8Array.from(opts.firmware) : opts.firmware;
+  if (boardProfile && !boot) {
+    if (isUf2(inputFirmware)) {
+      throw new Error('ESP32-4848S040 UF2 is not qualified: the existing UF2 loader is Cortex-M-only; use Xtensa ELF or merged flash');
+    }
+    validateEsp32S040Elf(inputFirmware);
+  }
+  const given = firmwareOnly && !boardProfile && inputFirmware && isUf2(inputFirmware)
+    ? uf2ToElf(inputFirmware).elf
+    : inputFirmware;
+  if (!boot && (firmwareOnly || boardProfile) && given && !isElf(given)) {
     throw new Error('labwired-adapter: firmware-only needs an ELF or UF2 image (a raw .bin carries ' +
       'no load address, and guessing one boots the chip from the wrong memory)');
   }
@@ -208,14 +224,14 @@ export function createLabwiredAdapter (opts) {
       'is the emulated SoftDevice\'s, under its node name)');
   }
 
-  const clockHz = boot ? boot.clockHz : (opts.clockHz ?? 48_000_000);
+  const clockHz = boot ? boot.clockHz : boardProfile ? boardProfile.clockHz : (opts.clockHz ?? 48_000_000);
   const clockHzBig = BigInt(clockHz);
   const names = Object.keys(pins);
   // Channel index IS the ref's position (documented by watch_logic_signals),
   // so this array is the ch→name table for every edge record.
   const refs = names.map((n) => ({ kind: 'gpio', peripheral: pins[n].peripheral, pin: pins[n].pin }));
 
-  const systemYaml = boot ? boot.systemYaml : opts.systemYaml
+  const systemYaml = boot ? boot.systemYaml : boardProfile ? boardProfile.systemYaml : opts.systemYaml
     ?? generateSystemYaml(opts.name ?? 'bw-labwired', opts.chipPath ?? './chip.yaml', pins);
 
   const build = () => {
@@ -279,6 +295,17 @@ export function createLabwiredAdapter (opts) {
   const openDrain = new Map();
   /** Last MODER|PUPDR|OTYPER signature per port — the reconfiguration detector. */
   const portConfig = new Map();
+  // The S040 circuit bridge is intentionally limited to its five H1 pads.
+  // These exact configuration registers have side-effect-free reads; the
+  // general read_memory API is a bus read and is NOT an arbitrary MMIO peek.
+  const s040Circuit = boardProfile && !firmwareOnly;
+  const connectedPins = new Set(boardProfile?.connectedPins ?? []);
+  const outputLatch = new Map();
+  const matrixOutput = new Map();
+  const outputEnabled = new Map();
+  const padAdmission = new Map();
+  const injectedInputs = new Set();
+  let electricalError = null;
 
   const cycleToNs = (cycle) => (BigInt(Math.round(cycle)) * NS_PER_S) / clockHzBig;
   const timeNs = () => (cycleNow * NS_PER_S) / clockHzBig;
@@ -286,6 +313,11 @@ export function createLabwiredAdapter (opts) {
   /** labwired's routing vocabulary → the board's Thevenin mode names. */
   const modeOf = (name) => {
     const r = routing.get(name);
+    if (s040Circuit && padAdmission.get(name)?.state !== 'gpio') return 'input';
+    if (s040Circuit && matrixOutput.get(name) !== 256) {
+      if (connectedPins.has(name)) refuseS040Pad(name, 'alternate-function electrical binding is not qualified');
+      return 'input'; // no external net; do not manufacture a peripheral drive
+    }
     // `af` drives the pad from a peripheral, which is still a driven output as
     // far as the circuit is concerned. `unknown` is reported by families that
     // cannot say; treating it as an input is the safe default — it makes the
@@ -323,11 +355,23 @@ export function createLabwiredAdapter (opts) {
    * the point — the two tiers must hand the board the same description of the
    * same pad.
    */
-  const restLevelOf = (name) => pulls.get(name) === 'up';
+  const restLevelOf = (name) => (!s040Circuit || padAdmission.get(name)?.state === 'gpio') && pulls.get(name) === 'up';
 
   function refreshRouting () {
-    if (!sim.pin_routing) return;
+    if (!sim.pin_routing) {
+      if (s040Circuit) throw new Error('ESP32-4848S040 needs qualified H1 pin_routing');
+      return;
+    }
     const rows = plain(sim.pin_routing(refs));
+    if (s040Circuit && (!Array.isArray(rows) || rows.length !== names.length ||
+        rows.some((row, i) => !row || row.peripheral !== refs[i].peripheral || row.pin !== refs[i].pin ||
+          !['input', 'output', 'af'].includes(row.mode)))) {
+      throw new Error('ESP32-4848S040 engine cannot qualify all H1 GPIOs, including bank 1');
+    }
+    if (s040Circuit && rows.some((row, i) => row.mode !== (outputEnabled.get(names[i])
+      ? matrixOutput.get(names[i]) === 256 ? 'output' : 'af' : 'input'))) {
+      throw new Error('ESP32-4848S040 H1 routing disagrees with GPIO direction registers');
+    }
     if (!Array.isArray(rows)) return;
     rows.forEach((row, i) => {
       if (row && typeof row.mode === 'string') routing.set(names[i], row.mode);
@@ -378,6 +422,7 @@ export function createLabwiredAdapter (opts) {
    * pull, and the pad stays a plain input rather than acquiring an invented one.
    */
   function refreshPulls () {
+    if (s040Circuit) return refreshS040Pads();
     if (!sim.get_peripheral_snapshot) return false;
     let changed = false;
     const perPort = new Map();
@@ -419,13 +464,68 @@ export function createLabwiredAdapter (opts) {
     return changed;
   }
 
+  function refreshS040Pads () {
+    if (electricalError) throw new Error(electricalError);
+    let changed = false;
+    for (const state of readEsp32S040PadConfiguration(sim)) {
+      const { name, pullUp: up, pullDown: down } = state;
+      const connected = connectedPins.has(name);
+      const prior = padAdmission.get(name);
+      const pending = { name, pin: state.pin, connected, function: state.function,
+        state: state.gpioFunction ? 'gpio' : 'pending',
+        ...(state.gpioFunction ? {} : {
+          reason: `IO_MUX function ${state.function} is not GPIO; circuit coupling is suspended until GPIO is selected`,
+        }) };
+      padAdmission.set(name, pending);
+      if (!state.gpioFunction && prior?.state === 'gpio' && connected) {
+        // Stop contributing circuit drive before releasing a former input.
+        // The explicit external-pad API clears the hold; a synthetic button
+        // binding cannot represent this transition and is never constructed.
+        if (board?.advanceTo) board.advanceTo(timeNs());
+        if (board?.setPin) board.setPin(name, 'input', false);
+        published.delete(name);
+        releaseS040Input(name);
+      }
+      // Reset FUNC0 on GPIO40/43/44 is MTDO/U0TXD/U0RXD, not GPIO.
+      // Leave these pads electrically isolated while the guest starts, and
+      // admit their GPIO coupling only after it writes function 1.
+      if (!state.gpioFunction) {
+        if (portConfig.get(name) !== state.signature) { portConfig.set(name, state.signature); changed = true; }
+        pulls.set(name, null); openDrain.set(name, false);
+        outputLatch.set(name, state.outputHigh); matrixOutput.set(name, state.matrixOutput);
+        outputEnabled.set(name, state.enabled);
+        continue;
+      }
+      if ((state.outputInverted || state.outputEnableInverted) && connectedPins.has(name)) {
+        refuseS040Pad(name, 'inverted GPIO matrix electrical binding is not qualified');
+      }
+      if (up && down && connectedPins.has(name)) {
+        refuseS040Pad(name, 'simultaneous pull-up and pull-down is not qualified');
+      }
+      if (down && state.openDrain && connectedPins.has(name)) {
+        refuseS040Pad(name, 'open-drain with pull-down is not qualified');
+      }
+      if (!state.inputEnabled && (!state.enabled || state.openDrain) && connectedPins.has(name)) {
+        refuseS040Pad(name, 'disabled input-buffer electrical binding is not qualified');
+      }
+      if (portConfig.get(name) !== state.signature) { portConfig.set(name, state.signature); changed = true; }
+      pulls.set(name, up ? 'up' : down ? 'down' : null);
+      openDrain.set(name, state.openDrain);
+      outputLatch.set(name, state.outputHigh);
+      matrixOutput.set(name, state.matrixOutput);
+      outputEnabled.set(name, state.enabled);
+    }
+    return changed;
+  }
+
   const publish = (name, highIn, atNs) => {
     if (!board) return;
     const mode = modeOf(name);
     // An input pad's level belongs to the board; what the chip contributes is
     // its pull. Publishing the engine's read-back for an input would feed the
     // board the value we injected into it a moment ago.
-    const high = isInputMode(mode) ? restLevelOf(name) : highIn;
+    const high = isInputMode(mode) ? restLevelOf(name)
+      : s040Circuit && openDrain.get(name) && routing.get(name) === 'output' ? outputLatch.get(name) : highIn;
     const prev = published.get(name);
     if (prev && prev.mode === mode && prev.high === high) return;
     published.set(name, { mode, high });
@@ -539,11 +639,26 @@ export function createLabwiredAdapter (opts) {
     inInputSync = true;
     try {
       for (const name of names) {
+        if (s040Circuit && !connectedPins.has(name)) continue;
+        if (s040Circuit && padAdmission.get(name)?.state !== 'gpio') {
+          releaseS040Input(name);
+          continue;
+        }
         // Only pads the firmware is NOT driving take a level from the board.
-        if (!isInputMode(modeOf(name))) continue;
+        const releasedOpenDrain = s040Circuit && openDrain.get(name) &&
+          routing.get(name) === 'output' && outputLatch.get(name);
+        if (!isInputMode(modeOf(name)) && !releasedOpenDrain) {
+          if (s040Circuit) releaseS040Input(name);
+          continue;
+        }
         try {
-          sim.set_board_io_input(name, board.readPin(name) === 1);
+          if (s040Circuit) {
+            const ref = pins[name];
+            sim.set_gpio_external(ref.peripheral, ref.pin, board.readPin(name) === 1);
+            injectedInputs.add(name);
+          } else sim.set_board_io_input(name, board.readPin(name) === 1);
         } catch (e) {
+          if (s040Circuit) refuseS040Pad(name, `input binding failed: ${e.message || e}`);
           // A pin with no binding (caller-supplied manifest) is not fatal:
           // it simply cannot be driven. Silence here would be worse than a
           // slow read, so record it once per pin.
@@ -559,12 +674,63 @@ export function createLabwiredAdapter (opts) {
     }
   }
 
+  function refuseS040Pad (name, reason) {
+    if (board && published.has(name)) {
+      if (board.advanceTo) board.advanceTo(timeNs());
+      board.setPin(name, 'input', false);
+      published.delete(name);
+    }
+    releaseS040Input(name);
+    electricalError = `ESP32-4848S040 ${name}: ${reason}; reset required`;
+    padAdmission.set(name, { ...padAdmission.get(name), state: 'refused', reason: electricalError });
+    throw new Error(electricalError);
+  }
+
+  function releaseS040Input (name) {
+    if (!injectedInputs.has(name)) return;
+    const ref = pins[name];
+    try {
+      sim.set_gpio_external(ref.peripheral, ref.pin, null);
+      injectedInputs.delete(name);
+    } catch (error) {
+      electricalError = `ESP32-4848S040 ${name}: external pad release failed; reset required: ${error.message || error}`;
+      const prior = padAdmission.get(name);
+      padAdmission.set(name, { ...prior, state: 'refused', reason: electricalError });
+      throw new Error(electricalError);
+    }
+  }
+
+  function releaseS040Board () {
+    const previous = board;
+    // Stop coupling immediately, including reentrant notifications from the
+    // Board. A failed release must not prevent other pads from being released.
+    board = null;
+    let firstError = null;
+    for (const name of published.keys()) {
+      try { previous?.setPin(name, 'input', false); } catch (error) { firstError ??= error; }
+    }
+    published.clear();
+    for (const name of [...injectedInputs]) {
+      try { releaseS040Input(name); } catch (error) { firstError ??= error; }
+    }
+    if (firstError) throw firstError;
+  }
+
   const adapter = {
     sim,
     clockHz,
     systemYaml,
     pins,
     ...(boot ? { firmwareBoot: boot.metadata } : {}),
+    ...(boardProfile ? { labwiredBoard: boardProfile.metadata } : {}),
+    ...(s040Circuit ? {
+      boardElectricalStatus: () => ({ boardId: boardProfile.metadata.id,
+        state: electricalError ? 'refused' : [...padAdmission.values()].some(p => p.connected && p.state !== 'gpio') ? 'pending' : 'ready',
+        pads: [...padAdmission.values()].filter(p => p.connected).map(p => ({ ...p })),
+        ...(electricalError ? { reason: electricalError } : {}) }),
+      assertRunnable: () => { if (electricalError) throw new Error(electricalError); },
+      releaseBoard: releaseS040Board,
+    } : {}),
     /** The chip's `arch:` — the debug target masks the Thumb bit only on 'arm'. */
     arch,
     /** True when built from a user image with no circuit (no header map). */
@@ -578,6 +744,13 @@ export function createLabwiredAdapter (opts) {
       const channels = plain(sim.list_inputs());
       if (!Array.isArray(channels)) {
         throw new Error('labwired-adapter: list_inputs returned an invalid channel list');
+      }
+      if (boardProfile) {
+        const touch = channels.filter(row => row.peripheral === 'touch');
+        if (touch.length !== 3 || !['x', 'y', 'pressed'].every(key => touch.some(row => row.key === key))) {
+          throw new Error('ESP32-4848S040 engine has no complete typed touch input surface');
+        }
+        return touch;
       }
       return channels;
     },
@@ -607,11 +780,16 @@ export function createLabwiredAdapter (opts) {
         return { channel: set.channel, value: set.value,
           ...(set.component === undefined ? {} : { component: set.component }) };
       });
+      if (boardProfile) validateEsp32S040Inputs(rows);
       sim.set_inputs(rows);
       return rows;
     },
 
     attachBoard (b) {
+      if (s040Circuit && b !== opts.board) throw new Error('ESP32-4848S040 cannot replace its selected circuit; create a new target');
+      if (s040Circuit && typeof sim.set_gpio_external !== 'function') {
+        throw new Error('ESP32-4848S040 engine needs explicit external GPIO drive/release');
+      }
       board = b;
       published.clear();
       cursor = 0;
@@ -620,6 +798,15 @@ export function createLabwiredAdapter (opts) {
       const seated = plain(sim.watch_logic_signals(refs));
       refreshPulls();            // pulls FIRST: the seat mode depends on them
       refreshRouting();
+      if (s040Circuit) {
+        if (!Array.isArray(seated) || seated.length !== names.length ||
+            seated.some(row => !row || typeof row.value !== 'boolean')) {
+          throw new Error('ESP32-4848S040 engine cannot sample every H1 GPIO');
+        }
+        // Admit the complete configuration before publishing any pad. An
+        // unknown later H1 function must not leave a partly seated circuit.
+        names.forEach(modeOf);
+      }
       const atNs = timeNs();
       if (Array.isArray(seated)) {
         seated.forEach((row, i) => {
@@ -628,7 +815,9 @@ export function createLabwiredAdapter (opts) {
           // `value: null` means the engine cannot say (unknown pad). Seat it
           // low rather than skipping: an unseated pin is the bug pillar 1
           // exists to catch, and the board must have a level for every pin.
-          const high = isInputMode(mode) ? restLevelOf(name) : (row && row.value === true);
+          const high = isInputMode(mode) ? restLevelOf(name)
+            : s040Circuit && openDrain.get(name) && routing.get(name) === 'output'
+              ? outputLatch.get(name) : (row && row.value === true);
           published.set(name, { mode, high });
           if (board.advanceTo) board.advanceTo(atNs);
           board.setPin(name, mode, high);
@@ -641,6 +830,10 @@ export function createLabwiredAdapter (opts) {
     syncInputs,
 
     advanceNs (deltaNs) {
+      if (s040Circuit) {
+        if (electricalError) throw new Error(electricalError);
+        drainEdges();
+      }
       syncInputs();
       const cycles = Number((BigInt(deltaNs) * clockHzBig) / NS_PER_S);
       if (cycles > 0) sim.step_batch(cycles);
@@ -661,12 +854,18 @@ export function createLabwiredAdapter (opts) {
       adapter.sim = sim;
       // A flash-boot machine owns a sizeable flash/ROM backing. A successful
       // reset replaces it; keep the previous machine only if rebuilding fails.
-      if (boot && typeof previous.free === 'function') previous.free();
+      if ((boot || boardProfile) && typeof previous.free === 'function') previous.free();
       published.clear();
       routing.clear();
       pulls.clear();
       openDrain.clear();
       portConfig.clear();
+      outputLatch.clear();
+      matrixOutput.clear();
+      outputEnabled.clear();
+      padAdmission.clear();
+      injectedInputs.clear();
+      electricalError = null;
       cursor = 0;
       cycleNow = 0n;
       if (board) adapter.attachBoard(board);
@@ -693,8 +892,9 @@ export function createLabwiredAdapter (opts) {
      * adapter's internals or call `advanceNs(0)` and rely on the special case.
      */
     pump () {
-      syncInputs();
+      if (!s040Circuit) syncInputs();
       drainEdges();
+      if (s040Circuit) syncInputs();
       drainSerial();
       publishMatrix();
       if (board && board.advanceTo) {

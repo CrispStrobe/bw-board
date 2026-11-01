@@ -395,6 +395,13 @@ const ESP8266_TERMINALS = [
 ];
 const ESP8266_ROLES = { vin: '5v' };
 
+// GUITION ESP32-4848S040 C_I: only its rear H1 connector. The internal
+// display, touch and memory pins are not expansion terminals. Its 5 V board
+// supply is separate from the GPIO's 3.3 V logic level.
+const ESP32_S040_TERMINALS = [
+  'gnd', 'gnd2', 'gpio40', 'gpio44', 'gpio2', 'gpio43', 'gpio1', '5v',
+];
+
 /**
  * Register board-kind device models.
  */
@@ -409,6 +416,7 @@ export function registerBoardKinds() {
   registerDevice('calliopemini', boardModel(CALLIOPE_MINI_TERMINALS, 3.3, CALLIOPE_MINI_ROLES));
   registerDevice('circuit_playground_express', boardModel(CPX_TERMINALS, 3.3, CPX_ROLES));
   registerDevice('esp8266', boardModel(ESP8266_TERMINALS, 3.3, ESP8266_ROLES));
+  registerDevice('esp32_4848s040', boardModel(ESP32_S040_TERMINALS, 3.3));
   registerDevice('pybadge', boardModel(PYBADGE_TERMINALS, 3.3, PYBADGE_ROLES));
   registerDevice('eater6502', boardModel(EATER6502_TERMINALS, 5.0));
   registerDevice('attiny88', bareChipModel(ATTINY88_TERMINALS, 5.0));

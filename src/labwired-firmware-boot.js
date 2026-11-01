@@ -8,6 +8,7 @@
  * validation, not a claim that arbitrary ESP-IDF/Arduino firmware is supported.
  */
 import { LABWIRED_CATALOG } from './labwired-catalog.js';
+import { prepareLabwiredBoardProfile } from './labwired-board-profile.js';
 
 export const ESP32S3_FLASH_BOOT_KIND = 'esp32s3-merged-flash';
 export const ESP32S3_FLASH_BOOT_CONSOLES = Object.freeze(['uart0', 'usb_serial_jtag', 'both']);
@@ -122,13 +123,14 @@ export function validateEsp32S3MergedFlash (firmware, { partitionTableOffset = 0
  * used on every reset; caller mutation cannot change the next boot.
  */
 export function prepareLabwiredFirmwareBoot (opts) {
+  const boardProfile = opts.labwiredBoardId !== undefined ? prepareLabwiredBoardProfile(opts) : null;
   const p = opts.firmwareBoot;
   if (!p || typeof p !== 'object' || Array.isArray(p) || p.kind !== ESP32S3_FLASH_BOOT_KIND) {
     fail(`firmwareBoot.kind must be '${ESP32S3_FLASH_BOOT_KIND}'`);
   }
   const fields = ['kind', 'irom', 'drom', 'console', 'partitionTableOffset'];
   if (Object.keys(p).some(k => !fields.includes(k))) fail('firmwareBoot contains an unsupported field');
-  const competing = ['board', 'chip', 'chipKind', 'mcuId', 'labwiredBoard', 'boardVariant',
+  const competing = [...(boardProfile ? [] : ['board', 'mcuId']), 'chip', 'chipKind', 'labwiredBoard', 'boardVariant',
     'softwareProfile', 'chipYaml', 'systemYaml', 'pins', 'clockHz', 'firmwareAddress',
     'extraSegments', 'blobs', 'chipPath', 'arduinoEsp32', 'softdeviceS110', 'labAir', 'boardMatrix'];
   if (competing.some(k => opts[k] != null)) fail('firmwareBoot cannot replace a circuit or competing configuration');
@@ -142,19 +144,23 @@ export function prepareLabwiredFirmwareBoot (opts) {
   }
   const checked = validateEsp32S3MergedFlash(opts.firmware, { partitionTableOffset: p.partitionTableOffset });
   const chip = LABWIRED_CATALOG.esp32s3;
-  const name = opts.name ?? 'bw-esp32s3-flash';
+  const name = opts.name ?? (boardProfile ? 'esp32-4848s040' : 'bw-esp32s3-flash');
   if (typeof name !== 'string' || !name) fail('name must be a non-empty string');
-  const systemYaml = `name: ${JSON.stringify(name)}\nchip: "./esp32s3.yaml"\n` +
-    (p.console === 'both' ? '' : `debug_uart: ${JSON.stringify(p.console)}\n`) +
-    'external_devices: []\nboard_io: []\n';
+  const consoleYaml = p.console === 'both' ? '' : `debug_uart: ${JSON.stringify(p.console)}\n`;
+  const systemYaml = boardProfile
+    ? boardProfile.systemYaml.replace(/^debug_uart:.*(?:\r?\n|$)/gm, '') + consoleYaml
+    : `name: ${JSON.stringify(name)}\nchip: "./esp32s3.yaml"\n` + consoleYaml +
+      'external_devices: []\nboard_io: []\n';
   return {
     chipYaml: chip.chipYaml, systemYaml, clockHz: chip.clockHz,
+    boardProfile,
     firmware: new Uint8Array(),
     blobs: Object.freeze({
       esp32s3_flash: Uint8Array.from(opts.firmware),
       esp32s3_irom: Uint8Array.from(p.irom),
       esp32s3_drom: Uint8Array.from(p.drom),
     }),
-    metadata: Object.freeze({ kind: p.kind, console: p.console, ...checked }),
+    metadata: Object.freeze({ kind: p.kind, console: p.console,
+      ...(boardProfile ? { boardId: boardProfile.metadata.id } : {}), ...checked }),
   };
 }

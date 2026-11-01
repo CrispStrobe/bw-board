@@ -1,0 +1,128 @@
+{
+  "schema": 1,
+  "qualification": "candidate",
+  "description": "functional software qualification of one local build; not published or independently reproduced; no physical hardware validation",
+  "source": {
+    "repository": "CrispStrobe/labwired-core",
+    "commit": null,
+    "baseCommit": "b6a8b2548ee01262001a04117c2d265f66350400",
+    "patch": {
+      "bytes": 126514,
+      "sha256": "96049ec5b16082c6596fc568f368af85c4b0996a434887bc79590830a4093446"
+    }
+  },
+  "engine": {
+    "version": "candidate-engine-v2",
+    "sourceCommit": null,
+    "releaseRepository": "CrispStrobe/bw-board",
+    "releaseTag": null,
+    "independentBuildsQualified": false,
+    "siliconDriftAcknowledged": false,
+    "assets": [
+      {
+        "file": "engine/labwired_wasm.js",
+        "asset": "nodejs-labwired_wasm.js",
+        "bytes": 151452,
+        "sha256": "c4e2c7c0c33e483f4644266c43c705ec4fbc1cfe1ff055d3098ff17e5d572c2e"
+      },
+      {
+        "file": "engine/labwired_wasm_bg.wasm",
+        "asset": "nodejs-labwired_wasm_bg.wasm",
+        "bytes": 29022073,
+        "sha256": "ecd690208c5e96f2756a3ffc44d84c39cc6c896f4e6ad6080e11b6bf1a467d0a"
+      }
+    ]
+  },
+  "firmware": {
+    "file": "firmware/probe.elf",
+    "sourcePath": "tests/fixtures/esp32-4848s040/probe.elf",
+    "bytes": 18032,
+    "sha256": "fc5563c16da88dc609c5ada36b17c72a611cc4998675d502572318c1657c419f",
+    "provenance": {
+      "description": "MIT source-owned stdlib Python Xtensa encoder; no SDK, compiler, ROM calls or physical capture",
+      "sourcePath": "tests/fixtures/esp32-4848s040/build_probe.py",
+      "bytes": 6996,
+      "sha256": "9188ebe1a280ee95ae490a6534a7255c28ea5ba6bd9700bea7cdcdfcf7228508"
+    }
+  },
+  "catalog": {
+    "boardId": "esp32-4848s040",
+    "sourcePath": "configs/systems/esp32-4848s040.yaml",
+    "bytes": 573,
+    "sha256": "671902a0ddbcb24c39a30246290eca93bf88a5496b513f83b92f662ce65a43fc",
+    "chipSha256": "64e513983592375093e9bf28327a09a4ab404aebecbe1d44a89d23be4081e0f6"
+  },
+  "knownFailures": [],
+  "flashBoot": {
+    "sourceRepository": "CrispStrobe/labwired-core",
+    "sourceCommit": "3b655aef4085082152129c84849d4e2ad5004a7f",
+    "firmware": {
+      "id": "arduino",
+      "file": "firmware/esp32s3-arduino-flash.bin",
+      "sourcePath": "tests/fixtures/tier1/esp32s3-arduino-flash.bin",
+      "bytes": 331776,
+      "sha256": "2664b7ba3bc27303cd5e48f028ea1b176a68c749230b42e0780a94710948e7c5",
+      "provenance": {
+        "application": "Retained hosted Arduino ESP32-S3 smoke artifact",
+        "sourceManifest": "tests/fixtures/tier1/MANIFEST.json",
+        "sketchSourceAvailable": false,
+        "toolchainLockAvailable": false,
+        "note": "The supplier manifest describes a hosted Arduino sketch printing SMOKE_OK, but retains neither its exact sketch source nor a compiler/core lock. The separate source-debug/main.ino belongs to a different binary and is not this artifact's source."
+      },
+      "console": "uart0",
+      "consoleEvidence": "The retained image's SMOKE_OK bytes are observed on UART0; a USB-only selection leaves them in the engine's unheard UART stream. Do not infer the output channel from the supplier's CDC build prose.",
+      "markers": [
+        "SMOKE_OK"
+      ]
+    },
+    "note": "Only the retained artifact and ROM boot route are exercised under the trusted S040 assembly; this smoke image does not initialize the RGB display."
+  },
+  "history": [
+    {
+      "version": "candidate-engine-v1",
+      "sourcePatch": {
+        "bytes": 125103,
+        "sha256": "b632354c7fb7d004ab849fed13444c777aabdf1e406d7540e6b16c8c7242c7d3"
+      },
+      "engineAssets": [
+        {
+          "file": "engine/labwired_wasm.js",
+          "asset": "nodejs-labwired_wasm.js",
+          "bytes": 151452,
+          "sha256": "c4e2c7c0c33e483f4644266c43c705ec4fbc1cfe1ff055d3098ff17e5d572c2e"
+        },
+        {
+          "file": "engine/labwired_wasm_bg.wasm",
+          "asset": "nodejs-labwired_wasm_bg.wasm",
+          "bytes": 29022073,
+          "sha256": "ecd690208c5e96f2756a3ffc44d84c39cc6c896f4e6ad6080e11b6bf1a467d0a"
+        }
+      ],
+      "failures": [
+        {
+          "version": "candidate-engine-v1",
+          "scope": "Producer full-session snapshot replay after typed touch",
+          "result": "Failed; retained separately from passing display/touch/H1/reset controls",
+          "cause": "Existing SetInputs replay serialized JS Map records instead of plain typed-input objects",
+          "resolution": "Reviewed fix pending independent same-test artifact qualification"
+        }
+      ],
+      "resolution": {
+        "version": "candidate-engine-v2",
+        "producerRegression": {
+          "path": "/workspace/scratch/dd037661e931/esp32s3-proof/s040-v2-result.json",
+          "bytes": 4869,
+          "sha256": "42de61b3f555ab9e44f725cad652e7bbe0566a40eac0e7a00892a93c7c127429"
+        },
+        "fullTouchSessionJournalRestore": true
+      }
+    }
+  ],
+  "producerQualification": {
+    "fullTouchSessionJournalRestore": true,
+    "result": {
+      "bytes": 4869,
+      "sha256": "42de61b3f555ab9e44f725cad652e7bbe0566a40eac0e7a00892a93c7c127429"
+    }
+  }
+}

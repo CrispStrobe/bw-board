@@ -91,6 +91,26 @@ test('ESP32-S3 retained inputs are separately qualified and never reported as pr
     assert.match(dedicated, /assert\.equal\(count\(flash, 'skipped'\), 0\)/);
 });
 
+test('S040 provisional evidence is distinct from mandatory release qualification', () => {
+    const row = INPUTS.find(input => input.id === 'labwired-esp32s040-fixtures');
+    assert.ok(row);
+    assert.equal(row.kind, 'fixture');
+    assert.equal(row.env, 'LABWIRED_ESP32S040_INPUTS');
+    assert.deepEqual(row.paths, []);
+    assert.deepEqual(row.gates, ['test/labwired-esp32s040-engine.test.mjs']);
+    assert.equal(row.ciAvailable, false);
+    assert.match(row.what, /candidate evidence/);
+    assert.match(row.what, /Directory presence does not admit bytes/);
+    const ordinary = readFileSync(join(ROOT, '.github/workflows/ci.yml'), 'utf8');
+    const dedicated = readFileSync(join(ROOT, '.github/workflows/esp32s040-public-factory.yml'), 'utf8');
+    assert.doesNotMatch(ordinary, /LABWIRED_ESP32S040_INPUTS|fetch-esp32s040-fixtures/);
+    assert.ok(dedicated.includes(`${row.env}:`));
+    assert.match(dedicated, /LABWIRED_REQUIRE_ESP32S040: '1'/);
+    assert.match(dedicated, /fetch-esp32s040-fixtures\.mjs --out/);
+    assert.match(dedicated, /count\('tests'\) >= 31/);
+    assert.match(dedicated, /assert\.equal\(count\('skipped'\), 0\)/);
+});
+
 test('environment-selected files carry the same identity as default-path files', () => {
     const key = 'BW_CENSUS_DIGEST_TEST_PATH', previous = process.env[key];
     const path = fileURLToPath(import.meta.url);

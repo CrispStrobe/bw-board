@@ -637,17 +637,41 @@ export function createLabwiredDebugTarget (opts) {
     video () {
       const disp = (opts.displays || [])[0];
       if (!disp || detached || typeof sim().get_display !== 'function') return null;
+      const s040 = disp.type === 'st7701-rgb';
+      const panelOf = d => {
+        const m = d?.meta;
+        if (!m || ['display_on', 'sleeping', 'backlight_on', 'powered'].some(k => typeof m[k] !== 'boolean') ||
+            !Number.isSafeInteger(m.frames_received) || m.frames_received < 1) return null;
+        return { displayOn: m.display_on, sleeping: m.sleeping, backlightOn: m.backlight_on,
+          powered: m.powered, framesReceived: m.frames_received };
+      };
       let meta;
       try { meta = plain(sim().get_display(disp.id, false)); } catch (e) { return null; }
       if (!meta) return null;
-      const gen = String(meta.meta?.generation ?? meta.generation ?? '');
+      const panel = s040 ? panelOf(meta) : null;
+      // Before the first complete DMA frame there are no firmware pixels to
+      // show. Power/sleep/backlight changes must invalidate a pixel-generation
+      // cache too; otherwise the last lit frame survives an actual panel-off.
+      if (s040 && (!panel || meta.width !== 480 || meta.height !== 480 ||
+          (meta.format ?? meta.meta?.format) !== 'rgb565_be')) return null;
+      const generation = String(meta.meta?.generation ?? meta.generation ?? '');
+      const gen = s040 && generation ? `${generation}:${JSON.stringify(panel)}` : generation;
       if (videoCache && videoCache.gen === gen && gen) return videoCache.frame;
       let full;
       try { full = plain(sim().get_display(disp.id, true)); } catch (e) { return null; }
+      const fullPanel = s040 ? panelOf(full) : null;
+      if (s040 && (!fullPanel || full.width !== 480 || full.height !== 480 ||
+          (full.format ?? full.meta?.format) !== 'rgb565_be' ||
+          !(full.bytes instanceof Uint8Array || Array.isArray(full.bytes)) ||
+          full.bytes.length !== 480 * 480 * 2 ||
+          Array.isArray(full.bytes) && full.bytes.some(b => !Number.isInteger(b) || b < 0 || b > 255))) return null;
       const decoded = decodeDisplay({ ...full, format: full?.format ?? full?.meta?.format });
       if (!decoded || decoded.refused) return null;
       videoFrames += 1;
-      const frame = { ...decoded, frame: videoFrames, signal: true };
+      const signal = fullPanel ? fullPanel.displayOn && !fullPanel.sleeping &&
+        fullPanel.backlightOn && fullPanel.powered : true;
+      const frame = { ...decoded, frame: videoFrames, signal,
+        ...(fullPanel ? { panel: fullPanel } : {}) };
       videoCache = { gen, frame };
       return frame;
     },
@@ -691,6 +715,7 @@ export function createLabwiredDebugTarget (opts) {
 
     reset () {
       if (adapter.resetToProgram) adapter.resetToProgram();
+      if ((opts.displays || []).some(d => d.type === 'st7701-rgb')) videoCache = null;
       running = false;
       insnRemaining = null;
       depthStep = null;
@@ -723,6 +748,7 @@ export function createLabwiredDebugTarget (opts) {
         writeWatches.size > 0;
 
       try {
+        if (typeof adapter.assertRunnable === 'function') adapter.assertRunnable();
         if (!mustWatch) {
           // Batch size from the OBSERVED cycles per instruction: a batch of
           // "cycles left" instructions overshoots by the CPI (4x at CPI 4). The
@@ -855,6 +881,7 @@ export function createLabwiredDebugTarget (opts) {
         return { unsupported: `restore refused: ${e.message || e}` };
       }
       faultSeen = false;
+      if ((opts.displays || []).some(d => d.type === 'st7701-rgb')) videoCache = null;
       adapter.pump();
       return undefined;
     },
@@ -878,7 +905,8 @@ export function createLabwiredDebugTarget (opts) {
       if (typeof sim().console_mismatch === 'function') {
         try { consoleMismatch = sim().console_mismatch() || null; } catch (e) { consoleMismatch = null; }
       }
-      return { fault: readFault(), fidelityGaps: Array.isArray(fidelityGaps) ? fidelityGaps : [], consoleMismatch };
+      return { fault: readFault(), fidelityGaps: Array.isArray(fidelityGaps) ? fidelityGaps : [], consoleMismatch,
+        ...(typeof adapter.boardElectricalStatus === 'function' ? { boardElectrical: adapter.boardElectricalStatus() } : {}) };
     },
 
     // The runner calls this UNGUARDED — board.advanceTo(target.timeNs()) on
@@ -891,17 +919,25 @@ export function createLabwiredDebugTarget (opts) {
 
     bwMs () { return undefined; },
 
-    detach () { detached = true; running = false; },
+    detach () {
+      detached = true;
+      running = false;
+      if (typeof adapter.releaseBoard === 'function') adapter.releaseBoard();
+    },
 
     destroy () {
       detached = true;
       running = false;
-      listeners = [];
-      eventListeners = [];
-      inputListeners = [];
-      breakpoints.clear();
-      codeBps.clear();
-      writeWatches.clear();
+      try {
+        if (typeof adapter.releaseBoard === 'function') adapter.releaseBoard();
+      } finally {
+        listeners = [];
+        eventListeners = [];
+        inputListeners = [];
+        breakpoints.clear();
+        codeBps.clear();
+        writeWatches.clear();
+      }
     },
   };
 

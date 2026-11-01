@@ -1,0 +1,61 @@
+name: ESP32-4848S040 public factory
+
+on:
+  push:
+    branches: ['**']
+    paths:
+      - 'src/labwired-*.js'
+      - 'src/debug-target-factory.js'
+      - 'src/devices/board-kinds.js'
+      - 'src/board.js'
+      - 'src/pin-model.js'
+      - 'test/labwired-esp32s040*.test.mjs'
+      - 'test/helpers/esp32s040-public-factory-proof.mjs'
+      - 'test/fixtures/labwired/esp32s040/**'
+      - 'scripts/fetch-esp32s040-fixtures.mjs'
+      - 'scripts/fetch-esp32s3-firmware-fixtures.mjs'
+      - 'scripts/gen-labwired-catalog.mjs'
+      - 'scripts/build-labwired-wasm.mjs'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/esp32s040-public-factory.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  public-factory:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22.23.4
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Fetch and admit the qualified immutable engine and source-owned guest
+        run: node scripts/fetch-esp32s040-fixtures.mjs --out "$RUNNER_TEMP/esp32s040"
+      - name: Require actual public-factory panel, touch, reset and H1 proof
+        env:
+          LABWIRED_ESP32S040_INPUTS: ${{ runner.temp }}/esp32s040
+          LABWIRED_REQUIRE_ESP32S040: '1'
+        run: |
+          set -euo pipefail
+          node --no-turbo-inline-js-wasm-calls --test --test-reporter=tap test/labwired-esp32s040.test.mjs test/labwired-esp32s040-engine.test.mjs | tee esp32s040-public-factory.tap
+          node --input-type=module <<'JS'
+          import {readFileSync} from 'node:fs';
+          import assert from 'node:assert/strict';
+          const text = readFileSync('esp32s040-public-factory.tap', 'utf8');
+          const count = name => Number(text.match(new RegExp(`^# ${name} (\\d+)$`, 'm'))?.[1] ?? -1);
+          assert.ok(count('tests') >= 31, 'all source controls, admission and both actual firmware routes must execute');
+          assert.equal(count('fail'), 0);
+          assert.equal(count('skipped'), 0);
+          assert.match(text, /real S040 guest and H1 circuit pass through the public factory/);
+          JS
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        if: always()
+        with:
+          name: esp32s040-public-factory-proof
+          path: esp32s040-*.tap
+          if-no-files-found: error
