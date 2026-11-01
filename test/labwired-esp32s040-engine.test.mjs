@@ -12,6 +12,18 @@ if (required && !directory) throw new Error('required S040 engine/guest inputs a
 if (required) requireEsp32S040Release();
 
 test('S040 evidence cannot promote a candidate or disagree with its source/catalog identity', () => {
+  // Keep the replay failure tied to the actual v1 artifact, even after the
+  // current engine advances. These are the original retained v1 receipt's
+  // bytes, not the later v2 fix or an eventual production release.
+  const v1 = esp32S040Manifest.history.find(record => record.version === 'candidate-engine-v1');
+  assert.deepEqual(v1.engineAssets.map(({asset, bytes, sha256}) => ({asset, bytes, sha256})), [
+    {asset:'nodejs-labwired_wasm.js', bytes:151452,
+      sha256:'c4e2c7c0c33e483f4644266c43c705ec4fbc1cfe1ff055d3098ff17e5d572c2e'},
+    {asset:'nodejs-labwired_wasm_bg.wasm', bytes:29021982,
+      sha256:'433a2611afa7939273887de5ddfe850345fab8bfdb72779671f3b4678c580d42'},
+  ]);
+  assert.equal(v1.failures[0].version, 'candidate-engine-v1');
+  assert.equal(v1.resolution.version, 'candidate-engine-v2');
   const manifest = structuredClone(esp32S040Manifest);
   manifest.qualification = 'candidate';
   assert.throws(() => requireEsp32S040Release(manifest), /release is pending/);

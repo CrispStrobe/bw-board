@@ -52,6 +52,14 @@ The candidate fixture manifest binds producer base
 The producer's unchanged full-session snapshot regression passes on v2. Its
 original v1 replay failure and passing v1 functional/browser observations remain
 retained separately; they are not relabeled as release evidence.
+Release-adoption audit found that the manifest's historical v1 WASM reference
+had accidentally copied the current v2 hash and length. The continuation
+corrects only that reference to the unchanged original v1 receipt:
+29,021,982 bytes, SHA-256
+`433a2611afa7939273887de5ddfe850345fab8bfdb72779671f3b4678c580d42`.
+The focused admission control reproduces the wrong-reference failure, then
+passes with the correction. The original commits, scratch receipts, v1 replay
+failure and current v2 executable assets remain unchanged.
 The final standalone CUI browser also passes 41/41 with these frozen M2
 modules and exact v2 web/WASM bytes: full frame, actual GT911 down/move/up and
 guest redraw, unbound-part isolation, owner replacement and removal release.

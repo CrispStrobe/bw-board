@@ -94,8 +94,8 @@
         {
           "file": "engine/labwired_wasm_bg.wasm",
           "asset": "nodejs-labwired_wasm_bg.wasm",
-          "bytes": 29022073,
-          "sha256": "ecd690208c5e96f2756a3ffc44d84c39cc6c896f4e6ad6080e11b6bf1a467d0a"
+          "bytes": 29021982,
+          "sha256": "433a2611afa7939273887de5ddfe850345fab8bfdb72779671f3b4678c580d42"
         }
       ],
       "failures": [
