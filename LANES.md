@@ -1,3 +1,11 @@
+## ESP32-S3 merged-flash public debugger route — CLAIMED, 2026-11-01
+
+Owner: ChatGPT ESP32 support lane, requested by CrispStrobe. Base: `dfdd1d0ee4a8109ca1212fb14dadde09dfe84ed0`. Isolated implementation branch; companion Lite claim `lanes/2026-11-01-esp32s3-firmware-boot.md` is merged. SAMD PR721 is confirmed merged; preserve its software-profile behavior.
+
+Own the new `src/labwired-firmware-boot.js` validator/profile/ROM identity seam, narrow explicit S3 flash boot additions in `src/labwired-adapter.js` and `src/debug-target-factory.js`, `test/labwired-esp32s3-flash.test.mjs`, `test/fixtures/labwired/esp32s3-flash/manifest.json`, `scripts/fetch-esp32s3-firmware-fixtures.mjs`, a focused `.github/workflows/esp32s3-firmware-boot.yml`, necessary source documentation and this section. Carry explicit merged-flash and admitted ROM bytes through the public factory and reset; select the declared UART/USB console. Retain ordinary addressed-ELF/UF2 guards and the classic ESP32 behavior. Caller ROM admission uses exported immutable source/hash identities. Reject competing configurations, malformed or wrong-chip firmware, absent ROMs, unaddressed app-only input and invalid segment/partition bounds.
+
+Qualify existing S3 ELF breakpoint/resume plus retained real ESP-IDF and Arduino flash fixtures through this factory, reset input-copy stability, console selection and meaningful malformed-input controls. Hosted focused proof must require the real pinned engine/fixtures rather than silently skip; use the existing engine release without rebuilding it. Preserve all existing integrity/CI gates and source pins. No claim of S040 display/touch or physical-board behavior from this milestone. Shared behavior lands here before Lite adopts its exact qualified source.
+
 ## Explicit software-profile debugger factory — DONE candidate, 2026-10-29
 
 Owner: Codex SAMD continuation, isolated checkout `lego-work/spike-delivery-20261028/bw-board`;
