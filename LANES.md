@@ -13,6 +13,13 @@ source notices without rewriting its original artifacts or receipts. Preserve
 every existing build, determinism, engine, SAMD and selected-motion gate, all
 production pins, and the pending S040 release boundary.
 
+Ordinary-CI diagnostics, 2026-11-01: Test now retains stdout/stderr under
+explicit pipefail and uploads the log after an executed Test, using its actual
+run/head/attempt identity. A skipped Test adds no missing-file failure. Test
+inputs, selection, triggers and failure status remain unchanged. This does not
+qualify S040 or classify failed run `41354797778`, whose complete diagnostics
+remain unavailable and whose ordinary-test failure is unclassified.
+
 Add the exact `labwiredBoardId: 'esp32-4848s040'` selector for addressed Xtensa ELF and explicit merged-flash ROM boot. The initial UF2 intent is narrowed after source inspection: the existing converter emits Cortex-M ELF and reads an ARM reset vector, so S040 explicitly refuses UF2 rather than guessing another architecture. Resolve the canonical internal ST7701/GT911 assembly from the supplier catalog; optional H1 circuit bindings derive from the actual board and selected MCU. Reject custom YAML, competing chip/pin/clock/profile overrides and unsupported electrical functions. Physical kind is `esp32_4848s040`; only H1 GPIO1/2/40/43/44, two grounds and 5V supply are exposed. GPIO uses 3.3 V logic. Do not manufacture generic DevKit pins, firmware output, native USB access, radio or analog support.
 
 Own `src/labwired-board-profile.js` (new); narrowly necessary S040 hunks in `src/labwired-{firmware-boot,adapter,debug,bridge,chips,catalog}.js`, `src/debug-target-factory.js`, `src/devices/board-kinds.js`; exact catalog/build-PIN adoption and generated source bindings; focused board/profile/display/input/circuit tests, fixture manifest, workflow and documentation. Preserve the M1 factory/ROM validation, existing SAMD route and every other board. The core companion owns bank-1 public pad access. Pad direction, pulls and open-drain require actual qualified register/driver evidence; unsupported bindings are refused explicitly.

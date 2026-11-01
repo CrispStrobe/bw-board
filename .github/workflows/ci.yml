@@ -270,6 +270,7 @@ jobs:
         run: node scripts/oracle-census.mjs --require nasm,emu8051,ngspice
 
       - name: Test
+        id: ordinary_tests
         # The 65x02 and z80 vector-suite tests skip cleanly when their suites
         # are not cloned, and so does test/moo.test.mjs. That is a real hole
         # and it is not papered over here — the `vectors` job below closes it
@@ -284,7 +285,17 @@ jobs:
         # reports in separate Node processes. Recent runner shutdowns lacked
         # memory telemetry; limiting overlap avoids multiplying their live heaps.
         # The runner derives every pattern and explicit file from scripts.test.
-        run: node scripts/run-ci-tests-serial.mjs
+        run: |
+          set -o pipefail
+          node scripts/run-ci-tests-serial.mjs 2>&1 | tee "$RUNNER_TEMP/bw-board-ci-test.log"
+
+      - name: Upload ordinary test diagnostics
+        if: ${{ always() && steps.ordinary_tests.outcome != 'skipped' }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: bw-board-test-${{ github.run_id }}-${{ github.run_attempt }}-${{ github.sha }}
+          path: ${{ runner.temp }}/bw-board-ci-test.log
+          if-no-files-found: warn
 
       # WHICH ORACLES DID NOT RUN. `npm test` above reports its skips, and in
       # that list "a CPU core's hardware-generated vectors did not run" looks
