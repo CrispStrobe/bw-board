@@ -23,11 +23,18 @@
   },
   "firmware": [
     {
-      "id": "esp-idf",
+      "id": "rust-tier1",
       "file": "firmware/esp32s3-flash.bin",
       "sourcePath": "tests/fixtures/tier1/esp32s3-flash.bin",
       "bytes": 4194304,
       "sha256": "9c0bb604abbc8d18da77bf6c0f2ff6cb11fcda8db18b34ce08081cbf12d64209",
+      "provenance": {
+        "application": "Rust esp-hal tier-1 application with raw-register peripheral checks",
+        "bootloader": "ESP-IDF second-stage bootloader",
+        "sourcePath": "examples/tier1-fixture/esp32s3/src/main.rs",
+        "buildScript": "scripts/build_tier1_fixtures.sh",
+        "note": "The pinned supplier builds the Rust application with the Espressif Rust toolchain and espflash save-image --merge. This lane admits the retained bytes; it does not rebuild the fixture or establish an ESP-IDF C application build."
+      },
       "console": "uart0",
       "markers": ["TIER1 clock PASS", "TIER1 gpio PASS", "TIER1 timer PASS", "TIER1 irq PASS", "TIER1 dma PASS", "TIER1 mcpwm PASS", "TIER1 rmt PASS", "TIER1 i2c PASS", "TIER1 done"]
     },
@@ -37,6 +44,13 @@
       "sourcePath": "tests/fixtures/tier1/esp32s3-arduino-flash.bin",
       "bytes": 331776,
       "sha256": "2664b7ba3bc27303cd5e48f028ea1b176a68c749230b42e0780a94710948e7c5",
+      "provenance": {
+        "application": "Retained hosted Arduino ESP32-S3 smoke artifact",
+        "sourceManifest": "tests/fixtures/tier1/MANIFEST.json",
+        "sketchSourceAvailable": false,
+        "toolchainLockAvailable": false,
+        "note": "The supplier manifest describes a hosted Arduino sketch printing SMOKE_OK, but retains neither its exact sketch source nor a compiler/core lock. The separate source-debug/main.ino belongs to a different binary and is not this artifact's source."
+      },
       "console": "uart0",
       "consoleEvidence": "The retained image's SMOKE_OK bytes are observed on UART0; a USB-only selection leaves them in the engine's unheard UART stream. Do not infer the output channel from the supplier's CDC build prose.",
       "markers": ["SMOKE_OK"]

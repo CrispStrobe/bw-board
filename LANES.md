@@ -1,10 +1,20 @@
+## ESP32-4848S040 trusted board profile — CLAIMED, 2026-11-01
+
+Owner: ChatGPT ESP32 board integration lane, requested by CrispStrobe. Base default branch: `90c70755981adb56774f245c1b6ba2ecf2cfbadc`. Companion firmware-boot implementation: PR722. Own this section and additive S040 behavior only.
+
+Add the exact `labwiredBoardId: 'esp32-4848s040'` selector for addressed ELF/UF2 and explicit merged-flash ROM boot. Resolve the canonical internal ST7701/GT911 assembly from the supplier catalog; optional H1 circuit bindings derive from the actual board and selected MCU. Reject custom YAML, competing chip/pin/clock/profile overrides and unsupported electrical functions. Physical kind is `esp32_4848s040`; only H1 GPIO1/2/40/43/44, two grounds and 5V supply are exposed. GPIO uses3.3V logic. Do not manufacture generic DevKit pins, firmware output, native USB access, radio or analog support.
+
+Own `src/labwired-board-profile.js` (new); narrowly necessary S040 hunks in `src/labwired-{firmware-boot,adapter,debug,bridge,chips,catalog}.js`, `src/debug-target-factory.js`, `src/devices/board-kinds.js`; exact catalog/build-PIN adoption and generated source bindings; focused board/profile/display/input/circuit tests, fixture manifest, workflow and documentation. Preserve the M1 factory/ROM validation, existing SAMD route and every other board. The core companion owns bank-1 public pad access. Pad direction, pulls and open-drain require actual qualified register/driver evidence; unsupported bindings are refused explicitly.
+
+Qualify the real source-owned S040 guest through the public target, display state/generation/RGB565, typed touch down/move/up and redraw, reset/input ownership, exact H1 output/input/direction handling and meaningful negative controls. Local candidate-artifact results are provisional. No consumer production adoption before owning source and its immutable two-build-qualified release land. Keep all existing CI/provenance/performance gates; report silicon drift as pending without inventing a capture or human acknowledgement.
+
 ## ESP32-S3 merged-flash public debugger route — DONE candidate, 2026-11-01
 
 Owner: ChatGPT ESP32 support lane, requested by CrispStrobe. Base: `dfdd1d0ee4a8109ca1212fb14dadde09dfe84ed0`. Isolated implementation branch; companion Lite claim `lanes/2026-11-01-esp32s3-firmware-boot.md` is merged. SAMD PR721 is confirmed merged; preserve its software-profile behavior.
 
 Own the new `src/labwired-firmware-boot.js` validator/profile/ROM identity seam, narrow explicit S3 flash boot additions in `src/labwired-adapter.js` and `src/debug-target-factory.js`, `test/labwired-esp32s3-flash.test.mjs`, `test/fixtures/labwired/esp32s3-flash/manifest.json`, `scripts/fetch-esp32s3-firmware-fixtures.mjs`, a focused `.github/workflows/esp32s3-firmware-boot.yml`, necessary source documentation and this section. Carry explicit merged-flash and admitted ROM bytes through the public factory and reset; select the declared UART/USB console. Retain ordinary addressed-ELF/UF2 guards and the classic ESP32 behavior. Caller ROM admission uses exported immutable source/hash identities. Reject competing configurations, malformed or wrong-chip firmware, absent ROMs, unaddressed app-only input and invalid segment/partition bounds.
 
-Qualify existing S3 ELF breakpoint/resume plus retained real ESP-IDF and Arduino flash fixtures through this factory, reset input-copy stability, console selection and meaningful malformed-input controls. Hosted focused proof must require the real pinned engine/fixtures rather than silently skip; use the existing engine release without rebuilding it. Preserve all existing integrity/CI gates and source pins. No claim of S040 display/touch or physical-board behavior from this milestone. Shared behavior lands here before Lite adopts its exact qualified source.
+Qualify existing S3 ELF breakpoint/resume plus retained real Rust tier-1 and Arduino flash fixtures through this factory, reset input-copy stability, console selection and meaningful malformed-input controls. The Rust esp-hal application uses an ESP-IDF bootloader; it is not an ESP-IDF C application. Hosted focused proof must require the real pinned engine/fixtures rather than silently skip; use the existing engine release without rebuilding it. Preserve all existing integrity/CI gates and source pins. No claim of S040 display/touch or physical-board behavior from this milestone. Shared behavior lands here before Lite adopts its exact qualified source.
 
 Implemented on `lane/esp32s3-firmware-boot-20261101` after claim merge
 `90c70755981adb56774f245c1b6ba2ecf2cfbadc`. The explicit profile supplies
@@ -25,6 +35,14 @@ also checked against these TAP receipts. The retained Arduino `SMOKE_OK` bytes
 are observed on UART0; selecting USB leaves them in the unheard UART stream
 and reports a mismatch. Supplier CDC build prose is not substituted for this
 artifact observation.
+
+Provenance correction after the first candidate: the fixture id is now
+`rust-tier1`, matching its retained Rust source and build recipe. The Arduino
+smoke image's exact sketch source and compiler/core lock are not retained in
+the supplier snapshot; the separate source-debug sketch belongs to another
+binary. No image, hash, executable path or assertion was changed by this
+correction. The manifest and documentation distinguish retained-artifact
+execution from rebuilding a compiler toolchain.
 
 Hosted qualification is pending on the final candidate head. Require the new
 focused workflow and the selected existing checks before a normal matched-head

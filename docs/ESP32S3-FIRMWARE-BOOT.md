@@ -104,10 +104,24 @@ this generic profile does not assign a physical USB connector.
 ## Qualification and limits
 
 The focused suite has structural refusal controls, reset-copy and constructor
-controls, hash/length download controls, and real retained ESP-IDF/Arduino
-images loaded through **this public factory**. Its separate unchanged ELF
+controls, hash/length download controls, and real retained Rust tier-1 and
+Arduino images loaded through **this public factory**. Its separate unchanged ELF
 control executes the existing S3 increment/branch fixture and stops on an odd
 Xtensa instruction address.
+
+The tier-1 application is Rust using `esp-hal` initialization and raw-register
+checks, with an ESP-IDF second-stage bootloader. The pinned supplier retains
+its [application source](https://github.com/CrispStrobe/labwired-core/blob/3b655aef4085082152129c84849d4e2ad5004a7f/examples/tier1-fixture/esp32s3/src/main.rs)
+and [Rust/espflash build recipe](https://github.com/CrispStrobe/labwired-core/blob/3b655aef4085082152129c84849d4e2ad5004a7f/scripts/build_tier1_fixtures.sh).
+Its bootloader banner does not make the application an ESP-IDF C build.
+
+The Arduino smoke artifact is described in the supplier's
+[fixture manifest](https://github.com/CrispStrobe/labwired-core/blob/3b655aef4085082152129c84849d4e2ad5004a7f/tests/fixtures/tier1/MANIFEST.json).
+That snapshot does not retain its exact sketch source or compiler/core lock.
+The similarly named `source-debug` image has a different digest and its sketch
+is not the source of this `SMOKE_OK` artifact. Qualification here reuses the
+recorded compiler outputs; it does not claim a reproducible Arduino or
+ESP-IDF source-to-firmware toolchain in this package.
 
 ```sh
 node scripts/fetch-esp32s3-firmware-fixtures.mjs --out /path/to/esp32s3-inputs
