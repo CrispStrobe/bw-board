@@ -1,0 +1,45 @@
+{
+  "schema": 1,
+  "sourceRepository": "CrispStrobe/labwired-core",
+  "sourceCommit": "3b655aef4085082152129c84849d4e2ad5004a7f",
+  "engine": {
+    "sourceCommit": "3b655aef4085082152129c84849d4e2ad5004a7f",
+    "releaseRepository": "CrispStrobe/bw-board",
+    "releaseTag": "labwired-wasm-3b655aef-locked",
+    "assets": [
+      {
+        "asset": "nodejs-labwired_wasm.js",
+        "file": "engine/labwired_wasm.js",
+        "bytes": 150447,
+        "sha256": "747cb78d8118854e87ff728c10c24710d7302c55871d920c2784537afd1f965d"
+      },
+      {
+        "asset": "nodejs-labwired_wasm_bg.wasm",
+        "file": "engine/labwired_wasm_bg.wasm",
+        "bytes": 29163799,
+        "sha256": "1ad2947b99df8a13fce29c9240a79c61fb66e4d57ede26ca50880f141f3e3978"
+      }
+    ]
+  },
+  "firmware": [
+    {
+      "id": "esp-idf",
+      "file": "firmware/esp32s3-flash.bin",
+      "sourcePath": "tests/fixtures/tier1/esp32s3-flash.bin",
+      "bytes": 4194304,
+      "sha256": "9c0bb604abbc8d18da77bf6c0f2ff6cb11fcda8db18b34ce08081cbf12d64209",
+      "console": "uart0",
+      "markers": ["TIER1 clock PASS", "TIER1 gpio PASS", "TIER1 timer PASS", "TIER1 irq PASS", "TIER1 dma PASS", "TIER1 mcpwm PASS", "TIER1 rmt PASS", "TIER1 i2c PASS", "TIER1 done"]
+    },
+    {
+      "id": "arduino",
+      "file": "firmware/esp32s3-arduino-flash.bin",
+      "sourcePath": "tests/fixtures/tier1/esp32s3-arduino-flash.bin",
+      "bytes": 331776,
+      "sha256": "2664b7ba3bc27303cd5e48f028ea1b176a68c749230b42e0780a94710948e7c5",
+      "console": "uart0",
+      "consoleEvidence": "The retained image's SMOKE_OK bytes are observed on UART0; a USB-only selection leaves them in the engine's unheard UART stream. Do not infer the output channel from the supplier's CDC build prose.",
+      "markers": ["SMOKE_OK"]
+    }
+  ]
+}

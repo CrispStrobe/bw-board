@@ -92,6 +92,7 @@ export function plain (v) {
 
 import { toLoadableElf, isElf } from './bin-to-elf.js';
 import { isUf2, uf2ToElf } from './uf2-to-elf.js';
+import { prepareLabwiredFirmwareBoot } from './labwired-firmware-boot.js';
 
 /** ns per second, as a bigint numerator for cycle→ns without float drift. */
 const NS_PER_S = 1_000_000_000n;
@@ -155,10 +156,17 @@ export function chipArch (chipYaml) {
  *   each other; one given none keeps a private air. The caller owns the bus and
  *   gives every machine on it a different node name.
  * @param {string} [opts.name]
+ * @param {object} [opts.firmwareBoot] explicit ESP32-S3 merged-flash/ROM profile;
+ *   firmware-only, mutually exclusive with chip/circuit/config overrides
  * @returns {object} boundary-A adapter
  */
 export function createLabwiredAdapter (opts) {
-  const { wasm, chipYaml } = opts;
+  const { wasm } = opts;
+  const boot = opts.firmwareBoot !== undefined ? prepareLabwiredFirmwareBoot(opts) : null;
+  if (boot && opts.firmwareOnly !== true) {
+    throw new Error('labwired-adapter: explicit flash boot requires firmwareOnly');
+  }
+  const chipYaml = boot ? boot.chipYaml : opts.chipYaml;
   // FIRMWARE-ONLY: a user's own image on a catalog chip, with no circuit. No
   // header map (so no board_io and no pad traffic), and the image must be an
   // ELF: a raw .bin says nothing about where it loads, and the one default
@@ -179,14 +187,14 @@ export function createLabwiredAdapter (opts) {
   const given = firmwareOnly && opts.firmware && isUf2(opts.firmware)
     ? uf2ToElf(opts.firmware).elf
     : opts.firmware;
-  if (firmwareOnly && given && !isElf(given)) {
+  if (!boot && firmwareOnly && given && !isElf(given)) {
     throw new Error('labwired-adapter: firmware-only needs an ELF or UF2 image (a raw .bin carries ' +
       'no load address, and guessing one boots the chip from the wrong memory)');
   }
   const firmwareOpts = isAvr
     ? { architecture: 'avr', loadAddress: opts.firmwareAddress }
     : { loadAddress: opts.firmwareAddress, extraSegments: opts.extraSegments };
-  const firmware = given
+  const firmware = boot ? boot.firmware : given
     ? toLoadableElf(given, firmwareOpts)
     : given;
   if (!wasm || !wasm.WasmSimulator) throw new Error('labwired-adapter: opts.wasm must expose WasmSimulator');
@@ -200,33 +208,33 @@ export function createLabwiredAdapter (opts) {
       'is the emulated SoftDevice\'s, under its node name)');
   }
 
-  const clockHz = opts.clockHz ?? 48_000_000;
+  const clockHz = boot ? boot.clockHz : (opts.clockHz ?? 48_000_000);
   const clockHzBig = BigInt(clockHz);
   const names = Object.keys(pins);
   // Channel index IS the ref's position (documented by watch_logic_signals),
   // so this array is the ch→name table for every edge record.
   const refs = names.map((n) => ({ kind: 'gpio', peripheral: pins[n].peripheral, pin: pins[n].pin }));
 
-  const systemYaml = opts.systemYaml
+  const systemYaml = boot ? boot.systemYaml : opts.systemYaml
     ?? generateSystemYaml(opts.name ?? 'bw-labwired', opts.chipPath ?? './chip.yaml', pins);
 
   const build = () => {
     // Named images for the chip's `image_env` ROM regions (the RP2040's
     // `bootrom`): the browser has no filesystem to read a ROM dump from.
-    const instance = wasm.WasmSimulator.new_from_config(systemYaml, chipYaml, firmware, opts.blobs);
+    const instance = wasm.WasmSimulator.new_from_config(systemYaml, chipYaml, firmware, boot ? boot.blobs : opts.blobs);
     // An nRF51 S110 application (micro:bit V1 / Calliope mini) needs the
     // emulated SoftDevice attached before it runs -- on every build, so a
     // reset (which rebuilds) keeps it.
     // A classic-ESP32 Arduino image (arduino-esp32 + FreeRTOS) needs the
     // engine's Arduino boot thunks before it runs — on every build, so a reset
     // keeps them. Symbol-driven: they come from this ELF's own symbol table.
-    if (opts.arduinoEsp32) {
+    if (!boot && opts.arduinoEsp32) {
       if (typeof instance.install_arduino_esp32_quirks !== 'function') {
         throw new Error('labwired-adapter: this labwired-wasm build cannot boot an Arduino-ESP32 image');
       }
       instance.install_arduino_esp32_quirks(firmware);
     }
-    if (opts.softdeviceS110) {
+    if (!boot && opts.softdeviceS110) {
       if (typeof instance.attach_softdevice_s110 !== 'function') {
         throw new Error('labwired-adapter: this labwired-wasm build cannot emulate the S110 SoftDevice');
       }
@@ -234,7 +242,7 @@ export function createLabwiredAdapter (opts) {
     }
     // A shared radio air: joined on every build, after the SoftDevice it
     // belongs to, so a reset (which rebuilds) stays on the same air.
-    if (opts.labAir) {
+    if (!boot && opts.labAir) {
       if (typeof instance.attach_lab_air !== 'function') {
         throw new Error('labwired-adapter: this labwired-wasm build cannot join a shared radio air');
       }
@@ -556,6 +564,7 @@ export function createLabwiredAdapter (opts) {
     clockHz,
     systemYaml,
     pins,
+    ...(boot ? { firmwareBoot: boot.metadata } : {}),
     /** The chip's `arch:` — the debug target masks the Thumb bit only on 'arm'. */
     arch,
     /** True when built from a user image with no circuit (no header map). */
@@ -647,8 +656,12 @@ export function createLabwiredAdapter (opts) {
     timeNs,
 
     resetToProgram () {
+      const previous = sim;
       sim = build();
       adapter.sim = sim;
+      // A flash-boot machine owns a sizeable flash/ROM backing. A successful
+      // reset replaces it; keep the previous machine only if rebuilding fails.
+      if (boot && typeof previous.free === 'function') previous.free();
       published.clear();
       routing.clear();
       pulls.clear();

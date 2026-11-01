@@ -169,6 +169,8 @@ async function createRiscV32Target(opts = {}) {
  * @param {Record<string,{peripheral:string,pin:number}>} [opts.pins] header map
  * @param {number} [opts.clockHz]
  * @param {string} [opts.systemYaml] override the generated manifest
+ * @param {object} [opts.firmwareBoot] explicit ESP32-S3 merged-flash/ROM profile;
+ *   separate from ELF/UF2 and mutually exclusive with other target definitions
  * @param {object} [opts.labAir] a labwired-wasm `AirBus` to put an S110
  *   board's radio on (firmware-only, `opts.labwiredBoard` with a SoftDevice);
  *   boards given the same bus hear each other. Give each a different `name`.
@@ -176,6 +178,14 @@ async function createRiscV32Target(opts = {}) {
 async function createLabwiredTarget(opts) {
   const { wasm, board, firmware, name } = opts;
   if (!wasm) throw new Error("labwired target requires opts.wasm (the labwired-wasm module)");
+  if (opts.firmwareBoot !== undefined) {
+    // The adapter validates the complete option envelope before creating a
+    // machine. Only this explicit profile admits a merged flash image; the
+    // ordinary addressed ELF/UF2 guard below remains unchanged.
+    const adapter = createLabwiredAdapter({ ...opts, firmwareOnly: true });
+    const target = createLabwiredDebugTarget({ adapter });
+    return { target, adapter, refusals: [] };
+  }
   if (!firmware) throw new Error('labwired target requires opts.firmware (an ELF)');
   if (opts.boardVariant != null && (!board || opts.systemYaml != null || opts.chipYaml != null || opts.pins != null)) {
     throw new Error('labwired boardVariant requires a board-derived manifest, not a firmware-only or explicit manifest override');

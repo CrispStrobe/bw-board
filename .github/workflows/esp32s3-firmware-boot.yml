@@ -1,0 +1,63 @@
+name: ESP32-S3 firmware boot
+
+on:
+  push:
+    branches: ['**']
+    paths:
+      - 'src/labwired-*.js'
+      - 'src/debug-target-factory.js'
+      - 'src/bin-to-elf.js'
+      - 'src/uf2-to-elf.js'
+      - 'src/elf-symbols.js'
+      - 'test/labwired-esp32s3-flash.test.mjs'
+      - 'test/labwired-firmware-only.test.mjs'
+      - 'test/fixtures/labwired/esp32s3-flash/**'
+      - 'scripts/fetch-esp32s3-firmware-fixtures.mjs'
+      - 'scripts/gen-labwired-catalog.mjs'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/esp32s3-firmware-boot.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  public-factory:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22.23.4
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Fetch and admit the exact retained engine, ROMs and compiler outputs
+        run: node scripts/fetch-esp32s3-firmware-fixtures.mjs --out "$RUNNER_TEMP/esp32s3"
+      - name: Run required real flash boot and unchanged S3 ELF breakpoint route
+        env:
+          LABWIRED_ESP32S3_INPUTS: ${{ runner.temp }}/esp32s3
+          LABWIRED_REQUIRE_ESP32S3: '1'
+          LABWIRED_WASM: ${{ runner.temp }}/esp32s3/engine
+        run: |
+          set -euo pipefail
+          node --no-turbo-inline-js-wasm-calls --test --test-reporter=tap test/labwired-esp32s3-flash.test.mjs | tee esp32s3-flash.tap
+          node --no-turbo-inline-js-wasm-calls --test --test-reporter=tap --test-name-pattern='esp32s3: a hand-assembled Xtensa loop' test/labwired-firmware-only.test.mjs | tee esp32s3-elf.tap
+          node --input-type=module <<'JS'
+          import {readFileSync} from 'node:fs';
+          import assert from 'node:assert/strict';
+          const count = (text, name) => Number(text.match(new RegExp(`^# ${name} (\\d+)$`, 'm'))?.[1] ?? -1);
+          const flash = readFileSync('esp32s3-flash.tap', 'utf8');
+          assert.ok(count(flash, 'tests') >= 23, 'all twenty controls and three real-engine cases must run');
+          assert.equal(count(flash, 'fail'), 0);
+          assert.equal(count(flash, 'skipped'), 0);
+          const elf = readFileSync('esp32s3-elf.tap', 'utf8');
+          assert.ok(count(elf, 'pass') >= 1, 'the original S3 ELF breakpoint case must execute');
+          assert.equal(count(elf, 'fail'), 0);
+          JS
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        if: always()
+        with:
+          name: esp32s3-public-factory-proof
+          path: esp32s3-*.tap
+          if-no-files-found: error
