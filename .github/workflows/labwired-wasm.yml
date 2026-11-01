@@ -112,6 +112,34 @@ jobs:
       - name: Report what came out
         run: cat "$RUNNER_TEMP/out/BUILD-INFO.json"
 
+      - name: Verify and preserve the exact source license notices
+        env:
+          RETAINED_BUILD: ${{ inputs.retained_build }}
+        run: |
+          node --input-type=module <<'JS'
+          import assert from 'node:assert/strict';
+          import {readFileSync, writeFileSync} from 'node:fs';
+          import {join} from 'node:path';
+          const out = join(process.env.RUNNER_TEMP, 'out');
+          const {ref} = JSON.parse(readFileSync(join(out, 'BUILD-INFO.json')));
+          assert.match(ref, /^[0-9a-f]{40}$/, 'the notice must use the built Core source');
+          const response = await fetch(`https://raw.githubusercontent.com/CrispStrobe/labwired-core/${ref}/LICENSE`,
+            {signal: AbortSignal.timeout(30_000)});
+          assert.equal(response.ok, true, `Core license response ${response.status}`);
+          const notices = {
+            'CORE-LICENSE.txt': Buffer.from(await response.arrayBuffer()),
+            'PRODUCER-LICENSE.txt': readFileSync('LICENSE'),
+          };
+          for (const [name, expected] of Object.entries(notices)) {
+            assert.ok(expected.length > 0 && expected.length <= 65_536, `${name}: bounded nonempty source notice`);
+            // Old retained artifacts predate notice packaging. Add the notices
+            // without rewriting any original binary, descriptor or receipt.
+            if (process.env.RETAINED_BUILD === 'true') writeFileSync(join(out, name), expected);
+            assert.deepEqual(readFileSync(join(out, name)), expected, `${name}: exact source bytes`);
+            console.log(`${name}: verified ${expected.length} source bytes`);
+          }
+          JS
+
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: labwired-wasm-${{ matrix.leg }}
@@ -136,9 +164,9 @@ jobs:
           # job failed on a missing path instead of on a real difference —
           # a gate that breaks when the thing it guards changes shape is a gate
           # nobody will trust the next time it goes red.
-          files=$(cd a && find . -type f \( -name '*.js' -o -name '*.wasm' -o -name 'package.json' -o -name 'samd-no-asf-profile.json' \) | sort)
+          files=$(cd a && find . -type f \( -name '*.js' -o -name '*.wasm' -o -name 'package.json' -o -name 'samd-no-asf-profile.json' -o -name 'CORE-LICENSE.txt' -o -name 'PRODUCER-LICENSE.txt' \) | sort)
           [ -n "$files" ] || { echo "::error::no build outputs to compare"; exit 1; }
-          diff -u <(cd a && find . -type f \( -name '*.js' -o -name '*.wasm' -o -name 'package.json' -o -name 'samd-no-asf-profile.json' \) | sort) <(cd b && find . -type f \( -name '*.js' -o -name '*.wasm' -o -name 'package.json' -o -name 'samd-no-asf-profile.json' \) | sort)
+          diff -u <(cd a && find . -type f \( -name '*.js' -o -name '*.wasm' -o -name 'package.json' -o -name 'samd-no-asf-profile.json' -o -name 'CORE-LICENSE.txt' -o -name 'PRODUCER-LICENSE.txt' \) | sort) <(cd b && find . -type f \( -name '*.js' -o -name '*.wasm' -o -name 'package.json' -o -name 'samd-no-asf-profile.json' -o -name 'CORE-LICENSE.txt' -o -name 'PRODUCER-LICENSE.txt' \) | sort)
           echo "comparing:"
           while IFS= read -r file; do printf '    %s\n' "$file"; done <<< "$files"
           for f in $files; do
@@ -405,12 +433,18 @@ jobs:
             echo '```'
             cat out/BUILD-INFO.json
             echo '```'
+            echo
+            echo 'Exact source license notices:'
+            echo '```'
+            (cd out && sha256sum CORE-LICENSE.txt PRODUCER-LICENSE.txt)
+            echo '```'
           } > notes.md
           # A release's assets are one flat namespace, so the target is part of
           # the name. Without that the two glues collide and whichever uploads
           # last wins — silently, and only one of them works in a browser.
           mkdir -p flat
           cp out/BUILD-INFO.json flat/
+          cp out/CORE-LICENSE.txt out/PRODUCER-LICENSE.txt flat/
           if [ -f out/samd-no-asf-profile.json ]; then cp out/samd-no-asf-profile.json flat/; fi
           if [ -f out/RETAINED-BUILD.json ]; then cp out/RETAINED-BUILD.json flat/; fi
           # package.json travels too. wasm-bindgen's nodejs glue is CommonJS and

@@ -74,9 +74,10 @@
  */
 import { execFileSync } from 'node:child_process';
 import {writeSamdProfile} from './lib/labwired-samd-profile.mjs';
-import { mkdirSync, rmSync, existsSync, readFileSync, readdirSync, writeFileSync, statSync } from 'node:fs';
+import { mkdirSync, rmSync, existsSync, readFileSync, readdirSync, writeFileSync, statSync, copyFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { realpathSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import { tmpdir } from 'node:os';
 import { createHash } from 'node:crypto';
 import { brotliCompressSync, constants as zlibConstants } from 'node:zlib';
@@ -192,6 +193,11 @@ try {
     // Explicit loader scope for the exact CommonJS glue shipped to consumers.
     writeFileSync(join(outDir, 'nodejs', 'package.json'), '{"type":"commonjs"}\n');
     const configAssets = writeSamdProfile({sourceDir: src, outDir, ref: head});
+    // Preserve both source notices before the pinned Core checkout is removed.
+    // The release workflow independently compares these with the exact sources.
+    copyFileSync(join(src, 'LICENSE'), join(outDir, 'CORE-LICENSE.txt'));
+    copyFileSync(fileURLToPath(new URL('../LICENSE', import.meta.url)),
+        join(outDir, 'PRODUCER-LICENSE.txt'));
 
     // 6. what actually came out
     const info = { ref: head, wasmBindgen: wbVersion, rustflags, builtAt: new Date().toISOString(), configAssets, targets: {} };
