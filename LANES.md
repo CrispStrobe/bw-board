@@ -50,6 +50,19 @@ merge; do not publish an unmerged source as Lite's dependency pin. This
 milestone makes no S040 display/touch, circuit, flashing, block-code-generation
 or arbitrary-firmware compatibility claim.
 
+Required census registration follow-up: the dedicated firmware workflow passed
+at PR722 head `2dd15ec3b5669a2ed5a21144697947499f29501e`, but ordinary CI remained
+failed. Its source-derived census guard was reproduced locally: the new
+fixture-gated test had no census row. The continuation adds the truthful
+`LABWIRED_ESP32S3_INPUTS` fixture row and a source control distinguishing the
+ordinary CI absence from the dedicated workflow's mandatory hash admission
+and executed-case checks. The census detector, frozen debt, existing gates
+and emulator behavior are unchanged. Full qualification remains pending on
+the new exact candidate head; this registration does not turn the prior failed
+run into a passing result. Local follow-up checks: the unchanged tree-census
+guard changes from one failure (the new unnamed file) to 3/3 passing, and all
+17 census source/CLI contracts pass, including the new workflow distinction.
+
 ## Explicit software-profile debugger factory — DONE candidate, 2026-10-29
 
 Owner: Codex SAMD continuation, isolated checkout `lego-work/spike-delivery-20261028/bw-board`;

@@ -471,6 +471,25 @@ export const INPUTS = [
         ci: 'no',
     },
     {
+        id: 'labwired-esp32s3-flash-fixtures', kind: 'fixture',
+        what: 'The exact retained Node engine, ESP32-S3 mask ROMs and merged Rust/Arduino '
+            + 'firmware used by the public-factory boot/reset and console-selection proof. '
+            + 'Directory presence does not admit bytes: the test checks every size and '
+            + 'SHA-256 before importing executable glue. The structural source controls '
+            + 'always run; the real-engine cases require this input directory.',
+        env: 'LABWIRED_ESP32S3_INPUTS', paths: [],
+        gates: ['test/labwired-esp32s3-flash.test.mjs'],
+        obtain: 'Run node scripts/fetch-esp32s3-firmware-fixtures.mjs --out <directory> '
+            + 'and set LABWIRED_ESP32S3_INPUTS to that directory. The helper streams '
+            + 'only the fixed manifest assets with size/SHA-256 bounds; no compiler '
+            + 'or engine build is required.',
+        ciAvailable: false,
+        ci: 'no — ordinary ci.yml does not fetch these inputs. The separate '
+            + 'esp32s3-firmware-boot.yml workflow fetches and admits them, sets '
+            + 'LABWIRED_REQUIRE_ESP32S3=1, and requires all real cases with zero skips. '
+            + 'Its result is a separate exact-head qualification.',
+    },
+    {
         id: 'labwired-warmed-window-profile', kind: 'fixture',
         what: 'Opt-in diagnostic capture of five warmed GPIO cycle windows using '
             + 'Node Inspector. Ordinary timing is a separate unchanged process. '
