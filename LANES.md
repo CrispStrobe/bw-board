@@ -1,3 +1,13 @@
+## ESP32-4848S040 trusted board profile — CLAIMED, 2026-11-01
+
+Owner: ChatGPT ESP32 board integration lane, requested by CrispStrobe. Base default branch: `90c70755981adb56774f245c1b6ba2ecf2cfbadc`. Companion firmware-boot implementation: PR722. Own this section and additive S040 behavior only.
+
+Add the exact `labwiredBoardId: 'esp32-4848s040'` selector for addressed ELF/UF2 and explicit merged-flash ROM boot. Resolve the canonical internal ST7701/GT911 assembly from the supplier catalog; optional H1 circuit bindings derive from the actual board and selected MCU. Reject custom YAML, competing chip/pin/clock/profile overrides and unsupported electrical functions. Physical kind is `esp32_4848s040`; only H1 GPIO1/2/40/43/44, two grounds and 5V supply are exposed. GPIO uses3.3V logic. Do not manufacture generic DevKit pins, firmware output, native USB access, radio or analog support.
+
+Own `src/labwired-board-profile.js` (new); narrowly necessary S040 hunks in `src/labwired-{firmware-boot,adapter,debug,bridge,chips,catalog}.js`, `src/debug-target-factory.js`, `src/devices/board-kinds.js`; exact catalog/build-PIN adoption and generated source bindings; focused board/profile/display/input/circuit tests, fixture manifest, workflow and documentation. Preserve the M1 factory/ROM validation, existing SAMD route and every other board. The core companion owns bank-1 public pad access. Pad direction, pulls and open-drain require actual qualified register/driver evidence; unsupported bindings are refused explicitly.
+
+Qualify the real source-owned S040 guest through the public target, display state/generation/RGB565, typed touch down/move/up and redraw, reset/input ownership, exact H1 output/input/direction handling and meaningful negative controls. Local candidate-artifact results are provisional. No consumer production adoption before owning source and its immutable two-build-qualified release land. Keep all existing CI/provenance/performance gates; report silicon drift as pending without inventing a capture or human acknowledgement.
+
 ## ESP32-S3 merged-flash public debugger route — CLAIMED, 2026-11-01
 
 Owner: ChatGPT ESP32 support lane, requested by CrispStrobe. Base: `dfdd1d0ee4a8109ca1212fb14dadde09dfe84ed0`. Isolated implementation branch; companion Lite claim `lanes/2026-11-01-esp32s3-firmware-boot.md` is merged. SAMD PR721 is confirmed merged; preserve its software-profile behavior.
