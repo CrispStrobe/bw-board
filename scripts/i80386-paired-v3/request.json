@@ -1,0 +1,33 @@
+{
+ "arms": {
+  "A": {
+   "head": "cda9d13b3e5b4a3e40854f45e04d110ab2a57ef3",
+   "tree": "043d1da0232bbc9c78195b2fe85c24d89e22c181"
+  },
+  "B": {
+   "head": "fcbd8c689d9bbbea9893fa085b2e98df3ba3eb0d",
+   "tree": "26dff4aba107bd9f7e6ebd4579bae7e360d8e654"
+  }
+ },
+ "candidate": "arm B reads conventional RAM below 0x9fc00 directly in _read386 (one guarded line); arm A is master cda9d13b",
+ "modes": [
+  "capfit",
+  "paired"
+ ],
+ "nodePath": "/opt/hostedtoolcache/node/22.23.3/x64/bin/node",
+ "nodeVersion": "v22.23.3",
+ "note": "Admits one capfit dispatch, then one paired dispatch only if capfit passes. Each is one-shot; failures are retained, never repeated.",
+ "predeclared": {
+  "capfitMaxWallSeconds": 30,
+  "children": 18,
+  "gate": {
+   "cpuEveryGreaterThan": 1,
+   "cpuMedianMin": 1.03,
+   "wallMedianMax": 1.02
+  },
+  "measuredRetirements": 10000000,
+  "reader": "scripts/i80386-paired-v3/reader.py (exact device goldens)"
+ },
+ "schema": "bw.paired-v3-request.v1",
+ "sourceRowsSha256": "876dea9d397b8efc7da3afb02909087a88ceb2ede384e1d1590ebd111df433c2"
+}
