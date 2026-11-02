@@ -141,6 +141,9 @@ export class ExperimentalI80386ATMachine extends I8086Machine {
   }
 
   _read386(address) {
+    // Conventional RAM below the MP floating pointer has no A20, reset-alias,
+    // MP/APIC or VGA decode; the page table still decides it is plain RAM.
+    if ((address >>> 0) < MP_FLOAT_BASE && this._page[address >>> 12] === 1) return this.mem[address >>> 0];
     const decoded = this._decode386(address);
     if (this._xv6Mp && this._mpReady && decoded >= MP_FLOAT_BASE && decoded < MP_FLOAT_BASE + 16)
       return this._xv6Mp.float[decoded - MP_FLOAT_BASE];
