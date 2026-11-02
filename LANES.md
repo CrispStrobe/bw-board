@@ -1,3 +1,21 @@
+## i80386 paired-v3 harness, exact device goldens and low-RAM read candidate — CLAIMED, 2026-11-02
+
+Owner: x86 performance follow-up lane (Claude), requested by CrispStrobe.
+Branch `claim/paired-v3-20261102` from master `cda9d13b3e5b4a3e40854f45e04d110ab2a57ef3`.
+Owns new `scripts/i80386-paired-v3/**`, `test/i80386-paired-v3.test.mjs`,
+`.github/workflows/i80386-paired-v3.yml` and this section. The paired-v2
+files stay byte-identical. Claim and harness land together (one PR).
+
+Follow-up C: reader v3 derives exact PIT fraction, RTC phases/register C,
+8042 queue, debt and deadline independently and admits both retained v2
+originals; perturbed copies are refused. Follow-up B: profile of master's
+authored loop put `_read386` at 8.5% self time (every opcode byte fetch goes
+through the full decode below 1 MiB). Candidate arm B `fcbd8c68…` adds one
+guarded line. Predeclared in `request.json` before any run: same gate, one
+capfit then one paired dispatch, originals acquired once, failures retained.
+Adoption, if the gate passes, is a separate PR with `ci:full` and the
+x86-xv6 guest job; otherwise the candidate stays unadopted.
+
 ## ESP32-4848S040 trusted board profile — DONE candidate, 2026-11-01
 
 Owner: ChatGPT ESP32 board integration lane, requested by CrispStrobe. Base default branch: `90c70755981adb56774f245c1b6ba2ecf2cfbadc`. Companion firmware-boot implementation: PR722. Own this section and additive S040 behavior only.
