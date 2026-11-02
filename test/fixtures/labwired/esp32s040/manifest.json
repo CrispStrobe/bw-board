@@ -1,37 +1,53 @@
 {
   "schema": 1,
-  "qualification": "candidate",
-  "description": "functional software qualification of one local build; not published or independently reproduced; no physical hardware validation",
+  "qualification": "release",
+  "description": "Functional software qualification against the immutable independently reproduced engine release; no physical hardware or arbitrary vendor-firmware claim.",
   "source": {
     "repository": "CrispStrobe/labwired-core",
-    "commit": null,
-    "baseCommit": "b6a8b2548ee01262001a04117c2d265f66350400",
-    "patch": {
-      "bytes": 126514,
-      "sha256": "96049ec5b16082c6596fc568f368af85c4b0996a434887bc79590830a4093446"
-    }
+    "commit": "9c4206499a39a04f56cd11c0b8c9b4cb94a06e62"
   },
   "engine": {
-    "version": "candidate-engine-v2",
-    "sourceCommit": null,
+    "version": "labwired-wasm-9c420649",
+    "sourceCommit": "9c4206499a39a04f56cd11c0b8c9b4cb94a06e62",
     "releaseRepository": "CrispStrobe/bw-board",
-    "releaseTag": null,
-    "independentBuildsQualified": false,
-    "siliconDriftAcknowledged": false,
+    "releaseTag": "labwired-wasm-9c420649",
+    "independentBuildsQualified": true,
+    "siliconDriftAcknowledged": true,
     "assets": [
       {
         "file": "engine/labwired_wasm.js",
         "asset": "nodejs-labwired_wasm.js",
         "bytes": 151452,
-        "sha256": "c4e2c7c0c33e483f4644266c43c705ec4fbc1cfe1ff055d3098ff17e5d572c2e"
+        "sha256": "b79c99c23545af5c173b63f5403f99cf3003cc7c57b8cce74bfb47d5f5f80674"
       },
       {
         "file": "engine/labwired_wasm_bg.wasm",
         "asset": "nodejs-labwired_wasm_bg.wasm",
-        "bytes": 29022073,
-        "sha256": "ecd690208c5e96f2756a3ffc44d84c39cc6c896f4e6ad6080e11b6bf1a467d0a"
+        "bytes": 29165165,
+        "sha256": "41c31ae388ce4389794eb9c6ee1f602bf361d792928dfabf2a1ef917d0796264"
       }
-    ]
+    ],
+    "releaseEvidence": {
+      "releaseId": 430923343,
+      "immutable": true,
+      "releaseUrl": "https://github.com/CrispStrobe/bw-board/releases/tag/labwired-wasm-9c420649",
+      "producerCommit": "1c9ed301819f21bdab9fc5c0fb35e82d858e821d",
+      "workflowRun": "https://github.com/CrispStrobe/bw-board/actions/runs/41359378516",
+      "independentBuilds": 2,
+      "deterministicFiles": 8,
+      "engineTests": 127,
+      "engineFailures": 0,
+      "engineSkips": 0,
+      "samdProfileControls": 6,
+      "samdGameSamples": 3,
+      "scope": "S040 adoption; optional selected-motion campaign was not selected and is not claimed."
+    },
+    "siliconDriftAcknowledgement": {
+      "digest": "952a2b85b15b54f120e0d63affb78c0eb9df3eca608eaa1a71aa36abf91f8b76",
+      "acknowledged": "2026-11-01",
+      "expires": "2026-12-01",
+      "note": "Owner acknowledgement only; the original reset-register capture, tier and watch list are unchanged. Physical RGB/touch/H1 recapture remains pending."
+    }
   },
   "firmware": {
     "file": "firmware/probe.elf",
@@ -116,13 +132,52 @@
         },
         "fullTouchSessionJournalRestore": true
       }
+    },
+    {
+      "version": "candidate-engine-v2",
+      "qualification": "candidate",
+      "source": {
+        "repository": "CrispStrobe/labwired-core",
+        "commit": null,
+        "baseCommit": "b6a8b2548ee01262001a04117c2d265f66350400",
+        "patch": {
+          "bytes": 126514,
+          "sha256": "96049ec5b16082c6596fc568f368af85c4b0996a434887bc79590830a4093446"
+        }
+      },
+      "engineAssets": [
+        {
+          "file": "engine/labwired_wasm.js",
+          "asset": "nodejs-labwired_wasm.js",
+          "bytes": 151452,
+          "sha256": "c4e2c7c0c33e483f4644266c43c705ec4fbc1cfe1ff055d3098ff17e5d572c2e"
+        },
+        {
+          "file": "engine/labwired_wasm_bg.wasm",
+          "asset": "nodejs-labwired_wasm_bg.wasm",
+          "bytes": 29022073,
+          "sha256": "ecd690208c5e96f2756a3ffc44d84c39cc6c896f4e6ad6080e11b6bf1a467d0a"
+        }
+      ],
+      "producerQualification": {
+        "fullTouchSessionJournalRestore": true,
+        "result": {
+          "bytes": 4869,
+          "sha256": "42de61b3f555ab9e44f725cad652e7bbe0566a40eac0e7a00892a93c7c127429"
+        }
+      },
+      "note": "Preserved original local v2 source/artifact proof; not relabelled as the released engine."
     }
   ],
   "producerQualification": {
+    "sourceCommit": "9c4206499a39a04f56cd11c0b8c9b4cb94a06e62",
+    "engineVersion": "labwired-wasm-9c420649",
+    "checker": "tests/fixtures/esp32-4848s040/check_wasm.cjs",
     "fullTouchSessionJournalRestore": true,
     "result": {
       "bytes": 4869,
-      "sha256": "42de61b3f555ab9e44f725cad652e7bbe0566a40eac0e7a00892a93c7c127429"
-    }
+      "sha256": "3b24d6c506a1ebb050f964bef02d6da58657449beb3b5734169a4a94d5a423ec"
+    },
+    "note": "Unchanged source-owned checker executed against the released Node glue/WASM; separate from independent release qualification and physical-board validation."
   }
 }

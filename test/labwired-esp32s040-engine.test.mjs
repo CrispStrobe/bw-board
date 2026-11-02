@@ -5,6 +5,7 @@ import {admitEsp32S040Inputs, esp32S040Manifest, requireEsp32S040Release,
   verifyEsp32S040Bytes} from '../scripts/fetch-esp32s040-fixtures.mjs';
 import {runEsp32S040PublicFactoryProof} from './helpers/esp32s040-public-factory-proof.mjs';
 import {createDebugTarget} from '../src/debug-target-factory.js';
+import {perfHint} from './helpers/perf-hint.mjs';
 
 const directory = process.env.LABWIRED_ESP32S040_INPUTS;
 const required = process.env.LABWIRED_REQUIRE_ESP32S040 === '1';
@@ -73,7 +74,7 @@ test('retained Arduino merged flash boots and resets under the trusted S040 asse
     target.run();
     for (let ms = 0; ms < 500 && !transcript.includes('SMOKE_OK'); ms++) {
       assert.equal(target.runFor(1_000_000), 'running', JSON.stringify(target.diagnostics()));
-      assert.ok(transcript.length < 100_000 && performance.now() - started < 85_000, 'bounded retained boot');
+      assert.ok(transcript.length < 100_000 && performance.now() - started < 85_000, perfHint('bounded retained boot'));
     }
     assert.ok(transcript.includes('SMOKE_OK'), `retained application marker absent: ${transcript}`);
     assert.equal(target.video(), null, 'the smoke image did not initialize the RGB panel; no frame may be fabricated');

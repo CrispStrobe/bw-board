@@ -1,10 +1,12 @@
 # S040 public-factory evidence
 
 `manifest.json` records exact bytes used by the real public-factory proof.
-It currently describes a **local candidate**, with a base commit and review
-patch hash. It does not identify a published release, a reproducible compiler
-toolchain or a physical board capture. The exact source-owned guest is produced
-by the supplier's retained `build_probe.py`, an independent Python Xtensa
+It identifies the immutable, independently reproduced
+`labwired-wasm-9c420649` release and exact Core source
+`9c4206499a39a04f56cd11c0b8c9b4cb94a06e62`. Original local v1/v2 source patches,
+artifact identities and replay evidence remain separately recorded in history.
+No compiler-toolchain or physical-board capture is inferred. The exact
+source-owned guest is produced by the supplier's retained `build_probe.py`, an independent Python Xtensa
 encoder under MIT. It uses SRAM1 code, descriptors and three reusable RGB565
 row buffers. No Arduino, ESP-IDF, ROM, Wi-Fi or Bluetooth execution is inferred.
 
@@ -15,9 +17,14 @@ The separate tiny H1 guest selects actual GPIO mux functions; debugger MMIO
 controls then verify the five physical header pads and Board electrical solve.
 It does not replace the display/touch guest or inject a firmware framebuffer.
 
-For a local candidate review, stage exactly these files in an external input
-directory; the engine glue requires a sibling `package.json` containing
-`{"type":"commonjs"}`:
+Fetch the admitted release and source fixture with:
+
+```sh
+node scripts/fetch-esp32s040-fixtures.mjs --out /path/to/esp32s040-inputs
+```
+
+The input directory contains exactly the required files below. The engine glue
+requires a sibling `package.json` containing `{"type":"commonjs"}`:
 
 - `engine/labwired_wasm.js`
 - `engine/labwired_wasm_bg.wasm`
@@ -46,11 +53,12 @@ The producer's original v1 full-session snapshot replay failure remains in the
 manifest history and the retained producer receipt. Passing panel/touch/H1/reset
 checks do not erase that separate failure.
 
-Remote fetching is deliberately unavailable while the manifest is provisional.
-`scripts/fetch-esp32s040-fixtures.mjs` refuses before network or output writes.
+Remote fetching requires the qualified release declaration and exact matching
+source/catalog identities. A provisional manifest still refuses before network
+or output writes.
 The dedicated workflow also requires `LABWIRED_REQUIRE_ESP32S040=1`; that switch
 rejects provisional release identities and missing inputs, and the TAP reader
 requires all cases and zero skips. There is no candidate bypass for hosted
-qualification. After the owning source, reviewed silicon acknowledgement and
-independently repeated immutable engine release are approved, update all source,
-catalog, release and fixture identities together and run that exact-head gate.
+qualification. The source, generated catalog and fixture engine identities now
+advance together. Run this exact-head gate before adopting the supplier in a
+consumer; the original physical capture and its validation tier remain unchanged.
