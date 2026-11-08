@@ -1,3 +1,24 @@
+## i80386 forward debug disassembly listing — CLAIMED, 2026-11-08
+
+Owner: x86 lane (Claude), requested by CrispStrobe. Branch
+`lane/386-debug-disasm-20261108` from master `a4762210`. Claim and change land
+together (one PR). Owns new `src/i80386-disasm.js`, new
+`test/i80386-disasm.test.mjs`, the `disasm`/`nextCodeAddress` hunk of
+`src/i80386-debug.js`, the one-line removal of those two names from the
+unsupported list in `test/i80386-debug-capture.test.mjs`, the added inventory
+entry (and its fixed count 78 -> 79) in
+`scripts/i80386-debug-guest/reader.py` and this section.
+
+The 386 debug target gains a forward linear listing in the current code
+segment: linear addresses (CS cache base + EIP), 16-bit and 32-bit (D bit)
+code, 66h/67h prefixes, FS/GS, SIB and the 386 0x0F map. Plain 16-bit code
+without 386-only bytes is delegated to the existing ground 8086/186 decoder.
+Unknown encodings are explicit one-byte `db` rows. Paging-enabled listing is
+refused rather than guessed. Tests use hand-checked vectors (no independent
+disassembler is installed locally), a length cross-check against the 186
+decoder and seeded mutants. Symbols, writes, checkpoints and replay remain
+unsupported. No CPU, timing, guest or physical-accuracy claim.
+
 ## i80386 paired-v3 harness, exact device goldens and low-RAM read candidate — CLAIMED, 2026-11-02
 
 Owner: x86 performance follow-up lane (Claude), requested by CrispStrobe.
