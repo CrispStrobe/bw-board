@@ -6,7 +6,8 @@ together (one PR). Owns new `src/i80386-disasm.js`, new
 `test/i80386-disasm.test.mjs`, the `disasm`/`nextCodeAddress` hunk of
 `src/i80386-debug.js`, the one-line removal of those two names from the
 unsupported list in `test/i80386-debug-capture.test.mjs`, the added inventory
-entry in `scripts/i80386-debug-guest/reader.py` and this section.
+entry (and its fixed count 78 -> 79) in
+`scripts/i80386-debug-guest/reader.py` and this section.
 
 The 386 debug target gains a forward linear listing in the current code
 segment: linear addresses (CS cache base + EIP), 16-bit and 32-bit (D bit)

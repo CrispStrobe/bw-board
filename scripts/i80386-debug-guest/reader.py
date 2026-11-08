@@ -435,7 +435,7 @@ def controls():
             e={'registersAfter':{'cpl':3,'eflags':514},'changes':{'registers':{'cpl':{'before':0,'after':3},'eflags':{'before':0,'after':514}}}}
             self.assertEqual(before_mode(e),{'cpl':0,'eflags':0})
         def test_fixed_inventory(self):
-            self.assertEqual(len(SOURCE_PATHS),78);self.assertEqual(len(set(SOURCE_PATHS)),78)
+            self.assertEqual(len(SOURCE_PATHS),79);self.assertEqual(len(set(SOURCE_PATHS)),79)
             self.assertIn('src/i80386-debug.js',SOURCE_PATHS)
             self.assertNotIn('src/debug-target-factory.js',SOURCE_PATHS)
     result=unittest.TextTestRunner(verbosity=2).run(unittest.defaultTestLoader.loadTestsFromTestCase(C))

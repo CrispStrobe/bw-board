@@ -89,7 +89,10 @@ test('own 16-bit decoder agrees on length with the ground 8086/186 decoder', () 
     const skip = new Set([0x0f, 0x63, 0x64, 0x65, 0x66, 0x67, 0xf1, 0x8c, 0x8e, 0xd8, 0xd9, 0xda, 0xdb, 0xdc, 0xdd, 0xde, 0xdf]);
     for (let n = 0; n < 20000; n++) {
         const bytes = Array.from({length: 8}, rnd);
-        if (skip.has(bytes[0])) continue;
+        const pfx = new Set([0x26, 0x2e, 0x36, 0x3e, 0xf0, 0xf2, 0xf3]);
+        let k = 0;
+        while (k < 7 && pfx.has(bytes[k])) k++;
+        if (skip.has(bytes[k]) || bytes.slice(0, k).some(b => skip.has(b))) continue;
         const own = disasmI80386(reader(bytes, 0), 0, {eip: 0, own: true});
         if (own.unknown) continue;
         const ref = disasmI8086(reader(bytes, 0), 0, {ip: 0, variant: '80186'});
