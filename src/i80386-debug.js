@@ -1,5 +1,6 @@
 /** Forward-only 386 debugging. Unsupported legacy decoding is explicit. */
 import {createI8086DebugTarget} from './i8086-debug.js';
+import {disasmI80386} from './i80386-disasm.js';
 
 const unsupported = operation => ({unsupported: `386 ${operation} is not implemented by this forward-debug target`});
 const validRange = (address, length) => Number.isSafeInteger(address) && address >= 0 &&
@@ -77,8 +78,41 @@ export function createI80386DebugTarget(adapter) {
         ? readMem(space, address, length)
         : space === 'mem' && validRange(address, length)
             ? readMem(space, address, length) : unsupported('physical memory read range');
-    for (const name of ['setSymbols','symbolAt','disasm','nextCodeAddress','writeMem','loadFirmware'])
+    for (const name of ['setSymbols','symbolAt','writeMem','loadFirmware'])
         target[name] = () => unsupported(name);
+    // Forward linear listing in the CURRENT code segment. Addresses are linear
+    // (CS cache base + EIP), the same space as code breakpoints and the PC.
+    // Paging would need a passive page walk, so it is refused rather than
+    // guessed; reads use the observer-only physical path of readMem.
+    const codeView = addr => {
+        const cpu = machine.cpu;
+        if (cpu.cr0 & 0x80000000) return null;
+        const cache = cpu.segmentCaches[1];
+        const code32 = cache.default32 === true && cpu.protectedMode && !cpu.virtual8086;
+        const segmentBase = cache.base >>> 0;
+        const mask = code32 ? 0xffffffff : 0xffff;
+        const offset = (addr - segmentBase) >>> 0;
+        const eip = offset <= mask ? offset : (code32 ? offset : addr & 0xffff);
+        return {code32, eip, segmentBase: (addr - eip) >>> 0, mask};
+    };
+    const validCode = addr => Number.isSafeInteger(addr) && addr >= 0 && addr <= 0xffffffff;
+    target.disasm = addr => {
+        if (!validCode(addr)) return unsupported('disassembly outside unsigned 32-bit linear space');
+        const view = codeView(addr);
+        if (!view) return unsupported('disassembly with paging enabled');
+        const byte = a => {
+            const read = readMem('mem', a >>> 0, 1);
+            return read && read.length ? read[0] & 0xff : 0;
+        };
+        return disasmI80386(byte, addr, {eip: view.eip, code32: view.code32});
+    };
+    target.nextCodeAddress = (addr, length) => {
+        if (!validCode(addr) || !Number.isSafeInteger(length) || length < 0)
+            return unsupported('code address progression requires unsigned 32-bit linear addresses');
+        const view = codeView(addr);
+        if (!view) return unsupported('code address progression with paging enabled');
+        return (view.segmentBase + (((view.eip + length) & view.mask) >>> 0)) >>> 0;
+    };
     target.captureCheckpoint = () => ({accepted: false, code: 'checkpoint-unsupported', reason: '386 architectural checkpoint is unsupported'});
     target.restoreCheckpoint = () => ({accepted: false, code: 'checkpoint-unsupported', reason: '386 architectural restore is unsupported'});
     target.replayInstruction = () => ({accepted: false, code: 'replay-unsupported', reason: '386 replay is unsupported'});

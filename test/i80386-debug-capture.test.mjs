@@ -62,7 +62,7 @@ test('unsupported legacy operations refuse before mutation in real and protected
     const {cpu,m,target}=fixture();
     for(const protectedMode of [false,true]){
         cpu.cr0=protectedMode?cpu.cr0|1:cpu.cr0&~1;const before=JSON.stringify(target.regs());const byte=m.mem[0];
-        for(const result of [target.step('over'),target.step('out'),target.disasm(0xfffffff0),target.nextCodeAddress(0,1),target.setSymbols(new Map()),target.symbolAt(0),target.writeMem('mem',0,[1]),target.loadFirmware([1]),target.setBreakpoint({kind:'code',seg:0,addr:0})])assert.ok(result.unsupported);
+        for(const result of [target.step('over'),target.step('out'),target.setSymbols(new Map()),target.symbolAt(0),target.writeMem('mem',0,[1]),target.loadFirmware([1]),target.setBreakpoint({kind:'code',seg:0,addr:0})])assert.ok(result.unsupported);
         assert.equal(JSON.stringify(target.regs()),before);assert.equal(m.mem[0],byte);
     }
     assert.deepEqual(target.capabilities().steps,['insn']);assert.equal(target.capabilities().symbols,false);
