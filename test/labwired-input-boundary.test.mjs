@@ -142,7 +142,12 @@ external_devices:
 board_io: []
 ` });
 };
-const counts = adapter => plain(adapter.sim.get_peripheral_snapshot('adc')).channel_inputs.slice(0, 2);
+// Upstream made millivolts the source of truth for a held ADC level
+// (`channel_inputs_mv`), so the snapshot reports the injected level rather than
+// the 12-bit code it produces. These two levels are 25 % and 75 % of a 3.3 V
+// rail; the ADC still converts them to 1023 / 3071 counts when it samples.
+const LEVELS_MV = [825, 2475];
+const levels = adapter => plain(adapter.sim.get_peripheral_snapshot('adc')).channel_inputs_mv.slice(0, 2);
 
 describe('actual WASM engineering-input transaction proof', { skip }, () => {
     it('discovers both scoped ids and drives real analog-kit ADC inputs in one transaction', () => {
@@ -152,7 +157,7 @@ describe('actual WASM engineering-input transaction proof', { skip }, () => {
                 [['left', 'position', '%'], ['right', 'position', '%']]);
             adapter.setInputs([{ component: 'left', channel: 'position', value: 25 },
                 { component: 'right', channel: 'position', value: 75 }]);
-            assert.deepEqual(counts(adapter), [1023, 3071]);
+            assert.deepEqual(levels(adapter), LEVELS_MV);
         } finally { adapter.sim.free(); }
     });
 
@@ -166,7 +171,7 @@ describe('actual WASM engineering-input transaction proof', { skip }, () => {
                 [{ component: 'left', channel: 'position', value: 50 },
                     { component: 'right', channel: 'position', value: 101 }]]) {
                 assert.throws(() => adapter.setInputs(sets));
-                assert.deepEqual(counts(adapter), [1023, 3071], 'failed transaction changes no earlier component');
+                assert.deepEqual(levels(adapter), LEVELS_MV, 'failed transaction changes no earlier component');
             }
         } finally { adapter.sim.free(); }
     });
@@ -186,10 +191,10 @@ describe('actual WASM engineering-input transaction proof', { skip }, () => {
             assert.equal(facts[0].payload.sets[0].value, 25);
             assert.deepEqual(facts[0].time, before, 'listeners cannot rewrite later receipts');
             assert.deepEqual(target.debugTime(), before, 'input does not retire a guest instruction');
-            assert.deepEqual(counts(adapter), [1023, 3071]);
+            assert.deepEqual(levels(adapter), LEVELS_MV);
             adapter.setInputs([{ component: 'left', channel: 'position', value: 0 }]);
             assert.deepEqual(target.applyReplayInput(facts[0]), { accepted: true });
-            assert.deepEqual(counts(adapter), [1023, 3071]);
+            assert.deepEqual(levels(adapter), LEVELS_MV);
             assert.equal(facts.length, 1);
             assert.equal(target.setInputs([{ component: 'right', channel: 'position', value: 101 }]).accepted, false);
             assert.equal(facts.length, 1, 'rejected input produces no accepted fact');
