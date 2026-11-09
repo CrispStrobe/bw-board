@@ -301,6 +301,15 @@ export function createI8086DebugTarget(adapter, opts = {}) {
     let cachedVideoFrame = null;
     let runState = 'halted';
     let pendingStep = null;
+    // LEAVING A BREAKPOINT. A code breakpoint is tested before the instruction
+    // at its address executes, so a Run or Step issued while stopped ON that
+    // address re-hit it at once and retired nothing: the program could never
+    // leave a breakpoint. run()/step() therefore exempt exactly the halt
+    // address, once, for the first instruction only. Reaching it again later
+    // (the next pass of a loop) halts as before.
+    let haltPc = null;
+    let leavePc = null;
+    const armLeave = () => { leavePc = haltPc !== null && haltPc === cpu.pc ? haltPc : null; };
     const haltListeners = [];
     const breakpoints = new Map();
     /** Linear address -> symbol name, or null. See setSymbols(). */
@@ -526,7 +535,7 @@ export function createI8086DebugTarget(adapter, opts = {}) {
     const publishInputEvent = (producer, payload) => {
         emitInput(producer, payload, eventTime());
     };
-    const halt = (info) => { runState = 'halted'; for (const cb of haltListeners) cb(info); };
+    const halt = (info) => { runState = 'halted'; haltPc = cpu.pc; leavePc = null; for (const cb of haltListeners) cb(info); };
 
     /**
      * Recover the segment-relative position represented by a linear address.
@@ -1344,12 +1353,13 @@ export function createI8086DebugTarget(adapter, opts = {}) {
             if (writeWatches.delete(id)) syncWriteTrap();
         },
 
-        run() { runState = 'running'; pendingStep = null; },
+        run() { runState = 'running'; pendingStep = null; armLeave(); },
 
         /** The session's pause verb: stop executing NOW and say why. */
         halt() { halt({ cause: 'pause' }); },
 
         step(kind, count = 1) {
+            armLeave();
             if (kind === 'insn') {
                 runState = 'running';
                 pendingStep = { kind: 'insn', remaining: count };
@@ -1428,11 +1438,12 @@ export function createI8086DebugTarget(adapter, opts = {}) {
                 // watch and event traps already install themselves only when
                 // something is watching; this is the same discipline for the
                 // one check that did not.
-                if (breakpoints.size) {
+                if (breakpoints.size && cpu.pc !== leavePc) {
                     for (const [id, bp] of breakpoints) {
                         if (bp.addr === cpu.pc) { halt({ cause: 'breakpoint', bp: id }); return 'halted'; }
                     }
                 }
+                leavePc = null;     // the exemption covers the first instruction only
                 if (pendingStep) {
                     if (pendingStep.kind === 'insn' && pendingStep.remaining <= 0) { halt({ cause: 'step' }); return 'halted'; }
                     // SP rising back to or above where it started means the

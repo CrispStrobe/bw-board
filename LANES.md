@@ -1,3 +1,19 @@
+## i8086/i80386 debug target: leave a code breakpoint on Run/Step — CLAIMED, 2026-11-09
+
+Owner: x86 lane (Claude), requested by CrispStrobe. Branch
+`lane/debug-bp-leave-on-resume-20261109` from master `04374a83`. Claim and
+change together (one PR). Owns the `run()`/`step()`/`runFor` breakpoint hunk of
+`src/i8086-debug.js`, new `test/i8086-debug-leave-breakpoint.test.mjs` and this
+section.
+
+A code breakpoint is tested before its instruction executes, so Run or Step
+issued while stopped on that address re-hit it at once and retired nothing.
+run()/step() now exempt exactly the halt address, once, for the first
+instruction only; a later arrival (the next pass of a loop) halts as before, and
+a breakpoint on the start PC of a first run still halts. Tests cover step and
+continue from a breakpoint and the loop re-hit on both the 8086 and 386
+targets, with four executed mutants. No timing or replay semantics changed.
+
 ## i80386 forward debug disassembly listing — CLAIMED, 2026-11-08
 
 Owner: x86 lane (Claude), requested by CrispStrobe. Branch
