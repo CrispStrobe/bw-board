@@ -2,8 +2,8 @@
 
 `manifest.json` records exact bytes used by the real public-factory proof.
 It identifies the immutable, independently reproduced
-`labwired-wasm-9c420649` release and exact Core source
-`9c4206499a39a04f56cd11c0b8c9b4cb94a06e62`. Original local v1/v2 source patches,
+`labwired-wasm-fa992f35` release and exact Core source
+`fa992f357df88dbd50057a31f13dbcc0835a95cd`. Original local v1/v2 source patches,
 artifact identities and replay evidence remain separately recorded in history.
 No compiler-toolchain or physical-board capture is inferred. The exact
 source-owned guest is produced by the supplier's retained `build_probe.py`, an independent Python Xtensa

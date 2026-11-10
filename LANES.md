@@ -1,3 +1,20 @@
+## LabWired engine catalog and S040/S3 fixtures follow labwired-wasm-fa992f35 — CLAIMED, 2026-11-10
+
+Owner: Lite browser-gate lane (Claude), requested by CrispStrobe for Lite tasks
+I1/I2. Branch `lane/labwired-engine-fa99-20261110` from master `c840653f`.
+Claim and change together (one PR). Owns the `PIN` line of
+`scripts/build-labwired-wasm.mjs`, regenerated `src/labwired-catalog.js`, the
+engine/source/release blocks of `test/fixtures/labwired/esp32s040/manifest.json`
+and `test/fixtures/labwired/esp32s3-flash/manifest.json`, the matching identity
+prose in `docs/ESP32-4848S040.md` and the S040 fixture README, and this section.
+
+Lite already ships the immutable, two-build `labwired-wasm-fa992f35` release
+(Core `fa992f35`), but these supplier fixtures still name `9c420649`, so Lite's
+S3 and S040 browser gates refuse the mismatch. Core `fa992f35` is not a
+descendant of `9c420649`; the S040 system/chip YAML, probe, build script and
+checker are byte-identical between them. Retained firmware/ROM identities
+(`3b655aef`) are unchanged. No gate, count or assertion is relaxed.
+
 ## i8086/i80386 debug target: leave a code breakpoint on Run/Step — CLAIMED, 2026-11-09
 
 Owner: x86 lane (Claude), requested by CrispStrobe. Branch
