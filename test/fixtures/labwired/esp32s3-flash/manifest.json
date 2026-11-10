@@ -3,21 +3,21 @@
   "sourceRepository": "CrispStrobe/labwired-core",
   "sourceCommit": "3b655aef4085082152129c84849d4e2ad5004a7f",
   "engine": {
-    "sourceCommit": "9c4206499a39a04f56cd11c0b8c9b4cb94a06e62",
+    "sourceCommit": "fa992f357df88dbd50057a31f13dbcc0835a95cd",
     "releaseRepository": "CrispStrobe/bw-board",
-    "releaseTag": "labwired-wasm-9c420649",
+    "releaseTag": "labwired-wasm-fa992f35",
     "assets": [
       {
         "file": "engine/labwired_wasm.js",
         "asset": "nodejs-labwired_wasm.js",
-        "bytes": 151452,
-        "sha256": "b79c99c23545af5c173b63f5403f99cf3003cc7c57b8cce74bfb47d5f5f80674"
+        "bytes": 157556,
+        "sha256": "c5bc1317e84b672987a64db7ad96f75589e86ab8106df9ad2ef5676b59ba1c7a"
       },
       {
         "file": "engine/labwired_wasm_bg.wasm",
         "asset": "nodejs-labwired_wasm_bg.wasm",
-        "bytes": 29165165,
-        "sha256": "41c31ae388ce4389794eb9c6ee1f602bf361d792928dfabf2a1ef917d0796264"
+        "bytes": 19614873,
+        "sha256": "0071c27197830e6d1fab2be32297c69ab450405cf893036f29977796aaa5648e"
       }
     ]
   },
