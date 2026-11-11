@@ -170,14 +170,27 @@
     }
   ],
   "producerQualification": {
-    "sourceCommit": "9c4206499a39a04f56cd11c0b8c9b4cb94a06e62",
-    "engineVersion": "labwired-wasm-9c420649",
+    "sourceCommit": "fa992f357df88dbd50057a31f13dbcc0835a95cd",
+    "engineVersion": "labwired-wasm-fa992f35",
     "checker": "tests/fixtures/esp32-4848s040/check_wasm.cjs",
+    "checkerSha256": "e6e8ea2169df954f091f3204f7e62f0b2c2277e7b68e74d690640e95f08bf1d0",
+    "node": "v22.23.4",
+    "exitCode": 0,
+    "passed": true,
     "fullTouchSessionJournalRestore": true,
     "result": {
-      "bytes": 4869,
-      "sha256": "3b24d6c506a1ebb050f964bef02d6da58657449beb3b5734169a4a94d5a423ec"
+      "bytes": 4870,
+      "sha256": "24fd1567328bf14d346618e7d78b43b183c2234f70b49ebc661fb6bbdf2f38dd"
     },
-    "note": "Unchanged source-owned checker executed against the released Node glue/WASM; separate from independent release qualification and physical-board validation."
+    "note": "Unchanged source-owned checker at the source commit executed against the released labwired-wasm-fa992f35 Node glue/WASM (hashes as in engine.assets); result is its complete stdout report. Separate from independent release qualification and physical-board validation.",
+    "previous": {
+      "sourceCommit": "9c4206499a39a04f56cd11c0b8c9b4cb94a06e62",
+      "engineVersion": "labwired-wasm-9c420649",
+      "fullTouchSessionJournalRestore": true,
+      "result": {
+        "bytes": 4869,
+        "sha256": "3b24d6c506a1ebb050f964bef02d6da58657449beb3b5734169a4a94d5a423ec"
+      }
+    }
   }
 }
