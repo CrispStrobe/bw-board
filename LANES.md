@@ -1,3 +1,14 @@
+## S040 producer checker rerun against labwired-wasm-fa992f35 — CLAIMED, 2026-11-11
+
+Owner: Lite browser-gate lane (Claude), requested by CrispStrobe. Branch
+`docs/s040-checker-rerun-fa992f35-20261111` from master `33d3ee39`. Claim and
+change together (one PR). Owns the top-level `producerQualification` block of
+`test/fixtures/labwired/esp32s040/manifest.json`, its sentence in
+`docs/ESP32-4848S040.md`, and this section. The unchanged Core checker
+`tests/fixtures/esp32-4848s040/check_wasm.cjs` at `fa992f35` ran once on Node
+22.23.4 against the release's Node assets (hashes as in the manifest): exit 0,
+`passed: true`. No engine, fixture, test, gate or threshold changes.
+
 ## LabWired engine catalog and S040/S3 fixtures follow labwired-wasm-fa992f35 — CLAIMED, 2026-11-10
 
 Owner: Lite browser-gate lane (Claude), requested by CrispStrobe for Lite tasks
