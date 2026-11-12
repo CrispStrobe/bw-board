@@ -1,4 +1,4 @@
-## Source-bound selected-motion diagnostic — CLAIMED, 2026-11-12
+## Source-bound selected-motion diagnostic — IMPLEMENTED CANDIDATE, 2026-11-12
 
 Owner: delivery follow-up lane, requested by CrispStrobe. Branch
 `lane/motion-source-diagnostic-20261112`, base `0f78a4a8`.
@@ -16,6 +16,13 @@ artifact event contracts and production workflows remain unchanged. Actual
 execution requires a separately coordinated run and original-custody admission;
 profile timing never replaces ordinary qualification. Test refusal before engine
 execution and actual source wiring; document limitations and next steps.
+
+Registration landed `d9dd4ad3`. Candidate tooling uses a separately admitted
+retained-byte transfer; the workflow has no original-artifact download route.
+Forty focused admission/profile/parser controls pass, no skips; actionlint passes.
+No transfer, diagnostic run, qualification or performance improvement is claimed.
+See `docs/LABWIRED-MOTION-SOURCE-DIAGNOSTIC.md` for custody prerequisites and
+source-bound execution/readback steps.
 
 ## S040 producer checker rerun against labwired-wasm-fa992f35 — CLAIMED, 2026-11-11
 
