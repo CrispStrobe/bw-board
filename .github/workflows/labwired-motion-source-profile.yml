@@ -136,6 +136,15 @@ jobs:
         run: |
           set -euo pipefail
           arm-none-eabi-gcc --version >> evidence/runner.txt
+          node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          import {execFileSync} from 'node:child_process';
+          import {MOTION_SOURCE} from './scripts/prepare-labwired-motion-diagnostic.mjs';
+          assert.equal(execFileSync('arm-none-eabi-gcc', ['--version'], {encoding:'utf8'}).split('\n')[0], MOTION_SOURCE.gcc);
+          assert.equal(execFileSync('arm-none-eabi-ld', ['--version'], {encoding:'utf8'}).split('\n')[0], MOTION_SOURCE.linker);
+          NODE
+          mkdir -p evidence/guest-inputs
+          export TMPDIR="$PWD/evidence/guest-inputs"
           unset NODE_OPTIONS
           for mode in trace-default sampled-default; do
             (cd producer-source && node scripts/profile-labwired-motion.mjs --wasm ../engine/nodejs --out "../evidence/$mode" --mode "$mode")
@@ -145,14 +154,19 @@ jobs:
         run: |
           node --input-type=module <<'NODE'
           import assert from 'node:assert/strict';
-          import {readFileSync} from 'node:fs';
-          import {MOTION_SOURCE} from './scripts/prepare-labwired-motion-diagnostic.mjs';
+          import {readFileSync, readdirSync, writeFileSync} from 'node:fs';
+          import {MOTION_SOURCE, motionElfImage} from './scripts/prepare-labwired-motion-diagnostic.mjs';
+          const guests = readdirSync('evidence/guest-inputs').filter(name => name.startsWith('bw-motion-guest-'))
+              .map(name => motionElfImage(readFileSync(`evidence/guest-inputs/${name}/motion.elf`)));
+          assert.equal(guests.length, 2);
+          for (const guest of guests) assert.equal(guest.sha256, MOTION_SOURCE.guestImageSha256);
+          writeFileSync('evidence/guest-load-image-binding.json', JSON.stringify({historicalReferenceGuestSha256:MOTION_SOURCE.guest, guests}, null, 2));
           for (const mode of ['trace-default', 'sampled-default']) {
             const receipt = JSON.parse(readFileSync(`evidence/${mode}/receipt.json`));
             assert.equal(receipt.wasmSha256, MOTION_SOURCE.files['labwired_wasm_bg.wasm'].sha256);
             assert.equal(receipt.glueSha256, MOTION_SOURCE.files['labwired_wasm.js'].sha256);
             assert.equal(receipt.node, MOTION_SOURCE.node);
-            assert.equal(receipt.guestSha256, MOTION_SOURCE.guest);
+            assert.ok(guests.some(guest => guest.fullElfSha256 === receipt.guestSha256));
           }
           NODE
       - name: Retain raw diagnostic evidence including failures

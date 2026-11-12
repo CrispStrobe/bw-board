@@ -15,6 +15,9 @@ export const MOTION_SOURCE = Object.freeze({
         'nodejs-labwired_wasm.js': 727497991, 'nodejs-labwired_wasm_bg.wasm': 727497995,
         'CORE-LICENSE.txt': 727497993, 'PRODUCER-LICENSE.txt': 727497992
     })}),
+    guestImageSha256: 'd0088c4b4f5be1d96e75c15c347c47d129369b5b1e49ce7c69388dd21b122cca',
+    gcc: 'arm-none-eabi-gcc (15:13.2.rel1-2) 13.2.1 20231009',
+    linker: 'GNU ld (2.42-1ubuntu1+23) 2.42',
     node: 'v22.23.4', guest: '07ad8163f00532215836844184e0b50c0ceba7abb5bd607be005fcb6beb60fde',
     notices: Object.freeze({"CORE-LICENSE.txt": {"bytes": 1072, "sha256": "cee2a5445168030357d6f8d3b51e7e3dd244dfa052687b9dbe558f30a864454b"}, "PRODUCER-LICENSE.txt": {"bytes": 1068, "sha256": "e53c4e17a0971ca6cac5010a19876b77a896e3ce172b1f61d934dfd14c595d6d"}}),
     files: Object.freeze({
@@ -114,6 +117,55 @@ export function validateRetainedMotionBytes ({info, transfer, read, readNotice})
         assert.deepEqual({bytes: bytes.length, sha256: createHash('sha256').update(bytes).digest('hex')}, expected, name + ': source notice');
     }
     return {diagnosticOnly: true, byteBindingOnly: true, core: info.ref, observed};
+}
+
+/** Independent ELF32 ARM load-image binding; non-loadable symbol strings are excluded. */
+export function motionElfImage (input) {
+    const bytes = Buffer.from(input);
+    assert.ok(bytes.length >= 52 && bytes.length <= 1024 * 1024, 'bounded motion ELF');
+    assert.deepEqual([...bytes.subarray(0, 7)], [0x7f, 69, 76, 70, 1, 1, 1], 'ELF32 little-endian');
+    assert.equal(bytes.readUInt16LE(16), 2, 'executable ELF');
+    assert.equal(bytes.readUInt16LE(18), 40, 'ARM ELF');
+    assert.equal(bytes.readUInt32LE(20), 1, 'ELF version');
+    assert.equal(bytes.readUInt16LE(40), 52, 'ELF header size');
+    assert.equal(bytes.readUInt16LE(42), 32, 'program header size');
+    const entry = bytes.readUInt32LE(24), flags = bytes.readUInt32LE(36);
+    const offset = bytes.readUInt32LE(28), count = bytes.readUInt16LE(44);
+    assert.ok(count > 0 && count <= 16 && offset >= 52 && offset + count * 32 <= bytes.length, 'program headers bounded');
+    const segments = [];
+    for (let i = 0; i < count; i++) {
+        const row = offset + i * 32, type = bytes.readUInt32LE(row);
+        if (type === 0) continue;
+        assert.equal(type, 1, 'only null/load headers in held guest');
+        const at = bytes.readUInt32LE(row + 4), vaddr = bytes.readUInt32LE(row + 8),
+            paddr = bytes.readUInt32LE(row + 12), filesz = bytes.readUInt32LE(row + 16),
+            memsz = bytes.readUInt32LE(row + 20), permissions = bytes.readUInt32LE(row + 24),
+            align = bytes.readUInt32LE(row + 28);
+        assert.ok(memsz > 0 && filesz <= memsz && at + filesz <= bytes.length, 'load bytes bounded');
+        assert.ok(vaddr + memsz <= 0x100000000 && paddr + memsz <= 0x100000000, 'load address bounded');
+        assert.ok(permissions <= 7 && (align === 0 || (align <= 0x100000 && (align & (align - 1)) === 0)), 'load attributes');
+        segments.push({vaddr, paddr, filesz, memsz, flags: permissions, align, data: bytes.subarray(at, at + filesz)});
+    }
+    assert.ok(segments.length, 'nonempty load image');
+    for (const key of ['vaddr', 'paddr']) {
+        const ordered = [...segments].sort((a, b) => a[key] - b[key]);
+        for (let i = 1; i < ordered.length; i++)
+            assert.ok(ordered[i][key] >= ordered[i - 1][key] + ordered[i - 1].memsz, 'nonoverlapping load image');
+    }
+    assert.ok((entry & 1) === 1 && segments.some(row => (row.flags & 1) &&
+        (entry - 1) >= row.vaddr && (entry - 1) < row.vaddr + row.filesz), 'Thumb entry in executable bytes');
+    segments.sort((a, b) => a.vaddr - b.vaddr);
+    const header = Buffer.alloc(16);
+    [40, entry, flags, segments.length].forEach((value, i) => header.writeUInt32LE(value, i * 4));
+    const pieces = [Buffer.from('labwired.motion-elf-image.v1\0'), header];
+    for (const row of segments) {
+        const header = Buffer.alloc(24);
+        ['vaddr', 'paddr', 'filesz', 'memsz', 'flags', 'align'].forEach((name, i) => header.writeUInt32LE(row[name], i * 4));
+        pieces.push(header, row.data);
+    }
+    return {schema: 'labwired.motion-elf-image.v1', sha256: createHash('sha256').update(Buffer.concat(pieces)).digest('hex'),
+        fullElfSha256: createHash('sha256').update(bytes).digest('hex'), entry, flags,
+        segments: segments.map(({data, ...row}) => row)};
 }
 
 export const SOURCE_HASHES = Object.freeze({

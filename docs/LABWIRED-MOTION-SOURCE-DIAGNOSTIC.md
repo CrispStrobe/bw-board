@@ -90,8 +90,17 @@ source dependencies as well as the listed hashes. It runs parser and admission
 controls, installs the guest compiler and records
 the runner/source hashes. It then runs the unchanged motion workload in distinct
 `trace-default` and `sampled-default` processes. Profile timing does not replace
-ordinary timing. No forced-tier or A/B experiment is selected. A changed compiler
-that changes the guest bytes fails the post-run exact guest-SHA join.
+ordinary timing. No forced-tier or A/B experiment is selected. The held GNU compiler/linker versions and source hashes are checked before
+execution. Two independently compiled guests produced different full ELF hashes
+because GCC embeds a random temporary object filename in the non-loadable symbol
+string table. Independent Python and JavaScript readers verified the same ARM
+entry/flags, load addresses, sizes, permissions, alignment and exact loaded bytes.
+The diagnostic therefore requires their canonical load-image digest
+`d0088c4b4f5be1d96e75c15c347c47d129369b5b1e49ce7c69388dd21b122cca`.
+Any changed loaded byte or load header refuses. Each process's reported full ELF
+hash must still match its actual retained compiled ELF. The historical original
+full hash remains recorded separately; its ELF was not retained here, so no direct
+comparison to its original load image is claimed.
 
 The upload uses `always()` and retains metadata admission, transfer archive,
 engine admission, runner/tooling details and whatever raw profile outputs exist.
@@ -100,7 +109,8 @@ A failure before either mode may leave no profile, which is not acceptance.
 
 ## Readback and next decision
 
-Confirm metadata, source, transfer, module/glue, Node and actual guest SHA joins.
+Confirm metadata, source, transfer, module/glue, Node, held GNU versions and
+actual guest full-hash/load-image joins.
 Read both raw stdout/stderr streams and receipts and preserve the raw CPU profile.
 Unsampled trace establishes compiler-tier behavior independently of sampling.
 Sampled whole-process self shares include initialization, compilation, warmup and

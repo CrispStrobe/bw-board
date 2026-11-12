@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {MOTION_SOURCE as S, admitMotionTransfer, validateMotionEngine, validateMotionSources}
+import {MOTION_SOURCE as S, admitMotionTransfer, validateMotionEngine, validateMotionSources, motionElfImage}
     from '../scripts/prepare-labwired-motion-diagnostic.mjs';
 const run = (id, head, conclusion = 'success') => ({id, head_sha: head, status: 'completed',
     run_attempt: 1, event: 'workflow_dispatch', conclusion,
@@ -95,5 +95,48 @@ test('workflow selects only manual execution, verified transfer, exact runtime a
     assert.doesNotMatch(source, /actions\/download-artifact|workflow_run|vercel|publish: true/);
     assert.match(source, /artifact==13932494417: raise ValueError\('original acquisition forbidden'\)/);
     assert.match(source, /hashlib.sha256\(raw\).hexdigest\(\)!=admitted\['transferDigest'\]/);
-    assert.match(source, /receipt.guestSha256, MOTION_SOURCE.guest/);
+    assert.match(source, /guest.sha256, MOTION_SOURCE.guestImageSha256/);
+    assert.match(source, /guest.fullElfSha256 === receipt.guestSha256/);
+    assert.match(source, /MOTION_SOURCE.gcc/);
+    assert.match(source, /MOTION_SOURCE.linker/);
+});
+
+const tinyElf = () => {
+    const b = Buffer.alloc(192);
+    Buffer.from([0x7f,69,76,70,1,1,1]).copy(b);
+    b.writeUInt16LE(2,16); b.writeUInt16LE(40,18); b.writeUInt32LE(1,20);
+    b.writeUInt32LE(0x101,24); b.writeUInt32LE(52,28); b.writeUInt32LE(0x5000200,36);
+    b.writeUInt16LE(52,40); b.writeUInt16LE(32,42); b.writeUInt16LE(1,44);
+    [1,128,0x100,0x100,8,8,5,1].forEach((value,i)=>b.writeUInt32LE(value,52+4*i));
+    Buffer.from([0,1,2,3,4,5,6,7]).copy(b,128);
+    return b;
+};
+test('ELF image preserves entry, flags and exact loaded bytes while excluding non-loadable names', () => {
+    const a=tinyElf(), b=Buffer.from(a);b[180]=99;
+    const x=motionElfImage(a),y=motionElfImage(b);
+    assert.equal(x.sha256,y.sha256);
+    assert.notEqual(x.fullElfSha256,y.fullElfSha256);
+    assert.deepEqual(x.segments,[{vaddr:256,paddr:256,filesz:8,memsz:8,flags:5,align:1}]);
+    for(const change of [b=>{b[128]^=1;},b=>b.writeUInt32LE(0x103,24),b=>b.writeUInt32LE(0x5000000,36),b=>b.writeUInt32LE(9,72)]) {
+        const mutant=tinyElf();change(mutant);
+        assert.notEqual(motionElfImage(mutant).sha256,x.sha256,'loadable/header mutation must change binding');
+    }
+});
+const elfCuts=[
+    ['wrong byte order',b=>{b[5]=2;}],
+    ['wrong CPU',b=>b.writeUInt16LE(3,18)],
+    ['not executable',b=>b.writeUInt16LE(1,16)],
+    ['truncated header table',b=>b.writeUInt32LE(190,28)],
+    ['excess program headers',b=>b.writeUInt16LE(17,44)],
+    ['no load image',b=>b.writeUInt32LE(0,52)],
+    ['truncated load bytes',b=>b.writeUInt32LE(190,56)],
+    ['file exceeds memory',b=>b.writeUInt32LE(4,72)],
+    ['entry outside load',b=>b.writeUInt32LE(0x201,24)],
+    ['non Thumb entry',b=>b.writeUInt32LE(0x100,24)],
+    ['non executable entry',b=>b.writeUInt32LE(4,76)],
+    ['overlapping loads',b=>{b.writeUInt16LE(2,44);[1,136,0x104,0x104,4,4,5,1].forEach((v,i)=>b.writeUInt32LE(v,84+4*i));}],
+    ['physical alias',b=>{b.writeUInt16LE(2,44);[1,136,0x200,0x100,4,4,5,1].forEach((v,i)=>b.writeUInt32LE(v,84+4*i));}]
+];
+for(const [name,change] of elfCuts)test('ELF load-image refusal: '+name,()=>{
+    const bytes=tinyElf();change(bytes);assert.throws(()=>motionElfImage(bytes),{name:'AssertionError'});
 });
