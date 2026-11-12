@@ -149,4 +149,27 @@ These execute no engine or guest and download nothing. The scope suite tests the
 actual gate shell through a fixture launcher that prevents only its own recursive
 re-entry; the production gate runs all four complete suites without skips. They cover metadata
 admission/refusal, held source identity and workflow wiring; real engine admission
-and actual hosted execution remain unperformed until custody and run coordination.
+and this manual workflow itself is not a workload qualification.
+
+
+## Bounded diagnostic result (2026-11-12)
+
+A separate source-bound Kaggle diagnostic ran with the retained equivalent
+engine pair, held source, Node version and a source-built guest. Its independent
+reader checked input identities, loadable-image digest, functional observations
+and all retained outputs. The newly built ELF is not claimed byte-identical to
+the unavailable historical original; the host also differs from the original
+qualification runner.
+
+All four diagnostic modes preserved the functional checks and stayed below the
+unchanged 1x floor. The ordinary windows were 0.701–0.744x before sampling and
+0.670–0.714x afterwards. In the whole-process sampled profile,
+`CortexM::step_batch` accounted for 32.56% self samples, bus `read_u32` 10.12%,
+`run_t16_fast_block` 7.14%, and `run_t16_cached_run` 5.97%. These shares include
+more than the timed windows and do not establish removable costs.
+
+Next, examine the actual CPU/bus execution path and its live IRQ and MMIO
+semantics. Only adopt an optimization with source-level correctness controls
+and actual-WASM differential evidence; then use a new bounded same-runner
+A/B/B/A measurement before considering fresh qualification. Keep the original
+failure and 1x floor; this diagnostic does not establish an improvement or pass.
