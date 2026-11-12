@@ -26,17 +26,18 @@ execution requires a separately coordinated run and original-custody admission;
 profile timing never replaces ordinary qualification. Test refusal before engine
 execution and actual source wiring; document limitations and next steps.
 
-Registration landed `d9dd4ad3`. Candidate tooling uses a separately admitted
+Registration landed `d9dd4ad3`; gate scope amendment landed `2aa43dd1`. Candidate tooling uses a separately admitted
 retained-byte transfer; the workflow has no original-artifact download route.
-Fifty-seven focused admission/profile/parser/ELF controls pass, no skips; actionlint
+Eighty-six focused scope/admission/profile/parser/ELF controls pass, no skips; actionlint
 passes. Distinct retained release-consumer bytes have normalized provenance, not
 a false qualification-archive ownership claim. Published reference release asset
 IDs and notice digests are independently admitted before transfer acquisition.
 Two source/toolchain-bound compiles have identical independently read load images;
 non-loadable temporary symbol names change full ELF hashes. Runtime admission holds
 the load-image digest and preserves each full hash, rather than forcing equality
-with unavailable original ELF bytes. No transfer, diagnostic run, qualification or
-performance improvement is claimed.
+with unavailable original ELF bytes. A private Kaggle diagnostic controller is separately prepared with retained bytes;
+service capacity/input refusals produce no application result. No transfer,
+diagnostic run, qualification or performance improvement is claimed.
 See `docs/LABWIRED-MOTION-SOURCE-DIAGNOSTIC.md` for custody prerequisites and
 source-bound execution/readback steps.
 

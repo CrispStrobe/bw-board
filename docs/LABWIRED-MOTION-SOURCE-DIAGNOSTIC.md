@@ -122,11 +122,27 @@ same-runner A/B/B/A before any fresh exact-source qualification. Preserve the 1x
 floor and all functional observations. This diagnostic establishes no browser,
 physical-accuracy or release result.
 
+## Narrow source-policy admission
+
+The registered first-introduction exception in `ci-tier-gate.yml` admits only
+this diagnostic's exact eight-path/status set. It checks owned open PR identity,
+unchanged head/base before and after complete API file enumeration, nonempty
+counts, exact paths and initial addition/claim statuses. Mixed production, pin,
+old qualification-workflow, unknown, renamed, removed, duplicate, incomplete or
+API-error inputs refuse. Subsequent edits are not automatically admitted by this
+first-introduction exception. Docs-only and existing full-label behavior for
+unrelated changes remain, and no other job selector or qualification gate changes.
+
+After scope admission the gate actually executes the diagnostic/profile/parser
+controls; a nonzero test result fails the gate. Every other enabled fast check
+still independently has to pass before merge. This is a bounded tooling policy,
+not workload qualification or permission to add a full-tier label or dispatch.
+
 ## Lightweight controls
 
 ```sh
-node --test test/labwired-motion-source-diagnostic.test.mjs test/wasm-motion-profile.test.mjs test/motion-ab-receipt.test.mjs
-actionlint .github/workflows/labwired-motion-source-profile.yml
+node --test test/motion-diagnostic-scope.test.mjs test/labwired-motion-source-diagnostic.test.mjs test/wasm-motion-profile.test.mjs test/motion-ab-receipt.test.mjs
+actionlint .github/workflows/labwired-motion-source-profile.yml .github/workflows/ci-tier-gate.yml
 ```
 
 These execute no engine or guest and download nothing. They cover metadata
