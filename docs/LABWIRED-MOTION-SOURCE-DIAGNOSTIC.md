@@ -173,3 +173,22 @@ semantics. Only adopt an optimization with source-level correctness controls
 and actual-WASM differential evidence; then use a new bounded same-runner
 A/B/B/A measurement before considering fresh qualification. Keep the original
 failure and 1x floor; this diagnostic does not establish an improvement or pass.
+
+## Countdown workload hypothesis
+
+The retained four diagnostic modes each recorded 1,911 completed scans between
+successive steady 64-million-cycle samples. The authored scan source contains
+five rows, each with a 2,048-iteration `SUBS`/`BNE` delay. Multiplying completed
+scans by that source shape estimates 39,137,280 delay instructions per steady
+window, about 61.2% of the numerical cycle budget. Scan boundaries can straddle
+windows; this is not a measured retired-instruction count, execution-time share
+or proof that the countdown fast path fired.
+
+The retained Core revision already contains a cached Thumb countdown path. Its
+entry depends on the normal decode-cache, batch-budget, observer, interrupt,
+debug, IT-state and scheduler-deadline guards. The retained diagnostic did not
+record its hit count or peripheral tick interval. A complementary opt-in
+counter and paired control should measure those facts on the same bound source
+and inputs, without removing or bypassing any guard. Preserve the original
+failed windows and 1x floor; independently verify outputs and avoid interpreting
+whole-process profile samples as per-instruction savings.
