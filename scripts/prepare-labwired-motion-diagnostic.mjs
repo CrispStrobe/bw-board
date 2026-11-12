@@ -11,6 +11,10 @@ export const MOTION_SOURCE = Object.freeze({
     producer: '0f78a4a873f3126c24717903ab09de1a34031c2c',
     core: 'fa992f357df88dbd50057a31f13dbcc0835a95cd',
     archive: 'sha256:eb032f56f4c3bc5ffcf7105767f342994c2a15c60d1a7488d4e273928fe72429',
+    release: Object.freeze({id: 439136423, tag: 'labwired-wasm-fa992f35', assets: Object.freeze({
+        'nodejs-labwired_wasm.js': 727497991, 'nodejs-labwired_wasm_bg.wasm': 727497995,
+        'CORE-LICENSE.txt': 727497993, 'PRODUCER-LICENSE.txt': 727497992
+    })}),
     node: 'v22.23.4', guest: '07ad8163f00532215836844184e0b50c0ceba7abb5bd607be005fcb6beb60fde',
     notices: Object.freeze({"CORE-LICENSE.txt": {"bytes": 1072, "sha256": "cee2a5445168030357d6f8d3b51e7e3dd244dfa052687b9dbe558f30a864454b"}, "PRODUCER-LICENSE.txt": {"bytes": 1068, "sha256": "e53c4e17a0971ca6cac5010a19876b77a896e3ce172b1f61d934dfd14c595d6d"}}),
     files: Object.freeze({
@@ -39,13 +43,24 @@ function runBinding (run, expectedId, expectedHead) {
 
 /** Metadata only. No archive reader/network API is called by this function. */
 export function admitMotionTransfer ({originalRun, originalJobs, originalArtifacts,
-    transferRun, transferArtifacts, request}) {
+    transferRun, transferArtifacts, release, request}) {
     assert.equal(request.custodyAcknowledged, true, 'custody transfer not acknowledged');
     assert.ok(id(request.transferRun) && id(request.transferArtifact), 'transfer identities');
     assert.notEqual(request.transferRun, MOTION_SOURCE.run, 'must not reacquire original run');
     assert.notEqual(request.transferArtifact, MOTION_SOURCE.artifact, 'must not reacquire original artifact');
     assert.ok(hex40(request.transferHead), 'exact transfer source');
     assert.ok(digest(request.transferDigest), 'exact transfer archive digest');
+    assert.equal(release.id, MOTION_SOURCE.release.id, 'reference release identity');
+    assert.equal(release.tag_name, MOTION_SOURCE.release.tag, 'reference release tag');
+    assert.equal(release.draft, false, 'published reference release');
+    assert.equal(release.prerelease, false, 'stable reference release');
+    for (const [name, assetId] of Object.entries(MOTION_SOURCE.release.assets)) {
+        const row = one(release.assets, item => item.id === assetId, 'release asset');
+        const expected = MOTION_SOURCE.files[name.replace(/^nodejs-/, '')] || MOTION_SOURCE.notices[name];
+        assert.equal(row.name, name, 'release asset name');
+        assert.equal(row.size, expected.bytes, 'release asset size');
+        assert.equal(row.digest, 'sha256:' + expected.sha256, 'release asset bytes');
+    }
     runBinding(originalRun, MOTION_SOURCE.run, MOTION_SOURCE.producer);
     assert.equal(originalRun.conclusion, 'failure', 'preserve failed qualification');
     assert.equal(originalRun.path, '.github/workflows/labwired-wasm.yml', 'original producer');
@@ -64,18 +79,22 @@ export function admitMotionTransfer ({originalRun, originalJobs, originalArtifac
     assert.ok(Number.isSafeInteger(transfer.size_in_bytes) && transfer.size_in_bytes > 0 &&
         transfer.size_in_bytes <= 64 * 1024 * 1024, 'bounded transfer');
     return {schema: 'labwired.motion-retained-admission.v1', diagnosticOnly: true,
-        originalRun: MOTION_SOURCE.run, originalArtifact: MOTION_SOURCE.artifact,
-        originalArchive: MOTION_SOURCE.archive, transferRun: request.transferRun,
+        referenceRun: MOTION_SOURCE.run, referenceArtifact: MOTION_SOURCE.artifact,
+        referenceArchive: MOTION_SOURCE.archive, byteEquivalentRelease: MOTION_SOURCE.release.tag, transferRun: request.transferRun,
         transferArtifact: request.transferArtifact, transferDigest: request.transferDigest,
         transferHead: request.transferHead};
 }
 
 export function validateMotionEngine ({info, transfer, read, readNotice, nodeVersion}) {
     assert.equal(nodeVersion, MOTION_SOURCE.node, 'exact Node runtime');
+    assert.equal(info.schema, 'labwired.retained-byte-manifest.v1', 'normalized retained-byte manifest');
     assert.equal(info.ref, MOTION_SOURCE.core, 'exact Core source');
-    assert.equal(transfer.originalRun, MOTION_SOURCE.run, 'retained original run');
-    assert.equal(transfer.originalArtifact, MOTION_SOURCE.artifact, 'retained original artifact');
-    assert.equal(transfer.originalArchive, MOTION_SOURCE.archive, 'retained archive digest');
+    assert.equal(transfer.referenceRun, MOTION_SOURCE.run, 'reference qualification run');
+    assert.equal(transfer.referenceArtifact, MOTION_SOURCE.artifact, 'reference qualification artifact');
+    assert.equal(transfer.referenceArchive, MOTION_SOURCE.archive, 'reference qualification archive');
+    assert.equal(transfer.retainedSource?.kind, 'byte-equivalent-release-assets', 'retained-byte source kind');
+    assert.equal(transfer.retainedSource?.tag, MOTION_SOURCE.release.tag, 'byte-equivalent release');
+    assert.deepEqual(transfer.retainedSource?.assets, MOTION_SOURCE.release.assets, 'reference release asset identities');
     assert.equal(transfer.verifiedRetainedBytes, true, 'custodian byte verification');
     const observed = {};
     for (const [name, expected] of Object.entries(MOTION_SOURCE.files)) {
@@ -115,7 +134,7 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
     if (mode === 'metadata') result = admitMotionTransfer(json(join(directory, 'packet.json')));
     else if (mode === 'engine') {
         validateMotionSources(name => readFileSync(name));
-        result = validateMotionEngine({info: json(join(directory, 'BUILD-INFO.json')),
+        result = validateMotionEngine({info: json(join(directory, 'engine-manifest.json')),
             transfer: json(join(directory, 'transfer.json')), nodeVersion: process.version,
             read: name => readFileSync(join(directory, 'nodejs', name)),
             readNotice: name => readFileSync(join(directory, name))});

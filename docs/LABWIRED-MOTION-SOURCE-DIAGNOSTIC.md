@@ -16,7 +16,11 @@ still needs the repository's normal checks before merge.
 
 The original motion job consumed **build A**, artifact `13932494417`, not build B.
 Do not re-download that original. Coordinate with its existing custodian to locate
-and independently verify the retained bytes. If no verified retained engine exists,
+and independently verify the retained bytes. Byte-identical engine files already
+retained from a different release consumer may be used with their actual
+provenance; they must not be relabelled as the later qualification archive. The
+packet records byte equivalence to the independently named public release assets.
+If no verified retained engine exists,
 stop and resolve acquisition custody separately; do not substitute another release
 or silently fetch the original through this workflow.
 
@@ -24,21 +28,37 @@ A separately coordinated transfer run in this repository must publish exactly on
 packet named `motion-source-retained-engine`. The workflow never creates this
 transfer or selects its acquisition automatically. Its flat archive contains only:
 
-- `BUILD-INFO.json` from the original engine;
+- `engine-manifest.json`, a normalized retained-byte manifest (not producer BUILD-INFO);
 - `nodejs/labwired_wasm.js`, `nodejs/labwired_wasm_bg.wasm`, `nodejs/package.json`;
-- `CORE-LICENSE.txt` and `PRODUCER-LICENSE.txt` from the original build;
+- `CORE-LICENSE.txt` and `PRODUCER-LICENSE.txt`; retained Git-object copies are
+  acceptable only when their bytes match the published source-notice digests;
 - `transfer.json`, created only after the custodian verifies the retained bytes:
 
 ```json
 {
-  "originalRun": 43191264877,
-  "originalArtifact": 13932494417,
-  "originalArchive": "sha256:eb032f56f4c3bc5ffcf7105767f342994c2a15c60d1a7488d4e273928fe72429",
+  "referenceRun": 43191264877,
+  "referenceArtifact": 13932494417,
+  "referenceArchive": "sha256:eb032f56f4c3bc5ffcf7105767f342994c2a15c60d1a7488d4e273928fe72429",
+  "retainedSource": {
+    "kind": "byte-equivalent-release-assets",
+    "tag": "labwired-wasm-fa992f35",
+    "assets": {
+      "nodejs-labwired_wasm.js": 727497991,
+      "nodejs-labwired_wasm_bg.wasm": 727497995,
+      "CORE-LICENSE.txt": 727497993,
+      "PRODUCER-LICENSE.txt": 727497992
+    }
+  },
   "verifiedRetainedBytes": true
 }
 ```
 
-Keep the original paired glue and notices. The admission script holds the exact
+The normalized `engine-manifest.json` has `schema` equal to
+`labwired.retained-byte-manifest.v1`, `ref` equal to the held Core commit, and
+`targets.nodejs` entries for `labwired_wasm.js` and `labwired_wasm_bg.wasm`, each
+containing the exact `bytes` and `sha256` from the independent retained-byte
+verification. It makes no original-build timestamp or archive-ownership claim.
+Keep the paired glue and notices. The admission script holds the exact
 module, glue and source-notice byte sizes and SHA256s; a substituted build, edited
 glue or missing notice refuses before loading the engine. The packet is bounded
 to 64 MiB compressed and extracted, disallows extra/duplicate entries and symlinks,
@@ -52,7 +72,9 @@ can select `labwired-motion-source-profile.yml` at its reviewed source head. Sup
 verified `sha256:` transfer archive digest, and `custody_ack: true`. Defaults do not
 acknowledge custody. The transfer must be a completed successful first-attempt
 manual run in this repository; the original producer metadata must still bind the
-failed first-attempt qualification and successful build A. Original run/artifact
+failed first-attempt qualification and successful build A. Independently fetched
+release metadata must also identify the published stable release and exact four
+reference assets with their held sizes and digests; this reads metadata only. Original run/artifact
 IDs are explicitly refused as transfer IDs. Metadata is read before any archive
 GET; there is one transfer acquisition, never an original artifact GET.
 

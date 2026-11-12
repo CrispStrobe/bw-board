@@ -19,7 +19,10 @@ execution and actual source wiring; document limitations and next steps.
 
 Registration landed `d9dd4ad3`. Candidate tooling uses a separately admitted
 retained-byte transfer; the workflow has no original-artifact download route.
-Forty focused admission/profile/parser controls pass, no skips; actionlint passes.
+Forty-three focused admission/profile/parser controls pass, no skips; actionlint
+passes. Distinct retained release-consumer bytes have normalized provenance, not
+a false qualification-archive ownership claim. Published reference release asset
+IDs and notice digests are independently admitted before transfer acquisition.
 No transfer, diagnostic run, qualification or performance improvement is claimed.
 See `docs/LABWIRED-MOTION-SOURCE-DIAGNOSTIC.md` for custody prerequisites and
 source-bound execution/readback steps.

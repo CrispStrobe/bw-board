@@ -74,6 +74,7 @@ jobs:
           packet={'originalRun':get('actions/runs/43191264877'),
               'originalJobs':get('actions/runs/43191264877/jobs?per_page=100'),
               'originalArtifacts':get('actions/runs/43191264877/artifacts?per_page=100'),
+              'release':get('releases/tags/labwired-wasm-fa992f35'),
               'transferRun':get('actions/runs/'+str(transfer)),
               'transferArtifacts':get('actions/runs/'+str(transfer)+'/artifacts?per_page=100'),
               'request':{'custodyAcknowledged':True,'transferRun':transfer,'transferArtifact':artifact,
@@ -106,7 +107,7 @@ jobs:
           if len(raw)>64*1024*1024: raise ValueError('archive exceeds bound')
           if 'sha256:'+hashlib.sha256(raw).hexdigest()!=admitted['transferDigest']: raise ValueError('archive digest mismatch')
           Path('evidence/transfer.zip').write_bytes(raw)
-          expected={'BUILD-INFO.json','transfer.json','nodejs/labwired_wasm.js','nodejs/labwired_wasm_bg.wasm','nodejs/package.json','CORE-LICENSE.txt','PRODUCER-LICENSE.txt'}
+          expected={'engine-manifest.json','transfer.json','nodejs/labwired_wasm.js','nodejs/labwired_wasm_bg.wasm','nodejs/package.json','CORE-LICENSE.txt','PRODUCER-LICENSE.txt'}
           with zipfile.ZipFile(io.BytesIO(raw)) as archive:
               rows=[row for row in archive.infolist() if not row.is_dir()]
               if len(rows)!=len(expected) or {row.filename for row in rows}!=expected: raise ValueError('closed packet entries')

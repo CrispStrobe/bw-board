@@ -10,6 +10,11 @@ const fixture = () => ({
     originalRun: {...run(S.run, S.producer, 'failure'), path: '.github/workflows/labwired-wasm.yml'},
     originalJobs: {jobs: [{name: 'build (a)', status: 'completed', conclusion: 'success'}]},
     originalArtifacts: {artifacts: [{id: S.artifact, name: 'labwired-wasm-a', digest: S.archive}]},
+    release: {id: S.release.id, tag_name: S.release.tag, draft: false, prerelease: false,
+        assets: Object.entries(S.release.assets).map(([name,id]) => {
+            const expected = S.files[name.replace(/^nodejs-/, '')] || S.notices[name];
+            return {id,name,size:expected.bytes,digest:'sha256:' + expected.sha256};
+        })},
     transferRun: run(9001, 'a'.repeat(40)),
     transferArtifacts: {artifacts: [{id: 9002, name: 'motion-source-retained-engine', expired: false,
         digest: 'sha256:' + 'b'.repeat(64), size_in_bytes: 100}]},
@@ -18,11 +23,14 @@ const fixture = () => ({
 });
 test('metadata admits only a separate declared retained-byte transfer, preserves failure', () => {
     const result = admitMotionTransfer(fixture());
-    assert.equal(result.originalRun, S.run);
+    assert.equal(result.referenceRun, S.run);
     assert.equal(result.transferArtifact, 9002);
     assert.equal(result.diagnosticOnly, true);
 });
 const cuts = [
+    ['reference release draft', p => {p.release.draft = true;}],
+    ['wrong release asset', p => {p.release.assets[0].id++;}],
+    ['wrong release digest', p => {p.release.assets[0].digest = 'sha256:' + '0'.repeat(64);}],
     ['custody ACK', p => {p.request.custodyAcknowledged = false;}],
     ['original run reacquisition', p => {p.request.transferRun = S.run;}],
     ['original artifact reacquisition', p => {p.request.transferArtifact = S.artifact;}],
@@ -51,8 +59,9 @@ for (const [name, mutate] of cuts) test('refuses before any engine access: ' + n
     assert.throws(() => admitMotionTransfer(packet), {name: 'AssertionError'});
 });
 test('runtime/source/retained-byte evidence refuses before engine code could execute', () => {
-    const input = {info: {ref: S.core, targets: {nodejs: S.files}},
-        transfer: {originalRun: S.run, originalArtifact: S.artifact, originalArchive: S.archive,
+    const input = {info: {schema: 'labwired.retained-byte-manifest.v1', ref: S.core, targets: {nodejs: S.files}},
+        transfer: {referenceRun: S.run, referenceArtifact: S.artifact, referenceArchive: S.archive,
+            retainedSource: {kind: 'byte-equivalent-release-assets', tag: S.release.tag, assets: {...S.release.assets}},
             verifiedRetainedBytes: true}, read: () => {throw Error('engine read');}, nodeVersion: S.node};
     for (const field of ['nodeVersion', 'info', 'transfer']) {
         const changed = structuredClone({nodeVersion: input.nodeVersion, info: input.info, transfer: input.transfer});
@@ -62,6 +71,8 @@ test('runtime/source/retained-byte evidence refuses before engine code could exe
         assert.throws(() => validateMotionEngine({...input, ...changed}), {name: 'AssertionError'});
     }
     assert.throws(() => validateMotionEngine({...input, read: () => Buffer.alloc(0)}), /exact retained bytes/);
+    assert.throws(() => validateMotionEngine({...input, transfer: {...input.transfer, retainedSource: {kind: 'original-artifact'}}}), /retained-byte source kind/);
+    assert.throws(() => validateMotionEngine({...input, info: {...input.info, schema: 'producer-build-info'}}), /normalized retained-byte manifest/);
 });
 test('actual held harness, guest, adapter, bridge and diagnostic sources remain exact', () => {
     const read = name => readFileSync(new URL('../' + name, import.meta.url));
