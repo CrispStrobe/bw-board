@@ -49,24 +49,34 @@ for(const [name,change] of cuts)test('diagnostic scope refuses '+name,()=>{
 const workflow=readFileSync(new URL('../.github/workflows/ci-tier-gate.yml',import.meta.url),'utf8');
 const shell=workflow.split('        run: |\n')[1].split('\n').map(line=>line.startsWith('          ')?line.slice(10):line).join('\n');
 assert.match(shell,/set -euo pipefail/);
-const controls='node --test test/labwired-motion-source-diagnostic.test.mjs test/wasm-motion-profile.test.mjs test/motion-ab-receipt.test.mjs || exit 1';
+const controls='node --test test/motion-diagnostic-scope.test.mjs test/labwired-motion-source-diagnostic.test.mjs test/wasm-motion-profile.test.mjs test/motion-ab-receipt.test.mjs || exit 1';
 function runGate({rows=files(),hasFull='false',apiError=false,body=shell}={}) {
     const temp=mkdtempSync(join(tmpdir(),'bw-motion-gate-'));mkdirSync(join(temp,'bin'));
     const p=packet();p.files=rows;p.before.changed_files=p.after.changed_files=rows.length;
     writeFileSync(join(temp,'pull.json'),JSON.stringify(p.before));writeFileSync(join(temp,'files.json'),JSON.stringify(rows));
     writeFileSync(join(temp,'bin','gh'),`#!${process.execPath}\nconst fs=require('node:fs');const a=process.argv.slice(2);if(process.env.API_ERROR==='1')process.exit(45);const p=a.find(x=>x.startsWith('repos/'));if(!p)process.exit(46);const rows=JSON.parse(fs.readFileSync(process.env.FAKE_FILES));if(p.endsWith('/files'))console.log(a.includes('--jq')?rows.map(r=>r.filename).join('\\n'):JSON.stringify([rows]));else console.log(fs.readFileSync(process.env.FAKE_PULL,'utf8'));`,{mode:0o755});
+    // The production gate runs this suite. This fixture also executes that gate,
+    // so its child launcher suppresses only this suite's recursive re-entry;
+    // the other three genuine suites still execute. No production path is changed.
+    writeFileSync(join(temp,'bin','node'),`#!${process.execPath}\nconst fs=require('node:fs');const cp=require('node:child_process');const requested=process.argv.slice(2);const own='test/motion-diagnostic-scope.test.mjs';const executed=requested[0]==='--test'&&requested.includes(own)?requested.filter(x=>x!==own):requested;if(executed.length!==requested.length)fs.writeFileSync(process.env.NESTED_RECORD,JSON.stringify({requested,executed}));const result=cp.spawnSync(process.env.REAL_NODE,executed,{stdio:'inherit'});process.exit(result.status??1);`,{mode:0o755});
     try {
-        const r=spawnSync('/bin/bash',['-c',body],{cwd:root,encoding:'utf8',timeout:15000,maxBuffer:512*1024,
+        const r=spawnSync('/bin/bash' ,['-c',body],{cwd:root,encoding:'utf8',timeout:15000,maxBuffer:512*1024,
             env:{PATH:join(temp,'bin')+':'+process.env.PATH,RUNNER_TEMP:temp,GH_TOKEN:'fixture-no-network',
                 REPO:'CrispStrobe/bw-board',PR:'731',HAS_FULL:hasFull,EXPECTED_HEAD:head,
-                FAKE_FILES:join(temp,'files.json'),FAKE_PULL:join(temp,'pull.json'),API_ERROR:apiError?'1':'0'}});
-        assert.ifError(r.error);return r;
+                FAKE_FILES:join(temp,'files.json'),FAKE_PULL:join(temp,'pull.json'),API_ERROR:apiError?'1':'0',
+                REAL_NODE:process.execPath,NESTED_RECORD:join(temp,'nested-record.json')}});
+        assert.ifError(r.error);
+        try {r.nestedRecord=JSON.parse(readFileSync(join(temp,'nested-record.json'),'utf8'));} catch {}
+        return r;
     } finally {rmSync(temp,{recursive:true,force:true});}
 }
 test('actual gate shell runs genuine focused controls for exact diagnostic scope',()=>{
     assert.equal(shell.split(controls).length-1,1);
     const r=runGate();assert.equal(r.status,0,r.stderr);assert.match(r.stdout,/57/);
     assert.match(r.stdout,/focused controls passed/);
+    assert.ok(r.nestedRecord.requested.includes('test/motion-diagnostic-scope.test.mjs'));
+    assert.ok(!r.nestedRecord.executed.includes('test/motion-diagnostic-scope.test.mjs'));
+    assert.equal(r.nestedRecord.executed.length,4,'three genuine suites plus --test');
 });
 test('actual gate keeps docs-only and existing full-label behavior; API/empty/mixed refuse',()=>{
     assert.equal(runGate({rows:[{filename:'docs/example.md',status:'added'}]}).status,0);

@@ -68,7 +68,7 @@ jobs:
           gh api --paginate --slurp "repos/$REPO/pulls/$PR/files" > "$RUNNER_TEMP/motion-pages.json"
           gh api "repos/$REPO/pulls/$PR" > "$RUNNER_TEMP/motion-after.json"
           if node scripts/check-motion-diagnostic-scope.mjs "$RUNNER_TEMP/motion-before.json" "$RUNNER_TEMP/motion-pages.json" "$RUNNER_TEMP/motion-after.json" "$EXPECTED_HEAD" "$PR"; then
-            node --test test/labwired-motion-source-diagnostic.test.mjs test/wasm-motion-profile.test.mjs test/motion-ab-receipt.test.mjs || exit 1
+            node --test test/motion-diagnostic-scope.test.mjs test/labwired-motion-source-diagnostic.test.mjs test/wasm-motion-profile.test.mjs test/motion-ab-receipt.test.mjs || exit 1
             echo "Exact diagnostic-only introduction: focused controls passed; every other enabled fast check remains required."
             exit 0
           fi

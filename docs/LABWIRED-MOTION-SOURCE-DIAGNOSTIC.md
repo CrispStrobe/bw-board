@@ -15,8 +15,8 @@ still needs the repository's normal checks before merge.
 ## Retained-byte transfer prerequisite
 
 The original motion job consumed **build A**, artifact `13932494417`, not build B.
-Do not re-download that original. Coordinate with its existing custodian to locate
-and independently verify the retained bytes. Byte-identical engine files already
+Do not re-download that original. Locate the retained bytes and independently verify their acquisition/reference
+provenance and exact content. Byte-identical engine files already
 retained from a different release consumer may be used with their actual
 provenance; they must not be relabelled as the later qualification archive. The
 packet records byte equivalence to the independently named public release assets.
@@ -24,7 +24,7 @@ If no verified retained engine exists,
 stop and resolve acquisition custody separately; do not substitute another release
 or silently fetch the original through this workflow.
 
-A separately coordinated transfer run in this repository must publish exactly one
+A separately recorded transfer run in this repository must publish exactly one
 packet named `motion-source-retained-engine`. The workflow never creates this
 transfer or selects its acquisition automatically. Its flat archive contains only:
 
@@ -32,7 +32,7 @@ transfer or selects its acquisition automatically. Its flat archive contains onl
 - `nodejs/labwired_wasm.js`, `nodejs/labwired_wasm_bg.wasm`, `nodejs/package.json`;
 - `CORE-LICENSE.txt` and `PRODUCER-LICENSE.txt`; retained Git-object copies are
   acceptable only when their bytes match the published source-notice digests;
-- `transfer.json`, created only after the custodian verifies the retained bytes:
+- `transfer.json`, created only after the retained bytes and reference metadata are verified:
 
 ```json
 {
@@ -71,11 +71,11 @@ Node 22.23.4 before runtime admission. Byte verification does not admit a runtim
 
 ## One coordinated diagnostic
 
-After normal tooling qualification and explicit custody coordination, the operator
-can select `labwired-motion-source-profile.yml` at its reviewed source head. Supply
+After normal tooling qualification and retained-input provenance checks, select `labwired-motion-source-profile.yml` at its reviewed source head. Supply
 `transfer_run`, its exact `transfer_head`, `transfer_artifact`, the independently
 verified `sha256:` transfer archive digest, and `custody_ack: true`. Defaults do not
-acknowledge custody. The transfer must be a completed successful first-attempt
+assert the technical provenance checks; the acknowledgement records those checks,
+not a request for additional operator authorization. The transfer must be a completed successful first-attempt
 manual run in this repository; the original producer metadata must still bind the
 failed first-attempt qualification and successful build A. Independently fetched
 release metadata must also identify the published stable release and exact four
@@ -133,8 +133,8 @@ API-error inputs refuse. Subsequent edits are not automatically admitted by this
 first-introduction exception. Docs-only and existing full-label behavior for
 unrelated changes remain, and no other job selector or qualification gate changes.
 
-After scope admission the gate actually executes the diagnostic/profile/parser
-controls; a nonzero test result fails the gate. Every other enabled fast check
+After scope admission the gate actually executes all four scope/diagnostic/
+profile/parser control files; a nonzero test result fails the gate. Every other enabled fast check
 still independently has to pass before merge. This is a bounded tooling policy,
 not workload qualification or permission to add a full-tier label or dispatch.
 
@@ -145,6 +145,8 @@ node --test test/motion-diagnostic-scope.test.mjs test/labwired-motion-source-di
 actionlint .github/workflows/labwired-motion-source-profile.yml .github/workflows/ci-tier-gate.yml
 ```
 
-These execute no engine or guest and download nothing. They cover metadata
+These execute no engine or guest and download nothing. The scope suite tests the
+actual gate shell through a fixture launcher that prevents only its own recursive
+re-entry; the production gate runs all four complete suites without skips. They cover metadata
 admission/refusal, held source identity and workflow wiring; real engine admission
 and actual hosted execution remain unperformed until custody and run coordination.

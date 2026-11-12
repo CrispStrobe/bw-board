@@ -22,7 +22,7 @@ motion guest, and collect separate unsampled compiler trace and whole-process
 CPU profile. Retain raw failures. No dispatch or original acquisition is selected
 by registration or implementation. Existing qualification floors, engine pins,
 artifact event contracts and production workflows remain unchanged. Actual
-execution requires a separately coordinated run and original-custody admission;
+execution requires a separately recorded diagnostic run and retained-input provenance;
 profile timing never replaces ordinary qualification. Test refusal before engine
 execution and actual source wiring; document limitations and next steps.
 
