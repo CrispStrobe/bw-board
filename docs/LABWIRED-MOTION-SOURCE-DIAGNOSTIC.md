@@ -64,6 +64,11 @@ glue or missing notice refuses before loading the engine. The packet is bounded
 to 64 MiB compressed and extracted, disallows extra/duplicate entries and symlinks,
 and verifies the declared transfer archive digest before extraction.
 
+The exported pure `validateRetainedMotionBytes` reader can verify a locally
+retained packet on another Node version without executing glue. Its result is
+explicitly byte-only; `validateMotionEngine` and the hosted CLI still require
+Node 22.23.4 before runtime admission. Byte verification does not admit a runtime.
+
 ## One coordinated diagnostic
 
 After normal tooling qualification and explicit custody coordination, the operator

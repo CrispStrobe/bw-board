@@ -85,8 +85,13 @@ export function admitMotionTransfer ({originalRun, originalJobs, originalArtifac
         transferHead: request.transferHead};
 }
 
-export function validateMotionEngine ({info, transfer, read, readNotice, nodeVersion}) {
-    assert.equal(nodeVersion, MOTION_SOURCE.node, 'exact Node runtime');
+export function validateMotionEngine (input) {
+    assert.equal(input.nodeVersion, MOTION_SOURCE.node, 'exact Node runtime');
+    return {...validateRetainedMotionBytes(input), node: input.nodeVersion};
+}
+
+/** Pure byte/provenance validation only; does not admit a runtime or execute glue. */
+export function validateRetainedMotionBytes ({info, transfer, read, readNotice}) {
     assert.equal(info.schema, 'labwired.retained-byte-manifest.v1', 'normalized retained-byte manifest');
     assert.equal(info.ref, MOTION_SOURCE.core, 'exact Core source');
     assert.equal(transfer.referenceRun, MOTION_SOURCE.run, 'reference qualification run');
@@ -108,7 +113,7 @@ export function validateMotionEngine ({info, transfer, read, readNotice, nodeVer
         const bytes = readNotice(name);
         assert.deepEqual({bytes: bytes.length, sha256: createHash('sha256').update(bytes).digest('hex')}, expected, name + ': source notice');
     }
-    return {diagnosticOnly: true, core: info.ref, node: nodeVersion, observed};
+    return {diagnosticOnly: true, byteBindingOnly: true, core: info.ref, observed};
 }
 
 export const SOURCE_HASHES = Object.freeze({
