@@ -1,3 +1,22 @@
+## Source-bound selected-motion diagnostic — CLAIMED, 2026-11-12
+
+Owner: delivery follow-up lane, requested by CrispStrobe. Branch
+`lane/motion-source-diagnostic-20261112`, base `0f78a4a8`.
+Own only new `.github/workflows/labwired-motion-source-profile.yml`,
+`scripts/prepare-labwired-motion-diagnostic.mjs`, its focused test,
+`docs/LABWIRED-MOTION-SOURCE-DIAGNOSTIC.md` and this section.
+
+Prepare a manually selected, diagnostic-only profile of one existing immutable
+NODEJS artifact. Admit an exact successful producer build, Core commit,
+module/glue hashes and source checkout; pin Node 22.23.4, preserve the unchanged
+motion guest, and collect separate unsampled compiler trace and whole-process
+CPU profile. Retain raw failures. No dispatch or original acquisition is selected
+by registration or implementation. Existing qualification floors, engine pins,
+artifact event contracts and production workflows remain unchanged. Actual
+execution requires a separately coordinated run and original-custody admission;
+profile timing never replaces ordinary qualification. Test refusal before engine
+execution and actual source wiring; document limitations and next steps.
+
 ## S040 producer checker rerun against labwired-wasm-fa992f35 — CLAIMED, 2026-11-11
 
 Owner: Lite browser-gate lane (Claude), requested by CrispStrobe. Branch
