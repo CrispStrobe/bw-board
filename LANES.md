@@ -6,6 +6,15 @@ Own only new `.github/workflows/labwired-motion-source-profile.yml`,
 `scripts/prepare-labwired-motion-diagnostic.mjs`, its focused test,
 `docs/LABWIRED-MOTION-SOURCE-DIAGNOSTIC.md` and this section.
 
+Scope amendment requested 2026-11-12: also own the bounded diagnostic-only
+exception in `.github/workflows/ci-tier-gate.yml`, its scope-classifier helper
+`scripts/check-motion-diagnostic-scope.mjs` and executable controls
+`test/motion-diagnostic-scope.test.mjs`. Admit only a nonempty exact diagnostic
+path set after real focused controls pass in the gate. Mixed production, pin,
+unknown workflow or invalid/API-error inputs refuse. Preserve docs-only and
+existing full-label behavior for all unrelated paths; every other enabled fast
+check remains required. No thorough-tier selection, label or dispatch is owned.
+
 Prepare a manually selected, diagnostic-only profile of one existing immutable
 NODEJS artifact. Admit an exact successful producer build, Core commit,
 module/glue hashes and source checkout; pin Node 22.23.4, preserve the unchanged
