@@ -8,6 +8,9 @@ name: CI tier gate
 # passes a docs-only PR (LANES.md, docs/, spec-updates/, *.md) or a PR that
 # carries `ci:full`, and FAILS any other code PR, so a code change cannot
 # show all checks green without the thorough tier having run on its head.
+# A separately registered first-introduction exception admits only the exact
+# retained-motion diagnostic path/status set, after actual focused controls pass.
+# It does not select or waive any other enabled job.
 on:
   pull_request:
     types: [opened, synchronize, reopened, labeled, unlabeled, ready_for_review]
@@ -26,26 +29,47 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 22.23.4
       - name: Docs-only, or labelled ci:full
         env:
           GH_TOKEN: ${{ github.token }}
           REPO: ${{ github.repository }}
           PR: ${{ github.event.pull_request.number }}
+          EXPECTED_HEAD: ${{ github.event.pull_request.head.sha }}
           HAS_FULL: ${{ contains(github.event.pull_request.labels.*.name, 'ci:full') }}
         run: |
           set -euo pipefail
+          case "$HAS_FULL" in true|false) ;; *) echo "::error::invalid full-tier selection"; exit 1 ;; esac
           if [ "$HAS_FULL" = "true" ]; then
             echo "ci:full label present: the thorough tier runs on this head."
             exit 0
           fi
           gh api --paginate "repos/$REPO/pulls/$PR/files" --jq '.[].filename' > "$RUNNER_TEMP/changed.txt"
-          if [ ! -s "$RUNNER_TEMP/changed.txt" ]; then
+          if [ ! -s "$RUNNER_TEMP/changed.txt" ] || ! grep -q '[^[:space:]]' "$RUNNER_TEMP/changed.txt"; then
             echo "::error::could not list the changed files of this PR"
             exit 1
           fi
           code=$(grep -Ev '^(LANES\.md|docs/.*|spec-updates/.*|.*\.md)$' "$RUNNER_TEMP/changed.txt" || true)
           if [ -z "$code" ]; then
             echo "Docs-only PR ($(wc -l < "$RUNNER_TEMP/changed.txt") files): the thorough tier is not required."
+            exit 0
+          fi
+          # Exact path/status admission is bounded to this diagnostic's first
+          # introduction. Before/after snapshots refuse head changes, incomplete
+          # API pages, unknown files, renames and any production/pin additions.
+          test "$(git rev-parse HEAD)" = "$EXPECTED_HEAD"
+          gh api "repos/$REPO/pulls/$PR" > "$RUNNER_TEMP/motion-before.json"
+          gh api --paginate --slurp "repos/$REPO/pulls/$PR/files" > "$RUNNER_TEMP/motion-pages.json"
+          gh api "repos/$REPO/pulls/$PR" > "$RUNNER_TEMP/motion-after.json"
+          if node scripts/check-motion-diagnostic-scope.mjs "$RUNNER_TEMP/motion-before.json" "$RUNNER_TEMP/motion-pages.json" "$RUNNER_TEMP/motion-after.json" "$EXPECTED_HEAD" "$PR"; then
+            node --test test/motion-diagnostic-scope.test.mjs test/labwired-motion-source-diagnostic.test.mjs test/wasm-motion-profile.test.mjs test/motion-ab-receipt.test.mjs || exit 1
+            echo "Exact diagnostic-only introduction: focused controls passed; every other enabled fast check remains required."
             exit 0
           fi
           echo "Code paths changed:"

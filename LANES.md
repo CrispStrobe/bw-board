@@ -1,4 +1,4 @@
-## Source-bound selected-motion diagnostic — CLAIMED, 2026-11-12
+## Source-bound selected-motion diagnostic — IMPLEMENTED CANDIDATE, 2026-11-12
 
 Owner: delivery follow-up lane, requested by CrispStrobe. Branch
 `lane/motion-source-diagnostic-20261112`, base `0f78a4a8`.
@@ -22,9 +22,24 @@ motion guest, and collect separate unsampled compiler trace and whole-process
 CPU profile. Retain raw failures. No dispatch or original acquisition is selected
 by registration or implementation. Existing qualification floors, engine pins,
 artifact event contracts and production workflows remain unchanged. Actual
-execution requires a separately coordinated run and original-custody admission;
+execution requires a separately recorded diagnostic run and retained-input provenance;
 profile timing never replaces ordinary qualification. Test refusal before engine
 execution and actual source wiring; document limitations and next steps.
+
+Registration landed `d9dd4ad3`; gate scope amendment landed `2aa43dd1`. Candidate tooling uses a separately admitted
+retained-byte transfer; the workflow has no original-artifact download route.
+Eighty-six focused scope/admission/profile/parser/ELF controls pass, no skips; actionlint
+passes. Distinct retained release-consumer bytes have normalized provenance, not
+a false qualification-archive ownership claim. Published reference release asset
+IDs and notice digests are independently admitted before transfer acquisition.
+Two source/toolchain-bound compiles have identical independently read load images;
+non-loadable temporary symbol names change full ELF hashes. Runtime admission holds
+the load-image digest and preserves each full hash, rather than forcing equality
+with unavailable original ELF bytes. A private Kaggle diagnostic controller is separately prepared with retained bytes;
+service capacity/input refusals produce no application result. No transfer,
+diagnostic run, qualification or performance improvement is claimed.
+See `docs/LABWIRED-MOTION-SOURCE-DIAGNOSTIC.md` for custody prerequisites and
+source-bound execution/readback steps.
 
 ## S040 producer checker rerun against labwired-wasm-fa992f35 — CLAIMED, 2026-11-11
 

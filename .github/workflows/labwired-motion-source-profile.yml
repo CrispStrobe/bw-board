@@ -1,0 +1,179 @@
+name: Retained selected-motion source diagnostic
+on:
+  workflow_dispatch:
+    inputs:
+      transfer_run:
+        description: Successful owned transfer run containing verified retained engine bytes
+        type: string
+        required: true
+      transfer_head:
+        description: Exact 40-hex source head of that transfer run
+        type: string
+        required: true
+      transfer_artifact:
+        description: ID of motion-source-retained-engine transfer packet (never original artifact)
+        type: string
+        required: true
+      transfer_digest:
+        description: Independently verified sha256 archive digest of transfer packet
+        type: string
+        required: true
+      custody_ack:
+        description: Custodian approved this one transfer acquisition; no original is re-downloaded
+        type: boolean
+        default: false
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: retained-motion-source-diagnostic
+  cancel-in-progress: false
+jobs:
+  diagnostic:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ github.sha }}
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 22.23.4
+      - name: Materialize exact held producer source without changing tooling checkout
+        run: |
+          set -euo pipefail
+          git fetch --no-tags --no-write-fetch-head origin 0f78a4a873f3126c24717903ab09de1a34031c2c
+          git worktree add --detach producer-source 0f78a4a873f3126c24717903ab09de1a34031c2c
+          test "$(git -C producer-source rev-parse HEAD)" = 0f78a4a873f3126c24717903ab09de1a34031c2c
+          test -z "$(git -C producer-source status --porcelain)"
+      - name: Read metadata only and admit retained transfer
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TRANSFER_RUN: ${{ inputs.transfer_run }}
+          TRANSFER_HEAD: ${{ inputs.transfer_head }}
+          TRANSFER_ARTIFACT: ${{ inputs.transfer_artifact }}
+          TRANSFER_DIGEST: ${{ inputs.transfer_digest }}
+          CUSTODY_ACK: ${{ inputs.custody_ack }}
+        run: |
+          set -euo pipefail
+          mkdir evidence
+          python3 - <<'PY'
+          import os,json,urllib.request,re
+          from pathlib import Path
+          def integer(name):
+              value=os.environ[name]
+              if not re.fullmatch(r'[1-9][0-9]{0,14}',value): raise ValueError('invalid identity')
+              return int(value)
+          transfer=integer('TRANSFER_RUN'); artifact=integer('TRANSFER_ARTIFACT')
+          if os.environ['CUSTODY_ACK']!='true': raise ValueError('custody acknowledgement required')
+          if transfer==43191264877 or artifact==13932494417: raise ValueError('original acquisition forbidden')
+          def get(path):
+              request=urllib.request.Request('https://api.github.com/repos/CrispStrobe/bw-board/'+path,
+                  headers={'Authorization':'Bearer '+os.environ['GH_TOKEN'],'Accept':'application/vnd.github+json'})
+              with urllib.request.urlopen(request,timeout=30) as response: return json.load(response)
+          packet={'originalRun':get('actions/runs/43191264877'),
+              'originalJobs':get('actions/runs/43191264877/jobs?per_page=100'),
+              'originalArtifacts':get('actions/runs/43191264877/artifacts?per_page=100'),
+              'release':get('releases/tags/labwired-wasm-fa992f35'),
+              'transferRun':get('actions/runs/'+str(transfer)),
+              'transferArtifacts':get('actions/runs/'+str(transfer)+'/artifacts?per_page=100'),
+              'request':{'custodyAcknowledged':True,'transferRun':transfer,'transferArtifact':artifact,
+                  'transferHead':os.environ['TRANSFER_HEAD'],'transferDigest':os.environ['TRANSFER_DIGEST']}}
+          Path('evidence/packet.json').write_text(json.dumps(packet,indent=2)+'\n')
+          PY
+          node scripts/prepare-labwired-motion-diagnostic.mjs metadata evidence evidence/admission.json
+      - name: Acquire admitted transfer once, verify archive and extract bounded files
+        id: engine
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json,hashlib,urllib.request,zipfile,io,stat
+          from pathlib import Path,PurePosixPath
+          admitted=json.loads(Path('evidence/admission.json').read_text())
+          artifact=admitted['transferArtifact']
+          if artifact==13932494417: raise ValueError('original acquisition forbidden')
+          request=urllib.request.Request('https://api.github.com/repos/CrispStrobe/bw-board/actions/artifacts/'+str(artifact)+'/zip',
+              headers={'Authorization':'Bearer '+__import__('os').environ['GH_TOKEN']})
+          # urllib strips Authorization on the cross-host artifact redirect.
+          class NoAuthRedirect(urllib.request.HTTPRedirectHandler):
+              def redirect_request(self,req,fp,code,msg,headers,newurl):
+                  result=super().redirect_request(req,fp,code,msg,headers,newurl)
+                  if result: result.remove_header('Authorization')
+                  return result
+          with urllib.request.build_opener(NoAuthRedirect()).open(request,timeout=60) as response:
+              raw=response.read(64*1024*1024+1)
+          if len(raw)>64*1024*1024: raise ValueError('archive exceeds bound')
+          if 'sha256:'+hashlib.sha256(raw).hexdigest()!=admitted['transferDigest']: raise ValueError('archive digest mismatch')
+          Path('evidence/transfer.zip').write_bytes(raw)
+          expected={'engine-manifest.json','transfer.json','nodejs/labwired_wasm.js','nodejs/labwired_wasm_bg.wasm','nodejs/package.json','CORE-LICENSE.txt','PRODUCER-LICENSE.txt'}
+          with zipfile.ZipFile(io.BytesIO(raw)) as archive:
+              rows=[row for row in archive.infolist() if not row.is_dir()]
+              if len(rows)!=len(expected) or {row.filename for row in rows}!=expected: raise ValueError('closed packet entries')
+              if sum(row.file_size for row in rows)>64*1024*1024: raise ValueError('extracted bound')
+              for row in rows:
+                  if stat.S_ISLNK(row.external_attr>>16): raise ValueError('symlink forbidden')
+                  if PurePosixPath(row.filename).is_absolute() or '..' in PurePosixPath(row.filename).parts: raise ValueError('unsafe path')
+                  target=Path('engine')/row.filename;target.parent.mkdir(parents=True,exist_ok=True);target.write_bytes(archive.read(row))
+          PY
+          (cd producer-source && node ../scripts/prepare-labwired-motion-diagnostic.mjs engine ../engine ../evidence/engine-admission.json)
+          printf '{"type":"commonjs"}\n' > engine/nodejs/package.json
+      - name: Verify tooling controls and record source and runner
+        run: |
+          set -euo pipefail
+          node --test test/labwired-motion-source-diagnostic.test.mjs test/wasm-motion-profile.test.mjs test/motion-ab-receipt.test.mjs
+          {
+            git rev-parse HEAD
+            lscpu
+            node --version
+            git -C producer-source rev-parse HEAD
+            (cd producer-source && sha256sum scripts/profile-labwired-motion.mjs test/labwired-microbit-motion.test.mjs test/fixtures/labwired/microbit-motion/*)
+          } > evidence/runner.txt
+      - name: Install held guest compiler
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq --no-install-recommends gcc-arm-none-eabi binutils-arm-none-eabi
+      - name: Separate unsampled compiler trace and sampled whole-process diagnostic
+        run: |
+          set -euo pipefail
+          arm-none-eabi-gcc --version >> evidence/runner.txt
+          node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          import {execFileSync} from 'node:child_process';
+          import {MOTION_SOURCE} from './scripts/prepare-labwired-motion-diagnostic.mjs';
+          assert.equal(execFileSync('arm-none-eabi-gcc', ['--version'], {encoding:'utf8'}).split('\n')[0], MOTION_SOURCE.gcc);
+          assert.equal(execFileSync('arm-none-eabi-ld', ['--version'], {encoding:'utf8'}).split('\n')[0], MOTION_SOURCE.linker);
+          NODE
+          mkdir -p evidence/guest-inputs
+          export TMPDIR="$PWD/evidence/guest-inputs"
+          unset NODE_OPTIONS
+          for mode in trace-default sampled-default; do
+            (cd producer-source && node scripts/profile-labwired-motion.mjs --wasm ../engine/nodejs --out "../evidence/$mode" --mode "$mode")
+          done
+      - name: Preserve exact guest and engine bindings after diagnostics
+        if: ${{ always() && steps.engine.outcome == 'success' }}
+        run: |
+          node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          import {readFileSync, readdirSync, writeFileSync} from 'node:fs';
+          import {MOTION_SOURCE, motionElfImage} from './scripts/prepare-labwired-motion-diagnostic.mjs';
+          const guests = readdirSync('evidence/guest-inputs').filter(name => name.startsWith('bw-motion-guest-'))
+              .map(name => motionElfImage(readFileSync(`evidence/guest-inputs/${name}/motion.elf`)));
+          assert.equal(guests.length, 2);
+          for (const guest of guests) assert.equal(guest.sha256, MOTION_SOURCE.guestImageSha256);
+          writeFileSync('evidence/guest-load-image-binding.json', JSON.stringify({historicalReferenceGuestSha256:MOTION_SOURCE.guest, guests}, null, 2));
+          for (const mode of ['trace-default', 'sampled-default']) {
+            const receipt = JSON.parse(readFileSync(`evidence/${mode}/receipt.json`));
+            assert.equal(receipt.wasmSha256, MOTION_SOURCE.files['labwired_wasm_bg.wasm'].sha256);
+            assert.equal(receipt.glueSha256, MOTION_SOURCE.files['labwired_wasm.js'].sha256);
+            assert.equal(receipt.node, MOTION_SOURCE.node);
+            assert.ok(guests.some(guest => guest.fullElfSha256 === receipt.guestSha256));
+          }
+          NODE
+      - name: Retain raw diagnostic evidence including failures
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: retained-motion-source-diagnostic
+          path: evidence/
+          if-no-files-found: warn
+          retention-days: 14
