@@ -192,3 +192,36 @@ counter and paired control should measure those facts on the same bound source
 and inputs, without removing or bypassing any guard. Preserve the original
 failed windows and 1x floor; independently verify outputs and avoid interpreting
 whole-process profile samples as per-instruction savings.
+
+## Retained profile timeline and countdown boundaries
+
+A second offline reading divided the existing 7,619-sample, 8.52-second
+whole-process profile into four equal cumulative sampled-time quarters. The
+named Cortex-M `step_batch` leaf accounted for 26.7%, 33.6%, 34.0% and 35.9%
+respectively; the fast-block and cached-run leaves were still represented in
+the last quarter (8.5% and 6.7%). The named bus accessor is 7.6%, 11.9%,
+10.9% and 10.1%. These are weighted sampled leaf-frame shares, not exact
+exclusive times or per-window measurements. The four portions are not aligned
+with guest measurement windows. No named countdown leaf was sampled; inlining
+and sampling prevent concluding that countdown did not execute. This single
+instrumented profile neither establishes a cause nor measures an improvement.
+
+The held Core source gives the counter experiment a more precise scope. The
+64,000-cycle adapter request is not the countdown's effective instruction
+budget: normal machine planning can clamp at a peripheral tick boundary or a
+scheduled event, and a pending wake can narrow the CPU's remaining budget
+again. The recommended tick interval is conditionally 1,024 or 1; the actual
+selected interval and distribution of effective budgets remain unmeasured.
+Cached countdown admission needs at least eight remaining instructions and the
+`SUBS` entry. Odd retirement can leave the program counter at `BNE`, so both
+entry alignment and remaining-budget parity deserve observation.
+
+Existing countdown controls compare arithmetic, interrupts, cache invalidation,
+observers and machine tick intervals, but their scheduler-budget test does not
+itself schedule an event. Before changing this path, add differential controls
+for both entry PCs and remaining budgets 7, 8, 9, 15, 16 and 17, with separately
+exercised scheduler-heap and newly armed pending-event boundaries around offsets
+0, 1, 7, 8 and 9. Compare CPU state, retirement, clock and event/IRQ delivery
+with the ordinary interpreter. These are proposed controls, not results. Retain
+all guards; neither the profile nor the source estimate justifies changing the
+1x floor or claiming an optimization.
