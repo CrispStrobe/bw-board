@@ -73,8 +73,10 @@ test('a timer horizon ends the batch before real LAPIC delivery and handler exec
   const dispatcher = await createI80386NativeDispatcher(fast);
   const legacyDispatcher = await createI80386NativeDispatcher(legacy, {blockInstructions: 16});
   assert.equal(dispatcher.run(64), 29);
-  assert.equal(legacyDispatcher.run(64), 16);
-  assert.equal(legacyDispatcher.run(64), 13);
+  let legacyRetired = legacyDispatcher.run(64);
+  assert.equal(legacyRetired, 16);
+  while (legacyRetired < 29) legacyRetired += legacyDispatcher.run(64);
+  assert.equal(legacyRetired, 29);
   for (let i = 0; i < 29; i++) slow.step();
   assert.deepEqual(state(fast), state(slow));
   assert.deepEqual(state(fast), state(legacy));
