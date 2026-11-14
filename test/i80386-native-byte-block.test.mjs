@@ -428,6 +428,166 @@ test('cached short and near branches invalidate when CS shrinks below their targ
   }
 });
 
+test('byte memory TEST immediate preserves registers, RAM and all interpreter flags',async()=>{
+  for(const [value,mask] of [[0,0xff],[0x80,0x80],[0x7f,0x55],[0xff,0],[0xff,0xff]]) {
+    for(const form of ['absolute','base','sib','ss']) {
+      const fast=await fixture(true),slow=await fixture(false);
+      const operand=form==='absolute' ? [0x05,0x18,0,0x13,0x80]
+        : form==='base' ? [0x43,0x18] : form==='sib' ? [0x44,0x8b,0x10] : [0x45,0];
+      for(const {machine} of [fast,slow]) {
+        [0xf6,...operand,mask].forEach((byte,i)=>machine._write386(CODE_PHYS+i,byte));
+        machine.mem[DATA_PHYS+24]=value;
+        machine.cpu.ebp=DATA+24;machine.cpu.eflags=0xad7;
+        machine.cpu.segmentCaches[2]={...machine.cpu.segmentCaches[3]};
+      }
+      const runner=await createI80386NativeByteRunner(fast.machine,fast.bridge);
+      const block=runner.decode(1);
+      assert.equal(block.instructions[0].op,22);
+      assert.equal(block.instructions[0].width,8);
+      const ram=fast.machine.mem.slice();
+      assert.deepEqual(runner.run(block,1),{instructions:1,cycles:6,reason:'done'});
+      slow.machine.step();
+      assert.deepEqual(fast.machine.cpu._snapshotInstruction(),slow.machine.cpu._snapshotInstruction());
+      assert.deepEqual(state(fast.machine),state(slow.machine));
+      assert.deepEqual(fast.machine.mem,ram);
+    }
+  }
+});
+
+test('byte TEST plus near JNZ links a real RAM-poll loop and obeys event bounds',async()=>{
+  for(const [budget,deadline,expected] of [[1,100,1],[7,100,7],[64,19,4]]) {
+    const fast=await fixture(true),slow=await fixture(false);
+    for(const {machine} of [fast,slow]) {
+      // TEST byte [EBX+24],80h; JNZ back (rel32=-10).
+      [0xf6,0x43,0x18,0x80,0x0f,0x85,0xf6,0xff,0xff,0xff].forEach((byte,i)=>
+        machine._write386(CODE_PHYS+i,byte));
+      machine.mem[DATA_PHYS+24]=0x80;machine._chipDeadline=deadline;
+    }
+    const runner=await createI80386NativeByteRunner(fast.machine,fast.bridge);
+    const block=runner.decode(8);
+    assert.deepEqual(block.instructions.map(ins=>ins.op),[22,5]);
+    assert.equal(block.instructions[1].dst,0);
+    assert.deepEqual(runner.run(block,budget),{instructions:expected,cycles:6*expected,reason:'event'});
+    for(let i=0;i<expected;i++)slow.machine.step();
+    assert.deepEqual(state(fast.machine),state(slow.machine));
+  }
+});
+
+test('byte TEST reads current RAM and exits before leaving its validated page',async()=>{
+  const fast=await fixture(true),slow=await fixture(false);
+  for(const {machine} of [fast,slow]) {
+    [0xf6,0x03,0x80].forEach((byte,i)=>machine._write386(CODE_PHYS+i,byte));
+    machine.cpu.ebx=DATA+0xfff;machine.mem[DATA_PHYS+0xfff]=0x80;
+    machine.cpu.deliverFaults=false;
+  }
+  const runner=await createI80386NativeByteRunner(fast.machine,fast.bridge);
+  const block=runner.decode(1);
+  fast.machine.mem[DATA_PHYS+0xfff]=slow.machine.mem[DATA_PHYS+0xfff]=0;
+  assert.equal(isI80386NativeByteBlockValid(block),true);
+  assert.deepEqual(runner.run(block,1),{instructions:1,cycles:6,reason:'done'});
+  slow.machine.step();
+  assert.ok(fast.machine.cpu.eflags&0x40);
+  assert.deepEqual(state(fast.machine),state(slow.machine));
+  for(const {machine} of [fast,slow]) { machine.cpu.eip=CODE;machine.cpu.ebx=DATA+0x1000; }
+  const before=state(fast.machine);
+  assert.deepEqual(runner.run(block,64),{instructions:0,cycles:0,reason:'fault-boundary'});
+  assert.deepEqual(state(fast.machine),before);
+  assert.throws(()=>fast.machine.step(),error=>error.vector===14);
+  assert.throws(()=>slow.machine.step(),error=>error.vector===14);
+  assert.equal(fast.machine.cpu.cr2,DATA+0x1000);
+  assert.deepEqual(state(fast.machine),state(slow.machine));
+});
+
+test('byte TEST refuses unsupported forms and revokes stale code, mapping and device windows',async()=>{
+  const fast=await fixture(true);
+  const runner=await createI80386NativeByteRunner(fast.machine,fast.bridge);
+  for(const bytes of [[0xf6,0xc0,0x80],[0xf6,0x0b,0x80],[0x66,0xf6,3,0x80],[0x67,0xf6,3,0x80]]) {
+    bytes.forEach((byte,i)=>fast.machine._write386(CODE_PHYS+i,byte));
+    assert.equal(runner.decode(1),null);
+  }
+  [0xf6,3,0x80].forEach((byte,i)=>fast.machine._write386(CODE_PHYS+i,byte));
+  fast.machine.cpu.ebx=DATA+24;
+  const block=runner.decode(1),before=state(fast.machine);
+  fast.machine._nmiPending=true;
+  assert.deepEqual(runner.run(block,64),{instructions:0,cycles:0,reason:'fallback'});
+  fast.machine._nmiPending=false;
+  fast.machine._write386(CODE_PHYS+2,0x40);
+  assert.equal(isI80386NativeByteBlockValid(block),false);
+  assert.deepEqual(runner.run(block,64),{instructions:0,cycles:0,reason:'fallback'});
+  assert.deepEqual(state(fast.machine),before);
+  const next=runner.decode(1);
+  fast.machine._page[DATA_PHYS>>>12]=3; // MMIO/overlap pages retain ordinary bus reads.
+  assert.equal(isI80386NativeByteBlockValid(next),false);
+  assert.equal(runner.decode(1),null);
+  fast.machine._page[DATA_PHYS>>>12]=1;
+  fast.put32(0x4000+0x130*4,0);
+  assert.equal(isI80386NativeByteBlockValid(next),false);
+  assert.equal(runner.decode(1),null);
+});
+
+test('byte TEST on MMIO retains its actual bus read and flags',async()=>{
+  const fast=await fixture(true),slow=await fixture(false),reads=new Map();
+  for(const {machine} of [fast,slow]) {
+    [0xf6,3,0x80].forEach((byte,i)=>machine._write386(CODE_PHYS+i,byte));
+    machine.cpu.ebx=DATA+24;
+    const seen=[];reads.set(machine,seen);
+    machine._mmio.push({start:DATA_PHYS+24,end:DATA_PHYS+24,stride:1,regs:1,
+      chip:{read(register){seen.push(register);return 0x80;}}});
+    machine._buildPageTable();
+  }
+  const runner=await createI80386NativeByteRunner(fast.machine,fast.bridge);
+  assert.equal(runner.decode(8),null);
+  assert.deepEqual(reads.get(fast.machine),[]);
+  const dispatcher=await createI80386NativeDispatcher(fast.machine);
+  assert.equal(dispatcher.run(64),1);slow.machine.step();
+  assert.equal(reads.get(fast.machine).length,1);
+  assert.equal(reads.get(fast.machine)[0],0);
+  assert.deepEqual(reads.get(fast.machine),reads.get(slow.machine));
+  assert.deepEqual(state(fast.machine),state(slow.machine));
+  assert.equal(dispatcher.stats.instructions,0);
+});
+
+test('byte TEST crossing its code page falls back to the original immediate-fetch fault',async()=>{
+  const fast=await fixture(true),slow=await fixture(false);
+  for(const {machine} of [fast,slow]) {
+    [0xf6,3,0x80].forEach((byte,i)=>machine._write386(CODE_PHYS+0xffe+i,byte));
+    machine.cpu.eip=CODE+0xffe;machine.cpu.ebx=DATA+24;machine.cpu.deliverFaults=false;
+  }
+  const runner=await createI80386NativeByteRunner(fast.machine,fast.bridge);
+  assert.equal(runner.decode(8),null);
+  const dispatcher=await createI80386NativeDispatcher(fast.machine);
+  assert.throws(()=>dispatcher.run(64),error=>error.vector===14);
+  assert.throws(()=>slow.machine.step(),error=>error.vector===14);
+  assert.equal(fast.machine.cpu.cr2,CODE+0x1000);
+  assert.deepEqual(fast.machine.cpu._snapshotInstruction(),slow.machine.cpu._snapshotInstruction());
+  assert.deepEqual(state(fast.machine),state(slow.machine));
+});
+
+test('byte TEST preserves supervisor-page and execute-only data-segment refusals',async()=>{
+  for(const privilege of [true,false]) {
+    const fast=await fixture(true),slow=await fixture(false);
+    for(const {machine,put32} of [fast,slow]) {
+      [0xf6,3,0x80].forEach((byte,i)=>machine._write386(CODE_PHYS+i,byte));
+      machine.cpu.ebx=DATA+24;machine.cpu.deliverFaults=false;
+      if(privilege) {
+        put32(0x4000+0x130*4,DATA_PHYS|3);
+        machine.cpu._translate(DATA+24);machine.cpu._translate(CODE);
+        machine.cpu.cs=3;
+      } else {
+        machine.cpu.segmentCaches[3]={...machine.cpu.segmentCaches[3],code:true,readable:false};
+      }
+    }
+    const runner=await createI80386NativeByteRunner(fast.machine,fast.bridge);
+    assert.equal(runner.decode(8),null);
+    const dispatcher=await createI80386NativeDispatcher(fast.machine);
+    const check=error=>privilege ? error.vector===14 && error.errorCode===5 : error.vector===13;
+    assert.throws(()=>dispatcher.run(64),check);
+    assert.throws(()=>slow.machine.step(),check);
+    assert.deepEqual(fast.machine.cpu._snapshotInstruction(),slow.machine.cpu._snapshotInstruction());
+    assert.deepEqual(state(fast.machine),state(slow.machine));
+  }
+});
+
 test('OR register from validated SS RAM matches interpreter flags and cycles',async()=>{
   for(const [source,initial] of [[0x12345678,0x80000000],[0,0],[0xffffffff,0x12]]) {
     const fast=await fixture(true),slow=await fixture(false);

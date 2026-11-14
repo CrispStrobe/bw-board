@@ -1,3 +1,26 @@
+## Native byte memory TEST — CANDIDATE, 2026-11-14
+
+Owner: same x86 performance lane, requested by CrispStrobe after actual
+admission-context evidence. Own F6/0 memory TEST decoding in
+`src/experimental/i80386-native-byte-block.js`, IR execution and ABI checking
+in `src/experimental/i80386-block-spike.{c,js}`, the rebuilt
+`wasm/i80386-block-spike.wasm` and its provenance, focused native/WASM tests,
+and this section. Same documented Clang 18.1.3 and build flags; no dependency
+pin or window policy change.
+
+Actual context counted 488,938 protected32 F6/0 memory TEST instructions;
+488,612 combined near-JZ/JNZ fallback observations immediately followed
+such a completed fallback. New IR 22 reads one byte through existing validated
+DS/SS RAM windows and computes TEST flags with its immediate mask. It leaves
+registers and RAM unchanged. Register forms, other F6 extensions and prefixes
+remain unsupported. ABI 13 adds this operation without widening the existing
+instruction, CS, mapping, privilege, device or event boundaries.
+
+Ninety focused tests pass, including interpreter flag/address parity,
+TEST/near-JNZ loop fusion, event bounds, code/data page faults, actual MMIO
+read preservation, segment/privilege refusal, stale code/mapping and invalid
+IR controls. Actual guest throughput is pending; no measured win is claimed.
+
 ## Retry missing native code translations — CANDIDATE, 2026-11-14
 
 Owner: same x86 performance lane, requested by CrispStrobe. Own negative

@@ -31,6 +31,28 @@ test('static WASM bridge executes multiple safe guest instructions per call',asy
     [cpu.eax,cpu.ecx,cpu.ebx,cpu.eip,cpu.eflags,cpu.cycles]);
 });
 
+test('byte-window TEST validates its IR before changing any state',async()=>{
+  const native=await createI80386BlockSpike();
+  const initial={regs:[0,0,0,0x1000,0,0,0,0],eip:0x200,eflags:0xad7,cycles:7};
+  const instruction={op:22,dst:0,src:0x80,width:8,length:3,
+    base:3,index:8,scale:0,disp:0,lo:0x1000,hi:0x1001};
+  native.ram[0x1000]=0x80;
+  native.setState(initial);native.setProgram([instruction]);
+  assert.deepEqual(native.run(0,1,1),{reason:'done',completed:1});
+  assert.deepEqual(native.state(),{...initial,eip:0x203,eflags:0x282,cycles:8});
+  assert.equal(native.ram[0x1000],0x80);
+  for(const delta of [{width:32},{dst:1},{src:256},{base:9},{index:9},{scale:4},
+    {length:2},{length:9},{lo:0x1001},{hi:native.ram.length+1}]) {
+    native.setState(initial);native.setProgram([{...instruction,...delta}]);
+    const before=native.state();
+    assert.deepEqual(native.run(0,1,1),{reason:'unsupported',completed:0});
+    assert.deepEqual(native.state(),before);
+  }
+  native.setState(initial);native.setProgram([{...instruction,disp:1}]);
+  assert.deepEqual(native.run(0,1,1),{reason:'fault-boundary',completed:0});
+  assert.deepEqual(native.state(),initial);
+});
+
 test('packed program copies the same IR and preserves event exits',async()=>{
   const bridge=await createI80386BlockSpike();
   const instructions=[
