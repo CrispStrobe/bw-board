@@ -1,3 +1,21 @@
+## Ordinary 386 instruction transaction — CANDIDATE, 2026-11-14
+
+Owner: same x86 performance lane, requested by CrispStrobe after the batch
+candidate missed the actual xv6 improvement target. Own a guarded ordinary
+transaction in `src/experimental/i80386.js`, new
+`test/i80386-unobserved-step.test.mjs`, and this section. Existing diagnostic
+step orchestration remains intact. The ordinary branch retains snapshots,
+rollback, trace/shadow/RF handling, task-commit and repeat-fault behavior,
+delivery evaluation order and execution-depth admission guards.
+
+The actual xv6 dispatcher CPU profile attributed 9.66% of sampled leaves to
+CPU `step`; this motivates separating its ordinary transaction from the
+larger observer orchestration. Sampling is diagnostic, not a speed claim.
+Actual xv6 candidate throughput remains to be measured. The batch-only
+candidate measured CPU ratio 0.99326 and wall ratio 0.99273 on actual xv6,
+below the requested 5% target; its larger authored-loop gains do not meet
+that actual-workload target.
+
 ## Opt-in 386 dispatcher batch amortization — CANDIDATE, 2026-11-14
 
 Owner: x86 performance lane, requested by CrispStrobe. Branch
