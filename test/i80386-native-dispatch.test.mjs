@@ -49,16 +49,118 @@ test('dispatcher attaches shared RAM and counts native guest steps', async () =>
   assert.throws(() => dispatcher.run(0), RangeError);
 });
 
+test('dispatcher amortizes a full batch without crossing caller or device budgets', async () => {
+  for (const [caller, chip, lapic, expected] of [
+    [64, 1000, null, 64],
+    [23, 1000, null, 23],
+    [64, 19, null, 19],
+    [64, 1000, 29, 29],
+    [64, 19, 29, 19],
+  ]) {
+    const fast = fixture(), slow = fixture();
+    for (const machine of [fast, slow]) {
+      machine._chipDeadline = chip * machine.functionalInstructionCycles;
+      if (lapic !== null) {
+        machine._lapicTimerInterval = 1000;
+        machine._lapicTimerNext = lapic * machine.functionalInstructionCycles;
+      }
+    }
+    const dispatcher = await createI80386NativeDispatcher(fast);
+    assert.equal(dispatcher.run(caller), expected);
+    for (let i = 0; i < expected; i++) slow.step();
+    assert.deepEqual(state(fast), state(slow));
+    assert.equal(dispatcher.stats.blockCalls, 1);
+    assert.equal(dispatcher.stats.instructions, expected);
+  }
+});
+
+test('an explicit smaller native batch remains supported', async () => {
+  const fast = fixture(), slow = fixture();
+  const dispatcher = await createI80386NativeDispatcher(fast, {blockInstructions: 16});
+  assert.equal(dispatcher.run(64), 16);
+  for (let i = 0; i < 16; i++) slow.step();
+  assert.deepEqual(state(fast), state(slow));
+});
+
+test('larger batches preserve device progress across repeated chip horizons', async () => {
+  const fast = fixture(), slow = fixture();
+  const dispatcher = await createI80386NativeDispatcher(fast);
+  const total = 4099;
+  let retired = 0;
+  while (retired < total)
+    retired += dispatcher.run(Math.min(64, total - retired));
+  for (let i = 0; i < total; i++) slow.step();
+  assert.deepEqual(state(fast), state(slow));
+  const devices = machine => ({
+    deadline: machine._chipDeadline,
+    pitFraction: machine.chips.pit1._frac,
+    pitCounters: machine.chips.pit1.counters.map(counter => ({...counter, hooks: undefined})),
+    rtcPhase: machine.chips.rtc1.cyclePhase,
+    rtcPeriodicPhase: machine.chips.rtc1.periodicPhase,
+    cgaCycles: machine.chips.cga1.cycles,
+  });
+  assert.deepEqual(devices(fast), devices(slow));
+  assert.ok(dispatcher.stats.instructions > 64);
+});
+
+test('a cached full batch yields to pending interrupts, timer expiry and debug traps', async () => {
+  const triggers = [
+    machine => { machine._nmiPending = true; },
+    machine => {
+      machine._mpReady = true;
+      machine.cpu.eflags |= 0x200;
+      machine._lapicTimerPending = true;
+      machine._lapic[0x320 >>> 2] = 0x40;
+    },
+    machine => {
+      machine._lapicTimerInterval = 1000;
+      machine._lapicTimerNext = machine.cycles;
+    },
+    machine => { machine.cpu.eflags |= 0x100; },
+  ];
+  for (const trigger of triggers) {
+    const fast = fixture(), slow = fixture();
+    const dispatcher = await createI80386NativeDispatcher(fast);
+    assert.equal(dispatcher.run(63), 63); // Return to the cached block start.
+    for (let i = 0; i < 63; i++) slow.step();
+    for (const machine of [fast, slow]) trigger(machine);
+    const nativeBefore = dispatcher.stats.instructions;
+    assert.equal(dispatcher.run(64), 1);
+    slow.step();
+    assert.equal(dispatcher.stats.instructions, nativeBefore);
+    assert.deepEqual(state(fast), state(slow));
+    assert.equal(fast.cpu.shutdown, slow.cpu.shutdown);
+    assert.equal(fast.cpu.lastFault?.vector, slow.cpu.lastFault?.vector);
+    assert.equal(fast._nmiPending, slow._nmiPending);
+    assert.equal(fast._lapicTimerPending, slow._lapicTimerPending);
+  }
+});
+
 test('dispatcher interprets unsupported and stale bytes', async () => {
   const fast = fixture(), slow = fixture();
   const dispatcher = await createI80386NativeDispatcher(fast);
-  dispatcher.run(3);
-  for (let i = 0; i < 3; i++) slow.step();
+  dispatcher.run(63);
+  for (let i = 0; i < 63; i++) slow.step();
   for (const machine of [fast, slow]) machine._write386(PHYSICAL, 0x40); // INC EAX
-  assert.equal(dispatcher.run(8), 1);
+  assert.equal(dispatcher.run(64), 1);
   slow.step();
   assert.deepEqual(state(fast), state(slow));
-  assert.equal(dispatcher.stats.instructions, 3);
+  assert.equal(dispatcher.stats.instructions, 63);
+});
+
+test('a cached full batch yields to a newly faulting code mapping', async () => {
+  const fast = fixture(), slow = fixture();
+  const dispatcher = await createI80386NativeDispatcher(fast);
+  assert.equal(dispatcher.run(63), 63);
+  for (let i = 0; i < 63; i++) slow.step();
+  for (const machine of [fast, slow])
+    machine._write386(0x4000 + 0x120 * 4, 0); // Revoke code-page presence.
+  assert.equal(dispatcher.run(64), 1);
+  slow.step();
+  assert.equal(dispatcher.stats.instructions, 63);
+  assert.deepEqual(state(fast), state(slow));
+  assert.equal(fast.cpu.lastFault?.vector, slow.cpu.lastFault?.vector);
+  assert.equal(fast.cpu.shutdown, slow.cpu.shutdown);
 });
 
 test('dispatcher skips native admission for 16-bit code', async () => {

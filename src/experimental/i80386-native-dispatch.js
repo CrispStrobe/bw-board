@@ -16,7 +16,10 @@ export async function createI80386NativeDispatcher(machine, {
   memoryBytes = machine?.memoryBytes,
   maxCachedBlocks = 4096,
   decodeInstructions = 8,
-  blockInstructions = 16,
+  // Amortize code/window validation and JS/WASM state transfers across the
+  // existing 64-instruction ceiling. The runner still caps every batch at
+  // the caller's budget and the next chip or LAPIC event.
+  blockInstructions = 64,
   successorObserver = null,
 } = {}) {
   if (machine?.variant !== '80386' || !machine.cpu ||

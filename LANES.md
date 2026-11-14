@@ -1,3 +1,28 @@
+## Opt-in 386 dispatcher batch amortization — CANDIDATE, 2026-11-14
+
+Owner: x86 performance lane, requested by CrispStrobe. Branch
+`lane/x86-perf-current-20261114` from master `d19b5e4d`.
+Claim and implementation together under the current delivery instruction.
+Own only the default `blockInstructions` option and explanatory comment in
+`src/experimental/i80386-native-dispatch.js`, focused additions in
+`test/i80386-native-dispatch.test.mjs`, and this section.
+
+The existing opt-in dispatcher now amortizes validation and JS/WASM state
+transfers over at most 64 instructions instead of 16. Its existing caller,
+chip, LAPIC, interrupt, debug, mapping and code guards remain intact; an
+explicit smaller batch remains supported. The ordinary machine path and
+dispatcher opt-in status are unchanged. Public correctness controls compare
+full batches, caller/device bounds, repeated chip flushes, pending interrupts,
+debug traps, code edits and newly faulting mappings with ordinary execution.
+
+Current-main comparison uses an authored paged protected32 register loop,
+not historical xv6 forktest. Seven retained comparisons measured mean whole
+process CPU 1.282532 to 0.900839 seconds (29.76% lower) and wall 1.163170 to
+0.760233 seconds (34.64% lower), all seven favorable in each metric. These are
+host throughput observations, not calibrated 386 timing or general-workload
+claims. Clean xv6 qualification and independent review remain pending; no
+production adoption or merge follows from the loop measurement alone.
+
 ## Source-bound selected-motion diagnostic — IMPLEMENTED CANDIDATE, 2026-11-12
 
 Owner: delivery follow-up lane, requested by CrispStrobe. Branch
