@@ -1,3 +1,21 @@
+## Actual xv6 performance outcome — MEASURED CANDIDATE, 2026-11-14
+
+Fresh outcome owner continues the same isolated performance branch, requested
+by CrispStrobe. Existing Kaggle comparison collected once; no duplicate job.
+Combined source `1cf0952ab61799e490d5f3f39236fde8548c45d1` versus frozen
+master `d19b5e4d2b8aa0f025fd7a3512db3252e470433d`: opt-in CPU ratio
+0.935521664 and wall ratio 0.923193852 (6.45% / 7.68% lower), both 7/7
+favorable. All 36 actual xv6 forktest outcomes match at 24,338,279 instructions
+each. Independent raw archive, numeric, inventory and original Git/runtime-hash
+audits pass; final focused checks 81/81 pass. Ordinary interpreter ratios are
+0.985586525 / 0.985644453 (6/7 favorable each). This combined result supersedes
+the pending-throughput notes in the individual candidate sections below;
+it does not isolate individual contributions. See the
+[measured results](docs/benchmarks/x86-dispatch-2026-11-14/xv6/README.md).
+Runtime bytes remain exactly the tested candidate. No default adoption,
+physical timing, full-suite dispatch or merge claim. Existing full-CI policy
+blocker remains for owner resolution under the no-full-CI instruction.
+
 ## Native byte memory TEST — CANDIDATE, 2026-11-14
 
 Owner: same x86 performance lane, requested by CrispStrobe after actual

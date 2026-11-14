@@ -1,5 +1,9 @@
 # Opt-in dispatcher measurements — 2026-11-14
 
+The later combined candidate passed the [actual xv6 forktest comparison](xv6/README.md):
+6.45% lower CPU time and 7.68% lower wall time, with matching guest outcomes.
+The authored-loop results below describe the earlier batch-only candidate.
+
 Baseline: `d19b5e4d2b8aa0f025fd7a3512db3252e470433d`.
 Candidate product: `0a5c49e34ecf7654e1974c0433249cda1a491f32`, increasing
 the existing opt-in batch limit from 16 to 64. Later test/harness commits
@@ -45,6 +49,6 @@ metadata and summaries retain those observations. Whole-child CPU is a
 serial child-resource delta and wall includes process overhead. Execution
 metrics and all raw samples are retained for comparison.
 
-Historical xv6 `forktest` was not remeasured. These authored paged protected32
-microbenchmarks do not establish general OS performance, calibrated 386
-timing or default-backend adoption.
+These authored paged protected32 microbenchmarks and the separate xv6 result
+do not establish general OS performance, calibrated 386 timing or
+default-backend adoption.
