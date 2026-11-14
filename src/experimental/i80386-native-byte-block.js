@@ -79,13 +79,19 @@ export function decodeI80386NativeByteBlock(machine, maxInstructions = 8) {
         if ((modrm >>> 6) !== 3 || (extension !== 4 && extension !== 5)) break;
         ir={op:extension === 4 ? 15 : 16,
           dst:modrm & 7,src:take(),width:32};
-      } else if (op === 0x74 || op === 0x75) {
-        const displacement = (take() << 24) >> 24;
-        const target = (eip + 2 + displacement) >>> 0;
+      } else if (op === 0x74 || op === 0x75 || op === 0x0f) {
+        const near = op === 0x0f;
+        const condition = near ? take() : op;
+        if (near && condition !== 0x84 && condition !== 0x85) break;
+        let displacement = 0;
+        if (near) {
+          for (let i = 0; i < 4; i++) displacement |= take() << (8 * i);
+        } else displacement = (take() << 24) >> 24;
+        const target = (eip + (near ? 6 : 2) + displacement) >>> 0;
         const targetIndex = starts.get(target);
         // An unlinked target exits this block after the branch. The next
         // dispatch validates and decodes its own code window at the target.
-        ir = {op:op === 0x74 ? 4 : 5,
+        ir = {op:condition === 0x74 || condition === 0x84 ? 4 : 5,
           dst:targetIndex ?? instructions.length + 1,src:target,width:32};
       } else if ([0x89,0x39,0x85,0x8b,0x8d,0x0b].includes(op)) {
         const modrm = take(), mod = modrm >>> 6,

@@ -1,3 +1,20 @@
+## Native near conditional branches — CANDIDATE, 2026-11-14
+
+Owner: same x86 performance lane, requested by CrispStrobe after the actual
+cache candidate remained below the 5% target (CPU ratio 0.971733, wall
+0.965052 against its paired baseline). Own near JZ/JNZ decoding in
+`src/experimental/i80386-native-byte-block.js`, its focused tests in
+`test/i80386-native-byte-block.test.mjs`, and this section.
+
+The actual fallback census observed 493,931 unprefixed protected32 near JNZ
+instructions and 1,857 near JZ instructions. These encodings were absent
+from the native decoder. Decode `0F 84/85 rel32` into the existing branch IR,
+retaining signed displacement, six-byte length, target wrapping, existing
+code/window admission and all event limits. No WASM or ABI change. Source
+tests compare interpreter results for both directions, wrap, fallthrough,
+linked loops, caller/chip/interrupt bounds, prefixes and page/fetch faults.
+Fresh actual xv6 measurement remains pending; no speedup is claimed here.
+
 ## Native dispatcher direct lookup cache — CANDIDATE, 2026-11-14
 
 Owner: same x86 performance lane, requested by CrispStrobe after actual xv6
