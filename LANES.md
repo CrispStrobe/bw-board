@@ -13,6 +13,8 @@ retaining signed displacement, six-byte length, target wrapping, existing
 code/window admission and all event limits. No WASM or ABI change. Source
 tests compare interpreter results for both directions, wrap, fallthrough,
 linked loops, caller/chip/interrupt bounds, prefixes and page/fetch faults.
+Both short and near branches conservatively refuse out-of-limit targets;
+cached blocks revalidate their required target limit after CS cache changes.
 Fresh actual xv6 measurement remains pending; no speedup is claimed here.
 
 ## Native dispatcher direct lookup cache — CANDIDATE, 2026-11-14

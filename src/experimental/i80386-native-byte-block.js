@@ -22,7 +22,7 @@ export function decodeI80386NativeByteBlock(machine, maxInstructions = 8) {
   const mem = machine.mem;
   const instructions = [], readWindows = [], writeWindows = [];
   const starts = new Map();
-  let eip = startEip;
+  let eip = startEip, requiredCodeLimit = startEip;
   for (let n = 0; n < maxInstructions && eip < pageEnd; n++) {
     const at = codeWindow.physicalPage + (eip - codeWindow.linearPage);
     let p = at;
@@ -88,6 +88,10 @@ export function decodeI80386NativeByteBlock(machine, maxInstructions = 8) {
           for (let i = 0; i < 4; i++) displacement |= take() << (8 * i);
         } else displacement = (take() << 24) >> 24;
         const target = (eip + (near ? 6 : 2) + displacement) >>> 0;
+        // The interpreter checks CS bounds before committing a taken branch.
+        // Refuse conservatively even if its current condition is not taken.
+        if (target > codeWindow.cache.limit) break;
+        requiredCodeLimit = Math.max(requiredCodeLimit, target);
         const targetIndex = starts.get(target);
         // An unlinked target exits this block after the branch. The next
         // dispatch validates and decodes its own code window at the target.
@@ -142,13 +146,14 @@ export function decodeI80386NativeByteBlock(machine, maxInstructions = 8) {
   if (!instructions.length) return null;
   const bytes=mem.slice(startPhysical,startPhysical+(eip-startEip));
   return {machine,cpu,startEip,codeWindow,readWindows,writeWindows,instructions,
-    physicalStart:startPhysical,bytes};
+    physicalStart:startPhysical,bytes,requiredCodeLimit};
 }
 
 export function isI80386NativeByteBlockValid(block) {
   if (!block || block.machine?.cpu !== block.cpu ||
       block.cpu.eip !== block.startEip ||
       !isI80386ReadWindowValid(block.codeWindow) ||
+      !(block.codeWindow.cache.limit >= block.requiredCodeLimit) ||
       !block.readWindows.every(isI80386ReadWindowValid) ||
       !block.writeWindows.every(isI80386WriteWindowValid)) return false;
   const mem=block.machine.mem;
