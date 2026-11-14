@@ -7960,8 +7960,8 @@ this is neither source adoption nor a measured speedup.
 
 No app, full-OS, physical timing or RTx claim follows.
 
-2026-11-14 CI local tier (`ci:local`) — CLAIM, Codex x86.
-Branch lane/ci-local-tier-20261114, exact base 9526b1898f850914e7a4a79e359f18c560d93c6f.
+2026-11-14 CI local tier (`ci:local`) — DONE, Codex x86. Introduced in PR #733 merge a6013d2f9514dc5321496865356ab547d830cd2a; this follow-up adds behavior tests.
+Branch lane/ci-local-tier-test-20261114, exact base a6013d2f9514dc5321496865356ab547d830cd2a.
 Owns .github/workflows/ci-tier-gate.yml, test/ci-tier-gate.test.mjs and this row.
 Adds repository label `ci:local`. A code PR carrying it passes the gate only when the PR body has `Local-validation: <40-char-head-sha> PASS <command/result>`; the SHA must match the PR head, so a pushed change invalidates old evidence. Local or Kaggle runs are accepted; no `ci:full` and no thorough GitHub jobs are started. The existing `ci:full` thorough tier and the first-introduction retained-motion diagnostic exception are unchanged. Docs-only and `ci:full` behavior unchanged; the one cheap gate job still runs and may queue on free tier, so a one-off owner exception remains available when the queue is starved.
-Verification: YAML parse; 2 new contract tests; 90 focused workflow/motion tests pass; regex accepts matching PASS lines and rejects missing PASS/stale/prefix lines; existing motion scope checks preserved. No test thresholds, workflow triggers, pins or production behavior changed.
+Verification: YAML parse; 3 behavior/contract tests; 91 focused workflow/motion tests pass; regex accepts matching PASS lines and rejects missing PASS/stale/prefix lines; existing motion scope checks preserved. No test thresholds, workflow triggers, pins or production behavior changed.
