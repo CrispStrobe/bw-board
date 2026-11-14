@@ -269,6 +269,41 @@ test('front-cache collisions and single-entry eviction retain Map ownership', as
   }
 });
 
+test('observer reentry can evict the outer block without leaving a front-cache entry', async () => {
+  const fast = fixture(), slow = fixture(), events = [];
+  for (const machine of [fast, slow]) {
+    machine.mem.copyWithin(PHYSICAL + 0x101, PHYSICAL, PHYSICAL + 10);
+    machine._chipDeadline = 10000;
+  }
+  let reentered = false;
+  const dispatcher = await createI80386NativeDispatcher(fast, {
+    maxCachedBlocks: 1,
+    successorObserver: {observe: record => {
+      events.push(record);
+      if (reentered) return;
+      reentered = true;
+      // A different front slot lets the nested dispatch evict the outer
+      // Map entry while its observer is still on the stack.
+      fast.cpu.eip = slow.cpu.eip = CODE + 0x101;
+      assert.equal(dispatcher.run(63), 63);
+      for (let i = 0; i < 63; i++) slow.step();
+      assert.deepEqual(state(fast), state(slow));
+      fast.cpu.eip = slow.cpu.eip = CODE;
+    }},
+  });
+  for (let i = 0; i < 63; i++) slow.step();
+  assert.equal(dispatcher.run(63), 63);
+  assert.equal(reentered, true);
+  assert.deepEqual(state(fast), state(slow));
+  assert.equal(dispatcher.stats.decoded, 2);
+  assert.equal(dispatcher.run(63), 63);
+  for (let i = 0; i < 63; i++) slow.step();
+  assert.deepEqual(state(fast), state(slow));
+  assert.equal(dispatcher.stats.decoded, 3);
+  assert.equal(dispatcher.stats.instructions, 189);
+  assert.deepEqual(events.map(record => record.beforeEip), [CODE, CODE + 0x101, CODE]);
+});
+
 test('front-cache hits recheck CS, CR3 and CR4 identity', async () => {
   for (const field of ['cs', 'cr3', 'cr4']) {
     const fast = fixture(), slow = fixture();
