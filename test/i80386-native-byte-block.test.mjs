@@ -5,6 +5,7 @@ import {ExperimentalI80386ATMachine,
   PCAT80386_EXPERIMENTAL_4M_HDD_XV6_SMP} from '../src/experimental/i80386-at-machine.js';
 import {createI80386NativeByteRunner,isI80386NativeByteBlockValid} from
   '../src/experimental/i80386-native-byte-block.js';
+import {createI80386NativeDispatcher} from '../src/experimental/i80386-native-dispatch.js';
 
 const CODE=0x80120000, DATA=0x80130000;
 const CODE_PHYS=0x120000, DATA_PHYS=0x130000;
@@ -247,6 +248,343 @@ test('terminal forward JZ and JNZ exit to their target or fallthrough',async()=>
     slow.machine.step();slow.machine.step();
     assert.deepEqual(state(fast.machine),state(slow.machine));
     assert.equal(fast.machine.cpu.eip,CODE+(taken ? 9 : 7));
+  }
+});
+
+test('near JZ and JNZ preserve signed rel32 targets, wrap and fallthrough',async()=>{
+  const vectors=[
+    {bytes:[2,0,0,0],target:CODE+13},
+    {bytes:[0xf3,0xff,0xff,0xff],target:CODE-2},
+    {bytes:[0xff,0xff,0xff,0x7f],target:0x0012000a},
+    {bytes:[0,0,0,0x80],start:0x12000,target:0x8001200b},
+  ];
+  for(const opcode of [0x84,0x85]) for(const taken of [false,true]) for(const vector of vectors) {
+    const fast=await fixture(true),slow=await fixture(false);
+    const start=vector.start ?? CODE;
+    for(const {machine,put32} of [fast,slow]) {
+      [0xb8,1,0,0,0,0x0f,opcode,...vector.bytes].forEach((byte,i)=>
+        machine._write386(CODE_PHYS+i,byte));
+      machine.cpu.eflags=taken === (opcode === 0x84) ? 0x42 : 2;
+      if(start !== CODE) {
+        put32(0x1000,0x4007);
+        put32(0x4000+0x12*4,CODE_PHYS|7);
+        machine.cpu.eip=start;
+        machine.cpu._translate(start);
+      }
+    }
+    const runner=await createI80386NativeByteRunner(fast.machine,fast.bridge);
+    const block=runner.decode(8);
+    assert.deepEqual(block.instructions.map(ins=>[ins.op,ins.length]),
+      [[11,5],[opcode === 0x84 ? 4 : 5,6]]);
+    assert.equal(block.instructions[1].src,vector.target);
+    assert.deepEqual(runner.run(block,2),{instructions:2,cycles:12,reason:'done'});
+    slow.machine.step();slow.machine.step();
+    assert.deepEqual(fast.machine.cpu._snapshotInstruction(),slow.machine.cpu._snapshotInstruction());
+    assert.deepEqual(state(fast.machine),state(slow.machine));
+    assert.equal(fast.machine.cpu.eip,taken ? vector.target : start+11);
+  }
+});
+
+test('linked near branches retain caller, chip and pending-interrupt limits',async()=>{
+  for(const [budget,deadline,expected] of [[1,100,1],[7,100,7],[64,19,4]]) {
+    const fast=await fixture(true),slow=await fixture(false);
+    for(const {machine} of [fast,slow]) {
+      // MOV EAX,1; JNZ back to MOV (rel32=-11).
+      [0xb8,1,0,0,0,0x0f,0x85,0xf5,0xff,0xff,0xff].forEach((byte,i)=>
+        machine._write386(CODE_PHYS+i,byte));
+      machine.cpu.eflags=2;machine._chipDeadline=deadline;
+    }
+    const runner=await createI80386NativeByteRunner(fast.machine,fast.bridge);
+    const block=runner.decode(8);
+    assert.equal(block.instructions[1].dst,0);
+    assert.deepEqual(runner.run(block,budget),{instructions:expected,cycles:expected*6,reason:'event'});
+    for(let i=0;i<expected;i++)slow.machine.step();
+    assert.deepEqual(state(fast.machine),state(slow.machine));
+  }
+  const fast=await fixture(true);
+  [0xb8,1,0,0,0,0x0f,0x85,0xf5,0xff,0xff,0xff].forEach((byte,i)=>
+    fast.machine._write386(CODE_PHYS+i,byte));
+  const runner=await createI80386NativeByteRunner(fast.machine,fast.bridge);
+  const block=runner.decode(8),before=state(fast.machine);
+  fast.machine._nmiPending=true;
+  assert.deepEqual(runner.run(block,64),{instructions:0,cycles:0,reason:'fallback'});
+  assert.deepEqual(state(fast.machine),before);
+});
+
+test('near-branch decode refuses prefixes and preserves a crossing fetch fault',async()=>{
+  const fast=await fixture(true);
+  const runner=await createI80386NativeByteRunner(fast.machine,fast.bridge);
+  for(const prefix of [0x66,0x67,0xf0,0xf2,0xf3,0x26]) {
+    [prefix,0x0f,0x85,0,0,0,0].forEach((byte,i)=>fast.machine._write386(CODE_PHYS+i,byte));
+    const before=state(fast.machine);
+    assert.equal(runner.decode(8),null);
+    assert.deepEqual(state(fast.machine),before);
+  }
+  for(const second of [0x80,0x83,0x86,0xaf,0x0b]) {
+    [0x0f,second,0,0,0,0].forEach((byte,i)=>fast.machine._write386(CODE_PHYS+i,byte));
+    assert.equal(runner.decode(8),null);
+  }
+  fast.machine.cpu.segmentCaches[1].default32=false;
+  assert.equal(runner.decode(8),null);
+
+  const crossing=await fixture(true),slow=await fixture(false),faults=new Map();
+  for(const {machine} of [crossing,slow]) {
+    // The sixth byte lies on an unmapped next linear page.
+    [0x0f,0x85,0,0,0,0].forEach((byte,i)=>machine._write386(CODE_PHYS+0xffb+i,byte));
+    machine.cpu.eip=CODE+0xffb;
+    const seen=[],deliver=machine.cpu._deliverFault;
+    faults.set(machine,seen);
+    machine.cpu._deliverFault=function(error,...args) {
+      seen.push({vector:error.vector,cr2:this.cr2});
+      return Reflect.apply(deliver,this,[error,...args]);
+    };
+  }
+  const crossingRunner=await createI80386NativeByteRunner(crossing.machine,crossing.bridge);
+  const before=state(crossing.machine);
+  assert.equal(crossingRunner.decode(8),null);
+  assert.deepEqual(state(crossing.machine),before);
+  const dispatcher=await createI80386NativeDispatcher(crossing.machine);
+  assert.equal(dispatcher.run(64),1);
+  slow.machine.step();
+  assert.equal(dispatcher.stats.instructions,0);
+  assert.deepEqual(crossing.machine.cpu._snapshotInstruction(),slow.machine.cpu._snapshotInstruction());
+  assert.deepEqual(state(crossing.machine),state(slow.machine));
+  assert.equal(crossing.machine.cpu.cr2,slow.machine.cpu.cr2);
+  assert.deepEqual(faults.get(crossing.machine),faults.get(slow.machine));
+  assert.deepEqual(faults.get(crossing.machine)[0],{vector:14,cr2:CODE+0x1000});
+  assert.equal(crossing.machine.cpu.lastFault?.vector,slow.machine.cpu.lastFault?.vector);
+  assert.equal(crossing.machine.cpu.shutdown,slow.machine.cpu.shutdown);
+});
+
+test('a near branch fitting exactly at code-page end completes before the next fetch',async()=>{
+  const fast=await fixture(true),slow=await fixture(false);
+  for(const {machine} of [fast,slow]) {
+    [0x0f,0x85,0,0,0,0].forEach((byte,i)=>machine._write386(CODE_PHYS+0xffa+i,byte));
+    machine.cpu.eip=CODE+0xffa;machine.cpu.eflags=2;
+  }
+  const runner=await createI80386NativeByteRunner(fast.machine,fast.bridge);
+  const block=runner.decode(8);
+  assert.equal(block.instructions[0].length,6);
+  assert.deepEqual(runner.run(block,1),{instructions:1,cycles:6,reason:'done'});
+  slow.machine.step();
+  assert.equal(fast.machine.cpu.eip,CODE+0x1000);
+  assert.deepEqual(state(fast.machine),state(slow.machine));
+});
+
+test('short and near branches preserve CS target-limit faults and untaken success',async()=>{
+  for(const near of [false,true]) for(const zero of [false,true]) for(const taken of [false,true]) {
+    const fast=await fixture(true),slow=await fixture(false);
+    const code=near ? [0x0f,zero ? 0x84 : 0x85,0,0x10,0,0] : [zero ? 0x74 : 0x75,0x40];
+    for(const {machine} of [fast,slow]) {
+      code.forEach((byte,i)=>machine._write386(CODE_PHYS+0xff0+i,byte));
+      machine.cpu.eip=CODE+0xff0;
+      machine.cpu.segmentCaches[1].limit=CODE+0xfff;
+      machine.cpu.eflags=taken === zero ? 0x42 : 2;
+      machine.cpu.deliverFaults=false;
+    }
+    const runner=await createI80386NativeByteRunner(fast.machine,fast.bridge);
+    assert.equal(runner.decode(8),null);
+    const dispatcher=await createI80386NativeDispatcher(fast.machine);
+    if(taken) {
+      assert.throws(()=>dispatcher.run(64),error=>error.vector === 13 && error.errorCode === 0);
+      assert.throws(()=>slow.machine.step(),error=>error.vector === 13 && error.errorCode === 0);
+      assert.equal(fast.machine.cpu.eip,CODE+0xff0);
+    } else {
+      assert.equal(dispatcher.run(64),1);
+      slow.machine.step();
+      assert.equal(fast.machine.cpu.eip,CODE+0xff0+code.length);
+    }
+    assert.equal(dispatcher.stats.instructions,0);
+    assert.deepEqual(fast.machine.cpu._snapshotInstruction(),slow.machine.cpu._snapshotInstruction());
+    assert.deepEqual(state(fast.machine),state(slow.machine));
+  }
+});
+
+test('cached short and near branches invalidate when CS shrinks below their target',async()=>{
+  for(const near of [false,true]) {
+    const fast=await fixture(true),slow=await fixture(false);
+    const jump=near ? [0x0f,0x85,0,0x10,0,0] : [0x75,0x40];
+    for(const {machine} of [fast,slow]) {
+      [0xb8,1,0,0,0,...jump].forEach((byte,i)=>machine._write386(CODE_PHYS+0xff0+i,byte));
+      machine.cpu.eip=CODE+0xff0;machine.cpu.eflags=2;
+      machine.cpu.deliverFaults=false;
+    }
+    const runner=await createI80386NativeByteRunner(fast.machine,fast.bridge);
+    const block=runner.decode(8);
+    assert.equal(block.instructions.length,2);
+    assert.equal(isI80386NativeByteBlockValid(block),true);
+    for(const {machine} of [fast,slow]) machine.cpu.segmentCaches[1].limit=CODE+0xfff;
+    assert.equal(isI80386NativeByteBlockValid(block),false);
+    const before=state(fast.machine);
+    assert.deepEqual(runner.run(block,64),{instructions:0,cycles:0,reason:'fallback'});
+    assert.deepEqual(state(fast.machine),before);
+    const dispatcher=await createI80386NativeDispatcher(fast.machine);
+    assert.equal(dispatcher.run(64),1);slow.machine.step();
+    assert.throws(()=>dispatcher.run(64),error=>error.vector === 13);
+    assert.throws(()=>slow.machine.step(),error=>error.vector === 13);
+    assert.equal(dispatcher.stats.instructions,0);
+    assert.deepEqual(fast.machine.cpu._snapshotInstruction(),slow.machine.cpu._snapshotInstruction());
+    assert.deepEqual(state(fast.machine),state(slow.machine));
+  }
+});
+
+test('byte memory TEST immediate preserves registers, RAM and all interpreter flags',async()=>{
+  for(const [value,mask] of [[0,0xff],[0x80,0x80],[0x7f,0x55],[0xff,0],[0xff,0xff]]) {
+    for(const form of ['absolute','base','sib','ss']) {
+      const fast=await fixture(true),slow=await fixture(false);
+      const operand=form==='absolute' ? [0x05,0x18,0,0x13,0x80]
+        : form==='base' ? [0x43,0x18] : form==='sib' ? [0x44,0x8b,0x10] : [0x45,0];
+      for(const {machine} of [fast,slow]) {
+        [0xf6,...operand,mask].forEach((byte,i)=>machine._write386(CODE_PHYS+i,byte));
+        machine.mem[DATA_PHYS+24]=value;
+        machine.cpu.ebp=DATA+24;machine.cpu.eflags=0xad7;
+        machine.cpu.segmentCaches[2]={...machine.cpu.segmentCaches[3]};
+      }
+      const runner=await createI80386NativeByteRunner(fast.machine,fast.bridge);
+      const block=runner.decode(1);
+      assert.equal(block.instructions[0].op,22);
+      assert.equal(block.instructions[0].width,8);
+      const ram=fast.machine.mem.slice();
+      assert.deepEqual(runner.run(block,1),{instructions:1,cycles:6,reason:'done'});
+      slow.machine.step();
+      assert.deepEqual(fast.machine.cpu._snapshotInstruction(),slow.machine.cpu._snapshotInstruction());
+      assert.deepEqual(state(fast.machine),state(slow.machine));
+      assert.deepEqual(fast.machine.mem,ram);
+    }
+  }
+});
+
+test('byte TEST plus near JNZ links a real RAM-poll loop and obeys event bounds',async()=>{
+  for(const [budget,deadline,expected] of [[1,100,1],[7,100,7],[64,19,4]]) {
+    const fast=await fixture(true),slow=await fixture(false);
+    for(const {machine} of [fast,slow]) {
+      // TEST byte [EBX+24],80h; JNZ back (rel32=-10).
+      [0xf6,0x43,0x18,0x80,0x0f,0x85,0xf6,0xff,0xff,0xff].forEach((byte,i)=>
+        machine._write386(CODE_PHYS+i,byte));
+      machine.mem[DATA_PHYS+24]=0x80;machine._chipDeadline=deadline;
+    }
+    const runner=await createI80386NativeByteRunner(fast.machine,fast.bridge);
+    const block=runner.decode(8);
+    assert.deepEqual(block.instructions.map(ins=>ins.op),[22,5]);
+    assert.equal(block.instructions[1].dst,0);
+    assert.deepEqual(runner.run(block,budget),{instructions:expected,cycles:6*expected,reason:'event'});
+    for(let i=0;i<expected;i++)slow.machine.step();
+    assert.deepEqual(state(fast.machine),state(slow.machine));
+  }
+});
+
+test('byte TEST reads current RAM and exits before leaving its validated page',async()=>{
+  const fast=await fixture(true),slow=await fixture(false);
+  for(const {machine} of [fast,slow]) {
+    [0xf6,0x03,0x80].forEach((byte,i)=>machine._write386(CODE_PHYS+i,byte));
+    machine.cpu.ebx=DATA+0xfff;machine.mem[DATA_PHYS+0xfff]=0x80;
+    machine.cpu.deliverFaults=false;
+  }
+  const runner=await createI80386NativeByteRunner(fast.machine,fast.bridge);
+  const block=runner.decode(1);
+  fast.machine.mem[DATA_PHYS+0xfff]=slow.machine.mem[DATA_PHYS+0xfff]=0;
+  assert.equal(isI80386NativeByteBlockValid(block),true);
+  assert.deepEqual(runner.run(block,1),{instructions:1,cycles:6,reason:'done'});
+  slow.machine.step();
+  assert.ok(fast.machine.cpu.eflags&0x40);
+  assert.deepEqual(state(fast.machine),state(slow.machine));
+  for(const {machine} of [fast,slow]) { machine.cpu.eip=CODE;machine.cpu.ebx=DATA+0x1000; }
+  const before=state(fast.machine);
+  assert.deepEqual(runner.run(block,64),{instructions:0,cycles:0,reason:'fault-boundary'});
+  assert.deepEqual(state(fast.machine),before);
+  assert.throws(()=>fast.machine.step(),error=>error.vector===14);
+  assert.throws(()=>slow.machine.step(),error=>error.vector===14);
+  assert.equal(fast.machine.cpu.cr2,DATA+0x1000);
+  assert.deepEqual(state(fast.machine),state(slow.machine));
+});
+
+test('byte TEST refuses unsupported forms and revokes stale code, mapping and device windows',async()=>{
+  const fast=await fixture(true);
+  const runner=await createI80386NativeByteRunner(fast.machine,fast.bridge);
+  for(const bytes of [[0xf6,0xc0,0x80],[0xf6,0x0b,0x80],[0x66,0xf6,3,0x80],[0x67,0xf6,3,0x80]]) {
+    bytes.forEach((byte,i)=>fast.machine._write386(CODE_PHYS+i,byte));
+    assert.equal(runner.decode(1),null);
+  }
+  [0xf6,3,0x80].forEach((byte,i)=>fast.machine._write386(CODE_PHYS+i,byte));
+  fast.machine.cpu.ebx=DATA+24;
+  const block=runner.decode(1),before=state(fast.machine);
+  fast.machine._nmiPending=true;
+  assert.deepEqual(runner.run(block,64),{instructions:0,cycles:0,reason:'fallback'});
+  fast.machine._nmiPending=false;
+  fast.machine._write386(CODE_PHYS+2,0x40);
+  assert.equal(isI80386NativeByteBlockValid(block),false);
+  assert.deepEqual(runner.run(block,64),{instructions:0,cycles:0,reason:'fallback'});
+  assert.deepEqual(state(fast.machine),before);
+  const next=runner.decode(1);
+  fast.machine._page[DATA_PHYS>>>12]=3; // MMIO/overlap pages retain ordinary bus reads.
+  assert.equal(isI80386NativeByteBlockValid(next),false);
+  assert.equal(runner.decode(1),null);
+  fast.machine._page[DATA_PHYS>>>12]=1;
+  fast.put32(0x4000+0x130*4,0);
+  assert.equal(isI80386NativeByteBlockValid(next),false);
+  assert.equal(runner.decode(1),null);
+});
+
+test('byte TEST on MMIO retains its actual bus read and flags',async()=>{
+  const fast=await fixture(true),slow=await fixture(false),reads=new Map();
+  for(const {machine} of [fast,slow]) {
+    [0xf6,3,0x80].forEach((byte,i)=>machine._write386(CODE_PHYS+i,byte));
+    machine.cpu.ebx=DATA+24;
+    const seen=[];reads.set(machine,seen);
+    machine._mmio.push({start:DATA_PHYS+24,end:DATA_PHYS+24,stride:1,regs:1,
+      chip:{read(register){seen.push(register);return 0x80;}}});
+    machine._buildPageTable();
+  }
+  const runner=await createI80386NativeByteRunner(fast.machine,fast.bridge);
+  assert.equal(runner.decode(8),null);
+  assert.deepEqual(reads.get(fast.machine),[]);
+  const dispatcher=await createI80386NativeDispatcher(fast.machine);
+  assert.equal(dispatcher.run(64),1);slow.machine.step();
+  assert.equal(reads.get(fast.machine).length,1);
+  assert.equal(reads.get(fast.machine)[0],0);
+  assert.deepEqual(reads.get(fast.machine),reads.get(slow.machine));
+  assert.deepEqual(state(fast.machine),state(slow.machine));
+  assert.equal(dispatcher.stats.instructions,0);
+});
+
+test('byte TEST crossing its code page falls back to the original immediate-fetch fault',async()=>{
+  const fast=await fixture(true),slow=await fixture(false);
+  for(const {machine} of [fast,slow]) {
+    [0xf6,3,0x80].forEach((byte,i)=>machine._write386(CODE_PHYS+0xffe+i,byte));
+    machine.cpu.eip=CODE+0xffe;machine.cpu.ebx=DATA+24;machine.cpu.deliverFaults=false;
+  }
+  const runner=await createI80386NativeByteRunner(fast.machine,fast.bridge);
+  assert.equal(runner.decode(8),null);
+  const dispatcher=await createI80386NativeDispatcher(fast.machine);
+  assert.throws(()=>dispatcher.run(64),error=>error.vector===14);
+  assert.throws(()=>slow.machine.step(),error=>error.vector===14);
+  assert.equal(fast.machine.cpu.cr2,CODE+0x1000);
+  assert.deepEqual(fast.machine.cpu._snapshotInstruction(),slow.machine.cpu._snapshotInstruction());
+  assert.deepEqual(state(fast.machine),state(slow.machine));
+});
+
+test('byte TEST preserves supervisor-page and execute-only data-segment refusals',async()=>{
+  for(const privilege of [true,false]) {
+    const fast=await fixture(true),slow=await fixture(false);
+    for(const {machine,put32} of [fast,slow]) {
+      [0xf6,3,0x80].forEach((byte,i)=>machine._write386(CODE_PHYS+i,byte));
+      machine.cpu.ebx=DATA+24;machine.cpu.deliverFaults=false;
+      if(privilege) {
+        put32(0x4000+0x130*4,DATA_PHYS|3);
+        machine.cpu._translate(DATA+24);machine.cpu._translate(CODE);
+        machine.cpu.cs=3;
+      } else {
+        machine.cpu.segmentCaches[3]={...machine.cpu.segmentCaches[3],code:true,readable:false};
+      }
+    }
+    const runner=await createI80386NativeByteRunner(fast.machine,fast.bridge);
+    assert.equal(runner.decode(8),null);
+    const dispatcher=await createI80386NativeDispatcher(fast.machine);
+    const check=error=>privilege ? error.vector===14 && error.errorCode===5 : error.vector===13;
+    assert.throws(()=>dispatcher.run(64),check);
+    assert.throws(()=>slow.machine.step(),check);
+    assert.deepEqual(fast.machine.cpu._snapshotInstruction(),slow.machine.cpu._snapshotInstruction());
+    assert.deepEqual(state(fast.machine),state(slow.machine));
   }
 });
 

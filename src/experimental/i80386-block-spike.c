@@ -9,7 +9,7 @@ enum { OP_NOP=0, OP_MOV=1, OP_CMP=2, OP_TEST=3,
        OP_ADD_IMM=12, OP_OR_IMM=13, OP_AND_IMM=14,
        OP_SHL_IMM=15, OP_SHR_IMM=16, OP_REP_STOSD=17,
        OP_TEST_AL_IMM8=18, OP_OR_WINDOW=19, OP_REP_MOVSD=20,
-       OP_REP_STOSB=21,
+       OP_REP_STOSB=21, OP_TEST_WINDOW_IMM8=22,
        OP_UNSUPPORTED=254, OP_FAULT_BOUNDARY=255 };
 enum { EXIT_DONE=0, EXIT_EVENT=1, EXIT_UNSUPPORTED=2, EXIT_FAULT_BOUNDARY=3 };
 enum { CF=1, PF=4, AF=16, ZF=64, SF=128, OF=2048 };
@@ -27,7 +27,7 @@ static State state;
 static Instruction program[64];
 static uint32_t ram_ptr, ram_capacity;
 
-uint32_t block_spike_version(void) { return 12; }
+uint32_t block_spike_version(void) { return 13; }
 uint32_t block_spike_state_ptr(void) { return (uint32_t)(uintptr_t)&state; }
 uint32_t block_spike_program_ptr(void) { return (uint32_t)(uintptr_t)program; }
 uint32_t block_spike_capacity(void) { return 64; }
@@ -197,6 +197,24 @@ uint32_t block_spike_run(uint32_t start, uint32_t end, uint32_t event_budget) {
       if (!state.regs[1]) { state.eip += ins.length; pc++; }
       state.cycles++;
       completed++;
+      continue;
+    }
+    if (ins.op == OP_TEST_WINDOW_IMM8) {
+      if (ins.width != 8 || ins.dst != 0 || ins.src > 255u ||
+          ins.base > 8 || ins.index > 8 || ins.scale > 3 ||
+          ins.length < 3 || ins.length > 8 ||
+          ins.lo >= ins.hi || ins.hi > ram_capacity)
+        return (EXIT_UNSUPPORTED << 24) | completed;
+      const uint32_t base = ins.base < 8 ? state.regs[ins.base] : 0;
+      const uint32_t index = ins.index < 8 ? state.regs[ins.index] : 0;
+      const uint32_t address = base + (index << ins.scale) + ins.disp;
+      if (address < ins.lo || address >= ins.hi)
+        return (EXIT_FAULT_BOUNDARY << 24) | completed;
+      logic_flags(read_ram(address, 1) & ins.src, 8);
+      state.eip += ins.length;
+      state.cycles++;
+      completed++;
+      pc++;
       continue;
     }
     if (ins.op == OP_TEST_AL_IMM8) {

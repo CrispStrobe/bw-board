@@ -1,0 +1,53 @@
+{
+  "semanticEquality": true,
+  "children": 27,
+  "means": {
+    "ordinary": {
+      "wholeCpuSeconds": 4.68389742857143,
+      "wholeWallSeconds": 4.709840741607228,
+      "executionCpuSeconds": 4.288788571428571,
+      "executionWallSeconds": 4.369793244428571
+    },
+    "dispatch": {
+      "wholeCpuSeconds": 1.2825322857142845,
+      "wholeWallSeconds": 1.1631697273281003,
+      "executionCpuSeconds": 0.9150318571428572,
+      "executionWallSeconds": 0.8034977597142857
+    },
+    "candidate": {
+      "wholeCpuSeconds": 0.9008394285714271,
+      "wholeWallSeconds": 0.760232710512355,
+      "executionCpuSeconds": 0.5458081428571429,
+      "executionWallSeconds": 0.4010634944285714
+    }
+  },
+  "ratios": {
+    "wholeCpuSeconds": {
+      "dispatchOverOrdinary": 0.27381732953649496,
+      "candidateOverDispatch": 0.7023912291375339
+    },
+    "wholeWallSeconds": {
+      "dispatchOverOrdinary": 0.24696582987457236,
+      "candidateOverDispatch": 0.6535870841985151
+    },
+    "executionCpuSeconds": {
+      "dispatchOverOrdinary": 0.21335438711963953,
+      "candidateOverDispatch": 0.5964908637841336
+    },
+    "executionWallSeconds": {
+      "dispatchOverOrdinary": 0.1838754638423076,
+      "candidateOverDispatch": 0.4991469977105908
+    }
+  },
+  "favorablePairs": {
+    "wholeCpuSeconds": 7,
+    "wholeWallSeconds": 7,
+    "executionCpuSeconds": 7,
+    "executionWallSeconds": 7
+  },
+  "loadAfter": [
+    8.4833984375,
+    5.25537109375,
+    2.9501953125
+  ]
+}

@@ -1,0 +1,218 @@
+[
+  {
+    "index": 0,
+    "arm": "candidate",
+    "cpuSeconds": 13.946386,
+    "wallSeconds": 10.500528981000002
+  },
+  {
+    "index": 0,
+    "arm": "candidate-ordinary",
+    "cpuSeconds": 19.798871,
+    "wallSeconds": 16.948502233
+  },
+  {
+    "index": 0,
+    "arm": "dispatch",
+    "cpuSeconds": 14.919632,
+    "wallSeconds": 11.40349692899997
+  },
+  {
+    "index": 0,
+    "arm": "ordinary",
+    "cpuSeconds": 20.657163,
+    "wallSeconds": 17.663078663999954
+  },
+  {
+    "index": 1,
+    "arm": "candidate",
+    "cpuSeconds": 13.725815,
+    "wallSeconds": 10.346076327999981
+  },
+  {
+    "index": 1,
+    "arm": "candidate-ordinary",
+    "cpuSeconds": 19.799583,
+    "wallSeconds": 16.94914733899998
+  },
+  {
+    "index": 1,
+    "arm": "dispatch",
+    "cpuSeconds": 14.822994999999999,
+    "wallSeconds": 11.35055226899999
+  },
+  {
+    "index": 1,
+    "arm": "ordinary",
+    "cpuSeconds": 20.476656000000002,
+    "wallSeconds": 17.603756736000037
+  },
+  {
+    "index": 2,
+    "arm": "candidate",
+    "cpuSeconds": 13.879184,
+    "wallSeconds": 10.448195392999992
+  },
+  {
+    "index": 2,
+    "arm": "candidate-ordinary",
+    "cpuSeconds": 20.091566,
+    "wallSeconds": 17.203370070999995
+  },
+  {
+    "index": 2,
+    "arm": "dispatch",
+    "cpuSeconds": 14.926158,
+    "wallSeconds": 11.36339273200008
+  },
+  {
+    "index": 2,
+    "arm": "ordinary",
+    "cpuSeconds": 20.478041,
+    "wallSeconds": 17.59858189099998
+  },
+  {
+    "index": 3,
+    "arm": "candidate",
+    "cpuSeconds": 13.919103999999999,
+    "wallSeconds": 10.545143984999982
+  },
+  {
+    "index": 3,
+    "arm": "candidate-ordinary",
+    "cpuSeconds": 20.080908,
+    "wallSeconds": 17.192085059999954
+  },
+  {
+    "index": 3,
+    "arm": "dispatch",
+    "cpuSeconds": 15.100398,
+    "wallSeconds": 11.506764430999965
+  },
+  {
+    "index": 3,
+    "arm": "ordinary",
+    "cpuSeconds": 20.589074999999998,
+    "wallSeconds": 17.65570933799995
+  },
+  {
+    "index": 4,
+    "arm": "candidate",
+    "cpuSeconds": 14.179721,
+    "wallSeconds": 10.694263292999949
+  },
+  {
+    "index": 4,
+    "arm": "candidate-ordinary",
+    "cpuSeconds": 19.984301000000002,
+    "wallSeconds": 17.19752021399995
+  },
+  {
+    "index": 4,
+    "arm": "dispatch",
+    "cpuSeconds": 14.759955,
+    "wallSeconds": 11.308882834999963
+  },
+  {
+    "index": 4,
+    "arm": "ordinary",
+    "cpuSeconds": 20.481959,
+    "wallSeconds": 17.546398346000046
+  },
+  {
+    "index": 5,
+    "arm": "candidate",
+    "cpuSeconds": 13.947928999999998,
+    "wallSeconds": 10.498936651999998
+  },
+  {
+    "index": 5,
+    "arm": "candidate-ordinary",
+    "cpuSeconds": 20.052221000000003,
+    "wallSeconds": 17.206854238000005
+  },
+  {
+    "index": 5,
+    "arm": "dispatch",
+    "cpuSeconds": 14.954359,
+    "wallSeconds": 11.461883426999975
+  },
+  {
+    "index": 5,
+    "arm": "ordinary",
+    "cpuSeconds": 20.675117,
+    "wallSeconds": 17.757363608999867
+  },
+  {
+    "index": 6,
+    "arm": "candidate",
+    "cpuSeconds": 13.821029,
+    "wallSeconds": 10.345848509000007
+  },
+  {
+    "index": 6,
+    "arm": "candidate-ordinary",
+    "cpuSeconds": 20.504617,
+    "wallSeconds": 17.651268587999994
+  },
+  {
+    "index": 6,
+    "arm": "dispatch",
+    "cpuSeconds": 14.996216,
+    "wallSeconds": 11.40438736100009
+  },
+  {
+    "index": 6,
+    "arm": "ordinary",
+    "cpuSeconds": 19.820538,
+    "wallSeconds": 16.94770203400003
+  },
+  {
+    "index": 7,
+    "arm": "candidate",
+    "cpuSeconds": 13.888451,
+    "wallSeconds": 10.449386701999856
+  },
+  {
+    "index": 7,
+    "arm": "candidate-ordinary",
+    "cpuSeconds": 19.95917,
+    "wallSeconds": 17.05009106899979
+  },
+  {
+    "index": 7,
+    "arm": "dispatch",
+    "cpuSeconds": 14.921508,
+    "wallSeconds": 11.40626556799998
+  },
+  {
+    "index": 7,
+    "arm": "ordinary",
+    "cpuSeconds": 20.423343000000003,
+    "wallSeconds": 17.452436470000066
+  },
+  {
+    "index": 8,
+    "arm": "candidate",
+    "cpuSeconds": 14.103133,
+    "wallSeconds": 10.605173629000092
+  },
+  {
+    "index": 8,
+    "arm": "candidate-ordinary",
+    "cpuSeconds": 20.146503,
+    "wallSeconds": 17.19881479600008
+  },
+  {
+    "index": 8,
+    "arm": "dispatch",
+    "cpuSeconds": 14.816326,
+    "wallSeconds": 11.257520457000055
+  },
+  {
+    "index": 8,
+    "arm": "ordinary",
+    "cpuSeconds": 20.410591,
+    "wallSeconds": 17.499763249999887
+  }
+]

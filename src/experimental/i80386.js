@@ -4562,6 +4562,23 @@ export class ExperimentalI80386 {
   }
 
   step() {
+    // Keep ordinary execution in a small transaction when no diagnostic can
+    // observe this step. Admission still sees executionDepth throughout bus
+    // callbacks, snapshots, fault delivery and cleanup.
+    if (!this.#owned0501ExecutionDepth &&
+        !this.#owned0501JournalActive && !this.#owned0501ExcursionActive &&
+        !this.#owned0501FaultOutcomeActive && !this.#owned0501PostPfActive &&
+        !this.#owned0501AdmissionBusy && !this.#owned0501ExcursionAdmissionBusy &&
+        !this.#owned0501FaultOutcomeAdmissionBusy &&
+        !this.#owned0501PostPfAdmissionBusy && !this.#owned0501PostPfAnchorBusy &&
+        !this.#owned0501PostPfAnchorPending) {
+      this.#owned0501ExecutionDepth++;
+      try {
+        return this.#stepUnobserved();
+      } finally {
+        this.#owned0501ExecutionDepth--;
+      }
+    }
     if (this.#owned0501PostPfAdmissionBusy || this.#owned0501PostPfAnchorBusy)
       this.#owned0501PostPfAdmissionReentered = true;
     if (this.#owned0501PostPfAnchorPending) this.#owned0501PostPfGeneration++;
@@ -4916,6 +4933,47 @@ export class ExperimentalI80386 {
           }
         }
       }
+    }
+  }
+
+  #stepUnobserved() {
+    if (this.halted || this.shutdown) return 0;
+    const state = this._snapshotInstruction(), restartEip = this.eip >>> 0;
+    const trace = !!(this.eflags & TF), debugInhibited = this._debugShadow > 0;
+    this._suppressTrace = false;
+    this._preserveRf = false;
+    try {
+      const result = this._stepInstruction();
+      this.eip >>>= 0;
+      const suppressDebug = debugInhibited || this._debugShadow > 0;
+      if (this._interruptShadow) this._interruptShadow--;
+      if (this._nmiShadow) this._nmiShadow--;
+      if (this._debugShadow) this._debugShadow--;
+      if (!this._preserveRf) this.eflags &= ~RF;
+      const traced = trace && !suppressDebug && !this._suppressTrace;
+      if (traced) this._repeatContext = null;
+      if (traced)
+        this._deliverFault(new I80386Fault(1, null, "single-step"), this.eip, {
+          trap: true,
+        });
+      return result;
+    } catch (error) {
+      if (error instanceof UnsupportedI80386) {
+        if (!error.taskCommitted) this._restoreInstruction(state);
+        throw error;
+      }
+      if (!(error instanceof I80386Fault)) throw error;
+      const repeatFlags = error.repeatFlags ??
+        (state.repeatContext?.cs === state.cs &&
+         state.repeatContext?.eip === restartEip ? state.repeatContext.flags : null);
+      if (!error.taskCommitted) this._restoreInstruction(state);
+      if (repeatFlags !== null) {
+        this.eflags = repeatFlags >>> 0;
+        this._repeatContext = null;
+      }
+      if (!this.deliverFaults) throw error;
+      this._deliverFault(error, error.taskCommitted ? this.eip : restartEip);
+      return 0;
     }
   }
 

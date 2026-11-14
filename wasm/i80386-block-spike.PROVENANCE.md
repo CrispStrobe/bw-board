@@ -22,9 +22,13 @@ clang --target=wasm32 -O3 -nostdlib -fno-builtin -Werror -Wall -Wextra \
   -o wasm/i80386-block-spike.wasm
 ```
 
-Source SHA-256: `df3ac2d9bb402f3705ea7ccd76c12b4723c877e95bca1f88164f06d12aecb0cb`
+Source SHA-256: `0518ba954f4c89a72d1e6fed4ca5f987779da9bf0b3050511e071ca622cb1b40`
 
-WASM SHA-256: `0e6cb0789a33500b512ec1ec5fc778b78a0459aebd2b3a0f89a786411f87a9c7`
+WASM SHA-256: `6ae9443649bdbac613d78101c63dbdcb548ce625f4bfcbac51a524fc8f19e3b3`
+
+ABI version 13 adds read-only byte-window TEST with an immediate mask.
+It uses the existing RAM-window, flag and instruction/event contracts; this
+source change alone establishes no guest throughput improvement.
 
 The module is used by the opt-in 386 CLI, GUI target, and stock-xv6 native-byte probe. Its
 [REP STOSD receipt](../docs/receipts/2026-09-27-i80386-native-rep-stosd.json)

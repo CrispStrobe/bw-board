@@ -1,0 +1,11 @@
+{
+  "baselineCommit": "d19b5e4d2b8aa0f025fd7a3512db3252e470433d",
+  "measuredProductCommit": "0a5c49e34ecf7654e1974c0433249cda1a491f32",
+  "productPath": "src/experimental/i80386-native-dispatch.js",
+  "candidateProductSha256": "40bd9da01f46f7e0dd2c8b7d423d319e6ff52622d57e09a278e188111e36c649",
+  "onlyRuntimeDifferenceFromBaseline": "src/experimental/i80386-native-dispatch.js",
+  "historicalXv6Remeasured": false,
+  "cpuIsolation": false,
+  "registerTimedSnapshot": "selected fields; full instruction snapshot in separate control",
+  "indexedMemoryTimedSnapshot": "full instruction snapshot in each child"
+}

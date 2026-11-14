@@ -1,0 +1,123 @@
+{
+  "pass": true,
+  "children": 36,
+  "stepsEach": 24338279,
+  "sourceHashesEach": 79,
+  "semanticEquality": true,
+  "originalCommits": {
+    "base": "d19b5e4d2b8aa0f025fd7a3512db3252e470433d",
+    "candidate": "1cf0952ab61799e490d5f3f39236fde8548c45d1"
+  },
+  "means": {
+    "candidate": {
+      "cpuSeconds": 13.962650142857143,
+      "wallSeconds": 10.51242116614284
+    },
+    "candidate-ordinary": {
+      "cpuSeconds": 20.117040857142857,
+      "wallSeconds": 17.24285771942854
+    },
+    "dispatch": {
+      "cpuSeconds": 14.924988571428571,
+      "wallSeconds": 11.387013830142873
+    },
+    "ordinary": {
+      "cpuSeconds": 20.411237714285715,
+      "wallSeconds": 17.493993562571404
+    }
+  },
+  "ratios": {
+    "cpuSeconds": {
+      "candidateOverDispatch": 0.9355216639553302,
+      "dispatchOverOrdinary": 0.7312142840305393
+    },
+    "wallSeconds": {
+      "candidateOverDispatch": 0.9231938524844086,
+      "dispatchOverOrdinary": 0.6509099131318715
+    }
+  },
+  "favorablePairs": {
+    "cpuSeconds": 7,
+    "wallSeconds": 7
+  },
+  "candidateOrdinaryRatios": {
+    "cpuSeconds": 0.9855865253611273,
+    "wallSeconds": 0.9856444532093476
+  },
+  "favorableCandidateOrdinaryPairs": {
+    "cpuSeconds": 6,
+    "wallSeconds": 6
+  },
+  "warmupRounds": 2,
+  "measuredRounds": 7,
+  "wholeChildTiming": true,
+  "nativeStats": {
+    "candidate": {
+      "attempts": 9787457,
+      "decoded": 24874,
+      "blockCalls": 4383287,
+      "instructions": 17403877,
+      "ineligibleModeSteps": 1530232,
+      "repStosDecoded": 2154,
+      "repStosBlockCalls": 35750,
+      "repStosIterations": 2145309,
+      "repMovDecoded": 48,
+      "repMovBlockCalls": 48,
+      "repMovIterations": 864,
+      "repStosbDecoded": 2,
+      "repStosbBlockCalls": 4,
+      "repStosbIterations": 182
+    },
+    "dispatch": {
+      "attempts": 10381684,
+      "decoded": 23414,
+      "blockCalls": 4001848,
+      "instructions": 16428211,
+      "ineligibleModeSteps": 1530232,
+      "repStosDecoded": 2154,
+      "repStosBlockCalls": 136188,
+      "repStosIterations": 2145309,
+      "repMovDecoded": 48,
+      "repMovBlockCalls": 96,
+      "repMovIterations": 864,
+      "repStosbDecoded": 2,
+      "repStosbBlockCalls": 13,
+      "repStosbIterations": 182
+    }
+  },
+  "hostBefore": {
+    "architecture": "x86_64",
+    "cpuModel": "Intel(R) Xeon(R) CPU @ 2.20GHz",
+    "gcc": "gcc (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0",
+    "loadAverage": [
+      0.41455078125,
+      0.15771484375,
+      0.10205078125
+    ],
+    "logicalCpus": 4,
+    "node": "v22.23.4",
+    "platform": "Linux",
+    "python": "3.13.18"
+  },
+  "hostAfter": {
+    "architecture": "x86_64",
+    "cpuModel": "Intel(R) Xeon(R) CPU @ 2.20GHz",
+    "gcc": "gcc (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0",
+    "loadAverage": [
+      1.22119140625,
+      1.03125,
+      0.58984375
+    ],
+    "logicalCpus": 4,
+    "node": "v22.23.4",
+    "platform": "Linux",
+    "python": "3.13.18"
+  },
+  "archiveSha256": "c98e501c68fb9a8fd9302839d4eabe792bcaceadb157ce92efde42110af2fe0a",
+  "archiveBytes": 263923,
+  "guestSemanticSha256": "f239d5dd1236ee717d0afe16edaf64fc92e97611ca114e3c76bfe66de55bde82",
+  "physicalTimingCalibrated": false,
+  "defaultAdoption": false,
+  "targetReductionPercent": 5,
+  "targetMet": true
+}

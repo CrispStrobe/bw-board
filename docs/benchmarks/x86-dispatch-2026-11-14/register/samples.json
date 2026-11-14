@@ -1,0 +1,1703 @@
+[
+  {
+    "round": 0,
+    "measured": false,
+    "arm": "ordinary",
+    "wholeCpuSeconds": 4.189671000000001,
+    "wholeWallSeconds": 4.307507948949933,
+    "steps": 9999999,
+    "warmupSteps": 25000,
+    "executionCpuSeconds": 3.838028,
+    "executionWallSeconds": 3.92028279,
+    "semantic": {
+      "retired": 9999999,
+      "eax": 1,
+      "eip": 2148663296,
+      "eflags": 151,
+      "cpuCycles": 9999999,
+      "machineCycles": 59999994,
+      "chipDebt": 5658,
+      "chipDeadline": 5664,
+      "ramSha256": "8cdfb3735ecc8417ae2159217c73ebd8302aa070365464bbd7caae09b76231f7",
+      "pit": [
+        {
+          "ce": 0,
+          "out": 0
+        },
+        {
+          "ce": 0,
+          "out": 0
+        },
+        {
+          "ce": 0,
+          "out": 0
+        }
+      ],
+      "rtc": {
+        "phase": 5994336,
+        "periodic": 200064
+      },
+      "pics": [
+        {
+          "irr": 0,
+          "isr": 0,
+          "imr": 0
+        },
+        {
+          "irr": 0,
+          "isr": 0,
+          "imr": 0
+        }
+      ]
+    },
+    "stats": null
+  },
+  {
+    "round": 0,
+    "measured": false,
+    "arm": "dispatch",
+    "wholeCpuSeconds": 1.1928970000000005,
+    "wholeWallSeconds": 2.3456968090031296,
+    "steps": 9999999,
+    "warmupSteps": 25000,
+    "executionCpuSeconds": 0.849419,
+    "executionWallSeconds": 1.52977757,
+    "semantic": {
+      "retired": 9999999,
+      "eax": 1,
+      "eip": 2148663296,
+      "eflags": 151,
+      "cpuCycles": 9999999,
+      "machineCycles": 59999994,
+      "chipDebt": 5658,
+      "chipDeadline": 5664,
+      "ramSha256": "8cdfb3735ecc8417ae2159217c73ebd8302aa070365464bbd7caae09b76231f7",
+      "pit": [
+        {
+          "ce": 0,
+          "out": 0
+        },
+        {
+          "ce": 0,
+          "out": 0
+        },
+        {
+          "ce": 0,
+          "out": 0
+        }
+      ],
+      "rtc": {
+        "phase": 5994336,
+        "periodic": 200064
+      },
+      "pics": [
+        {
+          "irr": 0,
+          "isr": 0,
+          "imr": 0
+        },
+        {
+          "irr": 0,
+          "isr": 0,
+          "imr": 0
+        }
+      ]
+    },
+    "stats": {
+      "attempts": 1127331,
+      "decoded": 2,
+      "blockCalls": 1113732,
+      "instructions": 9986400,
+      "ineligibleModeSteps": 0,
+      "repStosDecoded": 0,
+      "repStosBlockCalls": 0,
+      "repStosIterations": 0,
+      "repMovDecoded": 0,
+      "repMovBlockCalls": 0,
+      "repMovIterations": 0,
+      "repStosbDecoded": 0,
+      "repStosbBlockCalls": 0,
+      "repStosbIterations": 0
+    }
+  },
+  {
+    "round": 0,
+    "measured": false,
+    "arm": "candidate",
+    "wholeCpuSeconds": 0.9637669999999992,
+    "wholeWallSeconds": 1.3741460968740284,
+    "steps": 9999999,
+    "warmupSteps": 25000,
+    "executionCpuSeconds": 0.588558,
+    "executionWallSeconds": 0.842350902,
+    "semantic": {
+      "retired": 9999999,
+      "eax": 1,
+      "eip": 2148663296,
+      "eflags": 151,
+      "cpuCycles": 9999999,
+      "machineCycles": 59999994,
+      "chipDebt": 5658,
+      "chipDeadline": 5664,
+      "ramSha256": "8cdfb3735ecc8417ae2159217c73ebd8302aa070365464bbd7caae09b76231f7",
+      "pit": [
+        {
+          "ce": 0,
+          "out": 0
+        },
+        {
+          "ce": 0,
+          "out": 0
+        },
+        {
+          "ce": 0,
+          "out": 0
+        }
+      ],
+      "rtc": {
+        "phase": 5994336,
+        "periodic": 200064
+      },
+      "pics": [
+        {
+          "irr": 0,
+          "isr": 0,
+          "imr": 0
+        },
+        {
+          "irr": 0,
+          "isr": 0,
+          "imr": 0
+        }
+      ]
+    },
+    "stats": {
+      "attempts": 325999,
+      "decoded": 2,
+      "blockCalls": 312400,
+      "instructions": 9986400,
+      "ineligibleModeSteps": 0,
+      "repStosDecoded": 0,
+      "repStosBlockCalls": 0,
+      "repStosIterations": 0,
+      "repMovDecoded": 0,
+      "repMovBlockCalls": 0,
+      "repMovIterations": 0,
+      "repStosbDecoded": 0,
+      "repStosbBlockCalls": 0,
+      "repStosbIterations": 0
+    }
+  },
+  {
+    "round": 1,
+    "measured": false,
+    "arm": "candidate",
+    "wholeCpuSeconds": 0.8498399999999999,
+    "wholeWallSeconds": 1.0293709558900446,
+    "steps": 9999999,
+    "warmupSteps": 25000,
+    "executionCpuSeconds": 0.532661,
+    "executionWallSeconds": 0.588456454,
+    "semantic": {
+      "retired": 9999999,
+      "eax": 1,
+      "eip": 2148663296,
+      "eflags": 151,
+      "cpuCycles": 9999999,
+      "machineCycles": 59999994,
+      "chipDebt": 5658,
+      "chipDeadline": 5664,
+      "ramSha256": "8cdfb3735ecc8417ae2159217c73ebd8302aa070365464bbd7caae09b76231f7",
+      "pit": [
+        {
+          "ce": 0,
+          "out": 0
+        },
+        {
+          "ce": 0,
+          "out": 0
+        },
+        {
+          "ce": 0,
+          "out": 0
+        }
+      ],
+      "rtc": {
+        "phase": 5994336,
+        "periodic": 200064
+      },
+      "pics": [
+        {
+          "irr": 0,
+          "isr": 0,
+          "imr": 0
+        },
+        {
+          "irr": 0,
+          "isr": 0,
+          "imr": 0
+        }
+      ]
+    },
+    "stats": {
+      "attempts": 325999,
+      "decoded": 2,
+      "blockCalls": 312400,
+      "instructions": 9986400,
+      "ineligibleModeSteps": 0,
+      "repStosDecoded": 0,
+      "repStosBlockCalls": 0,
+      "repStosIterations": 0,
+      "repMovDecoded": 0,
+      "repMovBlockCalls": 0,
+      "repMovIterations": 0,
+      "repStosbDecoded": 0,
+      "repStosbBlockCalls": 0,
+      "repStosbIterations": 0
+    }
+  },
+  {
+    "round": 1,
+    "measured": false,
+    "arm": "dispatch",
+    "wholeCpuSeconds": 1.283455,
+    "wholeWallSeconds": 1.3790108209941536,
+    "steps": 9999999,
+    "warmupSteps": 25000,
+    "executionCpuSeconds": 0.952252,
+    "executionWallSeconds": 0.972507783,
+    "semantic": {
+      "retired": 9999999,
+      "eax": 1,
+      "eip": 2148663296,
+      "eflags": 151,
+      "cpuCycles": 9999999,
+      "machineCycles": 59999994,
+      "chipDebt": 5658,
+      "chipDeadline": 5664,
+      "ramSha256": "8cdfb3735ecc8417ae2159217c73ebd8302aa070365464bbd7caae09b76231f7",
+      "pit": [
+        {
+          "ce": 0,
+          "out": 0
+        },
+        {
+          "ce": 0,
+          "out": 0
+        },
+        {
+          "ce": 0,
+          "out": 0
+        }
+      ],
+      "rtc": {
+        "phase": 5994336,
+        "periodic": 200064
+      },
+      "pics": [
+        {
+          "irr": 0,
+          "isr": 0,
+          "imr": 0
+        },
+        {
+          "irr": 0,
+          "isr": 0,
+          "imr": 0
+        }
+      ]
+    },
+    "stats": {
+      "attempts": 1127331,
+      "decoded": 2,
+      "blockCalls": 1113732,
+      "instructions": 9986400,
+      "ineligibleModeSteps": 0,
+      "repStosDecoded": 0,
+      "repStosBlockCalls": 0,
+      "repStosIterations": 0,
+      "repMovDecoded": 0,
+      "repMovBlockCalls": 0,
+      "repMovIterations": 0,
+      "repStosbDecoded": 0,
+      "repStosbBlockCalls": 0,
+      "repStosbIterations": 0
+    }
+  },
+  {
+    "round": 1,
+    "measured": false,
+    "arm": "ordinary",
+    "wholeCpuSeconds": 4.474830000000001,
+    "wholeWallSeconds": 5.11074588005431,
+    "steps": 9999999,
+    "warmupSteps": 25000,
+    "executionCpuSeconds": 4.124014,
+    "executionWallSeconds": 4.676311208,
+    "semantic": {
+      "retired": 9999999,
+      "eax": 1,
+      "eip": 2148663296,
+      "eflags": 151,
+      "cpuCycles": 9999999,
+      "machineCycles": 59999994,
+      "chipDebt": 5658,
+      "chipDeadline": 5664,
+      "ramSha256": "8cdfb3735ecc8417ae2159217c73ebd8302aa070365464bbd7caae09b76231f7",
+      "pit": [
+        {
+          "ce": 0,
+          "out": 0
+        },
+        {
+          "ce": 0,
+          "out": 0
+        },
+        {
+          "ce": 0,
+          "out": 0
+        }
+      ],
+      "rtc": {
+        "phase": 5994336,
+        "periodic": 200064
+      },
+      "pics": [
+        {
+          "irr": 0,
+          "isr": 0,
+          "imr": 0
+        },
+        {
+          "irr": 0,
+          "isr": 0,
+          "imr": 0
+        }
+      ]
+    },
+    "stats": null
+  },
+  {
+    "round": 2,
+    "measured": true,
+    "arm": "ordinary",
+    "wholeCpuSeconds": 4.800053999999999,
+    "wholeWallSeconds": 5.913203642936423,
+    "steps": 9999999,
+    "warmupSteps": 25000,
+    "executionCpuSeconds": 4.429053,
+    "executionWallSeconds": 5.466948416,
+    "semantic": {
+      "retired": 9999999,
+      "eax": 1,
+      "eip": 2148663296,
+      "eflags": 151,
+      "cpuCycles": 9999999,
+      "machineCycles": 59999994,
+      "chipDebt": 5658,
+      "chipDeadline": 5664,
+      "ramSha256": "8cdfb3735ecc8417ae2159217c73ebd8302aa070365464bbd7caae09b76231f7",
+      "pit": [
+        {
+          "ce": 0,
+          "out": 0
+        },
+        {
+          "ce": 0,
+          "out": 0
+        },
+        {
+          "ce": 0,
+          "out": 0
+        }
+      ],
+      "rtc": {
+        "phase": 5994336,
+        "periodic": 200064
+      },
+      "pics": [
+        {
+          "irr": 0,
+          "isr": 0,
+          "imr": 0
+        },
+        {
+          "irr": 0,
+          "isr": 0,
+          "imr": 0
+        }
+      ]
+    },
+    "stats": null
+  },
+  {
+    "round": 2,
+    "measured": true,
+    "arm": "dispatch",
+    "wholeCpuSeconds": 1.2710490000000032,
+    "wholeWallSeconds": 1.228988426970318,
+    "steps": 9999999,
+    "warmupSteps": 25000,
+    "executionCpuSeconds": 0.910873,
+    "executionWallSeconds": 0.88822318,
+    "semantic": {
+      "retired": 9999999,
+      "eax": 1,
+      "eip": 2148663296,
+      "eflags": 151,
+      "cpuCycles": 9999999,
+      "machineCycles": 59999994,
+      "chipDebt": 5658,
+      "chipDeadline": 5664,
+      "ramSha256": "8cdfb3735ecc8417ae2159217c73ebd8302aa070365464bbd7caae09b76231f7",
+      "pit": [
+        {
+          "ce": 0,
+          "out": 0
+        },
+        {
+          "ce": 0,
+          "out": 0
+        },
+        {
+          "ce": 0,
+          "out": 0
+        }
+      ],
+      "rtc": {
+        "phase": 5994336,
+        "periodic": 200064
+      },
+      "pics": [
+        {
+          "irr": 0,
+          "isr": 0,
+          "imr": 0
+        },
+        {
+          "irr": 0,
+          "isr": 0,
+          "imr": 0
+        }
+      ]
+    },
+    "stats": {
+      "attempts": 1127331,
+      "decoded": 2,
+      "blockCalls": 1113732,
+      "instructions": 9986400,
+      "ineligibleModeSteps": 0,
+      "repStosDecoded": 0,
+      "repStosBlockCalls": 0,
+      "repStosIterations": 0,
+      "repMovDecoded": 0,
+      "repMovBlockCalls": 0,
+      "repMovIterations": 0,
+      "repStosbDecoded": 0,
+      "repStosbBlockCalls": 0,
+      "repStosbIterations": 0
+    }
+  },
+  {
+    "round": 2,
+    "measured": true,
+    "arm": "candidate",
+    "wholeCpuSeconds": 0.8077759999999977,
+    "wholeWallSeconds": 0.825624150922522,
+    "steps": 9999999,
+    "warmupSteps": 25000,
+    "executionCpuSeconds": 0.47799,
+    "executionWallSeconds": 0.432899298,
+    "semantic": {
+      "retired": 9999999,
+      "eax": 1,
+      "eip": 2148663296,
+      "eflags": 151,
+      "cpuCycles": 9999999,
+      "machineCycles": 59999994,
+      "chipDebt": 5658,
+      "chipDeadline": 5664,
+      "ramSha256": "8cdfb3735ecc8417ae2159217c73ebd8302aa070365464bbd7caae09b76231f7",
+      "pit": [
+        {
+          "ce": 0,
+          "out": 0
+        },
+        {
+          "ce": 0,
+          "out": 0
+        },
+        {
+          "ce": 0,
+          "out": 0
+        }
+      ],
+      "rtc": {
+        "phase": 5994336,
+        "periodic": 200064
+      },
+      "pics": [
+        {
+          "irr": 0,
+          "isr": 0,
+          "imr": 0
+        },
+        {
+          "irr": 0,
+          "isr": 0,
+          "imr": 0
+        }
+      ]
+    },
+    "stats": {
+      "attempts": 325999,
+      "decoded": 2,
+      "blockCalls": 312400,
+      "instructions": 9986400,
+      "ineligibleModeSteps": 0,
+      "repStosDecoded": 0,
+      "repStosBlockCalls": 0,
+      "repStosIterations": 0,
+      "repMovDecoded": 0,
+      "repMovBlockCalls": 0,
+      "repMovIterations": 0,
+      "repStosbDecoded": 0,
+      "repStosbBlockCalls": 0,
+      "repStosbIterations": 0
+    }
+  },
+  {
+    "round": 3,
+    "measured": true,
+    "arm": "candidate",
+    "wholeCpuSeconds": 0.9185699999999976,
+    "wholeWallSeconds": 0.934290342964232,
+    "steps": 9999999,
+    "warmupSteps": 25000,
+    "executionCpuSeconds": 0.53637,
+    "executionWallSeconds": 0.52360117,
+    "semantic": {
+      "retired": 9999999,
+      "eax": 1,
+      "eip": 2148663296,
+      "eflags": 151,
+      "cpuCycles": 9999999,
+      "machineCycles": 59999994,
+      "chipDebt": 5658,
+      "chipDeadline": 5664,
+      "ramSha256": "8cdfb3735ecc8417ae2159217c73ebd8302aa070365464bbd7caae09b76231f7",
+      "pit": [
+        {
+          "ce": 0,
+          "out": 0
+        },
+        {
+          "ce": 0,
+          "out": 0
+        },
+        {
+          "ce": 0,
+          "out": 0
+        }
+      ],
+      "rtc": {
+        "phase": 5994336,
+        "periodic": 200064
+      },
+      "pics": [
+        {
+          "irr": 0,
+          "isr": 0,
+          "imr": 0
+        },
+        {
+          "irr": 0,
+          "isr": 0,
+          "imr": 0
+        }
+      ]
+    },
+    "stats": {
+      "attempts": 325999,
+      "decoded": 2,
+      "blockCalls": 312400,
+      "instructions": 9986400,
+      "ineligibleModeSteps": 0,
+      "repStosDecoded": 0,
+      "repStosBlockCalls": 0,
+      "repStosIterations": 0,
+      "repMovDecoded": 0,
+      "repMovBlockCalls": 0,
+      "repMovIterations": 0,
+      "repStosbDecoded": 0,
+      "repStosbBlockCalls": 0,
+      "repStosbIterations": 0
+    }
+  },
+  {
+    "round": 3,
+    "measured": true,
+    "arm": "dispatch",
+    "wholeCpuSeconds": 1.2701949999999997,
+    "wholeWallSeconds": 1.233478883979842,
+    "steps": 9999999,
+    "warmupSteps": 25000,
+    "executionCpuSeconds": 0.886036,
+    "executionWallSeconds": 0.828933446,
+    "semantic": {
+      "retired": 9999999,
+      "eax": 1,
+      "eip": 2148663296,
+      "eflags": 151,
+      "cpuCycles": 9999999,
+      "machineCycles": 59999994,
+      "chipDebt": 5658,
+      "chipDeadline": 5664,
+      "ramSha256": "8cdfb3735ecc8417ae2159217c73ebd8302aa070365464bbd7caae09b76231f7",
+      "pit": [
+        {
+          "ce": 0,
+          "out": 0
+        },
+        {
+          "ce": 0,
+          "out": 0
+        },
+        {
+          "ce": 0,
+          "out": 0
+        }
+      ],
+      "rtc": {
+        "phase": 5994336,
+        "periodic": 200064
+      },
+      "pics": [
+        {
+          "irr": 0,
+          "isr": 0,
+          "imr": 0
+        },
+        {
+          "irr": 0,
+          "isr": 0,
+          "imr": 0
+        }
+      ]
+    },
+    "stats": {
+      "attempts": 1127331,
+      "decoded": 2,
+      "blockCalls": 1113732,
+      "instructions": 9986400,
+      "ineligibleModeSteps": 0,
+      "repStosDecoded": 0,
+      "repStosBlockCalls": 0,
+      "repStosIterations": 0,
+      "repMovDecoded": 0,
+      "repMovBlockCalls": 0,
+      "repMovIterations": 0,
+      "repStosbDecoded": 0,
+      "repStosbBlockCalls": 0,
+      "repStosbIterations": 0
+    }
+  },
+  {
+    "round": 3,
+    "measured": true,
+    "arm": "ordinary",
+    "wholeCpuSeconds": 4.537267000000003,
+    "wholeWallSeconds": 4.4882122131530195,
+    "steps": 9999999,
+    "warmupSteps": 25000,
+    "executionCpuSeconds": 4.152665,
+    "executionWallSeconds": 4.143426282,
+    "semantic": {
+      "retired": 9999999,
+      "eax": 1,
+      "eip": 2148663296,
+      "eflags": 151,
+      "cpuCycles": 9999999,
+      "machineCycles": 59999994,
+      "chipDebt": 5658,
+      "chipDeadline": 5664,
+      "ramSha256": "8cdfb3735ecc8417ae2159217c73ebd8302aa070365464bbd7caae09b76231f7",
+      "pit": [
+        {
+          "ce": 0,
+          "out": 0
+        },
+        {
+          "ce": 0,
+          "out": 0
+        },
+        {
+          "ce": 0,
+          "out": 0
+        }
+      ],
+      "rtc": {
+        "phase": 5994336,
+        "periodic": 200064
+      },
+      "pics": [
+        {
+          "irr": 0,
+          "isr": 0,
+          "imr": 0
+        },
+        {
+          "irr": 0,
+          "isr": 0,
+          "imr": 0
+        }
+      ]
+    },
+    "stats": null
+  },
+  {
+    "round": 4,
+    "measured": true,
+    "arm": "dispatch",
+    "wholeCpuSeconds": 1.2713589999999972,
+    "wholeWallSeconds": 1.4311032351106405,
+    "steps": 9999999,
+    "warmupSteps": 25000,
+    "executionCpuSeconds": 0.922169,
+    "executionWallSeconds": 0.991608451,
+    "semantic": {
+      "retired": 9999999,
+      "eax": 1,
+      "eip": 2148663296,
+      "eflags": 151,
+      "cpuCycles": 9999999,
+      "machineCycles": 59999994,
+      "chipDebt": 5658,
+      "chipDeadline": 5664,
+      "ramSha256": "8cdfb3735ecc8417ae2159217c73ebd8302aa070365464bbd7caae09b76231f7",
+      "pit": [
+        {
+          "ce": 0,
+          "out": 0
+        },
+        {
+          "ce": 0,
+          "out": 0
+        },
+        {
+          "ce": 0,
+          "out": 0
+        }
+      ],
+      "rtc": {
+        "phase": 5994336,
+        "periodic": 200064
+      },
+      "pics": [
+        {
+          "irr": 0,
+          "isr": 0,
+          "imr": 0
+        },
+        {
+          "irr": 0,
+          "isr": 0,
+          "imr": 0
+        }
+      ]
+    },
+    "stats": {
+      "attempts": 1127331,
+      "decoded": 2,
+      "blockCalls": 1113732,
+      "instructions": 9986400,
+      "ineligibleModeSteps": 0,
+      "repStosDecoded": 0,
+      "repStosBlockCalls": 0,
+      "repStosIterations": 0,
+      "repMovDecoded": 0,
+      "repMovBlockCalls": 0,
+      "repMovIterations": 0,
+      "repStosbDecoded": 0,
+      "repStosbBlockCalls": 0,
+      "repStosbIterations": 0
+    }
+  },
+  {
+    "round": 4,
+    "measured": true,
+    "arm": "candidate",
+    "wholeCpuSeconds": 0.8941720000000006,
+    "wholeWallSeconds": 0.7277564399410039,
+    "steps": 9999999,
+    "warmupSteps": 25000,
+    "executionCpuSeconds": 0.561633,
+    "executionWallSeconds": 0.370943344,
+    "semantic": {
+      "retired": 9999999,
+      "eax": 1,
+      "eip": 2148663296,
+      "eflags": 151,
+      "cpuCycles": 9999999,
+      "machineCycles": 59999994,
+      "chipDebt": 5658,
+      "chipDeadline": 5664,
+      "ramSha256": "8cdfb3735ecc8417ae2159217c73ebd8302aa070365464bbd7caae09b76231f7",
+      "pit": [
+        {
+          "ce": 0,
+          "out": 0
+        },
+        {
+          "ce": 0,
+          "out": 0
+        },
+        {
+          "ce": 0,
+          "out": 0
+        }
+      ],
+      "rtc": {
+        "phase": 5994336,
+        "periodic": 200064
+      },
+      "pics": [
+        {
+          "irr": 0,
+          "isr": 0,
+          "imr": 0
+        },
+        {
+          "irr": 0,
+          "isr": 0,
+          "imr": 0
+        }
+      ]
+    },
+    "stats": {
+      "attempts": 325999,
+      "decoded": 2,
+      "blockCalls": 312400,
+      "instructions": 9986400,
+      "ineligibleModeSteps": 0,
+      "repStosDecoded": 0,
+      "repStosBlockCalls": 0,
+      "repStosIterations": 0,
+      "repMovDecoded": 0,
+      "repMovBlockCalls": 0,
+      "repMovIterations": 0,
+      "repStosbDecoded": 0,
+      "repStosbBlockCalls": 0,
+      "repStosbIterations": 0
+    }
+  },
+  {
+    "round": 4,
+    "measured": true,
+    "arm": "ordinary",
+    "wholeCpuSeconds": 4.762366999999998,
+    "wholeWallSeconds": 4.6644856608472764,
+    "steps": 9999999,
+    "warmupSteps": 25000,
+    "executionCpuSeconds": 4.370925,
+    "executionWallSeconds": 4.36162887,
+    "semantic": {
+      "retired": 9999999,
+      "eax": 1,
+      "eip": 2148663296,
+      "eflags": 151,
+      "cpuCycles": 9999999,
+      "machineCycles": 59999994,
+      "chipDebt": 5658,
+      "chipDeadline": 5664,
+      "ramSha256": "8cdfb3735ecc8417ae2159217c73ebd8302aa070365464bbd7caae09b76231f7",
+      "pit": [
+        {
+          "ce": 0,
+          "out": 0
+        },
+        {
+          "ce": 0,
+          "out": 0
+        },
+        {
+          "ce": 0,
+          "out": 0
+        }
+      ],
+      "rtc": {
+        "phase": 5994336,
+        "periodic": 200064
+      },
+      "pics": [
+        {
+          "irr": 0,
+          "isr": 0,
+          "imr": 0
+        },
+        {
+          "irr": 0,
+          "isr": 0,
+          "imr": 0
+        }
+      ]
+    },
+    "stats": null
+  },
+  {
+    "round": 5,
+    "measured": true,
+    "arm": "candidate",
+    "wholeCpuSeconds": 0.8073109999999977,
+    "wholeWallSeconds": 0.7222338949795812,
+    "steps": 9999999,
+    "warmupSteps": 25000,
+    "executionCpuSeconds": 0.486845,
+    "executionWallSeconds": 0.401205308,
+    "semantic": {
+      "retired": 9999999,
+      "eax": 1,
+      "eip": 2148663296,
+      "eflags": 151,
+      "cpuCycles": 9999999,
+      "machineCycles": 59999994,
+      "chipDebt": 5658,
+      "chipDeadline": 5664,
+      "ramSha256": "8cdfb3735ecc8417ae2159217c73ebd8302aa070365464bbd7caae09b76231f7",
+      "pit": [
+        {
+          "ce": 0,
+          "out": 0
+        },
+        {
+          "ce": 0,
+          "out": 0
+        },
+        {
+          "ce": 0,
+          "out": 0
+        }
+      ],
+      "rtc": {
+        "phase": 5994336,
+        "periodic": 200064
+      },
+      "pics": [
+        {
+          "irr": 0,
+          "isr": 0,
+          "imr": 0
+        },
+        {
+          "irr": 0,
+          "isr": 0,
+          "imr": 0
+        }
+      ]
+    },
+    "stats": {
+      "attempts": 325999,
+      "decoded": 2,
+      "blockCalls": 312400,
+      "instructions": 9986400,
+      "ineligibleModeSteps": 0,
+      "repStosDecoded": 0,
+      "repStosBlockCalls": 0,
+      "repStosIterations": 0,
+      "repMovDecoded": 0,
+      "repMovBlockCalls": 0,
+      "repMovIterations": 0,
+      "repStosbDecoded": 0,
+      "repStosbBlockCalls": 0,
+      "repStosbIterations": 0
+    }
+  },
+  {
+    "round": 5,
+    "measured": true,
+    "arm": "dispatch",
+    "wholeCpuSeconds": 1.2565269999999948,
+    "wholeWallSeconds": 1.1314171249978244,
+    "steps": 9999999,
+    "warmupSteps": 25000,
+    "executionCpuSeconds": 0.919009,
+    "executionWallSeconds": 0.768571022,
+    "semantic": {
+      "retired": 9999999,
+      "eax": 1,
+      "eip": 2148663296,
+      "eflags": 151,
+      "cpuCycles": 9999999,
+      "machineCycles": 59999994,
+      "chipDebt": 5658,
+      "chipDeadline": 5664,
+      "ramSha256": "8cdfb3735ecc8417ae2159217c73ebd8302aa070365464bbd7caae09b76231f7",
+      "pit": [
+        {
+          "ce": 0,
+          "out": 0
+        },
+        {
+          "ce": 0,
+          "out": 0
+        },
+        {
+          "ce": 0,
+          "out": 0
+        }
+      ],
+      "rtc": {
+        "phase": 5994336,
+        "periodic": 200064
+      },
+      "pics": [
+        {
+          "irr": 0,
+          "isr": 0,
+          "imr": 0
+        },
+        {
+          "irr": 0,
+          "isr": 0,
+          "imr": 0
+        }
+      ]
+    },
+    "stats": {
+      "attempts": 1127331,
+      "decoded": 2,
+      "blockCalls": 1113732,
+      "instructions": 9986400,
+      "ineligibleModeSteps": 0,
+      "repStosDecoded": 0,
+      "repStosBlockCalls": 0,
+      "repStosIterations": 0,
+      "repMovDecoded": 0,
+      "repMovBlockCalls": 0,
+      "repMovIterations": 0,
+      "repStosbDecoded": 0,
+      "repStosbBlockCalls": 0,
+      "repStosbIterations": 0
+    }
+  },
+  {
+    "round": 5,
+    "measured": true,
+    "arm": "ordinary",
+    "wholeCpuSeconds": 4.6570010000000055,
+    "wholeWallSeconds": 4.445696891983971,
+    "steps": 9999999,
+    "warmupSteps": 25000,
+    "executionCpuSeconds": 4.256352,
+    "executionWallSeconds": 4.149382713,
+    "semantic": {
+      "retired": 9999999,
+      "eax": 1,
+      "eip": 2148663296,
+      "eflags": 151,
+      "cpuCycles": 9999999,
+      "machineCycles": 59999994,
+      "chipDebt": 5658,
+      "chipDeadline": 5664,
+      "ramSha256": "8cdfb3735ecc8417ae2159217c73ebd8302aa070365464bbd7caae09b76231f7",
+      "pit": [
+        {
+          "ce": 0,
+          "out": 0
+        },
+        {
+          "ce": 0,
+          "out": 0
+        },
+        {
+          "ce": 0,
+          "out": 0
+        }
+      ],
+      "rtc": {
+        "phase": 5994336,
+        "periodic": 200064
+      },
+      "pics": [
+        {
+          "irr": 0,
+          "isr": 0,
+          "imr": 0
+        },
+        {
+          "irr": 0,
+          "isr": 0,
+          "imr": 0
+        }
+      ]
+    },
+    "stats": null
+  },
+  {
+    "round": 6,
+    "measured": true,
+    "arm": "ordinary",
+    "wholeCpuSeconds": 4.721238000000003,
+    "wholeWallSeconds": 4.498487054137513,
+    "steps": 9999999,
+    "warmupSteps": 25000,
+    "executionCpuSeconds": 4.302264,
+    "executionWallSeconds": 4.177462474,
+    "semantic": {
+      "retired": 9999999,
+      "eax": 1,
+      "eip": 2148663296,
+      "eflags": 151,
+      "cpuCycles": 9999999,
+      "machineCycles": 59999994,
+      "chipDebt": 5658,
+      "chipDeadline": 5664,
+      "ramSha256": "8cdfb3735ecc8417ae2159217c73ebd8302aa070365464bbd7caae09b76231f7",
+      "pit": [
+        {
+          "ce": 0,
+          "out": 0
+        },
+        {
+          "ce": 0,
+          "out": 0
+        },
+        {
+          "ce": 0,
+          "out": 0
+        }
+      ],
+      "rtc": {
+        "phase": 5994336,
+        "periodic": 200064
+      },
+      "pics": [
+        {
+          "irr": 0,
+          "isr": 0,
+          "imr": 0
+        },
+        {
+          "irr": 0,
+          "isr": 0,
+          "imr": 0
+        }
+      ]
+    },
+    "stats": null
+  },
+  {
+    "round": 6,
+    "measured": true,
+    "arm": "dispatch",
+    "wholeCpuSeconds": 1.284076,
+    "wholeWallSeconds": 1.022730760043487,
+    "steps": 9999999,
+    "warmupSteps": 25000,
+    "executionCpuSeconds": 0.892357,
+    "executionWallSeconds": 0.6893248,
+    "semantic": {
+      "retired": 9999999,
+      "eax": 1,
+      "eip": 2148663296,
+      "eflags": 151,
+      "cpuCycles": 9999999,
+      "machineCycles": 59999994,
+      "chipDebt": 5658,
+      "chipDeadline": 5664,
+      "ramSha256": "8cdfb3735ecc8417ae2159217c73ebd8302aa070365464bbd7caae09b76231f7",
+      "pit": [
+        {
+          "ce": 0,
+          "out": 0
+        },
+        {
+          "ce": 0,
+          "out": 0
+        },
+        {
+          "ce": 0,
+          "out": 0
+        }
+      ],
+      "rtc": {
+        "phase": 5994336,
+        "periodic": 200064
+      },
+      "pics": [
+        {
+          "irr": 0,
+          "isr": 0,
+          "imr": 0
+        },
+        {
+          "irr": 0,
+          "isr": 0,
+          "imr": 0
+        }
+      ]
+    },
+    "stats": {
+      "attempts": 1127331,
+      "decoded": 2,
+      "blockCalls": 1113732,
+      "instructions": 9986400,
+      "ineligibleModeSteps": 0,
+      "repStosDecoded": 0,
+      "repStosBlockCalls": 0,
+      "repStosIterations": 0,
+      "repMovDecoded": 0,
+      "repMovBlockCalls": 0,
+      "repMovIterations": 0,
+      "repStosbDecoded": 0,
+      "repStosbBlockCalls": 0,
+      "repStosbIterations": 0
+    }
+  },
+  {
+    "round": 6,
+    "measured": true,
+    "arm": "candidate",
+    "wholeCpuSeconds": 0.9525360000000045,
+    "wholeWallSeconds": 0.7215657318010926,
+    "steps": 9999999,
+    "warmupSteps": 25000,
+    "executionCpuSeconds": 0.596013,
+    "executionWallSeconds": 0.375639048,
+    "semantic": {
+      "retired": 9999999,
+      "eax": 1,
+      "eip": 2148663296,
+      "eflags": 151,
+      "cpuCycles": 9999999,
+      "machineCycles": 59999994,
+      "chipDebt": 5658,
+      "chipDeadline": 5664,
+      "ramSha256": "8cdfb3735ecc8417ae2159217c73ebd8302aa070365464bbd7caae09b76231f7",
+      "pit": [
+        {
+          "ce": 0,
+          "out": 0
+        },
+        {
+          "ce": 0,
+          "out": 0
+        },
+        {
+          "ce": 0,
+          "out": 0
+        }
+      ],
+      "rtc": {
+        "phase": 5994336,
+        "periodic": 200064
+      },
+      "pics": [
+        {
+          "irr": 0,
+          "isr": 0,
+          "imr": 0
+        },
+        {
+          "irr": 0,
+          "isr": 0,
+          "imr": 0
+        }
+      ]
+    },
+    "stats": {
+      "attempts": 325999,
+      "decoded": 2,
+      "blockCalls": 312400,
+      "instructions": 9986400,
+      "ineligibleModeSteps": 0,
+      "repStosDecoded": 0,
+      "repStosBlockCalls": 0,
+      "repStosIterations": 0,
+      "repMovDecoded": 0,
+      "repMovBlockCalls": 0,
+      "repMovIterations": 0,
+      "repStosbDecoded": 0,
+      "repStosbBlockCalls": 0,
+      "repStosbIterations": 0
+    }
+  },
+  {
+    "round": 7,
+    "measured": true,
+    "arm": "dispatch",
+    "wholeCpuSeconds": 1.3550319999999956,
+    "wholeWallSeconds": 1.0748597951605916,
+    "steps": 9999999,
+    "warmupSteps": 25000,
+    "executionCpuSeconds": 0.962954,
+    "executionWallSeconds": 0.752752467,
+    "semantic": {
+      "retired": 9999999,
+      "eax": 1,
+      "eip": 2148663296,
+      "eflags": 151,
+      "cpuCycles": 9999999,
+      "machineCycles": 59999994,
+      "chipDebt": 5658,
+      "chipDeadline": 5664,
+      "ramSha256": "8cdfb3735ecc8417ae2159217c73ebd8302aa070365464bbd7caae09b76231f7",
+      "pit": [
+        {
+          "ce": 0,
+          "out": 0
+        },
+        {
+          "ce": 0,
+          "out": 0
+        },
+        {
+          "ce": 0,
+          "out": 0
+        }
+      ],
+      "rtc": {
+        "phase": 5994336,
+        "periodic": 200064
+      },
+      "pics": [
+        {
+          "irr": 0,
+          "isr": 0,
+          "imr": 0
+        },
+        {
+          "irr": 0,
+          "isr": 0,
+          "imr": 0
+        }
+      ]
+    },
+    "stats": {
+      "attempts": 1127331,
+      "decoded": 2,
+      "blockCalls": 1113732,
+      "instructions": 9986400,
+      "ineligibleModeSteps": 0,
+      "repStosDecoded": 0,
+      "repStosBlockCalls": 0,
+      "repStosIterations": 0,
+      "repMovDecoded": 0,
+      "repMovBlockCalls": 0,
+      "repMovIterations": 0,
+      "repStosbDecoded": 0,
+      "repStosbBlockCalls": 0,
+      "repStosbIterations": 0
+    }
+  },
+  {
+    "round": 7,
+    "measured": true,
+    "arm": "candidate",
+    "wholeCpuSeconds": 0.9579179999999963,
+    "wholeWallSeconds": 0.6689703669399023,
+    "steps": 9999999,
+    "warmupSteps": 25000,
+    "executionCpuSeconds": 0.566459,
+    "executionWallSeconds": 0.337176147,
+    "semantic": {
+      "retired": 9999999,
+      "eax": 1,
+      "eip": 2148663296,
+      "eflags": 151,
+      "cpuCycles": 9999999,
+      "machineCycles": 59999994,
+      "chipDebt": 5658,
+      "chipDeadline": 5664,
+      "ramSha256": "8cdfb3735ecc8417ae2159217c73ebd8302aa070365464bbd7caae09b76231f7",
+      "pit": [
+        {
+          "ce": 0,
+          "out": 0
+        },
+        {
+          "ce": 0,
+          "out": 0
+        },
+        {
+          "ce": 0,
+          "out": 0
+        }
+      ],
+      "rtc": {
+        "phase": 5994336,
+        "periodic": 200064
+      },
+      "pics": [
+        {
+          "irr": 0,
+          "isr": 0,
+          "imr": 0
+        },
+        {
+          "irr": 0,
+          "isr": 0,
+          "imr": 0
+        }
+      ]
+    },
+    "stats": {
+      "attempts": 325999,
+      "decoded": 2,
+      "blockCalls": 312400,
+      "instructions": 9986400,
+      "ineligibleModeSteps": 0,
+      "repStosDecoded": 0,
+      "repStosBlockCalls": 0,
+      "repStosIterations": 0,
+      "repMovDecoded": 0,
+      "repMovBlockCalls": 0,
+      "repMovIterations": 0,
+      "repStosbDecoded": 0,
+      "repStosbBlockCalls": 0,
+      "repStosbIterations": 0
+    }
+  },
+  {
+    "round": 7,
+    "measured": true,
+    "arm": "ordinary",
+    "wholeCpuSeconds": 4.457105000000004,
+    "wholeWallSeconds": 4.296179261058569,
+    "steps": 9999999,
+    "warmupSteps": 25000,
+    "executionCpuSeconds": 4.059123,
+    "executionWallSeconds": 3.960528758,
+    "semantic": {
+      "retired": 9999999,
+      "eax": 1,
+      "eip": 2148663296,
+      "eflags": 151,
+      "cpuCycles": 9999999,
+      "machineCycles": 59999994,
+      "chipDebt": 5658,
+      "chipDeadline": 5664,
+      "ramSha256": "8cdfb3735ecc8417ae2159217c73ebd8302aa070365464bbd7caae09b76231f7",
+      "pit": [
+        {
+          "ce": 0,
+          "out": 0
+        },
+        {
+          "ce": 0,
+          "out": 0
+        },
+        {
+          "ce": 0,
+          "out": 0
+        }
+      ],
+      "rtc": {
+        "phase": 5994336,
+        "periodic": 200064
+      },
+      "pics": [
+        {
+          "irr": 0,
+          "isr": 0,
+          "imr": 0
+        },
+        {
+          "irr": 0,
+          "isr": 0,
+          "imr": 0
+        }
+      ]
+    },
+    "stats": null
+  },
+  {
+    "round": 8,
+    "measured": true,
+    "arm": "candidate",
+    "wholeCpuSeconds": 0.967592999999995,
+    "wholeWallSeconds": 0.7211880460381508,
+    "steps": 9999999,
+    "warmupSteps": 25000,
+    "executionCpuSeconds": 0.595347,
+    "executionWallSeconds": 0.365980146,
+    "semantic": {
+      "retired": 9999999,
+      "eax": 1,
+      "eip": 2148663296,
+      "eflags": 151,
+      "cpuCycles": 9999999,
+      "machineCycles": 59999994,
+      "chipDebt": 5658,
+      "chipDeadline": 5664,
+      "ramSha256": "8cdfb3735ecc8417ae2159217c73ebd8302aa070365464bbd7caae09b76231f7",
+      "pit": [
+        {
+          "ce": 0,
+          "out": 0
+        },
+        {
+          "ce": 0,
+          "out": 0
+        },
+        {
+          "ce": 0,
+          "out": 0
+        }
+      ],
+      "rtc": {
+        "phase": 5994336,
+        "periodic": 200064
+      },
+      "pics": [
+        {
+          "irr": 0,
+          "isr": 0,
+          "imr": 0
+        },
+        {
+          "irr": 0,
+          "isr": 0,
+          "imr": 0
+        }
+      ]
+    },
+    "stats": {
+      "attempts": 325999,
+      "decoded": 2,
+      "blockCalls": 312400,
+      "instructions": 9986400,
+      "ineligibleModeSteps": 0,
+      "repStosDecoded": 0,
+      "repStosBlockCalls": 0,
+      "repStosIterations": 0,
+      "repMovDecoded": 0,
+      "repMovBlockCalls": 0,
+      "repMovIterations": 0,
+      "repStosbDecoded": 0,
+      "repStosbBlockCalls": 0,
+      "repStosbIterations": 0
+    }
+  },
+  {
+    "round": 8,
+    "measured": true,
+    "arm": "dispatch",
+    "wholeCpuSeconds": 1.2694880000000008,
+    "wholeWallSeconds": 1.019609865033999,
+    "steps": 9999999,
+    "warmupSteps": 25000,
+    "executionCpuSeconds": 0.911825,
+    "executionWallSeconds": 0.705070952,
+    "semantic": {
+      "retired": 9999999,
+      "eax": 1,
+      "eip": 2148663296,
+      "eflags": 151,
+      "cpuCycles": 9999999,
+      "machineCycles": 59999994,
+      "chipDebt": 5658,
+      "chipDeadline": 5664,
+      "ramSha256": "8cdfb3735ecc8417ae2159217c73ebd8302aa070365464bbd7caae09b76231f7",
+      "pit": [
+        {
+          "ce": 0,
+          "out": 0
+        },
+        {
+          "ce": 0,
+          "out": 0
+        },
+        {
+          "ce": 0,
+          "out": 0
+        }
+      ],
+      "rtc": {
+        "phase": 5994336,
+        "periodic": 200064
+      },
+      "pics": [
+        {
+          "irr": 0,
+          "isr": 0,
+          "imr": 0
+        },
+        {
+          "irr": 0,
+          "isr": 0,
+          "imr": 0
+        }
+      ]
+    },
+    "stats": {
+      "attempts": 1127331,
+      "decoded": 2,
+      "blockCalls": 1113732,
+      "instructions": 9986400,
+      "ineligibleModeSteps": 0,
+      "repStosDecoded": 0,
+      "repStosBlockCalls": 0,
+      "repStosIterations": 0,
+      "repMovDecoded": 0,
+      "repMovBlockCalls": 0,
+      "repMovIterations": 0,
+      "repStosbDecoded": 0,
+      "repStosbBlockCalls": 0,
+      "repStosbIterations": 0
+    }
+  },
+  {
+    "round": 8,
+    "measured": true,
+    "arm": "ordinary",
+    "wholeCpuSeconds": 4.852249999999996,
+    "wholeWallSeconds": 4.66262046713382,
+    "steps": 9999999,
+    "warmupSteps": 25000,
+    "executionCpuSeconds": 4.451138,
+    "executionWallSeconds": 4.329175198,
+    "semantic": {
+      "retired": 9999999,
+      "eax": 1,
+      "eip": 2148663296,
+      "eflags": 151,
+      "cpuCycles": 9999999,
+      "machineCycles": 59999994,
+      "chipDebt": 5658,
+      "chipDeadline": 5664,
+      "ramSha256": "8cdfb3735ecc8417ae2159217c73ebd8302aa070365464bbd7caae09b76231f7",
+      "pit": [
+        {
+          "ce": 0,
+          "out": 0
+        },
+        {
+          "ce": 0,
+          "out": 0
+        },
+        {
+          "ce": 0,
+          "out": 0
+        }
+      ],
+      "rtc": {
+        "phase": 5994336,
+        "periodic": 200064
+      },
+      "pics": [
+        {
+          "irr": 0,
+          "isr": 0,
+          "imr": 0
+        },
+        {
+          "irr": 0,
+          "isr": 0,
+          "imr": 0
+        }
+      ]
+    },
+    "stats": null
+  }
+]

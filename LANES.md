@@ -1,3 +1,143 @@
+## Actual xv6 performance outcome — MEASURED CANDIDATE, 2026-11-14
+
+Fresh outcome owner continues the same isolated performance branch, requested
+by CrispStrobe. Existing Kaggle comparison collected once; no duplicate job.
+Combined source `1cf0952ab61799e490d5f3f39236fde8548c45d1` versus frozen
+master `d19b5e4d2b8aa0f025fd7a3512db3252e470433d`: opt-in CPU ratio
+0.935521664 and wall ratio 0.923193852 (6.45% / 7.68% lower), both 7/7
+favorable. All 36 actual xv6 forktest outcomes match at 24,338,279 instructions
+each. Independent raw archive, numeric, inventory and original Git/runtime-hash
+audits pass; final focused checks 81/81 pass. Ordinary interpreter ratios are
+0.985586525 / 0.985644453 (6/7 favorable each). This combined result supersedes
+the pending-throughput notes in the individual candidate sections below;
+it does not isolate individual contributions. See the
+[measured results](docs/benchmarks/x86-dispatch-2026-11-14/xv6/README.md).
+Runtime bytes remain exactly the tested candidate. No default adoption,
+physical timing, full-suite dispatch or merge claim. Existing full-CI policy
+blocker remains for owner resolution under the no-full-CI instruction.
+
+## Native byte memory TEST — CANDIDATE, 2026-11-14
+
+Owner: same x86 performance lane, requested by CrispStrobe after actual
+admission-context evidence. Own F6/0 memory TEST decoding in
+`src/experimental/i80386-native-byte-block.js`, IR execution and ABI checking
+in `src/experimental/i80386-block-spike.{c,js}`, the rebuilt
+`wasm/i80386-block-spike.wasm` and its provenance, focused native/WASM tests,
+and this section. Same documented Clang 18.1.3 and build flags; no dependency
+pin or window policy change.
+
+Actual context counted 488,938 protected32 F6/0 memory TEST instructions;
+488,612 combined near-JZ/JNZ fallback observations immediately followed
+such a completed fallback. New IR 22 reads one byte through existing validated
+DS/SS RAM windows and computes TEST flags with its immediate mask. It leaves
+registers and RAM unchanged. Register forms, other F6 extensions and prefixes
+remain unsupported. ABI 13 adds this operation without widening the existing
+instruction, CS, mapping, privilege, device or event boundaries.
+
+Ninety focused tests pass, including interpreter flag/address parity,
+TEST/near-JNZ loop fusion, event bounds, code/data page faults, actual MMIO
+read preservation, segment/privilege refusal, stale code/mapping and invalid
+IR controls. Actual guest throughput is pending; no measured win is claimed.
+
+## Retry missing native code translations — CANDIDATE, 2026-11-14
+
+Owner: same x86 performance lane, requested by CrispStrobe. Own negative
+code-window retry in `src/experimental/i80386-native-dispatch.js`, its
+focused controls in `test/i80386-native-dispatch.test.mjs`, and this section.
+An ordinary instruction can fill a missing code TLB entry without changing
+translation generation. A cached failed decode previously ignored that fill.
+Only decoder-null negatives with refused code-window admission now record
+translation identity, generation and CS-cache identity; a change retries the
+unchanged decoder. Admitted-window unsupported/single-instruction negatives
+retain their existing caching. All execution and event guards remain intact.
+
+The near-branch actual candidate retained guest equality but only 1.14% CPU
+and 1.56% wall reduction, with 9,136 additional native retirements. Actual
+admission-context counts and this candidate's guest throughput are pending;
+no performance improvement is claimed from the retry source controls.
+
+## Native near conditional branches — CANDIDATE, 2026-11-14
+
+Owner: same x86 performance lane, requested by CrispStrobe after the actual
+cache candidate remained below the 5% target (CPU ratio 0.971733, wall
+0.965052 against its paired baseline). Own near JZ/JNZ decoding in
+`src/experimental/i80386-native-byte-block.js`, its focused tests in
+`test/i80386-native-byte-block.test.mjs`, and this section.
+
+The actual fallback census observed 493,931 unprefixed protected32 near JNZ
+instructions and 1,857 near JZ instructions. These encodings were absent
+from the native decoder. Decode `0F 84/85 rel32` into the existing branch IR,
+retaining signed displacement, six-byte length, target wrapping, existing
+code/window admission and all event limits. No WASM or ABI change. Source
+tests compare interpreter results for both directions, wrap, fallthrough,
+linked loops, caller/chip/interrupt bounds, prefixes and page/fetch faults.
+Both short and near branches conservatively refuse out-of-limit targets;
+cached blocks revalidate their required target limit after CS cache changes.
+Fresh actual xv6 measurement remains pending; no speedup is claimed here.
+
+## Native dispatcher direct lookup cache — CANDIDATE, 2026-11-14
+
+Owner: same x86 performance lane, requested by CrispStrobe after actual xv6
+retained only a 1.90% CPU and 2.30% wall reduction for the ordinary-transaction
+candidate with opt-in dispatch. Own the direct lookup cache in
+`src/experimental/i80386-native-dispatch.js`, its focused tests in
+`test/i80386-native-dispatch.test.mjs`, and this section.
+
+A 256-slot cache checks full EIP before reusing a Map-owned entry. Map
+replacement, eviction and fallback deletion keep it coherent; the Map still
+owns capacity and eviction order. All existing mode, mapping, byte, window
+and event guards remain. Actual forktest profiling attributed approximately
+5.9% of sample position ticks to the Map lookup; this is motivation, not a
+claimed speedup. Fresh actual xv6 candidate comparison remains pending.
+
+## Ordinary 386 instruction transaction — CANDIDATE, 2026-11-14
+
+Owner: same x86 performance lane, requested by CrispStrobe after the batch
+candidate missed the actual xv6 improvement target. Own a guarded ordinary
+transaction in `src/experimental/i80386.js`, new
+`test/i80386-unobserved-step.test.mjs`, and this section. Existing diagnostic
+step orchestration remains intact. The ordinary branch retains snapshots,
+rollback, trace/shadow/RF handling, task-commit and repeat-fault behavior,
+delivery evaluation order and execution-depth admission guards.
+
+The actual xv6 dispatcher CPU profile attributed 9.66% of sampled leaves to
+CPU `step`; this motivates separating its ordinary transaction from the
+larger observer orchestration. Sampling is diagnostic, not a speed claim.
+Actual xv6 candidate throughput remains to be measured. The batch-only
+candidate measured CPU ratio 0.99326 and wall ratio 0.99273 on actual xv6,
+below the requested 5% target; its larger authored-loop gains do not meet
+that actual-workload target.
+
+## Opt-in 386 dispatcher batch amortization — CANDIDATE, 2026-11-14
+
+Owner: x86 performance lane, requested by CrispStrobe. Branch
+`lane/x86-perf-current-20261114` from master `d19b5e4d`.
+Claim and implementation together under the current delivery instruction.
+Own only the default `blockInstructions` option and explanatory comment in
+`src/experimental/i80386-native-dispatch.js`, focused additions in
+`test/i80386-native-dispatch.test.mjs`, the portable harness in
+`scripts/bench-i80386-dispatch/`, retained representative measurements in
+`docs/benchmarks/x86-dispatch-2026-11-14/`, and this section.
+
+The existing opt-in dispatcher now amortizes validation and JS/WASM state
+transfers over at most 64 instructions instead of 16. Its existing caller,
+chip, LAPIC, interrupt, debug, mapping and code guards remain intact; an
+explicit smaller batch remains supported. The ordinary machine path and
+dispatcher opt-in status are unchanged. Public correctness controls compare
+full batches, caller/device bounds, repeated chip flushes, pending interrupts,
+debug traps, code edits and newly faulting mappings with ordinary execution.
+
+Current-main comparison uses an authored paged protected32 register loop,
+not historical xv6 forktest. Seven retained comparisons measured mean whole
+process CPU 1.282532 to 0.900839 seconds (29.76% lower) and wall 1.163170 to
+0.760233 seconds (34.64% lower), all seven favorable in each metric. A second
+indexed RAM loop measured 31.02% lower CPU and 38.45% lower wall time, with
+all seven favorable. Raw samples, metadata and source binding are retained
+with the [results](docs/benchmarks/x86-dispatch-2026-11-14/README.md). These are
+host throughput observations, not calibrated 386 timing or general-workload
+claims. Clean xv6 qualification and independent review remain pending; no
+production adoption or merge follows from the loop measurement alone.
+
 ## Source-bound selected-motion diagnostic — IMPLEMENTED CANDIDATE, 2026-11-12
 
 Owner: delivery follow-up lane, requested by CrispStrobe. Branch
