@@ -1,16 +1,25 @@
 name: CI tier gate
 
-# CI tiers (owner decision 2026-10-14, LANES "CI tiers"). Branch pushes run
-# only the FAST tier; the THOROUGH tier (ci.yml vectors/corpus/vectors186/
-# vectors-full, harris-native, x86-xv6) runs on master, nightly, on demand,
-# and on a pull request labelled `ci:full`. This one cheap job keeps
-# "merge only when every check on the exact head is green" meaningful: it
-# passes a docs-only PR (LANES.md, docs/, spec-updates/, *.md) or a PR that
-# carries `ci:full`, and FAILS any other code PR, so a code change cannot
-# show all checks green without the thorough tier having run on its head.
+# CI tiers (owner decision 2026-10-14, LANES "CI tiers"; local tier 2026-11-14).
+# Branch pushes run only the FAST tier; the THOROUGH tier (ci.yml vectors/
+# corpus/vectors186/vectors-full, harris-native, x86-xv6) runs on master,
+# nightly, on demand, and on a pull request labelled `ci:full`. This one cheap
+# job keeps "merge only when every check on the exact head is green" meaningful:
+# it passes a docs-only PR, a PR carrying `ci:full`, or a code PR carrying
+# `ci:local` plus exact-head local/Kaggle validation in the PR body.
+#
+# `ci:local` is deliberately not a blank cheque. The label is owner-controlled,
+# and the PR body must contain one line:
+#
+#   Local-validation: <full-40-char-head-sha> PASS <command/result>
+#
+# The SHA check prevents stale evidence after a push. Local and Kaggle runs are
+# acceptable; see kaggle_usage.md and docs/X86-RTX-PLATFORMS.md. A `ci:local`
+# PR does not start the thorough GitHub tier, so it avoids the free-tier queue.
+#
 # A separately registered first-introduction exception admits only the exact
-# retained-motion diagnostic path/status set, after actual focused controls pass.
-# It does not select or waive any other enabled job.
+# retained-motion diagnostic path/status set, after actual focused controls
+# pass. It does not select or waive any other enabled job.
 on:
   pull_request:
     types: [opened, synchronize, reopened, labeled, unlabeled, ready_for_review]
@@ -36,16 +45,18 @@ jobs:
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
           node-version: 22.23.4
-      - name: Docs-only, or labelled ci:full
+      - name: Full, local, docs-only, or admitted diagnostic
         env:
           GH_TOKEN: ${{ github.token }}
           REPO: ${{ github.repository }}
           PR: ${{ github.event.pull_request.number }}
           EXPECTED_HEAD: ${{ github.event.pull_request.head.sha }}
           HAS_FULL: ${{ contains(github.event.pull_request.labels.*.name, 'ci:full') }}
+          HAS_LOCAL: ${{ contains(github.event.pull_request.labels.*.name, 'ci:local') }}
         run: |
           set -euo pipefail
           case "$HAS_FULL" in true|false) ;; *) echo "::error::invalid full-tier selection"; exit 1 ;; esac
+          case "${HAS_LOCAL:-false}" in true|false) ;; *) echo "::error::invalid local-tier selection"; exit 1 ;; esac
           if [ "$HAS_FULL" = "true" ]; then
             echo "ci:full label present: the thorough tier runs on this head."
             exit 0
@@ -59,6 +70,15 @@ jobs:
           if [ -z "$code" ]; then
             echo "Docs-only PR ($(wc -l < "$RUNNER_TEMP/changed.txt") files): the thorough tier is not required."
             exit 0
+          fi
+          if [ "${HAS_LOCAL:-false}" = "true" ]; then
+            body=$(gh api "repos/$REPO/pulls/$PR" --jq '.body // ""')
+            if printf '%s\n' "$body" | grep -Eq "^Local-validation:[[:space:]]*${EXPECTED_HEAD}[[:space:]]+PASS([[:space:]]|$)"; then
+              echo "ci:local label and exact-head validation present for $EXPECTED_HEAD: thorough tier not required."
+              exit 0
+            fi
+            echo "::error::ci:local requires a PR-body line: Local-validation: $EXPECTED_HEAD PASS <command/result>"
+            exit 1
           fi
           # Exact path/status admission is bounded to this diagnostic's first
           # introduction. Before/after snapshots refuse head changes, incomplete
@@ -74,5 +94,5 @@ jobs:
           fi
           echo "Code paths changed:"
           echo "$code" | head -50
-          echo "::error::code change: add the ci:full label so the thorough tier runs before merge"
+          echo "::error::code change: add ci:full for the thorough tier, or ci:local with a matching Local-validation line in the PR body"
           exit 1
