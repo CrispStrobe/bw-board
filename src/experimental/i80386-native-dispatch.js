@@ -41,6 +41,10 @@ export async function createI80386NativeDispatcher(machine, {
   }
   const runner = await createI80386NativeByteRunner(machine, ramBridge);
   const blocks = new Map();
+  // A small direct-mapped front cache avoids hot Map lookups. Entries remain
+  // owned by blocks: replacement, eviction and fallback keep both coherent.
+  const front = new Array(256).fill(null);
+  const frontIndex = key => (key ^ (key >>> 12)) & 255;
   const stats = {attempts: 0, decoded: 0, blockCalls: 0, instructions: 0,
     ineligibleModeSteps: 0, repStosDecoded: 0, repStosBlockCalls: 0,
     repStosIterations: 0, repMovDecoded: 0, repMovBlockCalls: 0,
@@ -97,7 +101,12 @@ export async function createI80386NativeDispatcher(machine, {
     stats.attempts++;
     const cpu = machine.cpu;
     const key = cpu.eip >>> 0;
-    let entry = blocks.get(key);
+    const slot = frontIndex(key);
+    let entry = front[slot];
+    if (!entry || entry.key !== key) {
+      entry = blocks.get(key);
+      if (entry) front[slot] = entry;
+    }
     if (!entry || entry.cs !== cpu.cs || entry.cr3 !== cpu.cr3 ||
         entry.cr4 !== cpu.cr4 || (!entry.block &&
           cpu._repeatContext?.cs === cpu.cs && cpu._repeatContext?.eip === key)) {
@@ -108,9 +117,15 @@ export async function createI80386NativeDispatcher(machine, {
         if (block.instructions[0]?.op === REP_MOVSD) stats.repMovDecoded++;
         if (block.instructions[0]?.op === REP_STOSB) stats.repStosbDecoded++;
       } else block = null;
-      if (blocks.size >= maxCachedBlocks) blocks.delete(blocks.keys().next().value);
-      entry = {cs: cpu.cs, cr3: cpu.cr3, cr4: cpu.cr4, block};
+      if (blocks.size >= maxCachedBlocks) {
+        const oldest = blocks.keys().next().value;
+        const oldestSlot = frontIndex(oldest);
+        if (front[oldestSlot]?.key === oldest) front[oldestSlot] = undefined;
+        blocks.delete(oldest);
+      }
+      entry = {key, cs: cpu.cs, cr3: cpu.cr3, cr4: cpu.cr4, block};
       blocks.set(key, entry);
+      front[slot] = entry;
     }
     if (entry.block) {
       const before = successorObserver ? {cs:cpu.cs,eip:cpu.eip>>>0} : null;
@@ -143,8 +158,10 @@ export async function createI80386NativeDispatcher(machine, {
           observeCompletedCall(entry.block, before, result, limits);
         return result.instructions;
       }
-      if (result.reason === 'fallback' || result.reason === 'fault-boundary')
+      if (result.reason === 'fallback' || result.reason === 'fault-boundary') {
         blocks.delete(key);
+        if (front[slot]?.key === key) front[slot] = undefined;
+      }
     }
     machine.step();
     return 1;

@@ -240,6 +240,76 @@ test('dispatcher skips native admission for 16-bit code', async () => {
   assert.equal(dispatcher.stats.attempts, 0);
 });
 
+test('front-cache collisions and single-entry eviction retain Map ownership', async () => {
+  for (const [maxCachedBlocks, offset] of [[1, 0x100], [4, 0x100], [1, 0x101], [4, 0x101]]) {
+    for (const observed of [false, true]) {
+      const fast = fixture(), slow = fixture(), events = [];
+      // 100h offsets collide; 101h offsets keep separate direct-cache slots.
+      for (const machine of [fast, slow]) {
+        machine.mem.copyWithin(PHYSICAL + offset, PHYSICAL, PHYSICAL + 10);
+        machine._chipDeadline = 10000;
+      }
+      const dispatcher = await createI80386NativeDispatcher(fast, {
+        maxCachedBlocks,
+        successorObserver: observed ? {observe: record => events.push(record)} : null,
+      });
+      for (const eip of [CODE, CODE + offset, CODE]) {
+        fast.cpu.eip = slow.cpu.eip = eip;
+        assert.equal(dispatcher.run(63), 63);
+        for (let i = 0; i < 63; i++) slow.step();
+        assert.deepEqual(state(fast), state(slow));
+      }
+      assert.equal(dispatcher.stats.decoded, maxCachedBlocks === 1 ? 3 : 2);
+      assert.equal(events.length, observed ? 3 : 0);
+      if (observed) {
+        assert.ok(events.every(record => record.retired === 63));
+        assert.equal(events.at(-1).successorStatus, 'cached-valid-register-only');
+      }
+    }
+  }
+});
+
+test('front-cache hits recheck CS, CR3 and CR4 identity', async () => {
+  for (const field of ['cs', 'cr3', 'cr4']) {
+    const fast = fixture(), slow = fixture();
+    const dispatcher = await createI80386NativeDispatcher(fast);
+    assert.equal(dispatcher.run(63), 63);
+    for (let i = 0; i < 63; i++) slow.step();
+    for (const machine of [fast, slow]) {
+      if (field === 'cr3') {
+        const put32 = (at, value) => {
+          for (let i = 0; i < 4; i++) machine._write386(at + i, value >>> (8 * i) & 255);
+        };
+        put32(0x5800, 0x6007);
+        put32(0x6000 + 0x120 * 4, 0x130007);
+        machine.mem.copyWithin(0x130000, PHYSICAL, PHYSICAL + 10);
+        machine.mem[0x130001] = 2; // New address space executes MOV EAX,2.
+        machine.mem[0x130007] = 3; // CMP EAX,3 keeps the backward branch taken.
+      }
+      machine.cpu[field] = {cs: 8, cr3: 0x5000, cr4: 0x10}[field];
+      machine.cpu.invalidateTranslationCache();
+      machine.cpu._translate(CODE);
+    }
+    assert.equal(dispatcher.run(63), 63);
+    for (let i = 0; i < 63; i++) slow.step();
+    assert.deepEqual(state(fast), state(slow));
+    assert.equal(dispatcher.stats.decoded, 2);
+    if (field === 'cr3') assert.equal(fast.cpu.eax, 2);
+  }
+});
+
+test('fallback deletion removes a front entry before later decoding', async () => {
+  const machine = fixture();
+  const dispatcher = await createI80386NativeDispatcher(machine);
+  assert.equal(dispatcher.run(63), 63);
+  machine._write386(PHYSICAL, 0x40); // Invalidates cached native bytes.
+  assert.equal(dispatcher.run(64), 1);
+  machine._write386(PHYSICAL, 0xb8);
+  machine.cpu.eip = CODE;
+  assert.equal(dispatcher.run(63), 63);
+  assert.equal(dispatcher.stats.decoded, 2, 'fallback must remove both cache entries');
+});
+
 test('advanceToMs stops at the rounded cycle target and counts guest steps', async () => {
   const fast = fixture(), slow = fixture();
   const dispatcher = await createI80386NativeDispatcher(fast);

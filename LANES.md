@@ -1,3 +1,18 @@
+## Native dispatcher direct lookup cache — CANDIDATE, 2026-11-14
+
+Owner: same x86 performance lane, requested by CrispStrobe after actual xv6
+retained only a 1.90% CPU and 2.30% wall reduction for the ordinary-transaction
+candidate with opt-in dispatch. Own the direct lookup cache in
+`src/experimental/i80386-native-dispatch.js`, its focused tests in
+`test/i80386-native-dispatch.test.mjs`, and this section.
+
+A 256-slot cache checks full EIP before reusing a Map-owned entry. Map
+replacement, eviction and fallback deletion keep it coherent; the Map still
+owns capacity and eviction order. All existing mode, mapping, byte, window
+and event guards remain. Actual forktest profiling attributed approximately
+5.9% of sample position ticks to the Map lookup; this is motivation, not a
+claimed speedup. Fresh actual xv6 candidate comparison remains pending.
+
 ## Ordinary 386 instruction transaction — CANDIDATE, 2026-11-14
 
 Owner: same x86 performance lane, requested by CrispStrobe after the batch
