@@ -32,10 +32,73 @@ function fixture() {
 }
 
 function state(machine) {
-  return {eax: machine.cpu.eax, eip: machine.cpu.eip,
-    eflags: machine.cpu.eflags, cpuCycles: machine.cpu.cycles,
+  const cpu = machine.cpu;
+  return {architecture: structuredClone(cpu._snapshotInstruction()),
+    cr0: cpu.cr0, cr2: cpu.cr2, cr3: cpu.cr3, cr4: cpu.cr4,
+    gdtr: {...cpu.gdtr}, idtr: {...cpu.idtr}, shutdown: cpu.shutdown,
+    cpuCycles: cpu.cycles,
     cycles: machine.cycles, chipDebt: machine._chipDebt};
 }
+
+test('a timer horizon ends the batch before real LAPIC delivery and handler execution', async () => {
+  const fast = fixture(), legacy = fixture(), slow = fixture();
+  const events = new Map();
+  const handler = CODE + 0x100;
+  for (const machine of [fast, legacy, slow]) {
+    const cpu = machine.cpu;
+    const put = (offset, bytes) => bytes.forEach((byte, index) =>
+      machine._write386(PHYSICAL + offset + index, byte));
+    // Flat ring-zero GDT; vector 40h enters a real 32-bit interrupt gate.
+    put(0x208, [0xff, 0xff, 0, 0, 0, 0x9a, 0xcf, 0]);
+    put(0x210, [0xff, 0xff, 0, 0, 0, 0x92, 0xcf, 0]);
+    put(0x500, [handler & 255, (handler >>> 8) & 255, 8, 0,
+      0, 0x8e, (handler >>> 16) & 255, handler >>> 24]);
+    put(0x100, [0xbb, 0x78, 0x56, 0x34, 0x12]); // MOV EBX,12345678h
+    cpu.gdtr = {base: CODE + 0x200, limit: 0x17};
+    cpu.idtr = {base: CODE + 0x300, limit: 0x207};
+    cpu.cs = 8;
+    cpu.ss = 0x10;
+    cpu.segmentCaches[2] = {...cpu.segmentCaches[3]};
+    cpu.esp = CODE + 0xf00;
+    cpu.eflags |= 0x200;
+    machine._mpReady = true;
+    machine._lapic[0x320 >>> 2] = 0x40;
+    machine._lapic[0xf0 >>> 2] = 0x100;
+    machine._lapicTimerInterval = 1000;
+    machine._lapicTimerNext = 29 * machine.functionalInstructionCycles;
+    const seen = [];
+    machine.hooks.onInterrupt = event => seen.push(event);
+    events.set(machine, seen);
+  }
+  const dispatcher = await createI80386NativeDispatcher(fast);
+  const legacyDispatcher = await createI80386NativeDispatcher(legacy, {blockInstructions: 16});
+  assert.equal(dispatcher.run(64), 29);
+  assert.equal(legacyDispatcher.run(64), 16);
+  assert.equal(legacyDispatcher.run(64), 13);
+  for (let i = 0; i < 29; i++) slow.step();
+  assert.deepEqual(state(fast), state(slow));
+  assert.deepEqual(state(fast), state(legacy));
+  assert.deepEqual(events.get(fast), []);
+  assert.equal(fast.cpu.ebx, 0);
+  // The next dispatch must use ordinary interrupt delivery, execute the
+  // handler's first instruction and leave no native retirement past expiry.
+  assert.equal(dispatcher.run(64), 1);
+  assert.equal(legacyDispatcher.run(64), 1);
+  slow.step();
+  assert.deepEqual(events.get(fast), [{vector: 0x40, source: 'lapic-timer'}]);
+  assert.deepEqual(events.get(fast), events.get(slow));
+  assert.deepEqual(events.get(fast), events.get(legacy));
+  assert.equal(fast.cpu.ebx, 0x12345678);
+  assert.equal(fast.cpu.eip, handler + 5);
+  assert.ok(!fast.cpu.lastFault);
+  assert.equal(fast.cpu.shutdown, false);
+  assert.deepEqual(state(fast), state(slow));
+  assert.deepEqual(state(fast), state(legacy));
+  assert.equal(dispatcher.stats.instructions, 29);
+  assert.equal(fast._lapicTimerNext, slow._lapicTimerNext);
+  assert.deepEqual(fast.mem.slice(PHYSICAL + 0xeec, PHYSICAL + 0xf00),
+    slow.mem.slice(PHYSICAL + 0xeec, PHYSICAL + 0xf00));
+});
 
 test('dispatcher attaches shared RAM and counts native guest steps', async () => {
   const fast = fixture(), slow = fixture();
