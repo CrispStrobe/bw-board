@@ -1,0 +1,4376 @@
+[
+  {
+    "round": 0,
+    "measured": false,
+    "arm": "ordinary",
+    "wholeCpuSeconds": 5.671100000000001,
+    "wholeWallSeconds": 5.3861030652187765,
+    "steps": 9999999,
+    "warmupSteps": 25000,
+    "executionCpuSeconds": 5.283605,
+    "executionWallSeconds": 5.11599283,
+    "semantic": {
+      "instructionSnapshot": {
+        "eax": 305419897,
+        "ecx": 2,
+        "edx": 305419896,
+        "ebx": 2148728832,
+        "esp": 0,
+        "ebp": 0,
+        "esi": 0,
+        "edi": 0,
+        "eip": 2148663296,
+        "eflags": 2,
+        "cs": 0,
+        "ds": 0,
+        "es": 0,
+        "ss": 0,
+        "fs": 0,
+        "gs": 0,
+        "halted": false,
+        "interruptShadow": 0,
+        "nmiShadow": 0,
+        "debugShadow": 0,
+        "nmiActive": false,
+        "retainedRealCs": false,
+        "segmentCaches": [
+          {
+            "base": 0,
+            "limit": 65535,
+            "default32": false,
+            "present": true,
+            "code": false,
+            "writable": true
+          },
+          {
+            "base": 0,
+            "limit": 4294967295,
+            "default32": true,
+            "present": true,
+            "code": true,
+            "readable": true,
+            "writable": false
+          },
+          {
+            "base": 0,
+            "limit": 65535,
+            "default32": false,
+            "present": true,
+            "code": false,
+            "writable": true
+          },
+          {
+            "base": 0,
+            "limit": 4294967295,
+            "default32": true,
+            "present": true,
+            "code": false,
+            "readable": true,
+            "writable": true
+          },
+          {
+            "base": 0,
+            "limit": 65535,
+            "default32": false,
+            "present": true,
+            "code": false,
+            "writable": true
+          },
+          {
+            "base": 0,
+            "limit": 65535,
+            "default32": false,
+            "present": true,
+            "code": false,
+            "writable": true
+          }
+        ],
+        "repeatContext": null,
+        "ldtr": {
+          "selector": 0,
+          "base": 0,
+          "limit": 0,
+          "present": false
+        },
+        "tr": {
+          "selector": 0,
+          "base": 0,
+          "limit": 0,
+          "present": false
+        },
+        "debugRegisters": {
+          "0": 0,
+          "1": 0,
+          "2": 0,
+          "3": 0,
+          "4": 0,
+          "5": 0,
+          "6": 0,
+          "7": 0
+        }
+      },
+      "retired": 9999999,
+      "eax": 305419897,
+      "eip": 2148663296,
+      "eflags": 2,
+      "cpuCycles": 9999999,
+      "machineCycles": 59999994,
+      "chipDebt": 5658,
+      "chipDeadline": 5664,
+      "ramSha256": "055b2b9ad83c98728aca70de2f8c8d77ddc09a13158066d00cf2114b5017de52",
+      "pit": [
+        {
+          "ce": 0,
+          "out": 0
+        },
+        {
+          "ce": 0,
+          "out": 0
+        },
+        {
+          "ce": 0,
+          "out": 0
+        }
+      ],
+      "rtc": {
+        "phase": 5994336,
+        "periodic": 200064
+      },
+      "pics": [
+        {
+          "irr": 0,
+          "isr": 0,
+          "imr": 0
+        },
+        {
+          "irr": 0,
+          "isr": 0,
+          "imr": 0
+        }
+      ]
+    },
+    "stats": null
+  },
+  {
+    "round": 0,
+    "measured": false,
+    "arm": "dispatch",
+    "wholeCpuSeconds": 1.4067349999999998,
+    "wholeWallSeconds": 1.1218992760404944,
+    "steps": 9999999,
+    "warmupSteps": 25000,
+    "executionCpuSeconds": 1.025673,
+    "executionWallSeconds": 0.803479145,
+    "semantic": {
+      "instructionSnapshot": {
+        "eax": 305419897,
+        "ecx": 2,
+        "edx": 305419896,
+        "ebx": 2148728832,
+        "esp": 0,
+        "ebp": 0,
+        "esi": 0,
+        "edi": 0,
+        "eip": 2148663296,
+        "eflags": 2,
+        "cs": 0,
+        "ds": 0,
+        "es": 0,
+        "ss": 0,
+        "fs": 0,
+        "gs": 0,
+        "halted": false,
+        "interruptShadow": 0,
+        "nmiShadow": 0,
+        "debugShadow": 0,
+        "nmiActive": false,
+        "retainedRealCs": false,
+        "segmentCaches": [
+          {
+            "base": 0,
+            "limit": 65535,
+            "default32": false,
+            "present": true,
+            "code": false,
+            "writable": true
+          },
+          {
+            "base": 0,
+            "limit": 4294967295,
+            "default32": true,
+            "present": true,
+            "code": true,
+            "readable": true,
+            "writable": false
+          },
+          {
+            "base": 0,
+            "limit": 65535,
+            "default32": false,
+            "present": true,
+            "code": false,
+            "writable": true
+          },
+          {
+            "base": 0,
+            "limit": 4294967295,
+            "default32": true,
+            "present": true,
+            "code": false,
+            "readable": true,
+            "writable": true
+          },
+          {
+            "base": 0,
+            "limit": 65535,
+            "default32": false,
+            "present": true,
+            "code": false,
+            "writable": true
+          },
+          {
+            "base": 0,
+            "limit": 65535,
+            "default32": false,
+            "present": true,
+            "code": false,
+            "writable": true
+          }
+        ],
+        "repeatContext": null,
+        "ldtr": {
+          "selector": 0,
+          "base": 0,
+          "limit": 0,
+          "present": false
+        },
+        "tr": {
+          "selector": 0,
+          "base": 0,
+          "limit": 0,
+          "present": false
+        },
+        "debugRegisters": {
+          "0": 0,
+          "1": 0,
+          "2": 0,
+          "3": 0,
+          "4": 0,
+          "5": 0,
+          "6": 0,
+          "7": 0
+        }
+      },
+      "retired": 9999999,
+      "eax": 305419897,
+      "eip": 2148663296,
+      "eflags": 2,
+      "cpuCycles": 9999999,
+      "machineCycles": 59999994,
+      "chipDebt": 5658,
+      "chipDeadline": 5664,
+      "ramSha256": "055b2b9ad83c98728aca70de2f8c8d77ddc09a13158066d00cf2114b5017de52",
+      "pit": [
+        {
+          "ce": 0,
+          "out": 0
+        },
+        {
+          "ce": 0,
+          "out": 0
+        },
+        {
+          "ce": 0,
+          "out": 0
+        }
+      ],
+      "rtc": {
+        "phase": 5994336,
+        "periodic": 200064
+      },
+      "pics": [
+        {
+          "irr": 0,
+          "isr": 0,
+          "imr": 0
+        },
+        {
+          "irr": 0,
+          "isr": 0,
+          "imr": 0
+        }
+      ]
+    },
+    "stats": {
+      "attempts": 1127331,
+      "decoded": 2,
+      "blockCalls": 1113732,
+      "instructions": 9986400,
+      "ineligibleModeSteps": 0,
+      "repStosDecoded": 0,
+      "repStosBlockCalls": 0,
+      "repStosIterations": 0,
+      "repMovDecoded": 0,
+      "repMovBlockCalls": 0,
+      "repMovIterations": 0,
+      "repStosbDecoded": 0,
+      "repStosbBlockCalls": 0,
+      "repStosbIterations": 0
+    }
+  },
+  {
+    "round": 0,
+    "measured": false,
+    "arm": "candidate",
+    "wholeCpuSeconds": 1.151796,
+    "wholeWallSeconds": 0.869552348041907,
+    "steps": 9999999,
+    "warmupSteps": 25000,
+    "executionCpuSeconds": 0.792257,
+    "executionWallSeconds": 0.568884373,
+    "semantic": {
+      "instructionSnapshot": {
+        "eax": 305419897,
+        "ecx": 2,
+        "edx": 305419896,
+        "ebx": 2148728832,
+        "esp": 0,
+        "ebp": 0,
+        "esi": 0,
+        "edi": 0,
+        "eip": 2148663296,
+        "eflags": 2,
+        "cs": 0,
+        "ds": 0,
+        "es": 0,
+        "ss": 0,
+        "fs": 0,
+        "gs": 0,
+        "halted": false,
+        "interruptShadow": 0,
+        "nmiShadow": 0,
+        "debugShadow": 0,
+        "nmiActive": false,
+        "retainedRealCs": false,
+        "segmentCaches": [
+          {
+            "base": 0,
+            "limit": 65535,
+            "default32": false,
+            "present": true,
+            "code": false,
+            "writable": true
+          },
+          {
+            "base": 0,
+            "limit": 4294967295,
+            "default32": true,
+            "present": true,
+            "code": true,
+            "readable": true,
+            "writable": false
+          },
+          {
+            "base": 0,
+            "limit": 65535,
+            "default32": false,
+            "present": true,
+            "code": false,
+            "writable": true
+          },
+          {
+            "base": 0,
+            "limit": 4294967295,
+            "default32": true,
+            "present": true,
+            "code": false,
+            "readable": true,
+            "writable": true
+          },
+          {
+            "base": 0,
+            "limit": 65535,
+            "default32": false,
+            "present": true,
+            "code": false,
+            "writable": true
+          },
+          {
+            "base": 0,
+            "limit": 65535,
+            "default32": false,
+            "present": true,
+            "code": false,
+            "writable": true
+          }
+        ],
+        "repeatContext": null,
+        "ldtr": {
+          "selector": 0,
+          "base": 0,
+          "limit": 0,
+          "present": false
+        },
+        "tr": {
+          "selector": 0,
+          "base": 0,
+          "limit": 0,
+          "present": false
+        },
+        "debugRegisters": {
+          "0": 0,
+          "1": 0,
+          "2": 0,
+          "3": 0,
+          "4": 0,
+          "5": 0,
+          "6": 0,
+          "7": 0
+        }
+      },
+      "retired": 9999999,
+      "eax": 305419897,
+      "eip": 2148663296,
+      "eflags": 2,
+      "cpuCycles": 9999999,
+      "machineCycles": 59999994,
+      "chipDebt": 5658,
+      "chipDeadline": 5664,
+      "ramSha256": "055b2b9ad83c98728aca70de2f8c8d77ddc09a13158066d00cf2114b5017de52",
+      "pit": [
+        {
+          "ce": 0,
+          "out": 0
+        },
+        {
+          "ce": 0,
+          "out": 0
+        },
+        {
+          "ce": 0,
+          "out": 0
+        }
+      ],
+      "rtc": {
+        "phase": 5994336,
+        "periodic": 200064
+      },
+      "pics": [
+        {
+          "irr": 0,
+          "isr": 0,
+          "imr": 0
+        },
+        {
+          "irr": 0,
+          "isr": 0,
+          "imr": 0
+        }
+      ]
+    },
+    "stats": {
+      "attempts": 325999,
+      "decoded": 2,
+      "blockCalls": 312400,
+      "instructions": 9986400,
+      "ineligibleModeSteps": 0,
+      "repStosDecoded": 0,
+      "repStosBlockCalls": 0,
+      "repStosIterations": 0,
+      "repMovDecoded": 0,
+      "repMovBlockCalls": 0,
+      "repMovIterations": 0,
+      "repStosbDecoded": 0,
+      "repStosbBlockCalls": 0,
+      "repStosbIterations": 0
+    }
+  },
+  {
+    "round": 1,
+    "measured": false,
+    "arm": "candidate",
+    "wholeCpuSeconds": 1.0353809999999994,
+    "wholeWallSeconds": 0.8241650930140167,
+    "steps": 9999999,
+    "warmupSteps": 25000,
+    "executionCpuSeconds": 0.689753,
+    "executionWallSeconds": 0.507382529,
+    "semantic": {
+      "instructionSnapshot": {
+        "eax": 305419897,
+        "ecx": 2,
+        "edx": 305419896,
+        "ebx": 2148728832,
+        "esp": 0,
+        "ebp": 0,
+        "esi": 0,
+        "edi": 0,
+        "eip": 2148663296,
+        "eflags": 2,
+        "cs": 0,
+        "ds": 0,
+        "es": 0,
+        "ss": 0,
+        "fs": 0,
+        "gs": 0,
+        "halted": false,
+        "interruptShadow": 0,
+        "nmiShadow": 0,
+        "debugShadow": 0,
+        "nmiActive": false,
+        "retainedRealCs": false,
+        "segmentCaches": [
+          {
+            "base": 0,
+            "limit": 65535,
+            "default32": false,
+            "present": true,
+            "code": false,
+            "writable": true
+          },
+          {
+            "base": 0,
+            "limit": 4294967295,
+            "default32": true,
+            "present": true,
+            "code": true,
+            "readable": true,
+            "writable": false
+          },
+          {
+            "base": 0,
+            "limit": 65535,
+            "default32": false,
+            "present": true,
+            "code": false,
+            "writable": true
+          },
+          {
+            "base": 0,
+            "limit": 4294967295,
+            "default32": true,
+            "present": true,
+            "code": false,
+            "readable": true,
+            "writable": true
+          },
+          {
+            "base": 0,
+            "limit": 65535,
+            "default32": false,
+            "present": true,
+            "code": false,
+            "writable": true
+          },
+          {
+            "base": 0,
+            "limit": 65535,
+            "default32": false,
+            "present": true,
+            "code": false,
+            "writable": true
+          }
+        ],
+        "repeatContext": null,
+        "ldtr": {
+          "selector": 0,
+          "base": 0,
+          "limit": 0,
+          "present": false
+        },
+        "tr": {
+          "selector": 0,
+          "base": 0,
+          "limit": 0,
+          "present": false
+        },
+        "debugRegisters": {
+          "0": 0,
+          "1": 0,
+          "2": 0,
+          "3": 0,
+          "4": 0,
+          "5": 0,
+          "6": 0,
+          "7": 0
+        }
+      },
+      "retired": 9999999,
+      "eax": 305419897,
+      "eip": 2148663296,
+      "eflags": 2,
+      "cpuCycles": 9999999,
+      "machineCycles": 59999994,
+      "chipDebt": 5658,
+      "chipDeadline": 5664,
+      "ramSha256": "055b2b9ad83c98728aca70de2f8c8d77ddc09a13158066d00cf2114b5017de52",
+      "pit": [
+        {
+          "ce": 0,
+          "out": 0
+        },
+        {
+          "ce": 0,
+          "out": 0
+        },
+        {
+          "ce": 0,
+          "out": 0
+        }
+      ],
+      "rtc": {
+        "phase": 5994336,
+        "periodic": 200064
+      },
+      "pics": [
+        {
+          "irr": 0,
+          "isr": 0,
+          "imr": 0
+        },
+        {
+          "irr": 0,
+          "isr": 0,
+          "imr": 0
+        }
+      ]
+    },
+    "stats": {
+      "attempts": 325999,
+      "decoded": 2,
+      "blockCalls": 312400,
+      "instructions": 9986400,
+      "ineligibleModeSteps": 0,
+      "repStosDecoded": 0,
+      "repStosBlockCalls": 0,
+      "repStosIterations": 0,
+      "repMovDecoded": 0,
+      "repMovBlockCalls": 0,
+      "repMovIterations": 0,
+      "repStosbDecoded": 0,
+      "repStosbBlockCalls": 0,
+      "repStosbIterations": 0
+    }
+  },
+  {
+    "round": 1,
+    "measured": false,
+    "arm": "dispatch",
+    "wholeCpuSeconds": 1.6151239999999991,
+    "wholeWallSeconds": 1.376943944953382,
+    "steps": 9999999,
+    "warmupSteps": 25000,
+    "executionCpuSeconds": 1.233444,
+    "executionWallSeconds": 1.029195494,
+    "semantic": {
+      "instructionSnapshot": {
+        "eax": 305419897,
+        "ecx": 2,
+        "edx": 305419896,
+        "ebx": 2148728832,
+        "esp": 0,
+        "ebp": 0,
+        "esi": 0,
+        "edi": 0,
+        "eip": 2148663296,
+        "eflags": 2,
+        "cs": 0,
+        "ds": 0,
+        "es": 0,
+        "ss": 0,
+        "fs": 0,
+        "gs": 0,
+        "halted": false,
+        "interruptShadow": 0,
+        "nmiShadow": 0,
+        "debugShadow": 0,
+        "nmiActive": false,
+        "retainedRealCs": false,
+        "segmentCaches": [
+          {
+            "base": 0,
+            "limit": 65535,
+            "default32": false,
+            "present": true,
+            "code": false,
+            "writable": true
+          },
+          {
+            "base": 0,
+            "limit": 4294967295,
+            "default32": true,
+            "present": true,
+            "code": true,
+            "readable": true,
+            "writable": false
+          },
+          {
+            "base": 0,
+            "limit": 65535,
+            "default32": false,
+            "present": true,
+            "code": false,
+            "writable": true
+          },
+          {
+            "base": 0,
+            "limit": 4294967295,
+            "default32": true,
+            "present": true,
+            "code": false,
+            "readable": true,
+            "writable": true
+          },
+          {
+            "base": 0,
+            "limit": 65535,
+            "default32": false,
+            "present": true,
+            "code": false,
+            "writable": true
+          },
+          {
+            "base": 0,
+            "limit": 65535,
+            "default32": false,
+            "present": true,
+            "code": false,
+            "writable": true
+          }
+        ],
+        "repeatContext": null,
+        "ldtr": {
+          "selector": 0,
+          "base": 0,
+          "limit": 0,
+          "present": false
+        },
+        "tr": {
+          "selector": 0,
+          "base": 0,
+          "limit": 0,
+          "present": false
+        },
+        "debugRegisters": {
+          "0": 0,
+          "1": 0,
+          "2": 0,
+          "3": 0,
+          "4": 0,
+          "5": 0,
+          "6": 0,
+          "7": 0
+        }
+      },
+      "retired": 9999999,
+      "eax": 305419897,
+      "eip": 2148663296,
+      "eflags": 2,
+      "cpuCycles": 9999999,
+      "machineCycles": 59999994,
+      "chipDebt": 5658,
+      "chipDeadline": 5664,
+      "ramSha256": "055b2b9ad83c98728aca70de2f8c8d77ddc09a13158066d00cf2114b5017de52",
+      "pit": [
+        {
+          "ce": 0,
+          "out": 0
+        },
+        {
+          "ce": 0,
+          "out": 0
+        },
+        {
+          "ce": 0,
+          "out": 0
+        }
+      ],
+      "rtc": {
+        "phase": 5994336,
+        "periodic": 200064
+      },
+      "pics": [
+        {
+          "irr": 0,
+          "isr": 0,
+          "imr": 0
+        },
+        {
+          "irr": 0,
+          "isr": 0,
+          "imr": 0
+        }
+      ]
+    },
+    "stats": {
+      "attempts": 1127331,
+      "decoded": 2,
+      "blockCalls": 1113732,
+      "instructions": 9986400,
+      "ineligibleModeSteps": 0,
+      "repStosDecoded": 0,
+      "repStosBlockCalls": 0,
+      "repStosIterations": 0,
+      "repMovDecoded": 0,
+      "repMovBlockCalls": 0,
+      "repMovIterations": 0,
+      "repStosbDecoded": 0,
+      "repStosbBlockCalls": 0,
+      "repStosbIterations": 0
+    }
+  },
+  {
+    "round": 1,
+    "measured": false,
+    "arm": "ordinary",
+    "wholeCpuSeconds": 5.721718999999999,
+    "wholeWallSeconds": 5.547137405024841,
+    "steps": 9999999,
+    "warmupSteps": 25000,
+    "executionCpuSeconds": 5.30721,
+    "executionWallSeconds": 5.236788204,
+    "semantic": {
+      "instructionSnapshot": {
+        "eax": 305419897,
+        "ecx": 2,
+        "edx": 305419896,
+        "ebx": 2148728832,
+        "esp": 0,
+        "ebp": 0,
+        "esi": 0,
+        "edi": 0,
+        "eip": 2148663296,
+        "eflags": 2,
+        "cs": 0,
+        "ds": 0,
+        "es": 0,
+        "ss": 0,
+        "fs": 0,
+        "gs": 0,
+        "halted": false,
+        "interruptShadow": 0,
+        "nmiShadow": 0,
+        "debugShadow": 0,
+        "nmiActive": false,
+        "retainedRealCs": false,
+        "segmentCaches": [
+          {
+            "base": 0,
+            "limit": 65535,
+            "default32": false,
+            "present": true,
+            "code": false,
+            "writable": true
+          },
+          {
+            "base": 0,
+            "limit": 4294967295,
+            "default32": true,
+            "present": true,
+            "code": true,
+            "readable": true,
+            "writable": false
+          },
+          {
+            "base": 0,
+            "limit": 65535,
+            "default32": false,
+            "present": true,
+            "code": false,
+            "writable": true
+          },
+          {
+            "base": 0,
+            "limit": 4294967295,
+            "default32": true,
+            "present": true,
+            "code": false,
+            "readable": true,
+            "writable": true
+          },
+          {
+            "base": 0,
+            "limit": 65535,
+            "default32": false,
+            "present": true,
+            "code": false,
+            "writable": true
+          },
+          {
+            "base": 0,
+            "limit": 65535,
+            "default32": false,
+            "present": true,
+            "code": false,
+            "writable": true
+          }
+        ],
+        "repeatContext": null,
+        "ldtr": {
+          "selector": 0,
+          "base": 0,
+          "limit": 0,
+          "present": false
+        },
+        "tr": {
+          "selector": 0,
+          "base": 0,
+          "limit": 0,
+          "present": false
+        },
+        "debugRegisters": {
+          "0": 0,
+          "1": 0,
+          "2": 0,
+          "3": 0,
+          "4": 0,
+          "5": 0,
+          "6": 0,
+          "7": 0
+        }
+      },
+      "retired": 9999999,
+      "eax": 305419897,
+      "eip": 2148663296,
+      "eflags": 2,
+      "cpuCycles": 9999999,
+      "machineCycles": 59999994,
+      "chipDebt": 5658,
+      "chipDeadline": 5664,
+      "ramSha256": "055b2b9ad83c98728aca70de2f8c8d77ddc09a13158066d00cf2114b5017de52",
+      "pit": [
+        {
+          "ce": 0,
+          "out": 0
+        },
+        {
+          "ce": 0,
+          "out": 0
+        },
+        {
+          "ce": 0,
+          "out": 0
+        }
+      ],
+      "rtc": {
+        "phase": 5994336,
+        "periodic": 200064
+      },
+      "pics": [
+        {
+          "irr": 0,
+          "isr": 0,
+          "imr": 0
+        },
+        {
+          "irr": 0,
+          "isr": 0,
+          "imr": 0
+        }
+      ]
+    },
+    "stats": null
+  },
+  {
+    "round": 2,
+    "measured": true,
+    "arm": "ordinary",
+    "wholeCpuSeconds": 5.601389999999998,
+    "wholeWallSeconds": 5.393346990924329,
+    "steps": 9999999,
+    "warmupSteps": 25000,
+    "executionCpuSeconds": 5.199024,
+    "executionWallSeconds": 5.056657103,
+    "semantic": {
+      "instructionSnapshot": {
+        "eax": 305419897,
+        "ecx": 2,
+        "edx": 305419896,
+        "ebx": 2148728832,
+        "esp": 0,
+        "ebp": 0,
+        "esi": 0,
+        "edi": 0,
+        "eip": 2148663296,
+        "eflags": 2,
+        "cs": 0,
+        "ds": 0,
+        "es": 0,
+        "ss": 0,
+        "fs": 0,
+        "gs": 0,
+        "halted": false,
+        "interruptShadow": 0,
+        "nmiShadow": 0,
+        "debugShadow": 0,
+        "nmiActive": false,
+        "retainedRealCs": false,
+        "segmentCaches": [
+          {
+            "base": 0,
+            "limit": 65535,
+            "default32": false,
+            "present": true,
+            "code": false,
+            "writable": true
+          },
+          {
+            "base": 0,
+            "limit": 4294967295,
+            "default32": true,
+            "present": true,
+            "code": true,
+            "readable": true,
+            "writable": false
+          },
+          {
+            "base": 0,
+            "limit": 65535,
+            "default32": false,
+            "present": true,
+            "code": false,
+            "writable": true
+          },
+          {
+            "base": 0,
+            "limit": 4294967295,
+            "default32": true,
+            "present": true,
+            "code": false,
+            "readable": true,
+            "writable": true
+          },
+          {
+            "base": 0,
+            "limit": 65535,
+            "default32": false,
+            "present": true,
+            "code": false,
+            "writable": true
+          },
+          {
+            "base": 0,
+            "limit": 65535,
+            "default32": false,
+            "present": true,
+            "code": false,
+            "writable": true
+          }
+        ],
+        "repeatContext": null,
+        "ldtr": {
+          "selector": 0,
+          "base": 0,
+          "limit": 0,
+          "present": false
+        },
+        "tr": {
+          "selector": 0,
+          "base": 0,
+          "limit": 0,
+          "present": false
+        },
+        "debugRegisters": {
+          "0": 0,
+          "1": 0,
+          "2": 0,
+          "3": 0,
+          "4": 0,
+          "5": 0,
+          "6": 0,
+          "7": 0
+        }
+      },
+      "retired": 9999999,
+      "eax": 305419897,
+      "eip": 2148663296,
+      "eflags": 2,
+      "cpuCycles": 9999999,
+      "machineCycles": 59999994,
+      "chipDebt": 5658,
+      "chipDeadline": 5664,
+      "ramSha256": "055b2b9ad83c98728aca70de2f8c8d77ddc09a13158066d00cf2114b5017de52",
+      "pit": [
+        {
+          "ce": 0,
+          "out": 0
+        },
+        {
+          "ce": 0,
+          "out": 0
+        },
+        {
+          "ce": 0,
+          "out": 0
+        }
+      ],
+      "rtc": {
+        "phase": 5994336,
+        "periodic": 200064
+      },
+      "pics": [
+        {
+          "irr": 0,
+          "isr": 0,
+          "imr": 0
+        },
+        {
+          "irr": 0,
+          "isr": 0,
+          "imr": 0
+        }
+      ]
+    },
+    "stats": null
+  },
+  {
+    "round": 2,
+    "measured": true,
+    "arm": "dispatch",
+    "wholeCpuSeconds": 1.457353000000003,
+    "wholeWallSeconds": 1.2248868658207357,
+    "steps": 9999999,
+    "warmupSteps": 25000,
+    "executionCpuSeconds": 1.060392,
+    "executionWallSeconds": 0.862473515,
+    "semantic": {
+      "instructionSnapshot": {
+        "eax": 305419897,
+        "ecx": 2,
+        "edx": 305419896,
+        "ebx": 2148728832,
+        "esp": 0,
+        "ebp": 0,
+        "esi": 0,
+        "edi": 0,
+        "eip": 2148663296,
+        "eflags": 2,
+        "cs": 0,
+        "ds": 0,
+        "es": 0,
+        "ss": 0,
+        "fs": 0,
+        "gs": 0,
+        "halted": false,
+        "interruptShadow": 0,
+        "nmiShadow": 0,
+        "debugShadow": 0,
+        "nmiActive": false,
+        "retainedRealCs": false,
+        "segmentCaches": [
+          {
+            "base": 0,
+            "limit": 65535,
+            "default32": false,
+            "present": true,
+            "code": false,
+            "writable": true
+          },
+          {
+            "base": 0,
+            "limit": 4294967295,
+            "default32": true,
+            "present": true,
+            "code": true,
+            "readable": true,
+            "writable": false
+          },
+          {
+            "base": 0,
+            "limit": 65535,
+            "default32": false,
+            "present": true,
+            "code": false,
+            "writable": true
+          },
+          {
+            "base": 0,
+            "limit": 4294967295,
+            "default32": true,
+            "present": true,
+            "code": false,
+            "readable": true,
+            "writable": true
+          },
+          {
+            "base": 0,
+            "limit": 65535,
+            "default32": false,
+            "present": true,
+            "code": false,
+            "writable": true
+          },
+          {
+            "base": 0,
+            "limit": 65535,
+            "default32": false,
+            "present": true,
+            "code": false,
+            "writable": true
+          }
+        ],
+        "repeatContext": null,
+        "ldtr": {
+          "selector": 0,
+          "base": 0,
+          "limit": 0,
+          "present": false
+        },
+        "tr": {
+          "selector": 0,
+          "base": 0,
+          "limit": 0,
+          "present": false
+        },
+        "debugRegisters": {
+          "0": 0,
+          "1": 0,
+          "2": 0,
+          "3": 0,
+          "4": 0,
+          "5": 0,
+          "6": 0,
+          "7": 0
+        }
+      },
+      "retired": 9999999,
+      "eax": 305419897,
+      "eip": 2148663296,
+      "eflags": 2,
+      "cpuCycles": 9999999,
+      "machineCycles": 59999994,
+      "chipDebt": 5658,
+      "chipDeadline": 5664,
+      "ramSha256": "055b2b9ad83c98728aca70de2f8c8d77ddc09a13158066d00cf2114b5017de52",
+      "pit": [
+        {
+          "ce": 0,
+          "out": 0
+        },
+        {
+          "ce": 0,
+          "out": 0
+        },
+        {
+          "ce": 0,
+          "out": 0
+        }
+      ],
+      "rtc": {
+        "phase": 5994336,
+        "periodic": 200064
+      },
+      "pics": [
+        {
+          "irr": 0,
+          "isr": 0,
+          "imr": 0
+        },
+        {
+          "irr": 0,
+          "isr": 0,
+          "imr": 0
+        }
+      ]
+    },
+    "stats": {
+      "attempts": 1127331,
+      "decoded": 2,
+      "blockCalls": 1113732,
+      "instructions": 9986400,
+      "ineligibleModeSteps": 0,
+      "repStosDecoded": 0,
+      "repStosBlockCalls": 0,
+      "repStosIterations": 0,
+      "repMovDecoded": 0,
+      "repMovBlockCalls": 0,
+      "repMovIterations": 0,
+      "repStosbDecoded": 0,
+      "repStosbBlockCalls": 0,
+      "repStosbIterations": 0
+    }
+  },
+  {
+    "round": 2,
+    "measured": true,
+    "arm": "candidate",
+    "wholeCpuSeconds": 1.0884719999999968,
+    "wholeWallSeconds": 0.772957056062296,
+    "steps": 9999999,
+    "warmupSteps": 25000,
+    "executionCpuSeconds": 0.706799,
+    "executionWallSeconds": 0.457435142,
+    "semantic": {
+      "instructionSnapshot": {
+        "eax": 305419897,
+        "ecx": 2,
+        "edx": 305419896,
+        "ebx": 2148728832,
+        "esp": 0,
+        "ebp": 0,
+        "esi": 0,
+        "edi": 0,
+        "eip": 2148663296,
+        "eflags": 2,
+        "cs": 0,
+        "ds": 0,
+        "es": 0,
+        "ss": 0,
+        "fs": 0,
+        "gs": 0,
+        "halted": false,
+        "interruptShadow": 0,
+        "nmiShadow": 0,
+        "debugShadow": 0,
+        "nmiActive": false,
+        "retainedRealCs": false,
+        "segmentCaches": [
+          {
+            "base": 0,
+            "limit": 65535,
+            "default32": false,
+            "present": true,
+            "code": false,
+            "writable": true
+          },
+          {
+            "base": 0,
+            "limit": 4294967295,
+            "default32": true,
+            "present": true,
+            "code": true,
+            "readable": true,
+            "writable": false
+          },
+          {
+            "base": 0,
+            "limit": 65535,
+            "default32": false,
+            "present": true,
+            "code": false,
+            "writable": true
+          },
+          {
+            "base": 0,
+            "limit": 4294967295,
+            "default32": true,
+            "present": true,
+            "code": false,
+            "readable": true,
+            "writable": true
+          },
+          {
+            "base": 0,
+            "limit": 65535,
+            "default32": false,
+            "present": true,
+            "code": false,
+            "writable": true
+          },
+          {
+            "base": 0,
+            "limit": 65535,
+            "default32": false,
+            "present": true,
+            "code": false,
+            "writable": true
+          }
+        ],
+        "repeatContext": null,
+        "ldtr": {
+          "selector": 0,
+          "base": 0,
+          "limit": 0,
+          "present": false
+        },
+        "tr": {
+          "selector": 0,
+          "base": 0,
+          "limit": 0,
+          "present": false
+        },
+        "debugRegisters": {
+          "0": 0,
+          "1": 0,
+          "2": 0,
+          "3": 0,
+          "4": 0,
+          "5": 0,
+          "6": 0,
+          "7": 0
+        }
+      },
+      "retired": 9999999,
+      "eax": 305419897,
+      "eip": 2148663296,
+      "eflags": 2,
+      "cpuCycles": 9999999,
+      "machineCycles": 59999994,
+      "chipDebt": 5658,
+      "chipDeadline": 5664,
+      "ramSha256": "055b2b9ad83c98728aca70de2f8c8d77ddc09a13158066d00cf2114b5017de52",
+      "pit": [
+        {
+          "ce": 0,
+          "out": 0
+        },
+        {
+          "ce": 0,
+          "out": 0
+        },
+        {
+          "ce": 0,
+          "out": 0
+        }
+      ],
+      "rtc": {
+        "phase": 5994336,
+        "periodic": 200064
+      },
+      "pics": [
+        {
+          "irr": 0,
+          "isr": 0,
+          "imr": 0
+        },
+        {
+          "irr": 0,
+          "isr": 0,
+          "imr": 0
+        }
+      ]
+    },
+    "stats": {
+      "attempts": 325999,
+      "decoded": 2,
+      "blockCalls": 312400,
+      "instructions": 9986400,
+      "ineligibleModeSteps": 0,
+      "repStosDecoded": 0,
+      "repStosBlockCalls": 0,
+      "repStosIterations": 0,
+      "repMovDecoded": 0,
+      "repMovBlockCalls": 0,
+      "repMovIterations": 0,
+      "repStosbDecoded": 0,
+      "repStosbBlockCalls": 0,
+      "repStosbIterations": 0
+    }
+  },
+  {
+    "round": 3,
+    "measured": true,
+    "arm": "candidate",
+    "wholeCpuSeconds": 1.075006000000001,
+    "wholeWallSeconds": 0.771779126022011,
+    "steps": 9999999,
+    "warmupSteps": 25000,
+    "executionCpuSeconds": 0.701844,
+    "executionWallSeconds": 0.466774298,
+    "semantic": {
+      "instructionSnapshot": {
+        "eax": 305419897,
+        "ecx": 2,
+        "edx": 305419896,
+        "ebx": 2148728832,
+        "esp": 0,
+        "ebp": 0,
+        "esi": 0,
+        "edi": 0,
+        "eip": 2148663296,
+        "eflags": 2,
+        "cs": 0,
+        "ds": 0,
+        "es": 0,
+        "ss": 0,
+        "fs": 0,
+        "gs": 0,
+        "halted": false,
+        "interruptShadow": 0,
+        "nmiShadow": 0,
+        "debugShadow": 0,
+        "nmiActive": false,
+        "retainedRealCs": false,
+        "segmentCaches": [
+          {
+            "base": 0,
+            "limit": 65535,
+            "default32": false,
+            "present": true,
+            "code": false,
+            "writable": true
+          },
+          {
+            "base": 0,
+            "limit": 4294967295,
+            "default32": true,
+            "present": true,
+            "code": true,
+            "readable": true,
+            "writable": false
+          },
+          {
+            "base": 0,
+            "limit": 65535,
+            "default32": false,
+            "present": true,
+            "code": false,
+            "writable": true
+          },
+          {
+            "base": 0,
+            "limit": 4294967295,
+            "default32": true,
+            "present": true,
+            "code": false,
+            "readable": true,
+            "writable": true
+          },
+          {
+            "base": 0,
+            "limit": 65535,
+            "default32": false,
+            "present": true,
+            "code": false,
+            "writable": true
+          },
+          {
+            "base": 0,
+            "limit": 65535,
+            "default32": false,
+            "present": true,
+            "code": false,
+            "writable": true
+          }
+        ],
+        "repeatContext": null,
+        "ldtr": {
+          "selector": 0,
+          "base": 0,
+          "limit": 0,
+          "present": false
+        },
+        "tr": {
+          "selector": 0,
+          "base": 0,
+          "limit": 0,
+          "present": false
+        },
+        "debugRegisters": {
+          "0": 0,
+          "1": 0,
+          "2": 0,
+          "3": 0,
+          "4": 0,
+          "5": 0,
+          "6": 0,
+          "7": 0
+        }
+      },
+      "retired": 9999999,
+      "eax": 305419897,
+      "eip": 2148663296,
+      "eflags": 2,
+      "cpuCycles": 9999999,
+      "machineCycles": 59999994,
+      "chipDebt": 5658,
+      "chipDeadline": 5664,
+      "ramSha256": "055b2b9ad83c98728aca70de2f8c8d77ddc09a13158066d00cf2114b5017de52",
+      "pit": [
+        {
+          "ce": 0,
+          "out": 0
+        },
+        {
+          "ce": 0,
+          "out": 0
+        },
+        {
+          "ce": 0,
+          "out": 0
+        }
+      ],
+      "rtc": {
+        "phase": 5994336,
+        "periodic": 200064
+      },
+      "pics": [
+        {
+          "irr": 0,
+          "isr": 0,
+          "imr": 0
+        },
+        {
+          "irr": 0,
+          "isr": 0,
+          "imr": 0
+        }
+      ]
+    },
+    "stats": {
+      "attempts": 325999,
+      "decoded": 2,
+      "blockCalls": 312400,
+      "instructions": 9986400,
+      "ineligibleModeSteps": 0,
+      "repStosDecoded": 0,
+      "repStosBlockCalls": 0,
+      "repStosIterations": 0,
+      "repMovDecoded": 0,
+      "repMovBlockCalls": 0,
+      "repMovIterations": 0,
+      "repStosbDecoded": 0,
+      "repStosbBlockCalls": 0,
+      "repStosbIterations": 0
+    }
+  },
+  {
+    "round": 3,
+    "measured": true,
+    "arm": "dispatch",
+    "wholeCpuSeconds": 1.4617739999999992,
+    "wholeWallSeconds": 1.1799749489873648,
+    "steps": 9999999,
+    "warmupSteps": 25000,
+    "executionCpuSeconds": 1.085933,
+    "executionWallSeconds": 0.848071601,
+    "semantic": {
+      "instructionSnapshot": {
+        "eax": 305419897,
+        "ecx": 2,
+        "edx": 305419896,
+        "ebx": 2148728832,
+        "esp": 0,
+        "ebp": 0,
+        "esi": 0,
+        "edi": 0,
+        "eip": 2148663296,
+        "eflags": 2,
+        "cs": 0,
+        "ds": 0,
+        "es": 0,
+        "ss": 0,
+        "fs": 0,
+        "gs": 0,
+        "halted": false,
+        "interruptShadow": 0,
+        "nmiShadow": 0,
+        "debugShadow": 0,
+        "nmiActive": false,
+        "retainedRealCs": false,
+        "segmentCaches": [
+          {
+            "base": 0,
+            "limit": 65535,
+            "default32": false,
+            "present": true,
+            "code": false,
+            "writable": true
+          },
+          {
+            "base": 0,
+            "limit": 4294967295,
+            "default32": true,
+            "present": true,
+            "code": true,
+            "readable": true,
+            "writable": false
+          },
+          {
+            "base": 0,
+            "limit": 65535,
+            "default32": false,
+            "present": true,
+            "code": false,
+            "writable": true
+          },
+          {
+            "base": 0,
+            "limit": 4294967295,
+            "default32": true,
+            "present": true,
+            "code": false,
+            "readable": true,
+            "writable": true
+          },
+          {
+            "base": 0,
+            "limit": 65535,
+            "default32": false,
+            "present": true,
+            "code": false,
+            "writable": true
+          },
+          {
+            "base": 0,
+            "limit": 65535,
+            "default32": false,
+            "present": true,
+            "code": false,
+            "writable": true
+          }
+        ],
+        "repeatContext": null,
+        "ldtr": {
+          "selector": 0,
+          "base": 0,
+          "limit": 0,
+          "present": false
+        },
+        "tr": {
+          "selector": 0,
+          "base": 0,
+          "limit": 0,
+          "present": false
+        },
+        "debugRegisters": {
+          "0": 0,
+          "1": 0,
+          "2": 0,
+          "3": 0,
+          "4": 0,
+          "5": 0,
+          "6": 0,
+          "7": 0
+        }
+      },
+      "retired": 9999999,
+      "eax": 305419897,
+      "eip": 2148663296,
+      "eflags": 2,
+      "cpuCycles": 9999999,
+      "machineCycles": 59999994,
+      "chipDebt": 5658,
+      "chipDeadline": 5664,
+      "ramSha256": "055b2b9ad83c98728aca70de2f8c8d77ddc09a13158066d00cf2114b5017de52",
+      "pit": [
+        {
+          "ce": 0,
+          "out": 0
+        },
+        {
+          "ce": 0,
+          "out": 0
+        },
+        {
+          "ce": 0,
+          "out": 0
+        }
+      ],
+      "rtc": {
+        "phase": 5994336,
+        "periodic": 200064
+      },
+      "pics": [
+        {
+          "irr": 0,
+          "isr": 0,
+          "imr": 0
+        },
+        {
+          "irr": 0,
+          "isr": 0,
+          "imr": 0
+        }
+      ]
+    },
+    "stats": {
+      "attempts": 1127331,
+      "decoded": 2,
+      "blockCalls": 1113732,
+      "instructions": 9986400,
+      "ineligibleModeSteps": 0,
+      "repStosDecoded": 0,
+      "repStosBlockCalls": 0,
+      "repStosIterations": 0,
+      "repMovDecoded": 0,
+      "repMovBlockCalls": 0,
+      "repMovIterations": 0,
+      "repStosbDecoded": 0,
+      "repStosbBlockCalls": 0,
+      "repStosbIterations": 0
+    }
+  },
+  {
+    "round": 3,
+    "measured": true,
+    "arm": "ordinary",
+    "wholeCpuSeconds": 5.845689999999999,
+    "wholeWallSeconds": 5.708988609956577,
+    "steps": 9999999,
+    "warmupSteps": 25000,
+    "executionCpuSeconds": 5.465485,
+    "executionWallSeconds": 5.393746174,
+    "semantic": {
+      "instructionSnapshot": {
+        "eax": 305419897,
+        "ecx": 2,
+        "edx": 305419896,
+        "ebx": 2148728832,
+        "esp": 0,
+        "ebp": 0,
+        "esi": 0,
+        "edi": 0,
+        "eip": 2148663296,
+        "eflags": 2,
+        "cs": 0,
+        "ds": 0,
+        "es": 0,
+        "ss": 0,
+        "fs": 0,
+        "gs": 0,
+        "halted": false,
+        "interruptShadow": 0,
+        "nmiShadow": 0,
+        "debugShadow": 0,
+        "nmiActive": false,
+        "retainedRealCs": false,
+        "segmentCaches": [
+          {
+            "base": 0,
+            "limit": 65535,
+            "default32": false,
+            "present": true,
+            "code": false,
+            "writable": true
+          },
+          {
+            "base": 0,
+            "limit": 4294967295,
+            "default32": true,
+            "present": true,
+            "code": true,
+            "readable": true,
+            "writable": false
+          },
+          {
+            "base": 0,
+            "limit": 65535,
+            "default32": false,
+            "present": true,
+            "code": false,
+            "writable": true
+          },
+          {
+            "base": 0,
+            "limit": 4294967295,
+            "default32": true,
+            "present": true,
+            "code": false,
+            "readable": true,
+            "writable": true
+          },
+          {
+            "base": 0,
+            "limit": 65535,
+            "default32": false,
+            "present": true,
+            "code": false,
+            "writable": true
+          },
+          {
+            "base": 0,
+            "limit": 65535,
+            "default32": false,
+            "present": true,
+            "code": false,
+            "writable": true
+          }
+        ],
+        "repeatContext": null,
+        "ldtr": {
+          "selector": 0,
+          "base": 0,
+          "limit": 0,
+          "present": false
+        },
+        "tr": {
+          "selector": 0,
+          "base": 0,
+          "limit": 0,
+          "present": false
+        },
+        "debugRegisters": {
+          "0": 0,
+          "1": 0,
+          "2": 0,
+          "3": 0,
+          "4": 0,
+          "5": 0,
+          "6": 0,
+          "7": 0
+        }
+      },
+      "retired": 9999999,
+      "eax": 305419897,
+      "eip": 2148663296,
+      "eflags": 2,
+      "cpuCycles": 9999999,
+      "machineCycles": 59999994,
+      "chipDebt": 5658,
+      "chipDeadline": 5664,
+      "ramSha256": "055b2b9ad83c98728aca70de2f8c8d77ddc09a13158066d00cf2114b5017de52",
+      "pit": [
+        {
+          "ce": 0,
+          "out": 0
+        },
+        {
+          "ce": 0,
+          "out": 0
+        },
+        {
+          "ce": 0,
+          "out": 0
+        }
+      ],
+      "rtc": {
+        "phase": 5994336,
+        "periodic": 200064
+      },
+      "pics": [
+        {
+          "irr": 0,
+          "isr": 0,
+          "imr": 0
+        },
+        {
+          "irr": 0,
+          "isr": 0,
+          "imr": 0
+        }
+      ]
+    },
+    "stats": null
+  },
+  {
+    "round": 4,
+    "measured": true,
+    "arm": "dispatch",
+    "wholeCpuSeconds": 1.5401740000000002,
+    "wholeWallSeconds": 1.4884414549451321,
+    "steps": 9999999,
+    "warmupSteps": 25000,
+    "executionCpuSeconds": 1.163479,
+    "executionWallSeconds": 1.092418658,
+    "semantic": {
+      "instructionSnapshot": {
+        "eax": 305419897,
+        "ecx": 2,
+        "edx": 305419896,
+        "ebx": 2148728832,
+        "esp": 0,
+        "ebp": 0,
+        "esi": 0,
+        "edi": 0,
+        "eip": 2148663296,
+        "eflags": 2,
+        "cs": 0,
+        "ds": 0,
+        "es": 0,
+        "ss": 0,
+        "fs": 0,
+        "gs": 0,
+        "halted": false,
+        "interruptShadow": 0,
+        "nmiShadow": 0,
+        "debugShadow": 0,
+        "nmiActive": false,
+        "retainedRealCs": false,
+        "segmentCaches": [
+          {
+            "base": 0,
+            "limit": 65535,
+            "default32": false,
+            "present": true,
+            "code": false,
+            "writable": true
+          },
+          {
+            "base": 0,
+            "limit": 4294967295,
+            "default32": true,
+            "present": true,
+            "code": true,
+            "readable": true,
+            "writable": false
+          },
+          {
+            "base": 0,
+            "limit": 65535,
+            "default32": false,
+            "present": true,
+            "code": false,
+            "writable": true
+          },
+          {
+            "base": 0,
+            "limit": 4294967295,
+            "default32": true,
+            "present": true,
+            "code": false,
+            "readable": true,
+            "writable": true
+          },
+          {
+            "base": 0,
+            "limit": 65535,
+            "default32": false,
+            "present": true,
+            "code": false,
+            "writable": true
+          },
+          {
+            "base": 0,
+            "limit": 65535,
+            "default32": false,
+            "present": true,
+            "code": false,
+            "writable": true
+          }
+        ],
+        "repeatContext": null,
+        "ldtr": {
+          "selector": 0,
+          "base": 0,
+          "limit": 0,
+          "present": false
+        },
+        "tr": {
+          "selector": 0,
+          "base": 0,
+          "limit": 0,
+          "present": false
+        },
+        "debugRegisters": {
+          "0": 0,
+          "1": 0,
+          "2": 0,
+          "3": 0,
+          "4": 0,
+          "5": 0,
+          "6": 0,
+          "7": 0
+        }
+      },
+      "retired": 9999999,
+      "eax": 305419897,
+      "eip": 2148663296,
+      "eflags": 2,
+      "cpuCycles": 9999999,
+      "machineCycles": 59999994,
+      "chipDebt": 5658,
+      "chipDeadline": 5664,
+      "ramSha256": "055b2b9ad83c98728aca70de2f8c8d77ddc09a13158066d00cf2114b5017de52",
+      "pit": [
+        {
+          "ce": 0,
+          "out": 0
+        },
+        {
+          "ce": 0,
+          "out": 0
+        },
+        {
+          "ce": 0,
+          "out": 0
+        }
+      ],
+      "rtc": {
+        "phase": 5994336,
+        "periodic": 200064
+      },
+      "pics": [
+        {
+          "irr": 0,
+          "isr": 0,
+          "imr": 0
+        },
+        {
+          "irr": 0,
+          "isr": 0,
+          "imr": 0
+        }
+      ]
+    },
+    "stats": {
+      "attempts": 1127331,
+      "decoded": 2,
+      "blockCalls": 1113732,
+      "instructions": 9986400,
+      "ineligibleModeSteps": 0,
+      "repStosDecoded": 0,
+      "repStosBlockCalls": 0,
+      "repStosIterations": 0,
+      "repMovDecoded": 0,
+      "repMovBlockCalls": 0,
+      "repMovIterations": 0,
+      "repStosbDecoded": 0,
+      "repStosbBlockCalls": 0,
+      "repStosbIterations": 0
+    }
+  },
+  {
+    "round": 4,
+    "measured": true,
+    "arm": "candidate",
+    "wholeCpuSeconds": 0.9102160000000008,
+    "wholeWallSeconds": 0.7734452299773693,
+    "steps": 9999999,
+    "warmupSteps": 25000,
+    "executionCpuSeconds": 0.58962,
+    "executionWallSeconds": 0.438576184,
+    "semantic": {
+      "instructionSnapshot": {
+        "eax": 305419897,
+        "ecx": 2,
+        "edx": 305419896,
+        "ebx": 2148728832,
+        "esp": 0,
+        "ebp": 0,
+        "esi": 0,
+        "edi": 0,
+        "eip": 2148663296,
+        "eflags": 2,
+        "cs": 0,
+        "ds": 0,
+        "es": 0,
+        "ss": 0,
+        "fs": 0,
+        "gs": 0,
+        "halted": false,
+        "interruptShadow": 0,
+        "nmiShadow": 0,
+        "debugShadow": 0,
+        "nmiActive": false,
+        "retainedRealCs": false,
+        "segmentCaches": [
+          {
+            "base": 0,
+            "limit": 65535,
+            "default32": false,
+            "present": true,
+            "code": false,
+            "writable": true
+          },
+          {
+            "base": 0,
+            "limit": 4294967295,
+            "default32": true,
+            "present": true,
+            "code": true,
+            "readable": true,
+            "writable": false
+          },
+          {
+            "base": 0,
+            "limit": 65535,
+            "default32": false,
+            "present": true,
+            "code": false,
+            "writable": true
+          },
+          {
+            "base": 0,
+            "limit": 4294967295,
+            "default32": true,
+            "present": true,
+            "code": false,
+            "readable": true,
+            "writable": true
+          },
+          {
+            "base": 0,
+            "limit": 65535,
+            "default32": false,
+            "present": true,
+            "code": false,
+            "writable": true
+          },
+          {
+            "base": 0,
+            "limit": 65535,
+            "default32": false,
+            "present": true,
+            "code": false,
+            "writable": true
+          }
+        ],
+        "repeatContext": null,
+        "ldtr": {
+          "selector": 0,
+          "base": 0,
+          "limit": 0,
+          "present": false
+        },
+        "tr": {
+          "selector": 0,
+          "base": 0,
+          "limit": 0,
+          "present": false
+        },
+        "debugRegisters": {
+          "0": 0,
+          "1": 0,
+          "2": 0,
+          "3": 0,
+          "4": 0,
+          "5": 0,
+          "6": 0,
+          "7": 0
+        }
+      },
+      "retired": 9999999,
+      "eax": 305419897,
+      "eip": 2148663296,
+      "eflags": 2,
+      "cpuCycles": 9999999,
+      "machineCycles": 59999994,
+      "chipDebt": 5658,
+      "chipDeadline": 5664,
+      "ramSha256": "055b2b9ad83c98728aca70de2f8c8d77ddc09a13158066d00cf2114b5017de52",
+      "pit": [
+        {
+          "ce": 0,
+          "out": 0
+        },
+        {
+          "ce": 0,
+          "out": 0
+        },
+        {
+          "ce": 0,
+          "out": 0
+        }
+      ],
+      "rtc": {
+        "phase": 5994336,
+        "periodic": 200064
+      },
+      "pics": [
+        {
+          "irr": 0,
+          "isr": 0,
+          "imr": 0
+        },
+        {
+          "irr": 0,
+          "isr": 0,
+          "imr": 0
+        }
+      ]
+    },
+    "stats": {
+      "attempts": 325999,
+      "decoded": 2,
+      "blockCalls": 312400,
+      "instructions": 9986400,
+      "ineligibleModeSteps": 0,
+      "repStosDecoded": 0,
+      "repStosBlockCalls": 0,
+      "repStosIterations": 0,
+      "repMovDecoded": 0,
+      "repMovBlockCalls": 0,
+      "repMovIterations": 0,
+      "repStosbDecoded": 0,
+      "repStosbBlockCalls": 0,
+      "repStosbIterations": 0
+    }
+  },
+  {
+    "round": 4,
+    "measured": true,
+    "arm": "ordinary",
+    "wholeCpuSeconds": 5.633059,
+    "wholeWallSeconds": 5.447735942201689,
+    "steps": 9999999,
+    "warmupSteps": 25000,
+    "executionCpuSeconds": 5.206719,
+    "executionWallSeconds": 5.107367135,
+    "semantic": {
+      "instructionSnapshot": {
+        "eax": 305419897,
+        "ecx": 2,
+        "edx": 305419896,
+        "ebx": 2148728832,
+        "esp": 0,
+        "ebp": 0,
+        "esi": 0,
+        "edi": 0,
+        "eip": 2148663296,
+        "eflags": 2,
+        "cs": 0,
+        "ds": 0,
+        "es": 0,
+        "ss": 0,
+        "fs": 0,
+        "gs": 0,
+        "halted": false,
+        "interruptShadow": 0,
+        "nmiShadow": 0,
+        "debugShadow": 0,
+        "nmiActive": false,
+        "retainedRealCs": false,
+        "segmentCaches": [
+          {
+            "base": 0,
+            "limit": 65535,
+            "default32": false,
+            "present": true,
+            "code": false,
+            "writable": true
+          },
+          {
+            "base": 0,
+            "limit": 4294967295,
+            "default32": true,
+            "present": true,
+            "code": true,
+            "readable": true,
+            "writable": false
+          },
+          {
+            "base": 0,
+            "limit": 65535,
+            "default32": false,
+            "present": true,
+            "code": false,
+            "writable": true
+          },
+          {
+            "base": 0,
+            "limit": 4294967295,
+            "default32": true,
+            "present": true,
+            "code": false,
+            "readable": true,
+            "writable": true
+          },
+          {
+            "base": 0,
+            "limit": 65535,
+            "default32": false,
+            "present": true,
+            "code": false,
+            "writable": true
+          },
+          {
+            "base": 0,
+            "limit": 65535,
+            "default32": false,
+            "present": true,
+            "code": false,
+            "writable": true
+          }
+        ],
+        "repeatContext": null,
+        "ldtr": {
+          "selector": 0,
+          "base": 0,
+          "limit": 0,
+          "present": false
+        },
+        "tr": {
+          "selector": 0,
+          "base": 0,
+          "limit": 0,
+          "present": false
+        },
+        "debugRegisters": {
+          "0": 0,
+          "1": 0,
+          "2": 0,
+          "3": 0,
+          "4": 0,
+          "5": 0,
+          "6": 0,
+          "7": 0
+        }
+      },
+      "retired": 9999999,
+      "eax": 305419897,
+      "eip": 2148663296,
+      "eflags": 2,
+      "cpuCycles": 9999999,
+      "machineCycles": 59999994,
+      "chipDebt": 5658,
+      "chipDeadline": 5664,
+      "ramSha256": "055b2b9ad83c98728aca70de2f8c8d77ddc09a13158066d00cf2114b5017de52",
+      "pit": [
+        {
+          "ce": 0,
+          "out": 0
+        },
+        {
+          "ce": 0,
+          "out": 0
+        },
+        {
+          "ce": 0,
+          "out": 0
+        }
+      ],
+      "rtc": {
+        "phase": 5994336,
+        "periodic": 200064
+      },
+      "pics": [
+        {
+          "irr": 0,
+          "isr": 0,
+          "imr": 0
+        },
+        {
+          "irr": 0,
+          "isr": 0,
+          "imr": 0
+        }
+      ]
+    },
+    "stats": null
+  },
+  {
+    "round": 5,
+    "measured": true,
+    "arm": "candidate",
+    "wholeCpuSeconds": 1.104308000000002,
+    "wholeWallSeconds": 0.8224440240301192,
+    "steps": 9999999,
+    "warmupSteps": 25000,
+    "executionCpuSeconds": 0.711079,
+    "executionWallSeconds": 0.474813657,
+    "semantic": {
+      "instructionSnapshot": {
+        "eax": 305419897,
+        "ecx": 2,
+        "edx": 305419896,
+        "ebx": 2148728832,
+        "esp": 0,
+        "ebp": 0,
+        "esi": 0,
+        "edi": 0,
+        "eip": 2148663296,
+        "eflags": 2,
+        "cs": 0,
+        "ds": 0,
+        "es": 0,
+        "ss": 0,
+        "fs": 0,
+        "gs": 0,
+        "halted": false,
+        "interruptShadow": 0,
+        "nmiShadow": 0,
+        "debugShadow": 0,
+        "nmiActive": false,
+        "retainedRealCs": false,
+        "segmentCaches": [
+          {
+            "base": 0,
+            "limit": 65535,
+            "default32": false,
+            "present": true,
+            "code": false,
+            "writable": true
+          },
+          {
+            "base": 0,
+            "limit": 4294967295,
+            "default32": true,
+            "present": true,
+            "code": true,
+            "readable": true,
+            "writable": false
+          },
+          {
+            "base": 0,
+            "limit": 65535,
+            "default32": false,
+            "present": true,
+            "code": false,
+            "writable": true
+          },
+          {
+            "base": 0,
+            "limit": 4294967295,
+            "default32": true,
+            "present": true,
+            "code": false,
+            "readable": true,
+            "writable": true
+          },
+          {
+            "base": 0,
+            "limit": 65535,
+            "default32": false,
+            "present": true,
+            "code": false,
+            "writable": true
+          },
+          {
+            "base": 0,
+            "limit": 65535,
+            "default32": false,
+            "present": true,
+            "code": false,
+            "writable": true
+          }
+        ],
+        "repeatContext": null,
+        "ldtr": {
+          "selector": 0,
+          "base": 0,
+          "limit": 0,
+          "present": false
+        },
+        "tr": {
+          "selector": 0,
+          "base": 0,
+          "limit": 0,
+          "present": false
+        },
+        "debugRegisters": {
+          "0": 0,
+          "1": 0,
+          "2": 0,
+          "3": 0,
+          "4": 0,
+          "5": 0,
+          "6": 0,
+          "7": 0
+        }
+      },
+      "retired": 9999999,
+      "eax": 305419897,
+      "eip": 2148663296,
+      "eflags": 2,
+      "cpuCycles": 9999999,
+      "machineCycles": 59999994,
+      "chipDebt": 5658,
+      "chipDeadline": 5664,
+      "ramSha256": "055b2b9ad83c98728aca70de2f8c8d77ddc09a13158066d00cf2114b5017de52",
+      "pit": [
+        {
+          "ce": 0,
+          "out": 0
+        },
+        {
+          "ce": 0,
+          "out": 0
+        },
+        {
+          "ce": 0,
+          "out": 0
+        }
+      ],
+      "rtc": {
+        "phase": 5994336,
+        "periodic": 200064
+      },
+      "pics": [
+        {
+          "irr": 0,
+          "isr": 0,
+          "imr": 0
+        },
+        {
+          "irr": 0,
+          "isr": 0,
+          "imr": 0
+        }
+      ]
+    },
+    "stats": {
+      "attempts": 325999,
+      "decoded": 2,
+      "blockCalls": 312400,
+      "instructions": 9986400,
+      "ineligibleModeSteps": 0,
+      "repStosDecoded": 0,
+      "repStosBlockCalls": 0,
+      "repStosIterations": 0,
+      "repMovDecoded": 0,
+      "repMovBlockCalls": 0,
+      "repMovIterations": 0,
+      "repStosbDecoded": 0,
+      "repStosbBlockCalls": 0,
+      "repStosbIterations": 0
+    }
+  },
+  {
+    "round": 5,
+    "measured": true,
+    "arm": "dispatch",
+    "wholeCpuSeconds": 1.4675939999999936,
+    "wholeWallSeconds": 1.1732276380062103,
+    "steps": 9999999,
+    "warmupSteps": 25000,
+    "executionCpuSeconds": 1.084966,
+    "executionWallSeconds": 0.849014601,
+    "semantic": {
+      "instructionSnapshot": {
+        "eax": 305419897,
+        "ecx": 2,
+        "edx": 305419896,
+        "ebx": 2148728832,
+        "esp": 0,
+        "ebp": 0,
+        "esi": 0,
+        "edi": 0,
+        "eip": 2148663296,
+        "eflags": 2,
+        "cs": 0,
+        "ds": 0,
+        "es": 0,
+        "ss": 0,
+        "fs": 0,
+        "gs": 0,
+        "halted": false,
+        "interruptShadow": 0,
+        "nmiShadow": 0,
+        "debugShadow": 0,
+        "nmiActive": false,
+        "retainedRealCs": false,
+        "segmentCaches": [
+          {
+            "base": 0,
+            "limit": 65535,
+            "default32": false,
+            "present": true,
+            "code": false,
+            "writable": true
+          },
+          {
+            "base": 0,
+            "limit": 4294967295,
+            "default32": true,
+            "present": true,
+            "code": true,
+            "readable": true,
+            "writable": false
+          },
+          {
+            "base": 0,
+            "limit": 65535,
+            "default32": false,
+            "present": true,
+            "code": false,
+            "writable": true
+          },
+          {
+            "base": 0,
+            "limit": 4294967295,
+            "default32": true,
+            "present": true,
+            "code": false,
+            "readable": true,
+            "writable": true
+          },
+          {
+            "base": 0,
+            "limit": 65535,
+            "default32": false,
+            "present": true,
+            "code": false,
+            "writable": true
+          },
+          {
+            "base": 0,
+            "limit": 65535,
+            "default32": false,
+            "present": true,
+            "code": false,
+            "writable": true
+          }
+        ],
+        "repeatContext": null,
+        "ldtr": {
+          "selector": 0,
+          "base": 0,
+          "limit": 0,
+          "present": false
+        },
+        "tr": {
+          "selector": 0,
+          "base": 0,
+          "limit": 0,
+          "present": false
+        },
+        "debugRegisters": {
+          "0": 0,
+          "1": 0,
+          "2": 0,
+          "3": 0,
+          "4": 0,
+          "5": 0,
+          "6": 0,
+          "7": 0
+        }
+      },
+      "retired": 9999999,
+      "eax": 305419897,
+      "eip": 2148663296,
+      "eflags": 2,
+      "cpuCycles": 9999999,
+      "machineCycles": 59999994,
+      "chipDebt": 5658,
+      "chipDeadline": 5664,
+      "ramSha256": "055b2b9ad83c98728aca70de2f8c8d77ddc09a13158066d00cf2114b5017de52",
+      "pit": [
+        {
+          "ce": 0,
+          "out": 0
+        },
+        {
+          "ce": 0,
+          "out": 0
+        },
+        {
+          "ce": 0,
+          "out": 0
+        }
+      ],
+      "rtc": {
+        "phase": 5994336,
+        "periodic": 200064
+      },
+      "pics": [
+        {
+          "irr": 0,
+          "isr": 0,
+          "imr": 0
+        },
+        {
+          "irr": 0,
+          "isr": 0,
+          "imr": 0
+        }
+      ]
+    },
+    "stats": {
+      "attempts": 1127331,
+      "decoded": 2,
+      "blockCalls": 1113732,
+      "instructions": 9986400,
+      "ineligibleModeSteps": 0,
+      "repStosDecoded": 0,
+      "repStosBlockCalls": 0,
+      "repStosIterations": 0,
+      "repMovDecoded": 0,
+      "repMovBlockCalls": 0,
+      "repMovIterations": 0,
+      "repStosbDecoded": 0,
+      "repStosbBlockCalls": 0,
+      "repStosbIterations": 0
+    }
+  },
+  {
+    "round": 5,
+    "measured": true,
+    "arm": "ordinary",
+    "wholeCpuSeconds": 5.983090000000003,
+    "wholeWallSeconds": 5.843097815988585,
+    "steps": 9999999,
+    "warmupSteps": 25000,
+    "executionCpuSeconds": 5.559159,
+    "executionWallSeconds": 5.496711367,
+    "semantic": {
+      "instructionSnapshot": {
+        "eax": 305419897,
+        "ecx": 2,
+        "edx": 305419896,
+        "ebx": 2148728832,
+        "esp": 0,
+        "ebp": 0,
+        "esi": 0,
+        "edi": 0,
+        "eip": 2148663296,
+        "eflags": 2,
+        "cs": 0,
+        "ds": 0,
+        "es": 0,
+        "ss": 0,
+        "fs": 0,
+        "gs": 0,
+        "halted": false,
+        "interruptShadow": 0,
+        "nmiShadow": 0,
+        "debugShadow": 0,
+        "nmiActive": false,
+        "retainedRealCs": false,
+        "segmentCaches": [
+          {
+            "base": 0,
+            "limit": 65535,
+            "default32": false,
+            "present": true,
+            "code": false,
+            "writable": true
+          },
+          {
+            "base": 0,
+            "limit": 4294967295,
+            "default32": true,
+            "present": true,
+            "code": true,
+            "readable": true,
+            "writable": false
+          },
+          {
+            "base": 0,
+            "limit": 65535,
+            "default32": false,
+            "present": true,
+            "code": false,
+            "writable": true
+          },
+          {
+            "base": 0,
+            "limit": 4294967295,
+            "default32": true,
+            "present": true,
+            "code": false,
+            "readable": true,
+            "writable": true
+          },
+          {
+            "base": 0,
+            "limit": 65535,
+            "default32": false,
+            "present": true,
+            "code": false,
+            "writable": true
+          },
+          {
+            "base": 0,
+            "limit": 65535,
+            "default32": false,
+            "present": true,
+            "code": false,
+            "writable": true
+          }
+        ],
+        "repeatContext": null,
+        "ldtr": {
+          "selector": 0,
+          "base": 0,
+          "limit": 0,
+          "present": false
+        },
+        "tr": {
+          "selector": 0,
+          "base": 0,
+          "limit": 0,
+          "present": false
+        },
+        "debugRegisters": {
+          "0": 0,
+          "1": 0,
+          "2": 0,
+          "3": 0,
+          "4": 0,
+          "5": 0,
+          "6": 0,
+          "7": 0
+        }
+      },
+      "retired": 9999999,
+      "eax": 305419897,
+      "eip": 2148663296,
+      "eflags": 2,
+      "cpuCycles": 9999999,
+      "machineCycles": 59999994,
+      "chipDebt": 5658,
+      "chipDeadline": 5664,
+      "ramSha256": "055b2b9ad83c98728aca70de2f8c8d77ddc09a13158066d00cf2114b5017de52",
+      "pit": [
+        {
+          "ce": 0,
+          "out": 0
+        },
+        {
+          "ce": 0,
+          "out": 0
+        },
+        {
+          "ce": 0,
+          "out": 0
+        }
+      ],
+      "rtc": {
+        "phase": 5994336,
+        "periodic": 200064
+      },
+      "pics": [
+        {
+          "irr": 0,
+          "isr": 0,
+          "imr": 0
+        },
+        {
+          "irr": 0,
+          "isr": 0,
+          "imr": 0
+        }
+      ]
+    },
+    "stats": null
+  },
+  {
+    "round": 6,
+    "measured": true,
+    "arm": "ordinary",
+    "wholeCpuSeconds": 5.969042999999999,
+    "wholeWallSeconds": 5.794233875814825,
+    "steps": 9999999,
+    "warmupSteps": 25000,
+    "executionCpuSeconds": 5.607585,
+    "executionWallSeconds": 5.496559518,
+    "semantic": {
+      "instructionSnapshot": {
+        "eax": 305419897,
+        "ecx": 2,
+        "edx": 305419896,
+        "ebx": 2148728832,
+        "esp": 0,
+        "ebp": 0,
+        "esi": 0,
+        "edi": 0,
+        "eip": 2148663296,
+        "eflags": 2,
+        "cs": 0,
+        "ds": 0,
+        "es": 0,
+        "ss": 0,
+        "fs": 0,
+        "gs": 0,
+        "halted": false,
+        "interruptShadow": 0,
+        "nmiShadow": 0,
+        "debugShadow": 0,
+        "nmiActive": false,
+        "retainedRealCs": false,
+        "segmentCaches": [
+          {
+            "base": 0,
+            "limit": 65535,
+            "default32": false,
+            "present": true,
+            "code": false,
+            "writable": true
+          },
+          {
+            "base": 0,
+            "limit": 4294967295,
+            "default32": true,
+            "present": true,
+            "code": true,
+            "readable": true,
+            "writable": false
+          },
+          {
+            "base": 0,
+            "limit": 65535,
+            "default32": false,
+            "present": true,
+            "code": false,
+            "writable": true
+          },
+          {
+            "base": 0,
+            "limit": 4294967295,
+            "default32": true,
+            "present": true,
+            "code": false,
+            "readable": true,
+            "writable": true
+          },
+          {
+            "base": 0,
+            "limit": 65535,
+            "default32": false,
+            "present": true,
+            "code": false,
+            "writable": true
+          },
+          {
+            "base": 0,
+            "limit": 65535,
+            "default32": false,
+            "present": true,
+            "code": false,
+            "writable": true
+          }
+        ],
+        "repeatContext": null,
+        "ldtr": {
+          "selector": 0,
+          "base": 0,
+          "limit": 0,
+          "present": false
+        },
+        "tr": {
+          "selector": 0,
+          "base": 0,
+          "limit": 0,
+          "present": false
+        },
+        "debugRegisters": {
+          "0": 0,
+          "1": 0,
+          "2": 0,
+          "3": 0,
+          "4": 0,
+          "5": 0,
+          "6": 0,
+          "7": 0
+        }
+      },
+      "retired": 9999999,
+      "eax": 305419897,
+      "eip": 2148663296,
+      "eflags": 2,
+      "cpuCycles": 9999999,
+      "machineCycles": 59999994,
+      "chipDebt": 5658,
+      "chipDeadline": 5664,
+      "ramSha256": "055b2b9ad83c98728aca70de2f8c8d77ddc09a13158066d00cf2114b5017de52",
+      "pit": [
+        {
+          "ce": 0,
+          "out": 0
+        },
+        {
+          "ce": 0,
+          "out": 0
+        },
+        {
+          "ce": 0,
+          "out": 0
+        }
+      ],
+      "rtc": {
+        "phase": 5994336,
+        "periodic": 200064
+      },
+      "pics": [
+        {
+          "irr": 0,
+          "isr": 0,
+          "imr": 0
+        },
+        {
+          "irr": 0,
+          "isr": 0,
+          "imr": 0
+        }
+      ]
+    },
+    "stats": null
+  },
+  {
+    "round": 6,
+    "measured": true,
+    "arm": "dispatch",
+    "wholeCpuSeconds": 1.5217159999999947,
+    "wholeWallSeconds": 1.2706086339894682,
+    "steps": 9999999,
+    "warmupSteps": 25000,
+    "executionCpuSeconds": 1.151791,
+    "executionWallSeconds": 0.944165558,
+    "semantic": {
+      "instructionSnapshot": {
+        "eax": 305419897,
+        "ecx": 2,
+        "edx": 305419896,
+        "ebx": 2148728832,
+        "esp": 0,
+        "ebp": 0,
+        "esi": 0,
+        "edi": 0,
+        "eip": 2148663296,
+        "eflags": 2,
+        "cs": 0,
+        "ds": 0,
+        "es": 0,
+        "ss": 0,
+        "fs": 0,
+        "gs": 0,
+        "halted": false,
+        "interruptShadow": 0,
+        "nmiShadow": 0,
+        "debugShadow": 0,
+        "nmiActive": false,
+        "retainedRealCs": false,
+        "segmentCaches": [
+          {
+            "base": 0,
+            "limit": 65535,
+            "default32": false,
+            "present": true,
+            "code": false,
+            "writable": true
+          },
+          {
+            "base": 0,
+            "limit": 4294967295,
+            "default32": true,
+            "present": true,
+            "code": true,
+            "readable": true,
+            "writable": false
+          },
+          {
+            "base": 0,
+            "limit": 65535,
+            "default32": false,
+            "present": true,
+            "code": false,
+            "writable": true
+          },
+          {
+            "base": 0,
+            "limit": 4294967295,
+            "default32": true,
+            "present": true,
+            "code": false,
+            "readable": true,
+            "writable": true
+          },
+          {
+            "base": 0,
+            "limit": 65535,
+            "default32": false,
+            "present": true,
+            "code": false,
+            "writable": true
+          },
+          {
+            "base": 0,
+            "limit": 65535,
+            "default32": false,
+            "present": true,
+            "code": false,
+            "writable": true
+          }
+        ],
+        "repeatContext": null,
+        "ldtr": {
+          "selector": 0,
+          "base": 0,
+          "limit": 0,
+          "present": false
+        },
+        "tr": {
+          "selector": 0,
+          "base": 0,
+          "limit": 0,
+          "present": false
+        },
+        "debugRegisters": {
+          "0": 0,
+          "1": 0,
+          "2": 0,
+          "3": 0,
+          "4": 0,
+          "5": 0,
+          "6": 0,
+          "7": 0
+        }
+      },
+      "retired": 9999999,
+      "eax": 305419897,
+      "eip": 2148663296,
+      "eflags": 2,
+      "cpuCycles": 9999999,
+      "machineCycles": 59999994,
+      "chipDebt": 5658,
+      "chipDeadline": 5664,
+      "ramSha256": "055b2b9ad83c98728aca70de2f8c8d77ddc09a13158066d00cf2114b5017de52",
+      "pit": [
+        {
+          "ce": 0,
+          "out": 0
+        },
+        {
+          "ce": 0,
+          "out": 0
+        },
+        {
+          "ce": 0,
+          "out": 0
+        }
+      ],
+      "rtc": {
+        "phase": 5994336,
+        "periodic": 200064
+      },
+      "pics": [
+        {
+          "irr": 0,
+          "isr": 0,
+          "imr": 0
+        },
+        {
+          "irr": 0,
+          "isr": 0,
+          "imr": 0
+        }
+      ]
+    },
+    "stats": {
+      "attempts": 1127331,
+      "decoded": 2,
+      "blockCalls": 1113732,
+      "instructions": 9986400,
+      "ineligibleModeSteps": 0,
+      "repStosDecoded": 0,
+      "repStosBlockCalls": 0,
+      "repStosIterations": 0,
+      "repMovDecoded": 0,
+      "repMovBlockCalls": 0,
+      "repMovIterations": 0,
+      "repStosbDecoded": 0,
+      "repStosbBlockCalls": 0,
+      "repStosbIterations": 0
+    }
+  },
+  {
+    "round": 6,
+    "measured": true,
+    "arm": "candidate",
+    "wholeCpuSeconds": 0.9956519999999993,
+    "wholeWallSeconds": 0.7732786261476576,
+    "steps": 9999999,
+    "warmupSteps": 25000,
+    "executionCpuSeconds": 0.668717,
+    "executionWallSeconds": 0.457728229,
+    "semantic": {
+      "instructionSnapshot": {
+        "eax": 305419897,
+        "ecx": 2,
+        "edx": 305419896,
+        "ebx": 2148728832,
+        "esp": 0,
+        "ebp": 0,
+        "esi": 0,
+        "edi": 0,
+        "eip": 2148663296,
+        "eflags": 2,
+        "cs": 0,
+        "ds": 0,
+        "es": 0,
+        "ss": 0,
+        "fs": 0,
+        "gs": 0,
+        "halted": false,
+        "interruptShadow": 0,
+        "nmiShadow": 0,
+        "debugShadow": 0,
+        "nmiActive": false,
+        "retainedRealCs": false,
+        "segmentCaches": [
+          {
+            "base": 0,
+            "limit": 65535,
+            "default32": false,
+            "present": true,
+            "code": false,
+            "writable": true
+          },
+          {
+            "base": 0,
+            "limit": 4294967295,
+            "default32": true,
+            "present": true,
+            "code": true,
+            "readable": true,
+            "writable": false
+          },
+          {
+            "base": 0,
+            "limit": 65535,
+            "default32": false,
+            "present": true,
+            "code": false,
+            "writable": true
+          },
+          {
+            "base": 0,
+            "limit": 4294967295,
+            "default32": true,
+            "present": true,
+            "code": false,
+            "readable": true,
+            "writable": true
+          },
+          {
+            "base": 0,
+            "limit": 65535,
+            "default32": false,
+            "present": true,
+            "code": false,
+            "writable": true
+          },
+          {
+            "base": 0,
+            "limit": 65535,
+            "default32": false,
+            "present": true,
+            "code": false,
+            "writable": true
+          }
+        ],
+        "repeatContext": null,
+        "ldtr": {
+          "selector": 0,
+          "base": 0,
+          "limit": 0,
+          "present": false
+        },
+        "tr": {
+          "selector": 0,
+          "base": 0,
+          "limit": 0,
+          "present": false
+        },
+        "debugRegisters": {
+          "0": 0,
+          "1": 0,
+          "2": 0,
+          "3": 0,
+          "4": 0,
+          "5": 0,
+          "6": 0,
+          "7": 0
+        }
+      },
+      "retired": 9999999,
+      "eax": 305419897,
+      "eip": 2148663296,
+      "eflags": 2,
+      "cpuCycles": 9999999,
+      "machineCycles": 59999994,
+      "chipDebt": 5658,
+      "chipDeadline": 5664,
+      "ramSha256": "055b2b9ad83c98728aca70de2f8c8d77ddc09a13158066d00cf2114b5017de52",
+      "pit": [
+        {
+          "ce": 0,
+          "out": 0
+        },
+        {
+          "ce": 0,
+          "out": 0
+        },
+        {
+          "ce": 0,
+          "out": 0
+        }
+      ],
+      "rtc": {
+        "phase": 5994336,
+        "periodic": 200064
+      },
+      "pics": [
+        {
+          "irr": 0,
+          "isr": 0,
+          "imr": 0
+        },
+        {
+          "irr": 0,
+          "isr": 0,
+          "imr": 0
+        }
+      ]
+    },
+    "stats": {
+      "attempts": 325999,
+      "decoded": 2,
+      "blockCalls": 312400,
+      "instructions": 9986400,
+      "ineligibleModeSteps": 0,
+      "repStosDecoded": 0,
+      "repStosBlockCalls": 0,
+      "repStosIterations": 0,
+      "repMovDecoded": 0,
+      "repMovBlockCalls": 0,
+      "repMovIterations": 0,
+      "repStosbDecoded": 0,
+      "repStosbBlockCalls": 0,
+      "repStosbIterations": 0
+    }
+  },
+  {
+    "round": 7,
+    "measured": true,
+    "arm": "dispatch",
+    "wholeCpuSeconds": 1.5604069999999952,
+    "wholeWallSeconds": 1.2704886251594871,
+    "steps": 9999999,
+    "warmupSteps": 25000,
+    "executionCpuSeconds": 1.173587,
+    "executionWallSeconds": 0.945706302,
+    "semantic": {
+      "instructionSnapshot": {
+        "eax": 305419897,
+        "ecx": 2,
+        "edx": 305419896,
+        "ebx": 2148728832,
+        "esp": 0,
+        "ebp": 0,
+        "esi": 0,
+        "edi": 0,
+        "eip": 2148663296,
+        "eflags": 2,
+        "cs": 0,
+        "ds": 0,
+        "es": 0,
+        "ss": 0,
+        "fs": 0,
+        "gs": 0,
+        "halted": false,
+        "interruptShadow": 0,
+        "nmiShadow": 0,
+        "debugShadow": 0,
+        "nmiActive": false,
+        "retainedRealCs": false,
+        "segmentCaches": [
+          {
+            "base": 0,
+            "limit": 65535,
+            "default32": false,
+            "present": true,
+            "code": false,
+            "writable": true
+          },
+          {
+            "base": 0,
+            "limit": 4294967295,
+            "default32": true,
+            "present": true,
+            "code": true,
+            "readable": true,
+            "writable": false
+          },
+          {
+            "base": 0,
+            "limit": 65535,
+            "default32": false,
+            "present": true,
+            "code": false,
+            "writable": true
+          },
+          {
+            "base": 0,
+            "limit": 4294967295,
+            "default32": true,
+            "present": true,
+            "code": false,
+            "readable": true,
+            "writable": true
+          },
+          {
+            "base": 0,
+            "limit": 65535,
+            "default32": false,
+            "present": true,
+            "code": false,
+            "writable": true
+          },
+          {
+            "base": 0,
+            "limit": 65535,
+            "default32": false,
+            "present": true,
+            "code": false,
+            "writable": true
+          }
+        ],
+        "repeatContext": null,
+        "ldtr": {
+          "selector": 0,
+          "base": 0,
+          "limit": 0,
+          "present": false
+        },
+        "tr": {
+          "selector": 0,
+          "base": 0,
+          "limit": 0,
+          "present": false
+        },
+        "debugRegisters": {
+          "0": 0,
+          "1": 0,
+          "2": 0,
+          "3": 0,
+          "4": 0,
+          "5": 0,
+          "6": 0,
+          "7": 0
+        }
+      },
+      "retired": 9999999,
+      "eax": 305419897,
+      "eip": 2148663296,
+      "eflags": 2,
+      "cpuCycles": 9999999,
+      "machineCycles": 59999994,
+      "chipDebt": 5658,
+      "chipDeadline": 5664,
+      "ramSha256": "055b2b9ad83c98728aca70de2f8c8d77ddc09a13158066d00cf2114b5017de52",
+      "pit": [
+        {
+          "ce": 0,
+          "out": 0
+        },
+        {
+          "ce": 0,
+          "out": 0
+        },
+        {
+          "ce": 0,
+          "out": 0
+        }
+      ],
+      "rtc": {
+        "phase": 5994336,
+        "periodic": 200064
+      },
+      "pics": [
+        {
+          "irr": 0,
+          "isr": 0,
+          "imr": 0
+        },
+        {
+          "irr": 0,
+          "isr": 0,
+          "imr": 0
+        }
+      ]
+    },
+    "stats": {
+      "attempts": 1127331,
+      "decoded": 2,
+      "blockCalls": 1113732,
+      "instructions": 9986400,
+      "ineligibleModeSteps": 0,
+      "repStosDecoded": 0,
+      "repStosBlockCalls": 0,
+      "repStosIterations": 0,
+      "repMovDecoded": 0,
+      "repMovBlockCalls": 0,
+      "repMovIterations": 0,
+      "repStosbDecoded": 0,
+      "repStosbBlockCalls": 0,
+      "repStosbIterations": 0
+    }
+  },
+  {
+    "round": 7,
+    "measured": true,
+    "arm": "candidate",
+    "wholeCpuSeconds": 1.0195110000000058,
+    "wholeWallSeconds": 0.7196158110164106,
+    "steps": 9999999,
+    "warmupSteps": 25000,
+    "executionCpuSeconds": 0.686938,
+    "executionWallSeconds": 0.435279088,
+    "semantic": {
+      "instructionSnapshot": {
+        "eax": 305419897,
+        "ecx": 2,
+        "edx": 305419896,
+        "ebx": 2148728832,
+        "esp": 0,
+        "ebp": 0,
+        "esi": 0,
+        "edi": 0,
+        "eip": 2148663296,
+        "eflags": 2,
+        "cs": 0,
+        "ds": 0,
+        "es": 0,
+        "ss": 0,
+        "fs": 0,
+        "gs": 0,
+        "halted": false,
+        "interruptShadow": 0,
+        "nmiShadow": 0,
+        "debugShadow": 0,
+        "nmiActive": false,
+        "retainedRealCs": false,
+        "segmentCaches": [
+          {
+            "base": 0,
+            "limit": 65535,
+            "default32": false,
+            "present": true,
+            "code": false,
+            "writable": true
+          },
+          {
+            "base": 0,
+            "limit": 4294967295,
+            "default32": true,
+            "present": true,
+            "code": true,
+            "readable": true,
+            "writable": false
+          },
+          {
+            "base": 0,
+            "limit": 65535,
+            "default32": false,
+            "present": true,
+            "code": false,
+            "writable": true
+          },
+          {
+            "base": 0,
+            "limit": 4294967295,
+            "default32": true,
+            "present": true,
+            "code": false,
+            "readable": true,
+            "writable": true
+          },
+          {
+            "base": 0,
+            "limit": 65535,
+            "default32": false,
+            "present": true,
+            "code": false,
+            "writable": true
+          },
+          {
+            "base": 0,
+            "limit": 65535,
+            "default32": false,
+            "present": true,
+            "code": false,
+            "writable": true
+          }
+        ],
+        "repeatContext": null,
+        "ldtr": {
+          "selector": 0,
+          "base": 0,
+          "limit": 0,
+          "present": false
+        },
+        "tr": {
+          "selector": 0,
+          "base": 0,
+          "limit": 0,
+          "present": false
+        },
+        "debugRegisters": {
+          "0": 0,
+          "1": 0,
+          "2": 0,
+          "3": 0,
+          "4": 0,
+          "5": 0,
+          "6": 0,
+          "7": 0
+        }
+      },
+      "retired": 9999999,
+      "eax": 305419897,
+      "eip": 2148663296,
+      "eflags": 2,
+      "cpuCycles": 9999999,
+      "machineCycles": 59999994,
+      "chipDebt": 5658,
+      "chipDeadline": 5664,
+      "ramSha256": "055b2b9ad83c98728aca70de2f8c8d77ddc09a13158066d00cf2114b5017de52",
+      "pit": [
+        {
+          "ce": 0,
+          "out": 0
+        },
+        {
+          "ce": 0,
+          "out": 0
+        },
+        {
+          "ce": 0,
+          "out": 0
+        }
+      ],
+      "rtc": {
+        "phase": 5994336,
+        "periodic": 200064
+      },
+      "pics": [
+        {
+          "irr": 0,
+          "isr": 0,
+          "imr": 0
+        },
+        {
+          "irr": 0,
+          "isr": 0,
+          "imr": 0
+        }
+      ]
+    },
+    "stats": {
+      "attempts": 325999,
+      "decoded": 2,
+      "blockCalls": 312400,
+      "instructions": 9986400,
+      "ineligibleModeSteps": 0,
+      "repStosDecoded": 0,
+      "repStosBlockCalls": 0,
+      "repStosIterations": 0,
+      "repMovDecoded": 0,
+      "repMovBlockCalls": 0,
+      "repMovIterations": 0,
+      "repStosbDecoded": 0,
+      "repStosbBlockCalls": 0,
+      "repStosbIterations": 0
+    }
+  },
+  {
+    "round": 7,
+    "measured": true,
+    "arm": "ordinary",
+    "wholeCpuSeconds": 5.614036999999998,
+    "wholeWallSeconds": 5.338218844030052,
+    "steps": 9999999,
+    "warmupSteps": 25000,
+    "executionCpuSeconds": 5.208065,
+    "executionWallSeconds": 5.033101012,
+    "semantic": {
+      "instructionSnapshot": {
+        "eax": 305419897,
+        "ecx": 2,
+        "edx": 305419896,
+        "ebx": 2148728832,
+        "esp": 0,
+        "ebp": 0,
+        "esi": 0,
+        "edi": 0,
+        "eip": 2148663296,
+        "eflags": 2,
+        "cs": 0,
+        "ds": 0,
+        "es": 0,
+        "ss": 0,
+        "fs": 0,
+        "gs": 0,
+        "halted": false,
+        "interruptShadow": 0,
+        "nmiShadow": 0,
+        "debugShadow": 0,
+        "nmiActive": false,
+        "retainedRealCs": false,
+        "segmentCaches": [
+          {
+            "base": 0,
+            "limit": 65535,
+            "default32": false,
+            "present": true,
+            "code": false,
+            "writable": true
+          },
+          {
+            "base": 0,
+            "limit": 4294967295,
+            "default32": true,
+            "present": true,
+            "code": true,
+            "readable": true,
+            "writable": false
+          },
+          {
+            "base": 0,
+            "limit": 65535,
+            "default32": false,
+            "present": true,
+            "code": false,
+            "writable": true
+          },
+          {
+            "base": 0,
+            "limit": 4294967295,
+            "default32": true,
+            "present": true,
+            "code": false,
+            "readable": true,
+            "writable": true
+          },
+          {
+            "base": 0,
+            "limit": 65535,
+            "default32": false,
+            "present": true,
+            "code": false,
+            "writable": true
+          },
+          {
+            "base": 0,
+            "limit": 65535,
+            "default32": false,
+            "present": true,
+            "code": false,
+            "writable": true
+          }
+        ],
+        "repeatContext": null,
+        "ldtr": {
+          "selector": 0,
+          "base": 0,
+          "limit": 0,
+          "present": false
+        },
+        "tr": {
+          "selector": 0,
+          "base": 0,
+          "limit": 0,
+          "present": false
+        },
+        "debugRegisters": {
+          "0": 0,
+          "1": 0,
+          "2": 0,
+          "3": 0,
+          "4": 0,
+          "5": 0,
+          "6": 0,
+          "7": 0
+        }
+      },
+      "retired": 9999999,
+      "eax": 305419897,
+      "eip": 2148663296,
+      "eflags": 2,
+      "cpuCycles": 9999999,
+      "machineCycles": 59999994,
+      "chipDebt": 5658,
+      "chipDeadline": 5664,
+      "ramSha256": "055b2b9ad83c98728aca70de2f8c8d77ddc09a13158066d00cf2114b5017de52",
+      "pit": [
+        {
+          "ce": 0,
+          "out": 0
+        },
+        {
+          "ce": 0,
+          "out": 0
+        },
+        {
+          "ce": 0,
+          "out": 0
+        }
+      ],
+      "rtc": {
+        "phase": 5994336,
+        "periodic": 200064
+      },
+      "pics": [
+        {
+          "irr": 0,
+          "isr": 0,
+          "imr": 0
+        },
+        {
+          "irr": 0,
+          "isr": 0,
+          "imr": 0
+        }
+      ]
+    },
+    "stats": null
+  },
+  {
+    "round": 8,
+    "measured": true,
+    "arm": "candidate",
+    "wholeCpuSeconds": 1.028238000000008,
+    "wholeWallSeconds": 0.7694128460716456,
+    "steps": 9999999,
+    "warmupSteps": 25000,
+    "executionCpuSeconds": 0.658969,
+    "executionWallSeconds": 0.443700262,
+    "semantic": {
+      "instructionSnapshot": {
+        "eax": 305419897,
+        "ecx": 2,
+        "edx": 305419896,
+        "ebx": 2148728832,
+        "esp": 0,
+        "ebp": 0,
+        "esi": 0,
+        "edi": 0,
+        "eip": 2148663296,
+        "eflags": 2,
+        "cs": 0,
+        "ds": 0,
+        "es": 0,
+        "ss": 0,
+        "fs": 0,
+        "gs": 0,
+        "halted": false,
+        "interruptShadow": 0,
+        "nmiShadow": 0,
+        "debugShadow": 0,
+        "nmiActive": false,
+        "retainedRealCs": false,
+        "segmentCaches": [
+          {
+            "base": 0,
+            "limit": 65535,
+            "default32": false,
+            "present": true,
+            "code": false,
+            "writable": true
+          },
+          {
+            "base": 0,
+            "limit": 4294967295,
+            "default32": true,
+            "present": true,
+            "code": true,
+            "readable": true,
+            "writable": false
+          },
+          {
+            "base": 0,
+            "limit": 65535,
+            "default32": false,
+            "present": true,
+            "code": false,
+            "writable": true
+          },
+          {
+            "base": 0,
+            "limit": 4294967295,
+            "default32": true,
+            "present": true,
+            "code": false,
+            "readable": true,
+            "writable": true
+          },
+          {
+            "base": 0,
+            "limit": 65535,
+            "default32": false,
+            "present": true,
+            "code": false,
+            "writable": true
+          },
+          {
+            "base": 0,
+            "limit": 65535,
+            "default32": false,
+            "present": true,
+            "code": false,
+            "writable": true
+          }
+        ],
+        "repeatContext": null,
+        "ldtr": {
+          "selector": 0,
+          "base": 0,
+          "limit": 0,
+          "present": false
+        },
+        "tr": {
+          "selector": 0,
+          "base": 0,
+          "limit": 0,
+          "present": false
+        },
+        "debugRegisters": {
+          "0": 0,
+          "1": 0,
+          "2": 0,
+          "3": 0,
+          "4": 0,
+          "5": 0,
+          "6": 0,
+          "7": 0
+        }
+      },
+      "retired": 9999999,
+      "eax": 305419897,
+      "eip": 2148663296,
+      "eflags": 2,
+      "cpuCycles": 9999999,
+      "machineCycles": 59999994,
+      "chipDebt": 5658,
+      "chipDeadline": 5664,
+      "ramSha256": "055b2b9ad83c98728aca70de2f8c8d77ddc09a13158066d00cf2114b5017de52",
+      "pit": [
+        {
+          "ce": 0,
+          "out": 0
+        },
+        {
+          "ce": 0,
+          "out": 0
+        },
+        {
+          "ce": 0,
+          "out": 0
+        }
+      ],
+      "rtc": {
+        "phase": 5994336,
+        "periodic": 200064
+      },
+      "pics": [
+        {
+          "irr": 0,
+          "isr": 0,
+          "imr": 0
+        },
+        {
+          "irr": 0,
+          "isr": 0,
+          "imr": 0
+        }
+      ]
+    },
+    "stats": {
+      "attempts": 325999,
+      "decoded": 2,
+      "blockCalls": 312400,
+      "instructions": 9986400,
+      "ineligibleModeSteps": 0,
+      "repStosDecoded": 0,
+      "repStosBlockCalls": 0,
+      "repStosIterations": 0,
+      "repMovDecoded": 0,
+      "repMovBlockCalls": 0,
+      "repMovIterations": 0,
+      "repStosbDecoded": 0,
+      "repStosbBlockCalls": 0,
+      "repStosbIterations": 0
+    }
+  },
+  {
+    "round": 8,
+    "measured": true,
+    "arm": "dispatch",
+    "wholeCpuSeconds": 1.4599939999999902,
+    "wholeWallSeconds": 1.1704279899131507,
+    "steps": 9999999,
+    "warmupSteps": 25000,
+    "executionCpuSeconds": 1.095886,
+    "executionWallSeconds": 0.856562552,
+    "semantic": {
+      "instructionSnapshot": {
+        "eax": 305419897,
+        "ecx": 2,
+        "edx": 305419896,
+        "ebx": 2148728832,
+        "esp": 0,
+        "ebp": 0,
+        "esi": 0,
+        "edi": 0,
+        "eip": 2148663296,
+        "eflags": 2,
+        "cs": 0,
+        "ds": 0,
+        "es": 0,
+        "ss": 0,
+        "fs": 0,
+        "gs": 0,
+        "halted": false,
+        "interruptShadow": 0,
+        "nmiShadow": 0,
+        "debugShadow": 0,
+        "nmiActive": false,
+        "retainedRealCs": false,
+        "segmentCaches": [
+          {
+            "base": 0,
+            "limit": 65535,
+            "default32": false,
+            "present": true,
+            "code": false,
+            "writable": true
+          },
+          {
+            "base": 0,
+            "limit": 4294967295,
+            "default32": true,
+            "present": true,
+            "code": true,
+            "readable": true,
+            "writable": false
+          },
+          {
+            "base": 0,
+            "limit": 65535,
+            "default32": false,
+            "present": true,
+            "code": false,
+            "writable": true
+          },
+          {
+            "base": 0,
+            "limit": 4294967295,
+            "default32": true,
+            "present": true,
+            "code": false,
+            "readable": true,
+            "writable": true
+          },
+          {
+            "base": 0,
+            "limit": 65535,
+            "default32": false,
+            "present": true,
+            "code": false,
+            "writable": true
+          },
+          {
+            "base": 0,
+            "limit": 65535,
+            "default32": false,
+            "present": true,
+            "code": false,
+            "writable": true
+          }
+        ],
+        "repeatContext": null,
+        "ldtr": {
+          "selector": 0,
+          "base": 0,
+          "limit": 0,
+          "present": false
+        },
+        "tr": {
+          "selector": 0,
+          "base": 0,
+          "limit": 0,
+          "present": false
+        },
+        "debugRegisters": {
+          "0": 0,
+          "1": 0,
+          "2": 0,
+          "3": 0,
+          "4": 0,
+          "5": 0,
+          "6": 0,
+          "7": 0
+        }
+      },
+      "retired": 9999999,
+      "eax": 305419897,
+      "eip": 2148663296,
+      "eflags": 2,
+      "cpuCycles": 9999999,
+      "machineCycles": 59999994,
+      "chipDebt": 5658,
+      "chipDeadline": 5664,
+      "ramSha256": "055b2b9ad83c98728aca70de2f8c8d77ddc09a13158066d00cf2114b5017de52",
+      "pit": [
+        {
+          "ce": 0,
+          "out": 0
+        },
+        {
+          "ce": 0,
+          "out": 0
+        },
+        {
+          "ce": 0,
+          "out": 0
+        }
+      ],
+      "rtc": {
+        "phase": 5994336,
+        "periodic": 200064
+      },
+      "pics": [
+        {
+          "irr": 0,
+          "isr": 0,
+          "imr": 0
+        },
+        {
+          "irr": 0,
+          "isr": 0,
+          "imr": 0
+        }
+      ]
+    },
+    "stats": {
+      "attempts": 1127331,
+      "decoded": 2,
+      "blockCalls": 1113732,
+      "instructions": 9986400,
+      "ineligibleModeSteps": 0,
+      "repStosDecoded": 0,
+      "repStosBlockCalls": 0,
+      "repStosIterations": 0,
+      "repMovDecoded": 0,
+      "repMovBlockCalls": 0,
+      "repMovIterations": 0,
+      "repStosbDecoded": 0,
+      "repStosbBlockCalls": 0,
+      "repStosbIterations": 0
+    }
+  },
+  {
+    "round": 8,
+    "measured": true,
+    "arm": "ordinary",
+    "wholeCpuSeconds": 5.646832999999994,
+    "wholeWallSeconds": 5.3860642549116164,
+    "steps": 9999999,
+    "warmupSteps": 25000,
+    "executionCpuSeconds": 5.269869,
+    "executionWallSeconds": 5.12223314,
+    "semantic": {
+      "instructionSnapshot": {
+        "eax": 305419897,
+        "ecx": 2,
+        "edx": 305419896,
+        "ebx": 2148728832,
+        "esp": 0,
+        "ebp": 0,
+        "esi": 0,
+        "edi": 0,
+        "eip": 2148663296,
+        "eflags": 2,
+        "cs": 0,
+        "ds": 0,
+        "es": 0,
+        "ss": 0,
+        "fs": 0,
+        "gs": 0,
+        "halted": false,
+        "interruptShadow": 0,
+        "nmiShadow": 0,
+        "debugShadow": 0,
+        "nmiActive": false,
+        "retainedRealCs": false,
+        "segmentCaches": [
+          {
+            "base": 0,
+            "limit": 65535,
+            "default32": false,
+            "present": true,
+            "code": false,
+            "writable": true
+          },
+          {
+            "base": 0,
+            "limit": 4294967295,
+            "default32": true,
+            "present": true,
+            "code": true,
+            "readable": true,
+            "writable": false
+          },
+          {
+            "base": 0,
+            "limit": 65535,
+            "default32": false,
+            "present": true,
+            "code": false,
+            "writable": true
+          },
+          {
+            "base": 0,
+            "limit": 4294967295,
+            "default32": true,
+            "present": true,
+            "code": false,
+            "readable": true,
+            "writable": true
+          },
+          {
+            "base": 0,
+            "limit": 65535,
+            "default32": false,
+            "present": true,
+            "code": false,
+            "writable": true
+          },
+          {
+            "base": 0,
+            "limit": 65535,
+            "default32": false,
+            "present": true,
+            "code": false,
+            "writable": true
+          }
+        ],
+        "repeatContext": null,
+        "ldtr": {
+          "selector": 0,
+          "base": 0,
+          "limit": 0,
+          "present": false
+        },
+        "tr": {
+          "selector": 0,
+          "base": 0,
+          "limit": 0,
+          "present": false
+        },
+        "debugRegisters": {
+          "0": 0,
+          "1": 0,
+          "2": 0,
+          "3": 0,
+          "4": 0,
+          "5": 0,
+          "6": 0,
+          "7": 0
+        }
+      },
+      "retired": 9999999,
+      "eax": 305419897,
+      "eip": 2148663296,
+      "eflags": 2,
+      "cpuCycles": 9999999,
+      "machineCycles": 59999994,
+      "chipDebt": 5658,
+      "chipDeadline": 5664,
+      "ramSha256": "055b2b9ad83c98728aca70de2f8c8d77ddc09a13158066d00cf2114b5017de52",
+      "pit": [
+        {
+          "ce": 0,
+          "out": 0
+        },
+        {
+          "ce": 0,
+          "out": 0
+        },
+        {
+          "ce": 0,
+          "out": 0
+        }
+      ],
+      "rtc": {
+        "phase": 5994336,
+        "periodic": 200064
+      },
+      "pics": [
+        {
+          "irr": 0,
+          "isr": 0,
+          "imr": 0
+        },
+        {
+          "irr": 0,
+          "isr": 0,
+          "imr": 0
+        }
+      ]
+    },
+    "stats": null
+  }
+]

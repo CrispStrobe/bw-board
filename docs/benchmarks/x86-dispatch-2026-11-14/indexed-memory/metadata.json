@@ -1,0 +1,32 @@
+{
+  "schema": "x86-representative-dispatch-benchmark.v1",
+  "baseSha": "d19b5e4d2b8aa0f025fd7a3512db3252e470433d",
+  "candidateBase": "0a5c49e34ecf7654e1974c0433249cda1a491f32",
+  "node": "v24.22.1",
+  "cpuModel": "Intel Xeon Processor (Skylake, IBRS, no TSX)",
+  "logicalCpus": 4,
+  "affinity": [
+    0,
+    1,
+    2,
+    3
+  ],
+  "loadBefore": [
+    6.74951171875,
+    5.38671875,
+    3.20166015625
+  ],
+  "steps": 9999999,
+  "warmupSteps": 25000,
+  "warmupRounds": 2,
+  "measuredRounds": 7,
+  "workload": "test native-byte-block protected32 paged MOV EAX,[EBX+ECX*4+10h]; CMP EAX,EDX; JNZ back",
+  "physicalTimingCalibrated": false,
+  "defaultAdoption": false,
+  "sourceHashes": {
+    "base": "d96a13682f00e74d7f3302444c7608233f94b492d1ea757ee1a8b3bccfde6ed5",
+    "candidate": "40bd9da01f46f7e0dd2c8b7d423d319e6ff52622d57e09a278e188111e36c649"
+  },
+  "candidateCommit": "0a5c49e34ecf7654e1974c0433249cda1a491f32",
+  "candidateCommitSourceBinding": true
+}

@@ -5,7 +5,9 @@ Owner: x86 performance lane, requested by CrispStrobe. Branch
 Claim and implementation together under the current delivery instruction.
 Own only the default `blockInstructions` option and explanatory comment in
 `src/experimental/i80386-native-dispatch.js`, focused additions in
-`test/i80386-native-dispatch.test.mjs`, and this section.
+`test/i80386-native-dispatch.test.mjs`, the portable harness in
+`scripts/bench-i80386-dispatch/`, retained representative measurements in
+`docs/benchmarks/x86-dispatch-2026-11-14/`, and this section.
 
 The existing opt-in dispatcher now amortizes validation and JS/WASM state
 transfers over at most 64 instructions instead of 16. Its existing caller,
@@ -18,7 +20,10 @@ debug traps, code edits and newly faulting mappings with ordinary execution.
 Current-main comparison uses an authored paged protected32 register loop,
 not historical xv6 forktest. Seven retained comparisons measured mean whole
 process CPU 1.282532 to 0.900839 seconds (29.76% lower) and wall 1.163170 to
-0.760233 seconds (34.64% lower), all seven favorable in each metric. These are
+0.760233 seconds (34.64% lower), all seven favorable in each metric. A second
+indexed RAM loop measured 31.02% lower CPU and 38.45% lower wall time, with
+all seven favorable. Raw samples, metadata and source binding are retained
+with the [results](docs/benchmarks/x86-dispatch-2026-11-14/README.md). These are
 host throughput observations, not calibrated 386 timing or general-workload
 claims. Clean xv6 qualification and independent review remain pending; no
 production adoption or merge follows from the loop measurement alone.
