@@ -3,6 +3,7 @@
 import {createI80386RamBridge} from './i80386-ram-bridge.js';
 import {createI80386NativeByteRunner, isI80386NativeByteBlockValid} from
   './i80386-native-byte-block.js';
+import {prevalidateI80386ReadWindow} from './i80386-read-window.js';
 
 const REP_STOSD = 17;
 const REP_MOVSD = 20;
@@ -108,9 +109,16 @@ export async function createI80386NativeDispatcher(machine, {
       if (entry) front[slot] = entry;
     }
     if (!entry || entry.cs !== cpu.cs || entry.cr3 !== cpu.cr3 ||
-        entry.cr4 !== cpu.cr4 || (!entry.block &&
+        entry.cr4 !== cpu.cr4 || (entry.retryCodeTranslation &&
+          (entry.codeTranslation !== cpu._translations[(key >>> 12) & 511] ||
+           entry.translationGeneration !== cpu._translationGeneration ||
+           entry.codeSegment !== cpu.segmentCaches[1])) || (!entry.block &&
           cpu._repeatContext?.cs === cpu.cs && cpu._repeatContext?.eip === key)) {
       let block = runner.decode(decodeInstructions);
+      // A failed side-effect-free admission must not permanently cache a
+      // cold code translation: the ordinary fallback can populate it.
+      // Unsupported bytes in an admitted window keep their negative cache.
+      const retryCodeTranslation = !block && !prevalidateI80386ReadWindow(machine, key, 1);
       if (block && (block.instructions.length >= 2 || isRepeatBlock(block))) {
         stats.decoded++;
         if (block.instructions[0]?.op === REP_STOSD) stats.repStosDecoded++;
@@ -123,7 +131,11 @@ export async function createI80386NativeDispatcher(machine, {
         if (front[oldestSlot]?.key === oldest) front[oldestSlot] = undefined;
         blocks.delete(oldest);
       }
-      entry = {key, cs: cpu.cs, cr3: cpu.cr3, cr4: cpu.cr4, block};
+      entry = {key, cs: cpu.cs, cr3: cpu.cr3, cr4: cpu.cr4, block,
+        retryCodeTranslation,
+        codeTranslation: retryCodeTranslation ? cpu._translations[(key >>> 12) & 511] : null,
+        translationGeneration: cpu._translationGeneration,
+        codeSegment: cpu.segmentCaches[1]};
       blocks.set(key, entry);
       front[slot] = entry;
     }

@@ -240,6 +240,84 @@ test('dispatcher skips native admission for 16-bit code', async () => {
   assert.equal(dispatcher.stats.attempts, 0);
 });
 
+test('a cold negative retries when ordinary execution fills its code translation', async () => {
+  const fast = fixture(), slow = fixture();
+  for (const machine of [fast, slow]) machine.cpu.invalidateTranslationCache();
+  const generation = fast.cpu._translationGeneration;
+  const dispatcher = await createI80386NativeDispatcher(fast);
+  assert.equal(dispatcher.run(63), 1); // MOV primes the missing translation.
+  slow.step();
+  assert.equal(fast.cpu._translationGeneration, generation, 'TLB fill does not change generation');
+  assert.equal(dispatcher.stats.decoded, 0);
+  assert.deepEqual(state(fast), state(slow));
+  assert.equal(dispatcher.run(63), 2); // CMP/JNZ returns to the cold-negative entry.
+  slow.step(); slow.step();
+  assert.equal(dispatcher.run(63), 63);
+  for (let i = 0; i < 63; i++) slow.step();
+  assert.deepEqual(state(fast), state(slow));
+  assert.equal(dispatcher.stats.decoded, 2);
+  assert.equal(dispatcher.stats.instructions, 65);
+});
+
+test('cold-negative retry rechecks execute-only CS admission and pending NMI', async () => {
+  for (const pendingNmi of [false, true]) {
+    const fast = fixture(), slow = fixture();
+    for (const machine of [fast, slow]) machine.cpu.invalidateTranslationCache();
+    const dispatcher = await createI80386NativeDispatcher(fast);
+    assert.equal(dispatcher.run(63), 1); slow.step();
+    const fastEvents = [], slowEvents = [];
+    fast.hooks.onInterrupt = event => fastEvents.push(event);
+    slow.hooks.onInterrupt = event => slowEvents.push(event);
+    for (const machine of [fast, slow]) {
+      machine.cpu.eip = CODE;
+      if (pendingNmi) machine._nmiPending = true;
+      else machine.cpu.segmentCaches[1] = {...machine.cpu.segmentCaches[1], readable: false};
+    }
+    assert.equal(dispatcher.run(63), 1);
+    slow.step();
+    assert.equal(dispatcher.stats.instructions, 0);
+    assert.deepEqual(state(fast), state(slow));
+    assert.deepEqual(fastEvents, slowEvents);
+    if (pendingNmi) assert.deepEqual(fastEvents, [{vector: 2, source: 'nmi'}]);
+  }
+});
+
+test('cold-negative retry decodes the current remapped page', async () => {
+  const fast = fixture(), slow = fixture();
+  for (const machine of [fast, slow]) machine.cpu.invalidateTranslationCache();
+  const dispatcher = await createI80386NativeDispatcher(fast);
+  assert.equal(dispatcher.run(63), 1); slow.step();
+  for (const machine of [fast, slow]) {
+    machine.mem.set([0xb8, 2, 0, 0, 0, 0x83, 0xf8, 3, 0x75, 0xf6], 0x130000);
+    for (let i = 0; i < 4; i++) machine._write386(0x4480 + i, 0x130007 >>> (8 * i) & 255);
+    machine.cpu.eip = CODE;
+    machine.cpu._translate(CODE);
+  }
+  assert.equal(dispatcher.run(63), 63);
+  for (let i = 0; i < 63; i++) slow.step();
+  assert.deepEqual(state(fast), state(slow));
+  assert.equal(fast.cpu.eax, 2);
+});
+
+test('a changed CS cache retries a refused code window without a TLB change', async () => {
+  const fast = fixture(), slow = fixture();
+  for (const machine of [fast, slow]) machine.cpu.segmentCaches[1].readable = false;
+  const translation = fast.cpu._translations[(CODE >>> 12) & 511];
+  const generation = fast.cpu._translationGeneration;
+  const dispatcher = await createI80386NativeDispatcher(fast);
+  assert.equal(dispatcher.run(63), 1); slow.step();
+  for (const machine of [fast, slow]) {
+    machine.cpu.eip = CODE;
+    machine.cpu.segmentCaches[1] = {...machine.cpu.segmentCaches[1], readable: true};
+  }
+  assert.equal(fast.cpu._translations[(CODE >>> 12) & 511], translation);
+  assert.equal(fast.cpu._translationGeneration, generation);
+  assert.equal(dispatcher.run(63), 63);
+  for (let i = 0; i < 63; i++) slow.step();
+  assert.deepEqual(state(fast), state(slow));
+  assert.equal(dispatcher.stats.instructions, 63);
+});
+
 test('front-cache collisions and single-entry eviction retain Map ownership', async () => {
   for (const [maxCachedBlocks, offset] of [[1, 0x100], [4, 0x100], [1, 0x101], [4, 0x101]]) {
     for (const observed of [false, true]) {

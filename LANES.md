@@ -1,3 +1,20 @@
+## Retry missing native code translations — CANDIDATE, 2026-11-14
+
+Owner: same x86 performance lane, requested by CrispStrobe. Own negative
+code-window retry in `src/experimental/i80386-native-dispatch.js`, its
+focused controls in `test/i80386-native-dispatch.test.mjs`, and this section.
+An ordinary instruction can fill a missing code TLB entry without changing
+translation generation. A cached failed decode previously ignored that fill.
+Only decoder-null negatives with refused code-window admission now record
+translation identity, generation and CS-cache identity; a change retries the
+unchanged decoder. Admitted-window unsupported/single-instruction negatives
+retain their existing caching. All execution and event guards remain intact.
+
+The near-branch actual candidate retained guest equality but only 1.14% CPU
+and 1.56% wall reduction, with 9,136 additional native retirements. Actual
+admission-context counts and this candidate's guest throughput are pending;
+no performance improvement is claimed from the retry source controls.
+
 ## Native near conditional branches — CANDIDATE, 2026-11-14
 
 Owner: same x86 performance lane, requested by CrispStrobe after the actual
