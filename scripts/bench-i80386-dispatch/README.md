@@ -29,7 +29,9 @@ Use `--workload register` or `--workload indexed-memory` to select one loop.
 recorded and must be reported separately; smoke runs establish no speedup.
 
 The harness retains raw child stdout/stderr, samples, summaries, host/runtime
-metadata and source hashes. It checks complete CPU instruction snapshots,
+metadata and source hashes. Metadata includes the supplied checkout and output
+paths; remove local path details before sharing generated results publicly.
+It checks complete CPU instruction snapshots,
 RAM hashes and selected device state across arms. Source drift, untracked
 runtime source or unequal semantics fails the run. Whole-child CPU uses
 serial `RUSAGE_CHILDREN` deltas; wall includes launch, setup, reporting and
