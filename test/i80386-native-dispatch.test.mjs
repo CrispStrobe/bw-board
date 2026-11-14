@@ -240,6 +240,22 @@ test('dispatcher skips native admission for 16-bit code', async () => {
   assert.equal(dispatcher.stats.attempts, 0);
 });
 
+test('a CPU without translation-cache storage keeps ordinary fallback', async () => {
+  const fast = fixture(), slow = fixture();
+  for (const machine of [fast, slow]) {
+    machine.cpu._translationCacheEnabled = false;
+    delete machine.cpu._translations;
+  }
+  const dispatcher = await createI80386NativeDispatcher(fast);
+  for (let i = 0; i < 12; i++) {
+    assert.equal(dispatcher.run(63), 1);
+    slow.step();
+    assert.deepEqual(state(fast), state(slow));
+  }
+  assert.equal(dispatcher.stats.instructions, 0);
+  assert.equal(dispatcher.stats.decoded, 0);
+});
+
 test('a cold negative retries when ordinary execution fills its code translation', async () => {
   const fast = fixture(), slow = fixture();
   for (const machine of [fast, slow]) machine.cpu.invalidateTranslationCache();

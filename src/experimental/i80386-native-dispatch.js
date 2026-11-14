@@ -110,7 +110,8 @@ export async function createI80386NativeDispatcher(machine, {
     }
     if (!entry || entry.cs !== cpu.cs || entry.cr3 !== cpu.cr3 ||
         entry.cr4 !== cpu.cr4 || (entry.retryCodeTranslation &&
-          (entry.codeTranslation !== cpu._translations[(key >>> 12) & 511] ||
+          (!cpu._translationCacheEnabled ||
+           entry.codeTranslation !== cpu._translations?.[(key >>> 12) & 511] ||
            entry.translationGeneration !== cpu._translationGeneration ||
            entry.codeSegment !== cpu.segmentCaches[1])) || (!entry.block &&
           cpu._repeatContext?.cs === cpu.cs && cpu._repeatContext?.eip === key)) {
@@ -118,7 +119,8 @@ export async function createI80386NativeDispatcher(machine, {
       // A failed side-effect-free admission must not permanently cache a
       // cold code translation: the ordinary fallback can populate it.
       // Unsupported bytes in an admitted window keep their negative cache.
-      const retryCodeTranslation = !block && !prevalidateI80386ReadWindow(machine, key, 1);
+      const retryCodeTranslation = cpu._translationCacheEnabled &&
+        !block && !prevalidateI80386ReadWindow(machine, key, 1);
       if (block && (block.instructions.length >= 2 || isRepeatBlock(block))) {
         stats.decoded++;
         if (block.instructions[0]?.op === REP_STOSD) stats.repStosDecoded++;
