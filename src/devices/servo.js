@@ -85,6 +85,7 @@ export function registerServo() {
       const slewRate = part.params?.slewRate ?? 300; // deg/s
 
       const vcc = read('vcc') || 5.0;
+      if (state.externalServo) state.externalServo.powered = read('vcc') - read('gnd') >= 2;
       const vSignal = read('signal');
       const threshold = vcc * 0.5;
 
@@ -113,7 +114,7 @@ export function registerServo() {
       state._signalHigh = isHigh;
 
       // Slew toward target
-      if (state._lastTNs > 0n) {
+      if (!state.externalServo && state._lastTNs > 0n) {
         const dtSec = Number(tNs - state._lastTNs) / 1e9;
         if (dtSec > 0) {
           const diff = state.targetAngle - state.actualAngle;

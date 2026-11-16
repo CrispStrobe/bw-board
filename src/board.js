@@ -4868,6 +4868,34 @@ export class BoardImpl {
     return result;
   }
 
+  /** Ideal powered position servo: PWM decoding stays electrical, pose is external. */
+  attachExternalServo(partId, angleDeg = 90) {
+    const part = this.parts.find(p => p.id === partId), state = this._deviceStates.get(partId);
+    if (part?.kind !== 'servo' || !state || state.externalServo || !Number.isFinite(angleDeg)) throw new Error('Choose an unowned position servo');
+    const owner = {powered: false}; state.externalServo = owner; state.actualAngle = angleDeg; this._solve();
+    const valid = () => {if (this._deviceStates.get(partId) !== state || state.externalServo !== owner) throw new Error('Servo connection was released');};
+    return {
+      sample: value => {valid();if (!Number.isFinite(value)) throw new Error('Invalid servo shaft angle');state.actualAngle = value;},
+      target: () => {valid();return {angleDeg:state.targetAngle,powered:owner.powered,signal:state.signal};},
+      release: () => {if (state.externalServo === owner) delete state.externalServo;}
+    };
+  }
+
+  /** An ideal single-ray distance, consumed by the real ultrasonic pulse model. */
+  attachExternalDistanceSensor(partId) {
+    const part = this.parts.find(p => p.id === partId), state = this._deviceStates.get(partId);
+    if (part?.kind !== 'ultrasonic' || !state || state.externalDistance) throw new Error('Choose an unowned ultrasonic sensor');
+    const owner = {distanceMm:null};state.externalDistance=owner;
+    return {
+      sample: value => {
+        if (this._deviceStates.get(partId) !== state || state.externalDistance !== owner) throw new Error('Sensor connection was released');
+        if (value !== null && (!Number.isFinite(value) || value < 0 || value > 100000)) throw new Error('Invalid sensor distance');
+        owner.distanceMm=value;
+      },
+      release: () => {if (state.externalDistance === owner) delete state.externalDistance;}
+    };
+  }
+
   getDeviceState(partId) {
     // Built-in shift register
     const sr = this._shiftRegisters.get(partId);
@@ -5255,7 +5283,7 @@ export class BoardImpl {
     // current) start from rest too; a spinning motor at t = 0 meets a
     // stopped drive and a fresh integrator, a stiff edge the controller
     // cannot resolve.
-    for (const part of this.parts) { const state = this._deviceStates.get(part.id); if (state) delete state.externalShaft; resetDeviceState(part, state); }
+    for (const part of this.parts) { const state = this._deviceStates.get(part.id); if (state) {delete state.externalShaft;delete state.externalServo;delete state.externalDistance;} resetDeviceState(part, state); }
 
     // Clock reset starts a new capture epoch on the SAME configured handles.
     // Keep failure latches: clearing a ring cannot reconstruct refused history.

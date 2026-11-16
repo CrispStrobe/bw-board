@@ -62,11 +62,13 @@ export function registerSensors() {
       // Trigger FALLING edge → burst, then the echo (unless one is running).
       if (!trigHigh && state._trigHigh && !state._pending && !state._measuring) {
         // Own param, else the surface in front (world.js), else 1 m.
-        const distanceCm = part.params?.distance ?? surfaceDistanceCm(part) ?? 100;
+        const distanceCm = state.externalDistance ? state.externalDistance.distanceMm === null ? null : state.externalDistance.distanceMm / 10 : part.params?.distance ?? surfaceDistanceCm(part) ?? 100;
+        if (distanceCm !== null) {
         state._echoStartNs = tNs + 200_000n;              // 8 cycles at 40 kHz
         state._echoEndNs = state._echoStartNs + BigInt(Math.round(distanceCm * 58 * 1000));
         state._pending = true;
         state._wakeNs = state._echoStartNs;
+        }
       }
       state._trigHigh = trigHigh;
 
