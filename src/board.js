@@ -4832,6 +4832,7 @@ export class BoardImpl {
         try { const result = action(); if (result && typeof result.then === 'function') throw new Error('Circuit clock work must be synchronous'); return result; }
         finally { lease.entered = false; }
       },
+      isActive: () => this._externalClock === lease,
       release: () => { if (this._externalClock === lease) this._externalClock = null; },
     };
   }
