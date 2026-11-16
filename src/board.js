@@ -1,3 +1,4 @@
+import {publishShaftState} from './mechanical-shaft.js';
 /**
  * Board implementation — boundary B, and the router between two solvers.
  *
@@ -1507,6 +1508,7 @@ export class BoardImpl {
 
   /** @param {bigint} tNs */
   advanceTo(tNs) {
+    if (this._externalClock && !this._externalClock.entered) throw new Error('Circuit time is owned by the connected mechanics');
     const live = this._liveAdvanceContext;
     if (live) {
       if (!live.entering) {
@@ -4818,6 +4820,54 @@ export class BoardImpl {
     return fed;
   }
 
+  /** One time owner. The owner may advance an emulator synchronously inside run(). */
+  claimExternalClock() {
+    if (this._externalClock) throw new Error('Circuit clock already has an owner');
+    const lease = {entered: false}; this._externalClock = lease;
+    return {
+      run: action => {
+        if (this._externalClock !== lease) throw new Error('Circuit clock lease was released');
+        if (lease.entered) throw new Error('Circuit clock work is not reentrant');
+        lease.entered = true;
+        try { const result = action(); if (result && typeof result.then === 'function') throw new Error('Circuit clock work must be synchronous'); return result; }
+        finally { lease.entered = false; }
+      },
+      release: () => { if (this._externalClock === lease) this._externalClock = null; },
+    };
+  }
+
+  /** Attach a motor rotor to an external mechanical solver, without a second inertia integrator. */
+  attachMechanicalShaft(partId, initial = {angleRad: 0, velocityRadS: 0}) {
+    const part = this.parts.find(p => p.id === partId), state = this._deviceStates.get(partId);
+    if (!part || !state || !DRIVEN_MOTOR_KINDS.has(part.kind)) throw new Error('Choose a DC motor shaft');
+    if (state.externalShaft) throw new Error('Motor shaft already has an owner');
+    const resistance = part.params?.windingR ?? part.params?.R ?? 10;
+    const kE = part.params?.kV ?? 0.01, kT = part.params?.kT ?? kE;
+    if (![resistance, kE, kT].every(Number.isFinite) || resistance <= 0 || kE < 0 || kT < 0) throw new Error('Invalid electrical motor parameters');
+    const shaft = {lastNs: this.timeNs, chargeC: 0, armatureWorkJ: 0, copperLossJ: 0, angleRad: 0, voltageV: 0};
+    state.externalShaft = shaft;
+    try { this.setMechanicalShaftState(partId, initial); } catch (error) { delete state.externalShaft; throw error; }
+    return () => { if (state.externalShaft === shaft) delete state.externalShaft; };
+  }
+
+  setMechanicalShaftState(partId, sample) {
+    const part = this.parts.find(p => p.id === partId), state = this._deviceStates.get(partId);
+    if (!part || !state?.externalShaft) throw new Error('Motor shaft is not externally owned');
+    publishShaftState(part, state, sample, this.vcc);
+    this._solve();
+  }
+
+  /** Consume the electrical torque integral since the previous mechanical step (N m s). */
+  takeMechanicalShaftImpulse(partId) {
+    const part = this.parts.find(p => p.id === partId), state = this._deviceStates.get(partId), shaft = state?.externalShaft;
+    if (!part || !shaft) throw new Error('Motor shaft is not externally owned');
+    const kT = part.params?.kT ?? part.params?.kV ?? 0.01;
+    const result = {impulseNms: kT * shaft.chargeC, chargeC: shaft.chargeC, currentA: state.current ?? 0,
+      voltageV: shaft.voltageV, armatureWorkJ: shaft.armatureWorkJ, copperLossJ: shaft.copperLossJ};
+    shaft.chargeC = shaft.armatureWorkJ = shaft.copperLossJ = 0;
+    return result;
+  }
+
   getDeviceState(partId) {
     // Built-in shift register
     const sr = this._shiftRegisters.get(partId);
@@ -5179,6 +5229,7 @@ export class BoardImpl {
    * Parts, nets, and controls are preserved.
    */
   reset() {
+    this._externalClock = null;
     this.pinStates.clear();
     this.drivenPwm.clear();
     this.timeNs = 0n;
@@ -5204,7 +5255,7 @@ export class BoardImpl {
     // current) start from rest too; a spinning motor at t = 0 meets a
     // stopped drive and a fresh integrator, a stiff edge the controller
     // cannot resolve.
-    for (const part of this.parts) resetDeviceState(part, this._deviceStates.get(part.id));
+    for (const part of this.parts) { const state = this._deviceStates.get(part.id); if (state) delete state.externalShaft; resetDeviceState(part, state); }
 
     // Clock reset starts a new capture epoch on the SAME configured handles.
     // Keep failure latches: clearing a ring cannot reconstruct refused history.

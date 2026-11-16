@@ -1,3 +1,4 @@
+import {shaftElectricalStep} from '../mechanical-shaft.js';
 /**
  * Miscellaneous parts to complete the target inventory:
  *
@@ -65,6 +66,7 @@ export function registerMiscParts() {
     },
 
     update(part, state, read, tNs) {
+      if (shaftElectricalStep(part, state, read, tNs)) return false;
       const R = part.params?.windingR ?? 10;
       const kV = part.params?.kV ?? 0.01;
       const kT = part.params?.kT ?? kV;

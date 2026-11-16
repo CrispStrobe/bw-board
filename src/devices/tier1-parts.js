@@ -1,3 +1,4 @@
+import {shaftElectricalStep} from '../mechanical-shaft.js';
 /**
  * Tier 1 parts from the target catalogue — the gap-closers.
  *
@@ -158,6 +159,7 @@ export function registerTier1Parts() {
       ctx.theveninBetween('a', 'b', kV * state.velocity, R);
     },
     update(part, state, read, tNs) {
+      if (shaftElectricalStep(part, state, read, tNs)) return false;
       const R = part.params?.windingR ?? 10;
       const kV = part.params?.kV ?? 0.01;
       const kT = part.params?.kT ?? kV;

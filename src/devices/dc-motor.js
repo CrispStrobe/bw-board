@@ -1,3 +1,4 @@
+import {shaftElectricalStep} from '../mechanical-shaft.js';
 /**
  * DC motor — back-EMF + winding R + optional series inductance,
  * speed state integrated in advanceTo.
@@ -147,6 +148,7 @@ export function registerDCMotor() {
     },
 
     update(part, state, read, tNs) {
+      if (shaftElectricalStep(part, state, read, tNs)) return false;
       const R = getR(part);
       const kV = part.params?.kV ?? classDefaults('dc_motor').kV;
       const kT = part.params?.kT ?? kV; // ideal motor: kT = kV
