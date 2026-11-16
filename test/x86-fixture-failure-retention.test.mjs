@@ -6,7 +6,6 @@ import {existsSync,mkdirSync,mkdtempSync,readFileSync,readdirSync,rmSync,
   symlinkSync,writeFileSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {basename,join} from 'node:path';
-import {fileURLToPath} from 'node:url';
 import {runInNewContext} from 'node:vm';
 import {withFixtureFailureDiagnostics} from '../scripts/retain-x86-fixture-failure.mjs';
 
@@ -16,8 +15,10 @@ function setup(t,{elf=true}={}){
   t.after(()=>rmSync(root,{recursive:true,force:true}));
   const build=join(root,'build'),tools=join(root,'tools'),output=join(root,'retained');
   mkdirSync(build);mkdirSync(tools);
+  const executable=join(root,'synthetic-tool');
+  writeFileSync(executable,'synthetic identity; execution is mocked\n',{mode:0o755});
   for(const name of ['as','ld','objcopy','objdump','readelf'])
-    symlinkSync(process.execPath,join(tools,name));
+    symlinkSync(executable,join(tools,name));
   const source=join(root,'source.S');writeFileSync(source,'.code16\n');
   // Synthetic bytes only. No assembler, guest, historical capture or benchmark.
   for(const name of ['guest.o','guest.bin',...(elf?['guest.elf']:[])])
@@ -31,7 +32,7 @@ function setup(t,{elf=true}={}){
     const dir=join(output,readdirSync(output)[0]);
     return {dir,report:JSON.parse(readFileSync(join(dir,'manifest.json')))};
   };
-  return {root,build,output,source,options,details,calls,manifest};
+  return {root,build,output,source,executable,options,details,calls,manifest};
 }
 
 test('passing check executes once, returns its value and creates no retention or tool calls',t=>{
@@ -52,7 +53,7 @@ test('mismatch retains exact bytes, source, tool identities, argv and offset/dis
   for(const name of ['fixture.S','guest.o','guest.elf','guest.bin'])
     assert.equal(hash(readFileSync(join(dir,name))),report.files[name].sha256);
   assert.deepEqual(Object.keys(report.tools).sort(),['as','ld','objcopy','objdump','readelf']);
-  assert.equal(report.tools.as.sha256,hash(readFileSync(process.execPath)));
+  assert.equal(report.tools.as.sha256,hash(readFileSync(s.executable)));
   assert.equal(report.diagnosticCommands.length,10);
   assert.match(readFileSync(join(dir,'image-offset-bytes.txt'),'utf8'),/^00000000: 90 f4 00/);
   assert.equal(existsSync(join(dir,'image-disassembly.txt')),true);
