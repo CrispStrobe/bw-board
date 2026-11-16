@@ -1,3 +1,19 @@
+## Seal-compatible ordinary x86 toolchain repair — CANDIDATE, 2026-11-16
+
+Same existing x86 owner, explicitly requested by CrispStrobe, continues PR736.
+Own the ordinary `test` job runner/provenance hunks, new
+`scripts/check-x86-fixture-toolchain.mjs` and focused
+`test/x86-fixture-toolchain.test.mjs`, and this diagnostic guide update.
+Actual retained CI artifact14268933723 at head `6b9eefcf` proves GNU as2.46
+changed implicit alignment padding: five Win16 bytes and nine VM-task bytes,
+already different in relocatable .text before linking. Local GNU2.42 emits
+both original sealed images. Select Ubuntu24.04 for the ordinary test job and
+require/provenance-record GNU2.42 as/ld/objcopy before its original tests.
+Keep all original sources, recipes, seals, assertions and execution limits.
+New-head configuration/retention controls do not replace actual hosted fixture
+success or required exact-head qualification. No merge or Lite pin advance on
+the known failed diagnostic head; no new thorough-tier request or dispatch.
+
 ## Two owned x86 fixture mismatch diagnostics — CLAIMED, 2026-11-16
 
 Owner: existing x86 outcome lane, explicitly requested by CrispStrobe. Claim
