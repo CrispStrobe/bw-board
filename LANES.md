@@ -1,3 +1,39 @@
+## Seal-compatible ordinary x86 toolchain repair — CANDIDATE, 2026-11-16
+
+Same existing x86 owner, explicitly requested by CrispStrobe, continues PR736.
+Own the ordinary `test` job runner/provenance hunks, new
+`scripts/check-x86-fixture-toolchain.mjs` and focused
+`test/x86-fixture-toolchain.test.mjs`, and this diagnostic guide update.
+Actual retained CI artifact14268933723 at head `6b9eefcf` proves GNU as2.46
+changed implicit alignment padding: five Win16 bytes and nine VM-task bytes,
+already different in relocatable .text before linking. Local GNU2.42 emits
+both original sealed images. Select Ubuntu24.04 for the ordinary test job and
+require/provenance-record GNU2.42 as/ld/objcopy before its original tests.
+Keep all original sources, recipes, seals, assertions and execution limits.
+New-head configuration/retention controls do not replace actual hosted fixture
+success or required exact-head qualification. No merge or Lite pin advance on
+the known failed diagnostic head; no new thorough-tier request or dispatch.
+
+## Two owned x86 fixture mismatch diagnostics — CLAIMED, 2026-11-16
+
+Owner: existing x86 outcome lane, explicitly requested by CrispStrobe. Claim
+and diagnostic change together on `lane/x86-fixture-failure-retention-20261116`
+from `67d7af9d`. Own only the image-check retention/argv hunks in
+`test/i80386-code16-owned-io-trace.test.mjs` and
+`scripts/compare-bochs-cpu3-owned-integer-state.mjs`, new shared
+`scripts/retain-x86-fixture-failure.mjs` and its focused host controls,
+ordinary test diagnostic directory/upload in `.github/workflows/ci.yml`,
+this section and the diagnostic README.
+
+Failed owned CI discarded both generated images and supplied no GNU tool
+identities. On image-hash failure, retain the existing small build outputs,
+source, argv, tool versions/executable hashes and disassembly before cleanup;
+rethrow the original hard failure even if diagnostics fail. Success retains
+nothing. Original assembly sources, link options, oracle hashes and historical
+receipts are unchanged. This enables diagnosis, not a causal toolchain repair
+or new guest/performance qualification. No Lite pin advance before the actual
+repaired Board head satisfies its required qualification. No full-tier request.
+
 ## Actual xv6 performance outcome — MEASURED CANDIDATE, 2026-11-14
 
 Fresh outcome owner continues the same isolated performance branch, requested

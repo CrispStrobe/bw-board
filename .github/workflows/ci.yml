@@ -68,7 +68,9 @@ jobs:
   test:
     # FAST tier: every push of every branch, never on pull_request.
     if: github.event_name != 'pull_request'
-    runs-on: ubuntu-latest
+    # GNU as 2.46 changes implicit .align padding in the two sealed x86 images.
+    # 24.04/GNU 2.42 reproduces both seals; admit and record tools before tests.
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       - name: Fetch the commit that archived the WASM fastpath census receipt
@@ -269,6 +271,9 @@ jobs:
         # sitting in the workspace.
         run: node scripts/oracle-census.mjs --require nasm,emu8051,ngspice
 
+      - name: Admit and record seal-compatible GNU fixture toolchain
+        run: node scripts/check-x86-fixture-toolchain.mjs --out "$RUNNER_TEMP/bw-x86-toolchain.json"
+
       - name: Test
         id: ordinary_tests
         # The 65x02 and z80 vector-suite tests skip cleanly when their suites
@@ -281,6 +286,7 @@ jobs:
           # Prevent an old/partial emulator pin from making checkpoint tests
           # pass through their intentional unsupported-build branch.
           EMU8051_CHECKPOINT_REQUIRED: '1'
+          BW_X86_FIXTURE_DIAGNOSTICS: ${{ runner.temp }}/bw-x86-fixture-failures
         # Serialize test files: the compressed native receipts expand to large
         # reports in separate Node processes. Recent runner shutdowns lacked
         # memory telemetry; limiting overlap avoids multiplying their live heaps.
@@ -294,7 +300,10 @@ jobs:
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: bw-board-test-${{ github.run_id }}-${{ github.run_attempt }}-${{ github.sha }}
-          path: ${{ runner.temp }}/bw-board-ci-test.log
+          path: |
+            ${{ runner.temp }}/bw-board-ci-test.log
+            ${{ runner.temp }}/bw-x86-fixture-failures
+            ${{ runner.temp }}/bw-x86-toolchain.json
           if-no-files-found: warn
 
       # WHICH ORACLES DID NOT RUN. `npm test` above reports its skips, and in

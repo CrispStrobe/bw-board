@@ -5,13 +5,15 @@ import {mkdtempSync,readFileSync,rmSync} from 'node:fs';
 import {join,resolve} from 'node:path';
 import {tmpdir} from 'node:os';
 import {fileURLToPath} from 'node:url';
+import {withFixtureFailureDiagnostics} from './retain-x86-fixture-failure.mjs';
 import I80386 from '../src/experimental/i80386.js';
 
 const repo=resolve(fileURLToPath(new URL('..',import.meta.url)));
 const fixturePath='test/fixtures/i80386-vm-task.S';
 const receiptPath='docs/receipts/2026-09-30-i80386-bochs-cpu3-owned-native-checkpoint.json';
 const paths=[fixturePath,receiptPath,'src/experimental/i80386.js',
-  'scripts/compare-bochs-cpu3-owned-integer-state.mjs'];
+  'scripts/compare-bochs-cpu3-owned-integer-state.mjs',
+  'scripts/retain-x86-fixture-failure.mjs'];
 const registerNames=['eax','ecx','edx','ebx','esp','ebp','esi','edi'];
 const segmentNames=['es','cs','ss','ds','fs','gs'];
 const sha256=bytes=>createHash('sha256').update(bytes).digest('hex');
@@ -79,11 +81,16 @@ async function main(){
   const build=mkdtempSync(join(tmpdir(),'bw-bochs-cpu3-js-state-'));
   try {
     const object=join(build,'guest.o'),image=join(build,'guest.bin');
-    execFileSync('as',['--32','-o',object,resolve(repo,fixturePath)]);
-    execFileSync('ld',['-m','elf_i386','-Ttext','0x7c00','--oformat','binary','-o',image,object]);
+    const commands=[];
+    const assemble=(tool,args)=>{commands.push([tool,...args]);return execFileSync(tool,args);};
+    assemble('as',['--32','-o',object,resolve(repo,fixturePath)]);
+    assemble('ld',['-m','elf_i386','-Ttext','0x7c00','--oformat','binary','-o',image,object]);
     const binary=readFileSync(image);
-    if(sha256(binary)!==nativeReceipt.imageSha256)
-      throw new Error('assembled fixture differs from native image');
+    withFixtureFailureDiagnostics({id:'vm-task',build,source:resolve(repo,fixturePath),
+      expectedImageSha256:nativeReceipt.imageSha256,commands},()=>{
+      if(sha256(binary)!==nativeReceipt.imageSha256)
+        throw new Error('assembled fixture differs from native image');
+    });
     const memory=new Uint8Array(0x10000);
     memory.set(binary,0x7c00);
     let marker='';
