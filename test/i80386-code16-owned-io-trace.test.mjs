@@ -5,30 +5,36 @@ import {createHash} from 'node:crypto';
 import {mkdtempSync,readFileSync,rmSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
+import {withFixtureFailureDiagnostics} from '../scripts/retain-x86-fixture-failure.mjs';
 import I80386 from '../src/experimental/i80386.js';
 import {runOwnedI80386Code16IoTrace} from
   '../src/experimental/i80386-code16-owned-io-trace.js';
 
 const dir=mkdtempSync(join(tmpdir(),'bw-owned-io-trace-test-'));
 let image;
-try{
-  const obj=join(dir,'guest.o'),elf=join(dir,'guest.elf'),bin=join(dir,'guest.bin');
-  execFileSync('as',['--32','-o',obj,new URL('./fixtures/i80386-win16-io-boundary.S',import.meta.url).pathname]);
-  execFileSync('ld',['-m','elf_i386','-Ttext','0x7c00','-o',elf,obj]);
-  execFileSync('objcopy',['-O','binary',elf,bin]);
-  image=readFileSync(bin);
-}finally{rmSync(dir,{recursive:true,force:true});}
+const commands=[];
 const oracle=JSON.parse(readFileSync(new URL('../docs/receipts/2026-09-28-i80386-win16-io-boundary-oracle.json',import.meta.url)));
 const hash=data=>createHash('sha256').update(data).digest('hex');
-const ownedSource=readFileSync(new URL('./fixtures/i80386-win16-io-boundary.S',import.meta.url));
-// The oracle attests to the CPU source at its recorded revision. The current
-// CPU is exercised below and may evolve without changing that historical pin.
-const coreSource=execFileSync('git',
-  ['show',`${oracle.revision}:src/experimental/i80386.js`],
-  {cwd:new URL('../',import.meta.url)});
-assert.equal(hash(ownedSource),oracle.sourceHashes['test/fixtures/i80386-win16-io-boundary.S']);
-assert.equal(hash(coreSource),oracle.sourceHashes['src/experimental/i80386.js']);
-assert.equal(hash(image),oracle.imageSha256);
+try{
+  const obj=join(dir,'guest.o'),elf=join(dir,'guest.elf'),bin=join(dir,'guest.bin');
+  const assemble=(tool,args)=>{commands.push([tool,...args]);return execFileSync(tool,args);};
+  assemble('as',['--32','-o',obj,new URL('./fixtures/i80386-win16-io-boundary.S',import.meta.url).pathname]);
+  assemble('ld',['-m','elf_i386','-Ttext','0x7c00','-o',elf,obj]);
+  assemble('objcopy',['-O','binary',elf,bin]);
+  image=readFileSync(bin);
+  const ownedSource=readFileSync(new URL('./fixtures/i80386-win16-io-boundary.S',import.meta.url));
+  // The oracle attests to the CPU source at its recorded revision. The current
+  // CPU is exercised below and may evolve without changing that historical pin.
+  const coreSource=execFileSync('git',
+    ['show',`${oracle.revision}:src/experimental/i80386.js`],
+    {cwd:new URL('../',import.meta.url)});
+  assert.equal(hash(ownedSource),oracle.sourceHashes['test/fixtures/i80386-win16-io-boundary.S']);
+  assert.equal(hash(coreSource),oracle.sourceHashes['src/experimental/i80386.js']);
+  withFixtureFailureDiagnostics({id:'win16-io-boundary',build:dir,
+    source:new URL('./fixtures/i80386-win16-io-boundary.S',import.meta.url).pathname,
+    expectedImageSha256:oracle.imageSha256,commands},
+  ()=>assert.equal(hash(image),oracle.imageSha256));
+}finally{rmSync(dir,{recursive:true,force:true});}
 
 function fixture(cmpImmediate=1){
   const memory=new Uint8Array(0x10000);memory.set(image,0x7c00);

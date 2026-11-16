@@ -281,6 +281,7 @@ jobs:
           # Prevent an old/partial emulator pin from making checkpoint tests
           # pass through their intentional unsupported-build branch.
           EMU8051_CHECKPOINT_REQUIRED: '1'
+          BW_X86_FIXTURE_DIAGNOSTICS: ${{ runner.temp }}/bw-x86-fixture-failures
         # Serialize test files: the compressed native receipts expand to large
         # reports in separate Node processes. Recent runner shutdowns lacked
         # memory telemetry; limiting overlap avoids multiplying their live heaps.
@@ -294,7 +295,9 @@ jobs:
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: bw-board-test-${{ github.run_id }}-${{ github.run_attempt }}-${{ github.sha }}
-          path: ${{ runner.temp }}/bw-board-ci-test.log
+          path: |
+            ${{ runner.temp }}/bw-board-ci-test.log
+            ${{ runner.temp }}/bw-x86-fixture-failures
           if-no-files-found: warn
 
       # WHICH ORACLES DID NOT RUN. `npm test` above reports its skips, and in

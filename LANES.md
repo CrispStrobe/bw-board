@@ -1,3 +1,23 @@
+## Two owned x86 fixture mismatch diagnostics — CLAIMED, 2026-11-16
+
+Owner: existing x86 outcome lane, explicitly requested by CrispStrobe. Claim
+and diagnostic change together on `lane/x86-fixture-failure-retention-20261116`
+from `67d7af9d`. Own only the image-check retention/argv hunks in
+`test/i80386-code16-owned-io-trace.test.mjs` and
+`scripts/compare-bochs-cpu3-owned-integer-state.mjs`, new shared
+`scripts/retain-x86-fixture-failure.mjs` and its focused host controls,
+ordinary test diagnostic directory/upload in `.github/workflows/ci.yml`,
+this section and the diagnostic README.
+
+Failed owned CI discarded both generated images and supplied no GNU tool
+identities. On image-hash failure, retain the existing small build outputs,
+source, argv, tool versions/executable hashes and disassembly before cleanup;
+rethrow the original hard failure even if diagnostics fail. Success retains
+nothing. Original assembly sources, link options, oracle hashes and historical
+receipts are unchanged. This enables diagnosis, not a causal toolchain repair
+or new guest/performance qualification. No Lite pin advance before the actual
+repaired Board head satisfies its required qualification. No full-tier request.
+
 ## Actual xv6 performance outcome — MEASURED CANDIDATE, 2026-11-14
 
 Fresh outcome owner continues the same isolated performance branch, requested
