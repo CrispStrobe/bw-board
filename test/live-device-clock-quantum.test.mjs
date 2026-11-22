@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {BoardImpl} from '../src/board.js';
 import {registerAnalogAmps} from '../src/devices/analog-amps.js';
 import {registerLogicGates} from '../src/devices/logic-gates.js';
+import {registerDevice, unregisterDevice} from '../src/devices.js';
 
 registerAnalogAmps();
 registerLogicGates();
@@ -258,11 +259,29 @@ test('an option getter cannot move finite-analysis authority past the admission 
 });
 
 test('already skipped device history stays refused without clearing failure state',()=>{
-  const {b}=follower();b.advanceTo(50000000n);
-  const failure=b.transientAnalysisStatus().failure;
-  assert.throws(()=>b.advanceToLive(60000000n),error=>error.code==='SOLVE_FAILED_MEASUREMENT');
-  assert.equal(b.getTime(),50000000n);
-  assert.deepEqual(b.transientAnalysisStatus().failure,failure);
+  // The device sub-step budget scales with the interval, so an ordinary 50 ms
+  // follower advance now completes; skipped history needs a genuine runaway
+  // (a device waking every nanosecond), and the overflowing advance throws
+  // with the clock at the time actually simulated.
+  registerDevice('test_live_runaway_1ns',{terminals:['out'],
+    init:()=>({drives:{},_wakeNs:1n}),
+    update(part,state,read,tNs){
+      if(state._wakeNs&&BigInt(tNs)<state._wakeNs)return false;
+      state._wakeNs=BigInt(tNs)+1n;return false;
+    }});
+  try {
+    const {b}=follower();
+    b.setNetlist([...b.parts,{id:'RUN',kind:'test_live_runaway_1ns',params:{},terminals:['out']}],b.nets);
+    b.setPower(true);
+    assert.throws(()=>b.advanceTo(100000n),error=>error.code==='DEVICE_SUBSTEP_BUDGET_EXHAUSTED');
+    const stopped=b.getTime();
+    assert.ok(stopped<100000n);
+    const failure=b.transientAnalysisStatus().failure;
+    assert.equal(failure.code,'device-substep-budget-exceeded');
+    assert.throws(()=>b.advanceToLive(200000n),error=>error.code==='SOLVE_FAILED_MEASUREMENT');
+    assert.equal(b.getTime(),stopped);
+    assert.deepEqual(b.transientAnalysisStatus().failure,failure);
+  } finally { unregisterDevice('test_live_runaway_1ns'); }
 });
 
 for(const nested of ['ordinary','live']) test(`caught ${nested} listener reentry stops the outer quantum`,()=>{

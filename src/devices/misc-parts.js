@@ -168,14 +168,52 @@ export function registerMiscParts() {
     },
   });
 
+  // ─── Function generator ──────────────────────────────────────────
+  // A bench waveform source: OUT against its own GND lead, through a 50 Ω
+  // output impedance (params.rOut). The waveform is the vsource vocabulary —
+  // params.wave 'sine' (default) | 'square' | 'pulse' | 'triangle' | 'dc',
+  // freq (Hz, default 1000; `frequency` accepted), amplitude (V peak,
+  // default 1), offset (V), duty, phase (deg). The ELECTRICAL part is built
+  // by the board in its solver view (BoardImpl._expandFunctionGenerators):
+  // a hidden waveform vsource plus the output resistor, so the transient
+  // integrator sees its edges and corners exactly as it sees any source's.
+  // This registration is what lets a netlist name the kind at all — before
+  // it, `function_gen` was refused as unknown and builders hand-wired a
+  // vsource with wave params instead.
+  registerDevice('function_gen', {
+    terminals: ['out', 'gnd'],
+    init() { return { drives: {} }; },
+  });
+
+  // ─── Oscilloscope (passive probe) ────────────────────────────────
+  // Two channels against a common ground lead, each a 1 MΩ input
+  // (params.inputOhms) — the standard scope input. It only LOADS the
+  // circuit; the waveform itself is read through addScopeChannel on the
+  // channel's net. Registered so a circuit that includes the instrument
+  // is accepted and solves with the loading a real scope adds.
+  registerDevice('oscilloscope', {
+    terminals: ['ch1', 'ch2', 'gnd'],
+    init() { return { drives: {} }; },
+    stamp(ctx, part) {
+      const r = Number(part.params?.inputOhms ?? 1e6);
+      if (!(r > 0)) throw new Error(`oscilloscope ${part.id}: inputOhms must be positive`);
+      ctx.conductance('ch1', 'gnd', 1 / r);
+      ctx.conductance('ch2', 'gnd', 1 / r);
+    },
+  });
+
   // ─── Slide switch (SPDT) ─────────────────────────────────────────
-  // Three-terminal SPDT: params.position = 0 connects a↔com,
-  // position = 1 connects b↔com. Default position 0.
+  // Three-terminal SPDT: position 0 connects a↔com, position 1 connects
+  // b↔com. The position is the board control (setControl(id, 0|1), the
+  // same channel as a switch or button) and falls back to params.position,
+  // default 0 — so it is operable like every other contact, not only by
+  // rewriting its params.
   registerDevice('slide_switch', {
     terminals: ['a', 'com', 'b'],
     init() { return { drives: {}, _pos: -1 }; },
     stamp(ctx, part) {
-      const pos = part.params?.position ?? 0;
+      const pos = Number.isFinite(ctx.control) ? (ctx.control >= 0.5 ? 1 : 0)
+        : (part.params?.position ?? 0);
       if (pos === 0) ctx.conductance('a', 'com', 1 / 0.1);
       else           ctx.conductance('b', 'com', 1 / 0.1);
     },

@@ -119,15 +119,19 @@ export function registerTimer555() {
             state._lastToggleNs = BigInt(tNs);
           }
 
-          if (newFf !== state.ffOut) {
+          const changed = newFf !== state.ffOut;
+          if (changed) {
             state.ffOut = newFf;
             state.drives.output = {
               vTh: newFf ? vcc : vGnd, rTh: rOut,
             };
             state._dischargeActive = (newFf === 0);
-            return true;
           }
-          return false;
+          // Schedule the next toggle as a device wake, so the board steps
+          // to it exactly instead of noticing it on its 1 ms grid (which
+          // turned every tone above 500 Hz into 500 Hz).
+          state._wakeNs = state._lastToggleNs + (state.ffOut ? highNs : lowNs);
+          return changed;
         }
       }
 
