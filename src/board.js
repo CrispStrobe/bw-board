@@ -32,6 +32,7 @@ import { validateNetlist } from './validate.js';
 import { getDevice, initDeviceState, resetDeviceState } from './devices.js';
 import { servoCalibration } from './devices/servo.js';
 import { expandLm741LinearPoles } from './lm741-linear-pole.js';
+import { expandGroundSensingOpAmps, isHiddenPoleCapacitor, STAGE_KIND as GROUND_SENSING_STAGE } from './ground-sensing-opamp.js';
 import { meterQuadraticSegment, meterQuadraticIntegral } from './meter-quadrature.js';
 import { feedI2CSlave } from './devices/i2c-slave.js';
 import { checkCurrentBudget } from './current-ratings.js';
@@ -875,7 +876,11 @@ export class BoardImpl {
     // not one hop into the motor's insides.
     const windingView = BoardImpl._expandMotorWindings(parts, nets);
     const solveView = BoardImpl._expandBridgeClampDiodes(windingView.parts, windingView.nets);
-    const linearView = expandLm741LinearPoles(solveView.parts, solveView.nets);
+    const lm741View = expandLm741LinearPoles(solveView.parts, solveView.nets);
+    // LM358/LM324 macromodel (src/ground-sensing-opamp.js); only when its
+    // solver stage is registered, i.e. registerAnalogAmps() has run.
+    const linearView = getDevice(GROUND_SENSING_STAGE)
+      ? expandGroundSensingOpAmps(lm741View.parts, lm741View.nets) : lm741View;
     const macroView = BoardImpl._expandOpampMacros(linearView.parts, linearView.nets, this.vcc);
     this._solveParts = macroView.parts;
     this._solveNets = macroView.nets;
@@ -1006,6 +1011,8 @@ export class BoardImpl {
     this._scopeBaseNets = this._solveNets;
     this._rebuildScopeLoadView();
 
+    this._transientBlanketShunt = false;
+    this._seedOpampPoles();
     this._solve();
     this._recordLedSamples();
     this._notifyChange('netlist');
@@ -5316,6 +5323,7 @@ export class BoardImpl {
       if (p.kind === 'buzzer') this.buzzerEdges.set(p.id, []);
       if (p.kind === 'capacitor') this.capVoltages.set(p.id, 0);
     }
+    this._seedOpampPoles();
 
     this._solve();
     this._recordLedSamples();
@@ -5467,6 +5475,49 @@ export class BoardImpl {
     };
   }
 
+  /**
+   * Start every LM358/LM324 macromodel pole at the bench's bias point, as a
+   * SPICE transient starts from its operating point: solve the instant with
+   * the hidden pole capacitors left out (open) and every drawn capacitor at
+   * its stored voltage, then store each pole's voltage across its capacitor.
+   * Without this a static stage would slew up from 0 V after every netlist
+   * load and reset; drawn capacitors keep the power-on-at-rest rule. A solve
+   * that fails leaves the poles at 0 V (the plain power-on start).
+   */
+  _seedOpampPoles() {
+    const hidden = (this._solveParts ?? []).filter(p => p.kind === 'capacitor' && isHiddenPoleCapacitor(p.id));
+    if (!hidden.length) return;
+    for (const cap of hidden) this.capVoltages.set(cap.id, 0);
+    if (!this.powered) return;
+    const drop = new Set(hidden.map(p => p.id));
+    const parts = this._solveParts.filter(p => !drop.has(p.id));
+    const nets = this._solveNets.map(n => ({ ...n, terminals: n.terminals.filter(t => !drop.has(t.part)) }));
+    let res;
+    try {
+      this._syncDeviceGpioDrives();
+      this._chargeBoundedAdvanceWork('solves');
+      res = solveMNA(parts, nets, this._pinSources(), this.controls, this.vcc, {
+        powerOff: false,
+        temperatureC: this.temperatureC,
+        capVoltages: this.capVoltages,
+        tSeconds: Number(this.timeNs) / 1e9,
+        deviceStates: this._deviceStates,
+        qualifiedSources: this._qualifiedSources(),
+      });
+    } catch { return; }
+    if (res?.converged === false) return;
+    for (const cap of hidden) {
+      const a = this._solveNetOf(cap.id, 'a', this._solveNets);
+      const b = this._solveNetOf(cap.id, 'b', this._solveNets);
+      const v = (res.nodeVoltages.get(a) ?? 0) - (res.nodeVoltages.get(b) ?? 0);
+      if (Number.isFinite(v)) this.capVoltages.set(cap.id, v);
+    }
+  }
+
+  _solveNetOf(partId, terminal, nets) {
+    return nets.find(n => n.terminals.some(t => t.part === partId && t.terminal === terminal))?.id;
+  }
+
   _solveMNA(powerOff, testNodeA, testNodeB, testCurrent) {
     this._syncDeviceGpioDrives();
     const options = {
@@ -5482,6 +5533,8 @@ export class BoardImpl {
       tSeconds: Number(this.timeNs) / 1e9,
       deviceStates: this._deviceStates,
       qualifiedSources: this._qualifiedSources(),
+      nonlinearGuess: powerOff ? undefined : this.nodeVoltages,
+      opampRegionsGuess: powerOff ? undefined : this._mnaCache?.opampRegions,
     };
     if (powerOff || testNodeA || testNodeB) {
       this._chargeBoundedAdvanceWork('solves');
@@ -6390,12 +6443,20 @@ export class BoardImpl {
           capCurrents: ccS, inductorVoltages: lvS },
         deviceStates: this._deviceStates,
         qualifiedSources: qual,
+        // Warm start for nonlinear-current laws: the last published point.
+        nonlinearGuess: this.nodeVoltages,
+        // Op-amp rail regions remember the last accepted step (hysteresis).
+        opampRegionsGuess: (res ?? this._mnaCache)?.opampRegions,
+        // A topology whose selective shunt proved singular (an island with
+        // no reference) goes straight to the blanket shunt next time.
+        blanketShunt: this._transientBlanketShunt === true,
         // Power off strips the sources but NOT the storage: capacitor
         // and inductor companions keep stamping, so stored energy
         // discharges through whatever network remains (the audit found
         // every discharge-on-power-loss demo frozen instead).
         powerOff: !this.powered,
       });
+      if (r?.blanketShunt) this._transientBlanketShunt = true;
       return r;
     };
 

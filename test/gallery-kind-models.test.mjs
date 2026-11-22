@@ -175,10 +175,19 @@ describe('power-off discharge with devices on the board (substep path)', () => {
     // else, so assert the closed form rather than an inequality — it pins the
     // physics instead of merely bounding it.
     //   tau = 4700 * 0.001 = 4.7 s; the window is 6700 - 2100 = 4.6 s
-    const tau = 4700 * 0.001;
+    //
+    // CORRECTED AGAIN (2026-11-23). Two of the 555's pins ARE on nets: vcc
+    // (through r1 to the capacitor) and gnd. Between them sits the die's
+    // 5k/5k/5k CV divider, which is physical and which the model stamps for
+    // every wired-CV 555. With CV open it used to be dropped along with the
+    // missing CV net — the same open pin that read 0 V and froze every
+    // astable with a bare CV. So the capacitor discharges through the bleeder
+    // in parallel with r1 + 15 kOhm:
+    //   R = 4700 || 15100 = 3584.4 Ohm, tau = 3.584 s.
+    const tau = (4700 * 15100 / (4700 + 15100)) * 0.001;
     const expected = v0 * Math.exp(-4.6 / tau);
     assert.ok(Math.abs(v1 - expected) < 0.05,
-      `bleeder-only discharge: expected ${expected.toFixed(4)} V after 4.6 s `
+      `bleeder + 555 divider discharge: expected ${expected.toFixed(4)} V after 4.6 s `
       + `of a ${tau} s tau, got ${v1.toFixed(4)}`);
     // Still guards the original regression: the substep path once froze the
     // charge entirely, leaving v1 === v0.

@@ -1330,6 +1330,10 @@ function shockleyCompanion(vAcross, vf, rd, is, n) {
  * @param {boolean} [opts.inspectBjtRegions] - return detached final region diagnostics;
  *   not an event/admission certificate and never used to change the solve.
  * @param {Map<string, number>} [opts.capVoltages] - part id → present capacitor voltage.
+ * @param {Map<string, string>} [opts.opampRegionsGuess] - part id → op-amp /
+ *   railed-vcvs region of the previous solution (hysteresis memory).
+ * @param {Map<string, number>} [opts.nonlinearGuess] - net id → volts: initial
+ *   linearization point for registered nonlinearCurrents laws only.
  *   When given (and not in transient mode), each capacitor is stamped as a voltage
  *   source holding its stored voltage — which is what a capacitor IS at an instant.
  *   Without it, capacitors are DC-open (legacy operating-point behaviour).
@@ -1777,11 +1781,20 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
         }
       }
     }
-    if (part.kind === 'opamp') opampRegions.set(part.id, 'linear');
+    // Region memory (`opts.opampRegionsGuess`, the previous solution's map):
+    // with POSITIVE feedback the linear row has an unstable equilibrium
+    // inside the rails, and a Schmitt trigger's state is history, not a
+    // function of the present inputs. Starting every solve at 'linear'
+    // published that equilibrium inside the hysteresis band.
+    const remembered = (id) => {
+      const r = opts.opampRegionsGuess?.get?.(id);
+      return r === 'high' || r === 'low' || r === 'linear' ? r : 'linear';
+    };
+    if (part.kind === 'opamp') opampRegions.set(part.id, remembered(part.id));
     if (part.kind === 'vcvs' && (part.params?.railLow !== undefined
         || part.params?.railHigh !== undefined
         || outputCurrentLimit(part) > 0)) {
-      opampRegions.set(part.id, 'linear'); // shares the op-amp rail/ilim FSM
+      opampRegions.set(part.id, remembered(part.id)); // shares the op-amp rail/ilim FSM
     }
     if (part.kind === 'vccs' && part.params?.iMax > 0) {
       vccsClamps.set(part.id, 'linear');
@@ -1860,6 +1873,22 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
   const nonlinearDimensions = new Map();
   // solveAssembled replaces solution; the initial zero vector is not mutated.
   let nonlinearIterate = solution;
+  // Warm start for registered nonlinear laws ONLY (`opts.nonlinearGuess`,
+  // net id → volts, normally the previous published solution). Their
+  // iterate advances by a global 0.5 V trust step, so from the zero vector a
+  // bench with a 12 V rail spends ~25 iterations walking the rail up before
+  // the law is even evaluated near its operating point — every solve, every
+  // transient step. Junctions, BJTs, MOSFETs and op-amp regions keep their
+  // own initialisation; only the nonlinear-current linearization point moves.
+  if (opts.nonlinearGuess instanceof Map && opts.nonlinearGuess.size) {
+    const guess = new Float64Array(dim);
+    let any = false;
+    for (const [netId, index] of nodeIndex) {
+      const v = opts.nonlinearGuess.get(netId);
+      if (Number.isFinite(v)) { guess[index] = v; any = true; }
+    }
+    if (any) nonlinearIterate = guess;
+  }
   let topology;
   const getTopology = () => {
     if (topology) return topology;
@@ -2026,6 +2055,9 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
   // (junction voltages, region FSMs, CC clamps) lives in the enclosing
   // scope, so each rung seeds the next — the point of a continuation.
   const runNewton = (gmin, srcScale = 1, selectiveShunt = false) => {
+  // Rail regions each op-amp has occupied in THIS Newton run; see the
+  // cycle break in the region FSM below.
+  const railVisits = new Map();
   for (let iter = 0; iter < MAX_NR_ITER; iter++) {
     // Clear values; the assembled pattern survives for factor reuse.
     A.reset();
@@ -2733,6 +2765,24 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
           if (vOut >= vTarget) next = 'linear';
         }
       }
+      // Cycle break. Under positive feedback the FSM cycles forever:
+      // 'linear' solves to an output beyond a rail (the unstable root),
+      // that rail's solve says the ideal output is back inside, and round it
+      // goes (low → linear → low …: a Schmitt trigger or relaxation
+      // oscillator failed to converge at its first switching instant). A
+      // return to a region already tried in this run means the regions
+      // tried so far are each inconsistent, so take the rail region not yet
+      // tried; a negative-feedback stage, whose linear root is consistent,
+      // never revisits and never gets here.
+      if (next !== region && (next === 'linear' || next === 'high' || next === 'low')) {
+        let seen = railVisits.get(part.id);
+        if (!seen) { seen = new Set([region]); railVisits.set(part.id, seen); }
+        if (seen.has(next)) {
+          const untried = ['high', 'low', 'linear'].find(r => !seen.has(r));
+          if (untried) next = untried;
+        }
+        seen.add(next);
+      }
       if (next !== region) {
         opampRegions.set(part.id, next);
         regionChanged = true;
@@ -2933,7 +2983,22 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
   // trying to seed its history. Use the existing matrix-derived selective
   // mode from the first transient solve: genuinely undetermined rows retain
   // GMIN, while rows held by a companion or branch unknown do not.
-  converged = runNewton(GMIN, 1, transient !== null);
+  // `opts.blanketShunt` (a caller that already saw this topology need the
+  // retry below) skips the selective attempt that is known to be singular.
+  let blanketShunt = transient !== null && opts.blanketShunt === true;
+  converged = runNewton(GMIN, 1, transient !== null && !blanketShunt);
+  // A transient step whose selective shunt leaves an ISLAND with no path to
+  // the reference (resistors hanging between two high-Z MCU input pins,
+  // say) is singular: every row has a diagonal, so none kept its GMIN. That
+  // step used to fail outright — the bench only escaped because nothing on it
+  // was reactive and the transient never ran; one hidden op-amp pole made it
+  // run (76-multimeter). Retry once with the blanket GMIN shunt that every
+  // operating-point solve uses: the island's nodes are then defined, and the
+  // companion history of every other node is untouched.
+  if (!converged && transient !== null && !blanketShunt) {
+    converged = runNewton(GMIN, 1, false);
+    blanketShunt = converged;
+  }
 
   // E1.4 fallback ladder: GMIN stepping. A heavily inflated gmin makes any
   // operating point easy; each rung's solution seeds the next as gmin
@@ -3757,7 +3822,7 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
     }
     return { nodeVoltages, branchCurrents, indeterminateBranchCurrents, railCurrents,
       capVoltagesNext, capCurrentsNext,
-      inductorCurrentsNext, inductorVoltagesNext, converged, opampRegions, deviceStamps,
+      inductorCurrentsNext, inductorVoltagesNext, converged, opampRegions, deviceStamps, blanketShunt,
       ...regionDiagnostics,
       railConflicts: railConflicts.length ? [...new Set(railConflicts)] : undefined };
   }
@@ -4172,10 +4237,17 @@ function stampDevice(A, b, part, nets, nodeIndex, model, state, controls, vcc, t
       let dimensions = nonlinearDimensions.get(part.id);
       if (!dimensions) { dimensions = new Map(); nonlinearDimensions.set(part.id, dimensions); }
       let residualOhms;
+      // Resolved once per terminal for this stamp: evaluateAt runs several
+      // times per Newton iteration, and an uncached findNet is a linear scan
+      // of every net (it dominated the LM358 macromodel's profile).
+      const resolved = new Map();
       const terminalNet = (terminal) => {
+        const hit = resolved.get(terminal);
+        if (hit !== undefined) return hit;
         if (typeof terminal !== 'string' || !model.terminals.includes(terminal)) fail(`undeclared terminal ${String(terminal)}`);
         const net = findNet(nets, part.id, terminal);
         if (!net || !rowOrGround(net)) fail(`terminal ${terminal} must be connected to a node or reference`);
+        resolved.set(terminal, net);
         return net;
       };
       const readAt = (values) => (terminal) => {
