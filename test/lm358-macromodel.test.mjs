@@ -243,6 +243,63 @@ describe('LM358 with a capacitor in the loop (integrator, triangle generator)', 
     });
 });
 
+describe('LM358 slow integrators and charge packets (builder 3)', () => {
+    const integrator = (extraParts, extraNets, cFarads, rOhms = null) => {
+        const board = new BoardImpl(5.0);
+        board.setNetlist([V('VS', 9), G, V('VR', 4.5), LM358,
+            { id: 'C', kind: 'capacitor', params: { farads: cFarads }, terminals: ['a', 'b'] },
+            ...(rOhms ? [R('RI', rOhms)] : []), ...extraParts], [
+            net('nv', ['VS', 'pos'], ['U1', 'vcc']),
+            net('ng', ['G', 'gnd'], ['VS', 'neg'], ['VR', 'neg'], ['U1', 'gnd'], ...extraNets.gnd),
+            net('nref', ['VR', 'pos'], ['U1', '1_pos'], ...extraNets.ref),
+            net('nn', ['C', 'a'], ['U1', '1_neg'], ...extraNets.nn),
+            net('no', ['U1', '1_out'], ['C', 'b']),
+            ...extraNets.more,
+        ]);
+        return board;
+    };
+
+    it('a 10 s integrator (1 MΩ, 10 µF) runs 10 s in 10 ms ticks quickly and on its ramp', () => {
+        // 0.1 V below the 4.5 V reference: +0.1/(1 MΩ·10 µF) = +10 mV/s.
+        const board = integrator([V('VI', 4.4)],
+            { gnd: [['VI', 'neg']], ref: [], nn: [['RI', 'b']], more: [net('nin', ['VI', 'pos'], ['RI', 'a'])] },
+            10e-6, 1e6);
+        const t0 = performance.now();
+        for (let ms = 10n; ms <= 10000n; ms += 10n) board.advanceTo(ms * 1_000_000n);
+        const wall = performance.now() - t0;
+        assert.ok(Math.abs(board.nodeVoltage('no') - 4.6) < 0.001, `10 s ramp end ${board.nodeVoltage('no')}`);
+        assert.ok(wall < 60000, `10 s integrator took ${wall.toFixed(0)} ms`);
+    });
+
+    it('a diode charge pump steps the integrator once per rising edge, by C1·ΔV/C', () => {
+        // 100 Hz 0–5 V square → 10 nF → D1 into the virtual ground; D2 from
+        // the 4.5 V reference resets the pump capacitor on falling edges.
+        // Each rising edge moves 10 nF × (5 V − two diode drops ≈ 1.1 V) =
+        // ~39 nC into 1 µF: a −39 mV step, and nothing between edges.
+        const board = integrator([
+            V('VP', 0, { wave: 'square', freq: 100, amplitude: 2.5, offset: 2.5 }),
+            { id: 'C1', kind: 'capacitor', params: { farads: 10e-9 }, terminals: ['a', 'b'] },
+            { id: 'D1', kind: 'diode', params: {}, terminals: ['anode', 'cathode'] },
+            { id: 'D2', kind: 'diode', params: {}, terminals: ['anode', 'cathode'] },
+        ], { gnd: [['VP', 'neg']], ref: [['D2', 'anode']], nn: [['D1', 'cathode']],
+            more: [net('np', ['VP', 'pos'], ['C1', 'a']), net('nx', ['C1', 'b'], ['D1', 'anode'], ['D2', 'cathode'])] },
+            1e-6);
+        const settled = [];
+        for (let ms = 1n; ms <= 45n; ms++) {
+            board.advanceTo(ms * 1_000_000n - 500_000n);    // mid-interval, away from edges
+            settled.push(board.nodeVoltage('no'));
+        }
+        assert.equal(board._transientAccuracyUnmet, null);
+        // Rising edges at 10, 20, 30, 40 ms: steps between samples 9.5→10.5 ms etc.
+        for (let i = 1; i < settled.length; i++) {
+            const d = settled[i] - settled[i - 1];
+            const edge = i % 10 === 0;   // sample i is at (i + 0.5) ms
+            if (edge) assert.ok(d < -0.030 && d > -0.045, `step at ${i + 0.5} ms: ${(d * 1000).toFixed(1)} mV`);
+            else assert.ok(Math.abs(d) < 0.001, `no step at ${i + 0.5} ms: ${(d * 1000).toFixed(2)} mV`);
+        }
+    });
+});
+
 describe('ideal opamp under positive feedback (gap 5)', () => {
     it('a relaxation oscillator converges through every switching instant', () => {
         // Rails 0/5 V; v+ = 5/3 or 10/3 V from three 10 k; RC = 1 ms.

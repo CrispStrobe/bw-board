@@ -14,6 +14,7 @@
 
 import { registerDevice } from '../devices.js';
 import { ambient, surfaceDistanceCm } from '../world.js';
+import { vceShape } from '../photo-junctions.js';
 import { controlledResistance } from '../mna.js';
 
 // Input pins draw nothing here, on purpose. These models used to declare
@@ -211,16 +212,31 @@ export function registerSensors() {
     },
   });
 
+  // Light-driven collector current with VCE compliance (photo-junctions.js):
+  // light × iMax in the active region, saturating at VCE(sat) ≈ 0.2 V, and
+  // never driving a node beyond the rails as the old ideal source did.
   registerDevice('phototransistor', {
     terminals: ['collector', 'emitter'],
 
     init() { return { drives: {}, _current: 0 }; },
 
     stamp(ctx, part, state) {
-      if (state._current > 0) {
-        ctx.current('collector', -state._current);
-        ctx.current('emitter', state._current);
-      }
+      if (!ctx.netFor('collector') || !ctx.netFor('emitter')) return;
+      const iL = state._current;
+      ctx.nonlinearCurrents('photo-collector', (read, scale) => {
+        const [s, ds] = vceShape(read('collector') - read('emitter'));
+        const i = iL * scale * s;           // collector → emitter inside the part
+        const g = iL * scale * ds;
+        return {
+          region: 'smooth',
+          currents: new Map([['collector', -i], ['emitter', i]]),
+          jacobian: new Map([
+            ['collector', new Map([['collector', -g], ['emitter', g]])],
+            ['emitter', new Map([['collector', g], ['emitter', -g]])],
+          ]),
+          residualOhms: 1e6,
+        };
+      });
     },
 
     update(part, state) {

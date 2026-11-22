@@ -9,6 +9,7 @@
  * @module
  */
 
+import { ledSegment, vceShape } from '../photo-junctions.js';
 import { registerDevice } from '../devices.js';
 import { classDefaults } from '../parts-library.js';
 
@@ -205,50 +206,58 @@ export function registerAnalogICs() {
   });
 
   // ─── Optocoupler ──────────────────────────────────────────────────
-  // E3.6: the LED side is a real junction segment (off: 1 MΩ leak; on:
-  // rd above vf, so vLed clamps near vf + i·rd instead of the old
-  // 150 Ω-from-zero fiction), and the output is SCALED by the current
-  // transfer ratio instead of snapping to one saturation conductance:
-  // the phototransistor can sink at most CTR·iLed, modeled as a
-  // conductance ctr·iLed/vceSat — half the LED current, half the sink.
+  // One Newton-solved law (photo-junctions.js, 2026-11-23). The LED is a
+  // smooth junction segment (rd = 50 Ω above vf, exponentially dark below,
+  // 1 µS leakage); the phototransistor passes CTR·iLed shaped by its VCE
+  // saturation, so it saturates at ≈0.2 V instead of being a linear
+  // conductance. The old model set that conductance from the LED current in
+  // update() and asked for a re-solve whenever it moved by 5 %: an event per
+  // step while a coupled capacitor charged, and a diode-pump detector behind
+  // it failed at the integrator's minimum step after the LED switched off.
   registerDevice('optocoupler', {
     terminals: ['anode', 'cathode', 'collector', 'emitter'],
 
     init() {
-      return { drives: {}, _on: false, _gCe: 0 };
+      return { drives: {}, _on: false };
     },
 
-    stamp(ctx, part, state) {
+    stamp(ctx, part) {
       const rd = 50; // dynamic R of the internal LED
       const vf = part.params?.vf ?? 1.2;
-      if (state._on) {
-        // Conducting segment: i = (v − vf)/rd as a Norton pair.
-        ctx.conductance('anode', 'cathode', 1 / rd);
-        // Norton pair for i = (v − vf)/rd: the −vf/rd constant is an
-        // inflow at the anode and an outflow at the cathode (b += amps
-        // is inflow in this MNA).
-        ctx.current('anode', vf / rd);
-        ctx.current('cathode', -vf / rd);
-      } else {
-        ctx.conductance('anode', 'cathode', 1e-6); // dark leakage
-      }
-      if (state._gCe > 0) ctx.conductance('collector', 'emitter', state._gCe);
+      const ctr = part.params?.ctr ?? 1.0;
+      const led = ctx.netFor('anode') && ctx.netFor('cathode');
+      const out = ctx.netFor('collector') && ctx.netFor('emitter');
+      if (!led) return; // no LED current, nothing on the output either
+      ctx.nonlinearCurrents('optocoupler', (read, scale) => {
+        const vLed = read('anode') - read('cathode');
+        const [iLed, gLed] = ledSegment(vLed, vf * scale, rd);
+        const currents = new Map([['anode', -iLed], ['cathode', iLed]]);
+        const jacobian = new Map([
+          ['anode', new Map([['anode', -gLed], ['cathode', gLed]])],
+          ['cathode', new Map([['anode', gLed], ['cathode', -gLed]])],
+        ]);
+        if (out) {
+          const ion = Math.max(iLed - 1e-6 * vLed, 0); // photon-producing part only
+          const gon = iLed - 1e-6 * vLed > 0 ? gLed - 1e-6 : 0;
+          const [sh, dsh] = vceShape(read('collector') - read('emitter'));
+          const i = ctr * ion * sh;
+          const dLed = ctr * gon * sh;
+          const dVce = ctr * ion * dsh;
+          currents.set('collector', -i);
+          currents.set('emitter', i);
+          jacobian.set('collector', new Map([['anode', -dLed], ['cathode', dLed],
+            ['collector', -dVce], ['emitter', dVce]]));
+          jacobian.set('emitter', new Map([['anode', dLed], ['cathode', -dLed],
+            ['collector', dVce], ['emitter', -dVce]]));
+        }
+        return { region: 'smooth', currents, jacobian, residualOhms: 1e5 };
+      });
     },
 
     update(part, state, read) {
-      const rd = 50;
-      const vf = part.params?.vf ?? 1.2;
-      const ctr = part.params?.ctr ?? 1.0;
-      const vceSat = 0.2;
-      const vLed = read('anode') - read('cathode');
-      const on = vLed > vf;
-      const iLed = on ? Math.max(0, (vLed - vf) / rd) : 0;
-      const gCe = Math.min(ctr * iLed / vceSat, 1 / 5); // cap at the old hard-sat 5 Ω
-      const changed = on !== state._on || Math.abs(gCe - state._gCe) > state._gCe * 0.05 + 1e-9;
-      if (!changed) return false;
-      state._on = on;
-      state._gCe = gCe;
-      return true;
+      // Reporting only: the electrical law is solved inside the network.
+      state._on = read('anode') - read('cathode') > (part.params?.vf ?? 1.2);
+      return false;
     },
   });
 

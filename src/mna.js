@@ -26,6 +26,7 @@
 /**
  * Dense matrix backed by a flat Float64Array.
  */
+import { junctionVf } from './led-color.js';
 import { getDevice } from './devices.js';
 import { CooMatrix, SparseLU, toCSC } from './sparse.js';
 import { spiceExpValue, spicePulseVoltage, spicePwlValue, spiceSineValue } from './source-waveforms.js';
@@ -2675,7 +2676,7 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
             vcrit: junctionVcrit(emLim.is, emLim.nVt), noRs: true }
         : (part.kind === 'led' || part.kind === 'diode' || explicitShockleyZener)
           ? junctionLimitParams(part,
-              effVf(/** @type {number} */ (part.params.vf ?? (part.kind === 'led' ? 2.0 : 0.7))))
+              effVf(/** @type {number} */ (junctionVf(part))))
           : null;
       if (lim) {
         // The solve gives TOTAL branch volts; the NR state is the
@@ -3286,7 +3287,7 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
       // A bare LED is a ~2 V junction; a bare diode is silicon, 0.7 V.
       // (Sweep finding 2026-08-15: both defaulted to 2.0, so an
       // unparameterized diode behaved exactly like an LED.)
-      const vf = effVf(/** @type {number} */ (part.params.vf ?? (part.kind === 'diode' ? 0.7 : 2.0)));
+      const vf = effVf(/** @type {number} */ (junctionVf(part)));
       const rd = junctionRd(part); // bulk resistance, per kind
       const vAcross = vAnode - vCathode;
       // Same model as the stamp — a PWL current read off a Shockley solve
@@ -3964,7 +3965,7 @@ function stampDiode(A, b, part, nets, nodeIndex, groundNetId, diodeVoltages) {
   const anodeNet = findNet(nets, part.id, 'anode');
   const cathodeNet = findNet(nets, part.id, 'cathode');
   if (!anodeNet || !cathodeNet) return;
-  const vf = effVf(/** @type {number} */ (part.params.vf ?? (part.kind === 'diode' ? 0.7 : 2.0)));
+  const vf = effVf(/** @type {number} */ (junctionVf(part)));
   const rd = junctionRd(part);
 
   const vAcross = diodeVoltages.get(part.id) ?? 0;

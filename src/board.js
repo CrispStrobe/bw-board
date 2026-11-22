@@ -32,6 +32,7 @@ import { validateNetlist } from './validate.js';
 import { getDevice, initDeviceState, resetDeviceState } from './devices.js';
 import { servoCalibration } from './devices/servo.js';
 import { expandLm741LinearPoles } from './lm741-linear-pole.js';
+import { junctionVf, ledVf } from './led-color.js';
 import { expandGroundSensingOpAmps, isHiddenPoleCapacitor, STAGE_KIND as GROUND_SENSING_STAGE } from './ground-sensing-opamp.js';
 import { meterQuadraticSegment, meterQuadraticIntegral } from './meter-quadrature.js';
 import { feedI2CSlave } from './devices/i2c-slave.js';
@@ -738,18 +739,21 @@ export class BoardImpl {
     const netCopies = nets.map((n) => ({ ...n, terminals: [...n.terminals] }));
     const netsOf = (partId, terminal) => netCopies.filter(
       (n) => n.terminals.some((t) => t.part === partId && t.terminal === terminal));
-    const addLed = (id, anodeNets, cathodeNets) => {
+    const addLed = (id, anodeNets, cathodeNets, params = {}) => {
       if (present.has(id)) return;   // already expanded — see the note above
-      extraParts.push({ id, kind: 'led', params: {}, terminals: ['anode', 'cathode'] });
+      extraParts.push({ id, kind: 'led', params, terminals: ['anode', 'cathode'] });
       for (const n of anodeNets) n.terminals.push({ part: id, terminal: 'anode' });
       for (const n of cathodeNets) n.terminals.push({ part: id, terminal: 'cathode' });
     };
     for (const p of parts) {
       if (p.kind === 'rgb_led') {
         const cath = netsOf(p.id, 'cathode');
-        addLed(`${p.id}_r`, netsOf(p.id, 'r_anode'), cath);
-        addLed(`${p.id}_g`, netsOf(p.id, 'g_anode'), cath);
-        addLed(`${p.id}_b`, netsOf(p.id, 'b_anode'), cath);
+        // Each die keeps its own colour, so its forward voltage follows it
+        // (led-color.js: red 1.9 V, green and blue InGaN ~3.1 V in an RGB
+        // package — the green die of an RGB LED is InGaN, not GaP).
+        addLed(`${p.id}_r`, netsOf(p.id, 'r_anode'), cath, { color: 'red' });
+        addLed(`${p.id}_g`, netsOf(p.id, 'g_anode'), cath, { color: 'true-green' });
+        addLed(`${p.id}_b`, netsOf(p.id, 'b_anode'), cath, { color: 'blue' });
       } else if (p.kind === 'seven_segment') {
         const common = netsOf(p.id, 'common');
         for (const seg of ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'dp']) {
@@ -882,7 +886,13 @@ export class BoardImpl {
     const linearView = getDevice(GROUND_SENSING_STAGE)
       ? expandGroundSensingOpAmps(lm741View.parts, lm741View.nets) : lm741View;
     const macroView = BoardImpl._expandOpampMacros(linearView.parts, linearView.nets, this.vcc);
-    this._solveParts = macroView.parts;
+    // An IR transmitter IS an IR LED electrically. The solver sees it as an
+    // `led` of the same id (so its branch current and the LED junction model,
+    // knee and limiting are the LED's) with the IR forward voltage unless the
+    // part declares its own vf. The public part stays an `ir_transmitter`:
+    // it is not a visible LED, and its device model still reports emission.
+    this._solveParts = macroView.parts.map(p => p.kind === 'ir_transmitter'
+      ? { ...p, kind: 'led', params: { color: 'ir', ...p.params } } : p);
     this._solveNets = macroView.nets;
     this._macroFallbacks = macroView.notes;
 
@@ -5783,7 +5793,7 @@ export class BoardImpl {
    * branch irrelevant, which it physically is.
    */
   _junctionHeadroomFor(part) {
-    const vfOf = p => Number(p.params?.vf ?? (p.kind === 'diode' ? 0.7 : 2.0)) || 0;
+    const vfOf = p => Number(junctionVf(p)) || 0;
     const isJunction = p => p.kind === 'led' || p.kind === 'diode';
     const byId = new Map(this.parts.map(p => [p.id, p]));
     const allNets = this.nets || [];
@@ -7341,7 +7351,7 @@ export class BoardImpl {
     // the same LED. That disagreement is why nodeVoltage and branchCurrent
     // had to be corrected in one commit.
     const vf = kneeFromVf(
-      /** @type {number} */ (led.params.vf ?? LED_VF), rd);
+      /** @type {number} */ (ledVf(led)), rd);
 
     // LED terminals: "anode" and "cathode"
     const anodeNet = this._netForTerminal(led.id, 'anode');
