@@ -23,7 +23,7 @@ import {createScopeAperture, advanceScopeAperture, edgeScopeAperture} from './sc
 import { pinThevenin } from './pin-model.js';
 import { buildPinAliasTable } from './pin-aliases.js';
 import {
-  solveMNA, ebersMollParams, OPAMP_ISHORT_DEFAULT, JUNCTION_THERMAL_VOLTAGE, MOS_BULK_THERMAL_VOLTAGE, kneeFromVf,
+  solveMNA, ebersMollParams, parasiticCaps, OPAMP_ISHORT_DEFAULT, JUNCTION_THERMAL_VOLTAGE, MOS_BULK_THERMAL_VOLTAGE, kneeFromVf,
   sourceDcValue, sourceVoltage, sourceCurrent,
 } from './mna.js';
 import { resolveParams, classDefaults } from './parts-library.js';
@@ -371,6 +371,8 @@ export class BoardImpl {
     /** @type {Map<string, number>} */
     this.inductorVoltages = new Map();
     this._trapValid = false;
+    /** Newton state of the last accepted transient point (solveMNA newtonSeed). */
+    this._newtonSeed = null;
     /** Last accepted adaptive step size (seconds); seeds the next call. */
     this._transH = 1e-4;
     /**
@@ -830,6 +832,7 @@ export class BoardImpl {
   }
 
   setNetlist(parts, nets) {
+    this._newtonSeed = null; // junction/region state belongs to the old netlist
     this._ledFanout = undefined; // netlist changed: recompute the fan-out memo
     this._wiperLoaded = undefined; // ditto for the loaded-wiper routing memo
     this._wiperMcuPins = undefined; // and the MCU pins sitting on a wiper net
@@ -3809,6 +3812,12 @@ export class BoardImpl {
           }
         }
       }
+      // Device parasitics start at the operating point too, not uncharged.
+      for (const cap of parasiticCaps(part)) {
+        const value = (point.nodeVoltages.get(this._netForTerminal(part.id, cap.a)) ?? 0)
+          - (point.nodeVoltages.get(this._netForTerminal(part.id, cap.b)) ?? 0);
+        if (Number.isFinite(value)) capacitorVoltages.set(cap.key, value);
+      }
       if (part.kind === 'capacitor') {
         const a = this._netForTerminal(part.id, 'a');
         const b = this._netForTerminal(part.id, 'b');
@@ -3899,6 +3908,7 @@ export class BoardImpl {
     this._liveSolveError = null;
     this._trapValid = false;
     this._transH = 1e-4;
+    this._newtonSeed = null;
     this._lastTransientSolves = 0;
     this._transientAttemptOverflow = false;
     this._transientAccuracyUnmet = null;
@@ -4009,6 +4019,7 @@ export class BoardImpl {
     this._liveSolveError = null;
     this._trapValid = false;
     this._transH = 1e-4;
+    this._newtonSeed = null;
     this._lastTransientSolves = 0;
     this._transientAttemptOverflow = false;
     this._transientAccuracyUnmet = null;
@@ -5277,6 +5288,7 @@ export class BoardImpl {
     this.capCurrents = new Map();
     this.inductorVoltages = new Map();
     this._trapValid = false;
+    this._newtonSeed = null;
     this._transH = 1e-4;
     this._transientAttemptOverflow = false;
     this._transientAccuracyUnmet = null;
@@ -5349,6 +5361,7 @@ export class BoardImpl {
    * @param {object} snap
    */
   restore(snap) {
+    this._newtonSeed = null; // the snapshot carries no Newton state; start cold
     this.timeNs = snap.timeNs;
     this.powered = snap.powered;
     this.pinStates = new Map(snap.pinStates);
@@ -5484,7 +5497,11 @@ export class BoardImpl {
       this._chargeBoundedAdvanceWork('solves');
       return solveMNA(this._solveParts, this._solveNets, this._pinSources(), this.controls, this.vcc, options);
     }
-    return this._solveLiveMNA(this._pinSources(), options);
+    // The live circuit continues from where it was (see `newtonSeed`).
+    const result = this._solveLiveMNA(this._pinSources(),
+      { ...options, newtonSeed: this._newtonSeed ?? undefined });
+    if (result?.newtonState) this._newtonSeed = result.newtonState;
+    return result;
   }
 
   _solveLiveMNA(pinSources, options) {
@@ -5866,6 +5883,19 @@ export class BoardImpl {
   }
 
   /** Any capacitor or inductor present? */
+  /**
+   * Does any default transistor carry input capacitance (`parasiticCaps`)?
+   * Such a network is not memoryless: a latch or a thyristor holds its state
+   * between source events, so a time-varying source's pulse must be
+   * integrated through rather than skipped by one endpoint solve.
+   */
+  _hasDeviceCapacitance() {
+    for (const p of (this._solveParts ?? this.parts)) {
+      if (parasiticCaps(p).length) return true;
+    }
+    return false;
+  }
+
   _hasReactive() {
     // SOLVER view, not the drawing: hidden reactive parts (motor
     // windings, macromodel poles) must pull advanceTo into transient
@@ -5896,7 +5926,7 @@ export class BoardImpl {
    */
   _transientIntegrationMode() {
     if (this._sourceConstrainedInductorDirect()) return 'source-constrained-inductor-direct';
-    return !this._hasReactive()
+    return !this._hasReactive() && !this._hasDeviceCapacitance()
       && this._deviceStates.size === 0
       && this._shiftRegisters.size === 0
       && this._scopeChannels.size === 0
@@ -6375,13 +6405,16 @@ export class BoardImpl {
         stage, timeSec: atSec,
       };
     };
-    const solveStep = (tStart, hs, method, cvS, ilS, ccS, lvS) => {
+    // Newton state (junction voltages, region FSMs) at the last accepted
+    // point seeds the next step's solve -- see `newtonSeed` in solveMNA.
+    let seed = this._newtonSeed ?? null;
+    const solveStep = (tStart, hs, method, cvS, ilS, ccS, lvS, seedS = seed) => {
       nSolves++;
       const r = this._solveLiveMNA(pinSources, {
         tSeconds: tStart + hs,
         temperatureC: this.temperatureC,
         transient: { dtSec: hs, method, capVoltages: cvS, inductorCurrents: ilS,
-          capCurrents: ccS, inductorVoltages: lvS },
+          capCurrents: ccS, inductorVoltages: lvS, newtonSeed: seedS ?? undefined },
         deviceStates: this._deviceStates,
         qualifiedSources: qual,
         // Power off strips the sources but NOT the storage: capacitor
@@ -6419,6 +6452,7 @@ export class BoardImpl {
       il = r.inductorCurrentsNext ?? il;
       cc = r.capCurrentsNext ?? cc;
       lv = r.inductorVoltagesNext ?? lv;
+      seed = r.newtonState ?? seed;
       res = r;
       publish(r, atSec,quadratic);
       // One device pass per accepted step, told the SUB-STEP time — the
@@ -6448,9 +6482,21 @@ export class BoardImpl {
       // Keep the established first-step diagnostic stage (`be`). With no
       // storage, BE and trapezoidal stamp the identical algebraic system.
       const direct = solveStep(t0, dtSec, 'be', cv, il, cc, lv);
-      t = tEnd;
-      accept(direct, t, null, 'be');
-      trapReady = true;
+      if (validTransientSolution(direct)) {
+        t = tEnd;
+        accept(direct, t, null, 'be');
+        trapReady = true;
+      } else {
+        // No operating point near the last one: a latch or flip-flop whose
+        // trigger crossed its switching threshold inside this interval has
+        // nowhere continuous to go in one algebraic jump. Integrate the
+        // interval instead, through the device input capacitances
+        // (`parasiticCaps` in mna.js), from the last accepted state. Only a
+        // failed direct solve takes this path; every converging endpoint is
+        // exactly what it was.
+        trapReady = false;
+        h = Math.min(H_SEED, dtSec);
+      }
     }
 
     let fatalTrialFailure = false;
@@ -6513,7 +6559,7 @@ export class BoardImpl {
       if (rejectTrial(h1)) { if (fatalTrialFailure) break; continue; }
       const h2 = solveStep(t + hEff / 2, hEff / 2, 'trap',
         h1.capVoltagesNext ?? cv, h1.inductorCurrentsNext ?? il,
-        h1.capCurrentsNext ?? cc, h1.inductorVoltagesNext ?? lv);
+        h1.capCurrentsNext ?? cc, h1.inductorVoltagesNext ?? lv, h1.newtonState ?? seed);
       if (rejectTrial(h2)) { if (fatalTrialFailure) break; continue; }
 
       let err = 0;
@@ -6603,6 +6649,7 @@ export class BoardImpl {
     this.capCurrents = new Map(cc);
     this.inductorVoltages = new Map(lv);
     this._trapValid = trapReady;
+    this._newtonSeed = seed;
     this._transH = h;
     // Observable for the idle-advance solve-count oracle; costs nothing.
     this._lastTransientSolves = nSolves;

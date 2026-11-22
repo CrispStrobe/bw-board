@@ -189,7 +189,7 @@ function solveAssembled(A, b) {
  * @param {boolean} [opts.shockley] - use Shockley model (default: false)
  * @returns {{ gEq: number, iEq: number }}
  */
-function diodeCompanion(vAcross, vf, rd, opts) {
+function diodeCompanion(vAcross, vf, rd, opts, gOff = PWL_OFF_G) {
   if (opts && opts.shockley) {
     // COMPOSITE linearization: junction + series rs as one branch,
     // i(v_total) with v_total = vJ + i·rs. `vAcross` here is the stored
@@ -212,23 +212,35 @@ function diodeCompanion(vAcross, vf, rd, opts) {
   // smoothVov fix. Outside the band both branches are BIT-IDENTICAL to
   // the original lines, so every corpus operating point away from the
   // knee is untouched.
+  //
+  // THE OFF CONDUCTANCE RUNS THROUGH EVERY SEGMENT. The off branch carries
+  // PWL_OFF_G*v and used to stop there, so the curve STEPPED from
+  // PWL_OFF_G*(vf - eps) to zero where the knee began: 0.675 nA for a base
+  // junction, 2 nA for an LED. Newton cannot settle on a step -- each side's
+  // root lies on the other side -- and a transistor whose base sat exactly at
+  // the knee's foot (an astable's off device recharging) alternated across it
+  // with a constant 4 uV residual until the step failed. Carrying the same
+  // parallel conductance through the knee and the linear segment makes the
+  // curve continuous, and it is what SPICE does: GMIN across every junction.
   const EPS = kneeEps(rd);
   if (vAcross < vf - EPS) {
-    const gOff = 1e-9;
     return { gEq: gOff, iEq: 0 };
   }
   if (vAcross > vf + EPS) {
-    const gEq = 1 / rd;
+    const gEq = 1 / rd + gOff;
     const iEq = -vf / rd;
     return { gEq, iEq };
   }
   // In-band: i(v) = (v − vf + ε)² / (4·ε·rd) — joins i = 0 at vf−ε and the
   // line (v−vf)/rd at vf+ε with matching slope at both ends.
   const u = vAcross - vf + EPS;
-  const gEq = u / (2 * EPS * rd);
-  const i = (u * u) / (4 * EPS * rd);
+  const gEq = u / (2 * EPS * rd) + gOff;
+  const i = (u * u) / (4 * EPS * rd) + gOff * vAcross;
   return { gEq, iEq: i - gEq * vAcross };
 }
+
+/** The piecewise junction's parallel (off-state) conductance, siemens. */
+const PWL_OFF_G = 1e-9;
 
 /** Half-width of the PWL knee's C1 blend band (volts), for an LED-scale part. */
 const PWL_KNEE_EPS = 0.025;
@@ -274,12 +286,9 @@ function pwlKneeCurrent(v, vf, rd) {
 }
 
 /** Readback includes the off conductance; region classification stays unchanged. */
-function pwlStampedCurrent(v, vf, rd) {
-  if (v < vf-kneeEps(rd)) {
-    const {gEq,iEq} = diodeCompanion(v,vf,rd);
-    return gEq*v+iEq;
-  }
-  return pwlKneeCurrent(v,vf,rd);
+function pwlStampedCurrent(v, vf, rd, gOff = PWL_OFF_G) {
+  const {gEq,iEq} = diodeCompanion(v,vf,rd,undefined,gOff);
+  return gEq*v+iEq;
 }
 
 /**
@@ -1484,6 +1493,7 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
     });
     for (const net of nets) if (isGndNet(net)) mergedGndIds.add(net.id);
   }
+  const callerNets = nets;
   if (mergedGndIds.size) {
     const view = [];
     let mergedMain = null;
@@ -1514,7 +1524,18 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
   // is a pure function of the array's identity. Measured on the
   // perf-budget LED bench: ~19K → ~22K setPin/sec — the rebuild was
   // ~8% self time, real but not the bench's dominant cost.
-  if (!nets[NETS_TERM_MAP]) nets[NETS_TERM_MAP] = buildTermMap(nets);
+  // The view above is a fresh array on every solve, so memoizing on IT never
+  // hit: the map was rebuilt per solve. Memoize on the CALLER'S array (the
+  // identity the note above relies on), keyed by the ground merge that shaped
+  // the view, and attach the shared map to this solve's private view.
+  const termMapKey = `${groundNetId ?? ''}\u0000${[...mergedGndIds].join('\u0000')}`;
+  const termMemo = TERM_MAP_MEMO.get(callerNets);
+  if (termMemo && termMemo.key === termMapKey) {
+    nets[NETS_TERM_MAP] = termMemo.map;
+  } else {
+    nets[NETS_TERM_MAP] = buildTermMap(nets);
+    TERM_MAP_MEMO.set(callerNets, { key: termMapKey, map: nets[NETS_TERM_MAP] });
+  }
 
   /** @type {Map<string, number>} net id → node index */
   const nodeIndex = new Map();
@@ -1738,6 +1759,12 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
   // second one stops being a function of the first.
   /** @type {Map<string, number>} */
   const bjtVbc = new Map();
+  // Vce (npn) / Vec (pnp) for a BJT on the smooth output law: its collector
+  // current depends on it, so it is a Newton variable like Vbe.
+  /** @type {Map<string, number>} */
+  const bjtVce = new Map();
+  const bjtVceDamp = new Map();
+  const bjtVceLastStep = new Map();
   // TRIODE NEEDS Vds AS WELL AS Vgs. The level-1 linear-region current is
   // `k*(2*Vov*Vds - Vds^2)`, quadratic in Vds, so one Newton variable is not
   // enough — the same shape as the BJT's second junction. `diodeVoltages`
@@ -1769,6 +1796,7 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
       if ((part.kind === 'npn' || part.kind === 'pnp') && ebersMollParams(part)) {
         bjtVbc.set(part.id, 0);
       }
+      if (bjtSmoothOutput(part)) bjtVce.set(part.id, 0);
       if (part.kind === 'nmos' || part.kind === 'pmos') {
         mosVds.set(part.id, 0);
         if (part.params?.bulkAtGround || findNet(nets, part.id, 'bulk') !== undefined) {
@@ -1788,6 +1816,43 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
     }
     if (part.kind === 'npn' || part.kind === 'pnp') bjtRegions.set(part.id, 'active');
     if (part.kind === 'nmos' || part.kind === 'pmos') mosRegions.set(part.id, 'saturation');
+  }
+
+  // TRANSIENT NEWTON STARTS FROM THE PREVIOUS TIME POINT, NOT FROM ZERO.
+  //
+  // Every transient solve used to start each junction at 0 V and every region
+  // FSM at its rest state, as though the circuit had just been switched on.
+  // SPICE seeds a time step's Newton with the solution at the last accepted
+  // point, because over a small step the answer barely moves. A cold start
+  // costs iterations on every step, and on a circuit with more than one
+  // consistent state (a latch, a flip-flop) it is a second chance to land on
+  // the wrong one. Only keys this solve also initialised are adopted, so a
+  // seed from another netlist cannot inject state, and the seed is advisory:
+  // the answer is still whatever Newton accepts at NR_TOL.
+  // An instantaneous (operating-point) solve takes the same seed from
+  // `opts.newtonSeed`: a static latch has no capacitor to remember its state,
+  // so the previous solution IS its memory. Restarting every event from zero
+  // let a set/reset flip-flop fall back to its unstable half-on point the
+  // moment the button was released.
+  const newtonSeed = transient?.newtonSeed ?? opts.newtonSeed;
+  if (newtonSeed) {
+    const adopt = (target, source) => {
+      if (!(source instanceof Map)) return;
+      for (const [id, value] of source) if (target.has(id)) target.set(id, value);
+    };
+    adopt(diodeVoltages, newtonSeed.diodeVoltages);
+    adopt(bjtVbc, newtonSeed.bjtVbc);
+    adopt(bjtVce, newtonSeed.bjtVce);
+    adopt(mosVds, newtonSeed.mosVds);
+    adopt(mosVsb, newtonSeed.mosVsb);
+    adopt(mosVdb, newtonSeed.mosVdb);
+    adopt(bjtRegions, newtonSeed.bjtRegions);
+    adopt(mosRegions, newtonSeed.mosRegions);
+    adopt(opampRegions, newtonSeed.opampRegions);
+    adopt(vccsClamps, newtonSeed.vccsClamps);
+    if (newtonSeed.bjtVceSat instanceof Map) {
+      for (const [id, value] of newtonSeed.bjtVceSat) if (bjtRegions.has(id)) bjtVceSat.set(id, value);
+    }
   }
 
   // Newton–Raphson iterations
@@ -2228,24 +2293,28 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
         case 'npn':
           stampNPN(A, b, part, nets, nodeIndex, groundNetId, diodeVoltages,
             bjtRegions.get(part.id), bjtVceSat.get(part.id), bjtVbc,
-            bjtBaseIndex, bjtCollectorIndex);
+            bjtBaseIndex, bjtCollectorIndex, bjtVce);
           stampBjtTransientCharge(A, b, part, nets, nodeIndex, bjtBaseIndex, bjtCollectorIndex,
             diodeVoltages, bjtVbc, transient);
+          stampParasitics(A, b, part, nets, nodeIndex, transient);
           break;
 
         case 'pnp':
           stampPNP(A, b, part, nets, nodeIndex, groundNetId, diodeVoltages,
-            bjtRegions.get(part.id), bjtVceSat.get(part.id), bjtVbc, bjtBaseIndex, bjtCollectorIndex);
+            bjtRegions.get(part.id), bjtVceSat.get(part.id), bjtVbc, bjtBaseIndex, bjtCollectorIndex, bjtVce);
           stampBjtTransientCharge(A, b, part, nets, nodeIndex, bjtBaseIndex, bjtCollectorIndex,
             diodeVoltages, bjtVbc, transient);
+          stampParasitics(A, b, part, nets, nodeIndex, transient);
           break;
 
         case 'nmos':
           stampNMOS(A, b, part, nets, nodeIndex, groundNetId, diodeVoltages, mosRegions.get(part.id), mosVds, mosVsb, mosVdb);
+          stampParasitics(A, b, part, nets, nodeIndex, transient);
           break;
 
         case 'pmos':
           stampPMOS(A, b, part, nets, nodeIndex, groundNetId, diodeVoltages, mosRegions.get(part.id), mosVds, mosVsb, mosVdb);
+          stampParasitics(A, b, part, nets, nodeIndex, transient);
           break;
 
         case 'opamp':
@@ -2623,6 +2692,34 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
           : vOld2 + Math.max(-NR_MAX_STEP, Math.min(NR_MAX_STEP, vNew2 - vOld2)));
       }
 
+      if (bjtVce.has(part.id)) {
+        // The smooth law saturates in Vce (bounded f, bounded slope), so the
+        // output variable needs no limiting; its raw move joins convergence.
+        const netC6 = findNet(nets, part.id, 'collector');
+        const netE6 = findNet(nets, part.id, 'emitter');
+        const iC6 = netC6 ? nodeIndex.get(netC6) : undefined;
+        const iE6 = netE6 ? nodeIndex.get(netE6) : undefined;
+        const vC6 = iC6 !== undefined ? solution[iC6] : 0;
+        const vE6 = iE6 !== undefined ? solution[iE6] : 0;
+        const vNew6 = part.kind === 'npn' ? vC6 - vE6 : vE6 - vC6;
+        const vOld6 = bjtVce.get(part.id);
+        const step6 = vNew6 - vOld6;
+        maxDelta = Math.max(maxDelta, Math.abs(step6));
+        // f(Vce) is a logistic curve a few Vt wide around Vt*ln(BF/BR), and a
+        // tangent step on a sigmoid overshoots: Newton alternated Vce between
+        // -0.05 and +0.37 V on an astable edge, forever. Halve the step each
+        // time it reverses direction (a bisection safeguard), recover it while
+        // it keeps going one way. The raw delta still decides convergence.
+        let damp6 = bjtVceDamp.get(part.id) ?? 1;
+        const last6 = bjtVceLastStep.get(part.id) ?? 0;
+        damp6 = step6 * last6 < 0 ? Math.max(damp6 / 2, 1 / 64) : Math.min(damp6 * 2, 1);
+        bjtVceDamp.set(part.id, damp6);
+        bjtVceLastStep.set(part.id, step6);
+        // And never more than NR_MAX_STEP at once, like every piecewise
+        // junction state: a cold start once threw Vce to -2e6 V in one step.
+        bjtVce.set(part.id, vOld6 + Math.max(-NR_MAX_STEP, Math.min(NR_MAX_STEP, damp6 * step6)));
+      }
+
       const vOld = diodeVoltages.get(part.id) ?? 0;
 
       // Limited update. Shockley diodes/LEDs get pnjlim — the logarithmic
@@ -2746,6 +2843,8 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
       // clamp. Running this FSM alongside it would be two answers to one
       // question, and the clamp — a stiff 10 S conductance — would win.
       if (bjtVbc.has(part.id)) continue;
+      // The smooth output law has no regions either (`bjtForcedBeta`).
+      if (bjtVce.has(part.id)) continue;
       const beta = /** @type {number} */ (part.params.beta ?? 100);
       const vbe = effVf(/** @type {number} */ (part.params.vbe ?? 0.7));
       const vceSat = /** @type {number} */ (part.params.vceSat ?? bjtVceSat.get(part.id) ?? 0.2);
@@ -3009,7 +3108,7 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
   // iterate from an answer.
   if (converged && !transient) {
     const shunted = Float64Array.from(solution);
-    const snap = [diodeVoltages, mosVsb, mosVdb, mosVds, bjtVbc].map((m) => new Map(m));
+    const snap = [diodeVoltages, mosVsb, mosVdb, mosVds, bjtVbc, bjtVce].map((m) => new Map(m));
     const nonlinearPresent = nonlinearDevicesValid().present;
     // A failed refinement must restore the companions used by the accepted
     // solution too. Limit this additional snapshot to the new authority path.
@@ -3020,7 +3119,7 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
     const restore = () => {
       solution = shunted;
       for (const [m, saved] of [[diodeVoltages, snap[0]], [mosVsb, snap[1]],
-        [mosVdb, snap[2]], [mosVds, snap[3]], [bjtVbc, snap[4]]]) {
+        [mosVdb, snap[2]], [mosVds, snap[3]], [bjtVbc, snap[4]], [bjtVce, snap[5]]]) {
         m.clear();
         for (const [k, v] of saved) m.set(k, v);
       }
@@ -3094,6 +3193,15 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
 
   // No continuation/refinement route may publish a region-stale authority.
   if (converged && !nonlinearDevicesValid().valid) converged = false;
+
+  // The converged Newton state, handed back so the next solve can start here.
+  const captureNewtonState = () => ({
+    diodeVoltages: new Map(diodeVoltages), bjtVbc: new Map(bjtVbc), bjtVce: new Map(bjtVce),
+    mosVds: new Map(mosVds), mosVsb: new Map(mosVsb), mosVdb: new Map(mosVdb),
+    bjtRegions: new Map(bjtRegions), bjtVceSat: new Map(bjtVceSat),
+    mosRegions: new Map(mosRegions), opampRegions: new Map(opampRegions),
+    vccsClamps: new Map(vccsClamps),
+  });
 
   // ─── Extract results ────────────────────────────────────────────────────
 
@@ -3333,6 +3441,18 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
       } else {
         ib = pwlStampedCurrent(vE - vB, vbeThresh, rd);
         ic = beta * ib;
+      }
+      if (bjtVce.has(part.id)) {
+        // The same smooth law the stamp used, at the converged Vce.
+        const vOutX = part.kind === 'npn' ? vC - vE : vE - vC;
+        const vJX = part.kind === 'npn' ? vB - vE : vE - vB;
+        ic = ib * bjtForcedBeta(vOutX, beta, /** @type {number} */ (part.params.betaR ?? 1)).f;
+        const ibc = pwlStampedCurrent(vJX - vOutX, bjtBcKnee(part), rd, BC_CLAMP_GOFF);
+        const polarityX = part.kind === 'npn' ? 1 : -1;
+        currents.set('base', -polarityX * (ib + ibc));
+        currents.set('collector', -polarityX * (ic - ibc));
+        currents.set('emitter', polarityX * (ib + ic));
+        continue;
       }
       // SATURATED: beta*Ib is what the VCCS would DEMAND, not what the
       // branch passes. The stamp knows this — it replaces the VCCS with a
@@ -3695,11 +3815,30 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
     }
   }
 
+  // Parasitic capacitor currents belong to their part's terminals: a meter in
+  // series with a base must read what actually flows, edge current included.
+  if (transient) {
+    for (const part of parts) {
+      const currents = branchCurrents.get(part.id);
+      if (!currents) continue;
+      for (const cap of parasiticCaps(part)) {
+        const c = parasiticCompanion(cap, transient);
+        if (!c) continue;
+        const v = (nodeVoltages.get(findNet(nets, part.id, cap.a)) ?? 0)
+          - (nodeVoltages.get(findNet(nets, part.id, cap.b)) ?? 0);
+        const i = c.g * v - c.iHist; // into terminal a, out of terminal b
+        currents.set(cap.a, (currents.get(cap.a) ?? 0) - i);
+        currents.set(cap.b, (currents.get(cap.b) ?? 0) + i);
+      }
+    }
+  }
+
   // Transient next-state: what the caller stores for the next step. The
   // trapezoidal companions need the element's own current (cap) and voltage
   // (inductor) history too, so both are returned alongside the classic pair.
   const regionDiagnostics = opts.inspectBjtRegions === true ? {
     bjtRegionDiagnostics: new Map([...bjtRegions].map(([id, region]) => [id,
+      bjtVce.has(id) ? smoothBjtDiagnostic(parts.find(part => part.id === id), bjtVce.get(id)) :
       Object.freeze({region: bjtVbc.has(id) ? 'ebers-moll' : region,
         saturationVoltage: bjtVbc.has(id) ? null
           : parts.find(part => part.id === id)?.params?.vceSat ?? bjtVceSat.get(id) ?? .2})])),
@@ -3710,6 +3849,13 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
     const inductorCurrentsNext = new Map();
     const inductorVoltagesNext = new Map();
     for (const part of parts) {
+      for (const cap of parasiticCaps(part)) {
+        const v = (nodeVoltages.get(findNet(nets, part.id, cap.a)) ?? 0)
+          - (nodeVoltages.get(findNet(nets, part.id, cap.b)) ?? 0);
+        const c = parasiticCompanion(cap, transient);
+        capVoltagesNext.set(cap.key, v);
+        capCurrentsNext.set(cap.key, c ? c.g * v - c.iHist : 0);
+      }
       const em = (part.kind === 'npn' || part.kind === 'pnp') ? ebersMollParams(part) : null;
       if (em && (em.cje || em.cjc || em.tf)) {
         const voltage = t => nodeVoltages.get(findNet(nets, part.id, t)) ?? 0;
@@ -3758,6 +3904,7 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
     return { nodeVoltages, branchCurrents, indeterminateBranchCurrents, railCurrents,
       capVoltagesNext, capCurrentsNext,
       inductorCurrentsNext, inductorVoltagesNext, converged, opampRegions, deviceStamps,
+      newtonState: converged ? captureNewtonState() : undefined,
       ...regionDiagnostics,
       railConflicts: railConflicts.length ? [...new Set(railConflicts)] : undefined };
   }
@@ -3765,6 +3912,7 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
   return { nodeVoltages, branchCurrents, indeterminateBranchCurrents, railCurrents,
     ...(opts.capVoltages && chargedBjtIds.length ? {deferredBjtChargeIds: chargedBjtIds} : {}),
     converged, opampRegions, deviceStamps, ...regionDiagnostics,
+    newtonState: converged ? captureNewtonState() : undefined,
     railConflicts: railConflicts.length ? [...new Set(railConflicts)] : undefined };
 }
 
@@ -3819,16 +3967,27 @@ function stampPortCoupling(A, rowNetA, rowNetB, colNetA, colNetB, g, nodeIndex) 
 }
 
 const NETS_TERM_MAP = Symbol('bw-term-map');
+/** caller nets array -> {key, map}; see the memo note in solveMNA. */
+const TERM_MAP_MEMO = new WeakMap();
 const termKey = (partId, terminal) => partId + String.fromCharCode(0) + terminal;
 
-/** @param {Net[]} nets @returns {Map<string, string>} */
+/**
+ * part id -> terminal -> net id. Two levels rather than one concatenated
+ * key: findNet runs tens of times per stamp per Newton iteration, and building
+ * the key string on every call was the single largest cost of a small
+ * transient solve (17 % of an astable's profile).
+ * @param {Net[]} nets @returns {Map<string, Map<string, string>>}
+ */
 function buildTermMap(nets) {
   const m = new Map();
   for (const net of nets) {
     for (const t of net.terminals) {
-      const k = termKey(t.part, t.terminal);
+      // String keys: the concatenated key this replaced coerced both parts.
+      const part = String(t.part), terminal = String(t.terminal);
+      let byTerminal = m.get(part);
+      if (!byTerminal) { byTerminal = new Map(); m.set(part, byTerminal); }
       // First net in array order wins — the linear scan's exact semantics.
-      if (!m.has(k)) m.set(k, net.id);
+      if (!byTerminal.has(terminal)) byTerminal.set(terminal, net.id);
     }
   }
   return m;
@@ -3842,8 +4001,8 @@ function buildTermMap(nets) {
  * @returns {string | undefined}
  */
 function findNet(nets, partId, terminal) {
-  const m = /** @type {Map<string, string> | undefined} */ (nets[NETS_TERM_MAP]);
-  if (m) return m.get(termKey(partId, terminal));
+  const m = /** @type {Map<string, Map<string, string>> | undefined} */ (nets[NETS_TERM_MAP]);
+  if (m) return m.get(String(partId))?.get(String(terminal));
   for (const net of nets) {
     for (const t of net.terminals) {
       if (t.part === partId && t.terminal === terminal) {
@@ -4340,6 +4499,219 @@ function stampVariableResistor(A, b, part, nets, nodeIndex, groundNetId, control
 }
 
 /**
+ * THE DEFAULT BJT'S OUTPUT CHARACTERISTIC: ONE SMOOTH LAW, NO REGIONS.
+ *
+ * The piecewise transistor used to switch between two collector laws -- the
+ * active VCCS `Ic = beta*Ib` and a saturated 10 S clamp to a Vce(sat) that was
+ * itself re-derived from the drive inside the Newton loop -- through a
+ * hysteretic region FSM. The converged saturated point was already Ebers-Moll's
+ * Vce(sat) for the forced beta (`ebersMollVceSat`); the machinery around it was
+ * what failed:
+ *
+ *  - The FSM's entry test (Vce below Vce(sat), where the clamp passes zero) and
+ *    exit test (beta*Ib under 95 % of the clamp current) were different
+ *    boundaries. Between them neither region's root satisfies its own test, and
+ *    a transistor sliding out of saturation while its partner turned off (every
+ *    half-period of a cross-coupled astable) cycled Newton saturated -> active
+ *    -> saturated at every step size down to the femtosecond floor: "transient
+ *    Newton solve failed at minimum step", the astable frozen half-on.
+ *  - Vce(sat) updated per iteration is a fixed-point iteration the Jacobian
+ *    does not know about; on a fast edge it locked Newton into a two-cycle.
+ *  - A collector held by a source at Vce = 0.1 V never saturated, because the
+ *    stiff clamp made `min(beta*Ib, clamp)` pick beta*Ib.
+ *
+ * The same physics as ONE law: solve Ebers-Moll (NF = NR = 1, forward beta BF,
+ * reverse beta BR) for the collector current at a given base current and Vce.
+ * With x = exp(Vce/Vt), the forced ratio f = Ic/Ib satisfies
+ * `Vce = Vt*ln((1 + (1+f)/BR) / (1 - f/BF))`, i.e.
+ *
+ *     f(Vce) = (x - 1 - 1/BR) / (1/BR + x/BF)
+ *
+ * which is beta to within 1e-6 for Vce above ~0.45 V, falls smoothly through
+ * saturation, crosses zero at Vt*ln(1 + 1/BR), and is bounded below by
+ * -(BR + 1) in reverse. So `Ic = Ib(Vbe) * f(Vce)` with the base junction's
+ * existing knee for Ib: the converged saturated point is the same Ebers-Moll
+ * Vce(sat) the old fixed point reached (less the 0.1 R of clamp it added), the
+ * active region is unchanged wherever Vce clears the knee, and the Jacobian is
+ * the law's own derivative. No region, no fixed point, no seam.
+ *
+ * A part that states `vceSat` explicitly keeps the fixed clamp it asked for.
+ *
+ * @returns {{f: number, df: number}} f = Ic/Ib and df = d f / d Vce
+ */
+export function bjtForcedBeta(vce, beta, betaR = 1) {
+  const vt = JUNCTION_THERMAL_VOLTAGE;
+  const a = 1 + 1 / betaR;
+  const c = 1 / betaR;
+  if (vce >= 0) {
+    const y = Math.exp(-vce / vt);
+    const den = c * y + 1 / beta;
+    return { f: (1 - a * y) / den, df: (a / beta + c) * (y / vt) / (den * den) };
+  }
+  const x = Math.exp(vce / vt);
+  const den = c + x / beta;
+  return { f: (x - a) / den, df: (x / vt) * (c + a / beta) / (den * den) };
+}
+
+/**
+ * Region of a smooth-law BJT, for diagnostics only (the law itself has none):
+ * saturated once the forced beta has fallen 5 % below beta; the saturation
+ * voltage reported is then the converged Vce itself.
+ */
+function smoothBjtDiagnostic(part, vce) {
+  const beta = Number(part?.params?.beta ?? 100);
+  const { f } = bjtForcedBeta(vce, beta, Number(part?.params?.betaR ?? 1));
+  const saturated = f < 0.95 * beta;
+  return Object.freeze({ region: saturated ? 'saturated' : 'active',
+    saturationVoltage: saturated ? vce : null });
+}
+
+/**
+ * PARASITIC JUNCTION CAPACITANCE FOR THE DEFAULT (PIECEWISE) DEVICES.
+ *
+ * A regenerative circuit -- a cross-coupled astable, a flip-flop, a
+ * thyristor latch -- reaches a point where its slow trajectory ENDS: the loop
+ * gain passes one and no nearby state is consistent any more (a fold). A real
+ * circuit leaves it through its device capacitances, in nanoseconds. A model
+ * with none has nowhere to go: no solution exists near the old one at ANY step
+ * size, so the transient fails "at minimum step" however good Newton is. That
+ * is where every discrete switching circuit on the default `npn` / `nmos`
+ * froze, and it is why the exponential path (with `cje`/`cjc`) could get past
+ * it while the default never could.
+ *
+ * So the default devices carry the input capacitance every real part has, in
+ * transient only (an operating point has no use for it): B-E `cpi` 5 pF for a
+ * BJT and G-S `cgs` 5 pF for a MOSFET, small-signal-transistor magnitudes.
+ * With it the control node of every device is a state, and the switching
+ * loop becomes an ordinary (fast) differential equation instead of an
+ * algebraic one with an end. On anything slower than nanoseconds it is
+ * invisible; at a regenerative edge it is what carries the state across.
+ *
+ * The OUTPUT-side capacitances (B-C `cmu`, G-D `cgd`) are available but 0 by
+ * default, deliberately: across an inductive load an undamped picofarad on
+ * the collector is a megahertz tank the trapezoidal rule never damps, and a
+ * current-limited transistor driving a 5 mH winding rang for the whole run at
+ * the step floor (4,896 attempts per millisecond instead of 120). The input
+ * capacitance alone already makes the regenerative loops regular. A part may
+ * state its own values; 0 removes one.
+ *
+ * Norton companion (BE or trapezoidal, as the step), history under
+ * `@par:<id>:<pair>` in the ordinary capacitor-history maps. Like every other
+ * capacitor, a pair with no history starts uncharged (power-up, UIC);
+ * `initializeTransientFromOperatingPoint` seeds them from the operating point.
+ * Starting uncharged is also what lets a latch power up into one of its
+ * stable states: the first nanoseconds are a real, asymmetric trajectory
+ * rather than a jump straight onto the operating point Newton happens to
+ * find, which for a cross-coupled pair can be the unstable half-on one.
+ */
+const PARASITIC_DEFAULTS = {
+  npn: [['cpi', 'base', 'emitter', 5e-12], ['cmu', 'base', 'collector', 0]],
+  pnp: [['cpi', 'base', 'emitter', 5e-12], ['cmu', 'base', 'collector', 0]],
+  nmos: [['cgs', 'gate', 'source', 5e-12], ['cgd', 'gate', 'drain', 0]],
+  pmos: [['cgs', 'gate', 'source', 5e-12], ['cgd', 'gate', 'drain', 0]],
+};
+const parasiticKey = (id, name) => `@par:${id}:${name}`;
+
+/** The parasitic capacitors a part carries in transient: [{key, a, b, farads}]. */
+export function parasiticCaps(part) {
+  const table = PARASITIC_DEFAULTS[part.kind];
+  if (!table) return [];
+  // Only the default (piecewise-junction) BJT. An exponential card is a SPICE
+  // card: it carries exactly the charge it states (cje/cjc/tf), so that it
+  // keeps matching the deck it is exported as -- an implicit 5 pF moved an
+  // ngspice-matched winding startup by microamps.
+  if ((part.kind === 'npn' || part.kind === 'pnp') && !bjtSmoothOutput(part)) return [];
+  if ((part.kind === 'nmos' || part.kind === 'pmos') && part.params?.parasitics === false) return [];
+  const out = [];
+  for (const [name, a, b, fallback] of table) {
+    const farads = Number(part.params?.[name] ?? fallback);
+    if (Number.isFinite(farads) && farads > 0) out.push({ key: parasiticKey(part.id, name), a, b, farads });
+  }
+  return out;
+}
+
+/** Companion {g, iHist} of a parasitic: i(v) = g*v - iHist; null with no history. */
+function parasiticCompanion(cap, transient) {
+  if (!transient) return null;
+  const h = Math.max(transient.dtSec, 1e-15);
+  const trap = transient.method === 'trap';
+  const g = (trap ? 2 : 1) * cap.farads / h;
+  const vPrev = transient.capVoltages?.get(cap.key) ?? 0;
+  const iPrev = trap ? (transient.capCurrents?.get(cap.key) ?? 0) : 0;
+  return { g, iHist: g * vPrev + iPrev };
+}
+
+/**
+ * THE BASE-COLLECTOR JUNCTION OF THE DEFAULT BJT.
+ *
+ * The forced-beta law bounds the collector current by the base current, so on
+ * its own nothing stops a collector that is pulled below the emitter: an off
+ * LED above it leaves only nanosiemens on the node, and a cold Newton start
+ * of a plain saturated switch ran the collector to -49 V. A real transistor's
+ * base-collector junction forward-biases there and holds the collector about a
+ * diode drop under the base. This is that junction, piecewise like the
+ * base-emitter one, with its knee placed `BC_CLAMP_OFFSET` above `vbe` so that
+ * it stays shut in ordinary saturation (Vbc = Vbe - Vce(sat), below the knee
+ * by Vce(sat) + 0.1 V) and only conducts once the collector is driven below
+ * the emitter -- the inverted and reverse-biased regions the forced-beta law
+ * does not describe. `vbc` on the part overrides the knee.
+ */
+const BC_CLAMP_OFFSET = 0.1;
+/**
+ * The clamp carries NO off-state conductance. It exists only to conduct when
+ * the collector is driven past the base; shut, it must not add a leakage path
+ * the default BJT never had. At 1 nS it turned on a base held only by 10 GOhm,
+ * and even at the 1e-12 S junction GMIN it moved every floating base in the
+ * gallery (an open-switch base read 9.1 mV instead of 5.0 mV), because a
+ * floating node's voltage IS the ratio of its leakages.
+ */
+const BC_CLAMP_GOFF = 0;
+function bjtBcKnee(part) {
+  const vbe = /** @type {number} */ (part.params?.vbe ?? 0.7);
+  return Number(part.params?.vbc ?? vbe + BC_CLAMP_OFFSET);
+}
+
+/** True when a BJT solves with the smooth output law (`bjtForcedBeta`). */
+export function bjtSmoothOutput(part) {
+  return (part.kind === 'npn' || part.kind === 'pnp')
+    && part.params?.vceSat === undefined && !ebersMollParams(part);
+}
+
+/** Stamp a part's parasitic capacitors (see PARASITIC_DEFAULTS). */
+function stampParasitics(A, b, part, nets, nodeIndex, transient) {
+  if (!transient) return;
+  for (const cap of parasiticCaps(part)) {
+    const c = parasiticCompanion(cap, transient);
+    if (!c) continue;
+    const netA = findNet(nets, part.id, cap.a);
+    const netB = findNet(nets, part.id, cap.b);
+    const ia = netA ? nodeIndex.get(netA) : undefined;
+    const ib = netB ? nodeIndex.get(netB) : undefined;
+    if (ia !== undefined) { A.add(ia, ia, c.g); b[ia] += c.iHist; }
+    if (ib !== undefined) { A.add(ib, ib, c.g); b[ib] -= c.iHist; }
+    if (ia !== undefined && ib !== undefined) { A.add(ia, ib, -c.g); A.add(ib, ia, -c.g); }
+  }
+}
+
+/**
+ * Stamp `I = gm*(v[jp]-v[jn]) + go*(v[op]-v[on]) + ieq` flowing into node
+ * `inIdx` and out of node `outIdx` -- the linearised smooth collector law.
+ */
+function stampSmoothCollector(A, b, inIdx, outIdx, jp, jn, op, on, gm, go, ieq) {
+  const vccs = (cp, cn, g) => {
+    if (g === 0) return;
+    if (inIdx !== undefined && cp !== undefined) A.add(inIdx, cp, g);
+    if (inIdx !== undefined && cn !== undefined) A.add(inIdx, cn, -g);
+    if (outIdx !== undefined && cp !== undefined) A.add(outIdx, cp, -g);
+    if (outIdx !== undefined && cn !== undefined) A.add(outIdx, cn, g);
+  };
+  vccs(jp, jn, gm);
+  vccs(op, on, go);
+  if (inIdx !== undefined) b[inIdx] -= ieq;
+  if (outIdx !== undefined) b[outIdx] += ieq;
+}
+
+/**
  * Stamp an NPN transistor. Simplified Ebers-Moll:
  * Terminals: base, collector, emitter.
  * B-E junction: diode with Vbe ≈ 0.7V.
@@ -4347,7 +4719,7 @@ function stampVariableResistor(A, b, part, nets, nodeIndex, groundNetId, control
  * Linearized: Ic = gm × Vbe - Ic0 (Norton companion model).
  */
 function stampNPN(A, b, part, nets, nodeIndex, groundNetId, diodeVoltages,
-  region = 'active', vceSatEff = undefined, bjtVbc, bjtBaseIndex, bjtCollectorIndex) {
+  region = 'active', vceSatEff = undefined, bjtVbc, bjtBaseIndex, bjtCollectorIndex, bjtVce) {
   const beta = /** @type {number} */ (part.params.beta ?? 100);
   const vbe = /** @type {number} */ (part.params.vbe ?? 0.7);
   const rd = 10; // base-emitter dynamic resistance
@@ -4429,6 +4801,21 @@ function stampNPN(A, b, part, nets, nodeIndex, groundNetId, diodeVoltages,
   if (idxB !== undefined) b[idxB] -= iEq;
   if (idxE !== undefined) b[idxE] += iEq;
 
+  if (bjtVce?.has(part.id)) {
+    // The smooth output law (`bjtForcedBeta`): Ic = Ib(Vbe) * f(Vce).
+    const vce0 = bjtVce.get(part.id);
+    const { f, df } = bjtForcedBeta(vce0, beta, /** @type {number} */ (part.params.betaR ?? 1));
+    const iB0 = gEq * vAcross + iEq;
+    const gm = gEq * f;
+    const go = iB0 * df;
+    stampSmoothCollector(A, b, idxC, idxE, idxB, idxE, idxC, idxE, gm, go,
+      iB0 * f - gm * vAcross - go * vce0);
+    // Base-collector junction, anode at the base (`bjtBcKnee`).
+    const bc = diodeCompanion(vAcross - vce0, bjtBcKnee(part), rd, undefined, BC_CLAMP_GOFF);
+    stampSmoothCollector(A, b, idxB, idxC, idxB, idxC, undefined, undefined, bc.gEq, 0, bc.iEq);
+    return;
+  }
+
   // Saturated: the VCCS is replaced by a Vce clamp — a stiff
   // conductance holding collector ≈ emitter + vceSat, so Ic becomes
   // whatever the LOAD passes at Vce(sat), which is the physics of a
@@ -4467,7 +4854,7 @@ function stampNPN(A, b, part, nets, nodeIndex, groundNetId, diodeVoltages,
  * Stamp a PNP transistor. Mirror of NPN with reversed polarities.
  * Terminals: base, collector, emitter.
  */
-function stampPNP(A, b, part, nets, nodeIndex, groundNetId, diodeVoltages, region = 'active', vceSatEff = undefined, bjtVbc, bjtBaseIndex, bjtCollectorIndex) {
+function stampPNP(A, b, part, nets, nodeIndex, groundNetId, diodeVoltages, region = 'active', vceSatEff = undefined, bjtVbc, bjtBaseIndex, bjtCollectorIndex, bjtVce) {
   const beta = /** @type {number} */ (part.params.beta ?? 100);
   const vbe = /** @type {number} */ (part.params.vbe ?? 0.7);
   const rd = 10;
@@ -4530,6 +4917,22 @@ function stampPNP(A, b, part, nets, nodeIndex, groundNetId, diodeVoltages, regio
   }
   if (idxE !== undefined) b[idxE] -= iEq;
   if (idxB !== undefined) b[idxB] += iEq;
+
+  if (bjtVce?.has(part.id)) {
+    // The smooth output law, mirrored: Vec plays Vce and the current flows
+    // into the emitter and out of the collector.
+    const vec0 = bjtVce.get(part.id);
+    const { f, df } = bjtForcedBeta(vec0, beta, /** @type {number} */ (part.params.betaR ?? 1));
+    const iB0 = gEq * vAcross + iEq;
+    const gm = gEq * f;
+    const go = iB0 * df;
+    stampSmoothCollector(A, b, idxE, idxC, idxE, idxB, idxE, idxC, gm, go,
+      iB0 * f - gm * vAcross - go * vec0);
+    // Collector-base junction, anode at the collector (`bjtBcKnee`).
+    const bc = diodeCompanion(vAcross - vec0, bjtBcKnee(part), rd, undefined, BC_CLAMP_GOFF);
+    stampSmoothCollector(A, b, idxC, idxB, idxC, idxB, undefined, undefined, bc.gEq, 0, bc.iEq);
+    return;
+  }
 
   if (region === 'saturated') {
     // Clamp emitter ≈ collector + vceSat (mirror of the NPN clamp);
