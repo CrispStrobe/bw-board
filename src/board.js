@@ -1253,6 +1253,9 @@ export class BoardImpl {
             const ov = this._digitalOverlay.get(n);
             return ov !== undefined ? ov : (this.nodeVoltages.get(n) ?? 0);
           };
+          // An unconnected pin reads 0 V, indistinguishable from a grounded
+          // one; models whose open pin has its own internal bias ask here.
+          read.connected = (terminal) => Boolean(f.terminalNets.get(terminal));
           model.update(f.part, state, read, this.timeNs);
         }
       }
@@ -6242,6 +6245,9 @@ export class BoardImpl {
         const ov = this._digitalOverlay.get(n);
         return ov !== undefined ? ov : (this.nodeVoltages.get(n) ?? 0);
       };
+      // An unconnected pin reads 0 V, indistinguishable from a grounded one;
+      // a model whose open pin has an internal bias (555 CV) asks here.
+      read.connected = (terminal) => Boolean(this._netForTerminal(part.id, terminal));
       this._attachMeasurementValidity(model, read, solution);
       if (model.transientUpdateContext === true) read.transient = acceptedTransient;
       try {

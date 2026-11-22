@@ -322,3 +322,70 @@ describe('555 timer: monostable basics', () => {
     assert.ok(vOut < 1.0, `output should be LOW (trigger not active), got ${vOut.toFixed(3)}V`);
   });
 });
+
+// Gallery regression (pc67-555-tongenerator, pc87-stroboskop): a CV pin that
+// appears in NO net — the common way a schematic leaves it open — used to
+// read 0 V, so the upper threshold was 0 and the astable never left LOW.
+// The internal 5k/5k/5k divider holds an open CV at 2/3·Vcc.
+describe('555 timer: control pin absent from every net', () => {
+  beforeEach(setup);
+  afterEach(teardown);
+
+  function openCv(kind) {
+    const { parts, nets } = makeAstableCircuit();
+    parts.find(p => p.id === 'U1').kind = kind;
+    return { parts, nets: nets.filter(n => n.id !== 'net_ctrl') };
+  }
+
+  for (const kind of ['timer_555', '555']) {
+    it(`${kind}: open CV oscillates at the 2/3-1/3 Vcc thresholds`, () => {
+      if (kind === '555') registerTimer555();
+      const board = new BoardImpl(5.0);
+      const { parts, nets } = openCv(kind);
+      board.setNetlist(parts, nets);
+      let flips = 0, last = 0, vMin = 5, vMax = 0;
+      for (let ms = 1; ms <= 1000; ms++) {
+        board.advanceTo(BigInt(ms) * 1_000_000n);
+        const out = board.nodeVoltage('net_out') > 2.5 ? 1 : 0;
+        if (out !== last) { flips++; last = out; }
+        if (ms > 300) {
+          const vc = board.nodeVoltage('net_cap');
+          vMin = Math.min(vMin, vc); vMax = Math.max(vMax, vc);
+        }
+      }
+      assert.ok(flips >= 6, `open CV must oscillate, got ${flips} flips`);
+      assert.ok(Math.abs(vMax - 10 / 3) < 0.15, `upper threshold 2/3·Vcc, got ${vMax.toFixed(3)}`);
+      assert.ok(Math.abs(vMin - 5 / 3) < 0.15, `lower threshold 1/3·Vcc, got ${vMin.toFixed(3)}`);
+    });
+  }
+
+  it('556: an open CV on either section oscillates too', () => {
+    const board = new BoardImpl(5.0);
+    const parts = [
+      { id: 'VCC', kind: 'vcc', params: {}, terminals: ['vcc'] },
+      { id: 'GND', kind: 'gnd', params: {}, terminals: ['gnd'] },
+      { id: 'U1', kind: '556', params: { rOut: 50 }, terminals: ['1dis','1thr','1ctl','1rst','1out','1trg','gnd',
+        '2trg','2out','2rst','2ctl','2thr','2dis','vcc'] },
+      { id: 'R1', kind: 'resistor', params: { ohms: 10000 }, terminals: ['a', 'b'] },
+      { id: 'R2', kind: 'resistor', params: { ohms: 10000 }, terminals: ['a', 'b'] },
+      { id: 'C1', kind: 'capacitor', params: { farads: 10e-6 }, terminals: ['a', 'b'] },
+      { id: 'RL', kind: 'resistor', params: { ohms: 10000 }, terminals: ['a', 'b'] },
+    ];
+    const T = (part, terminal) => ({ part, terminal });
+    const nets = [
+      { id: 'nv', terminals: [T('VCC', 'vcc'), T('U1', 'vcc'), T('U1', '1rst'), T('R1', 'a')] },
+      { id: 'ng', terminals: [T('GND', 'gnd'), T('U1', 'gnd'), T('C1', 'b'), T('RL', 'b')] },
+      { id: 'nd', terminals: [T('R1', 'b'), T('U1', '1dis'), T('R2', 'a')] },
+      { id: 'nc', terminals: [T('R2', 'b'), T('U1', '1thr'), T('U1', '1trg'), T('C1', 'a')] },
+      { id: 'no', terminals: [T('U1', '1out'), T('RL', 'a')] },
+    ];
+    board.setNetlist(parts, nets);
+    let flips = 0, last = 0;
+    for (let ms = 1; ms <= 1000; ms++) {
+      board.advanceTo(BigInt(ms) * 1_000_000n);
+      const out = board.nodeVoltage('no') > 2.5 ? 1 : 0;
+      if (out !== last) { flips++; last = out; }
+    }
+    assert.ok(flips >= 6, `open 1ctl must oscillate, got ${flips} flips`);
+  });
+});
