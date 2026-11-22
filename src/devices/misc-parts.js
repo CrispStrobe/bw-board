@@ -6,7 +6,7 @@ import {shaftElectricalStep} from '../mechanical-shaft.js';
  * - timer_556: dual 555 (composed — two independent 555 channels)
  * - keypad_4x4: 4×4 matrix keypad (16 buttons, 8 pins)
  * - dip_switch: N-position DIP switch (array of independent switches)
- * - polarized_cap: polarized capacitor (same as cap but validates polarity)
+ * - polarized_cap: electrolytic capacitor (a solver capacitor + polarity check)
  * - vibration_motor: like DC motor but only cares about on/off state
  *
  * @module
@@ -15,8 +15,9 @@ import {shaftElectricalStep} from '../mechanical-shaft.js';
 import { registerDevice } from '../devices.js';
 import { stepMotorVelocity, motorDirectionOf } from './dc-motor.js';
 
-const R_INPUT = 1e6;
 const R_OUT = 50;
+/** Default rotor inertia of the encoder motor (kg·m²): a small hobby motor. */
+export const ENCODER_MOTOR_J = 5e-7;
 
 /**
  * Register miscellaneous parts.
@@ -35,6 +36,15 @@ export function registerMiscParts() {
   // pulse); `omega` stays the speed, `direction` what the `direction of
   // motor` reporter reads. Until 2026-10 omega was clamped at 0, so driven
   // backwards the motor sat still and the encoder never moved.
+  //
+  // MECHANICS (2026-11): params.loadTorque (N·m, Coulomb: opposes motion,
+  // cannot start it) and params.friction (viscous, N·m·s/rad) load the
+  // shaft, so the steady speed is the torque balance
+  //   kT (V − kV w)/R = loadTorque + friction·w.
+  // The default rotor inertia is a small hobby motor's, J = 5e-7 kg·m²: with
+  // the default kV 0.01 and 10 Ohm winding the mechanical time constant
+  // J·R/(kT·kV) is 50 ms, so it is at speed in about 0.25 s. It was 1e-3,
+  // a 100 s time constant -- about 200 s of simulated time to spin up.
   registerDevice('dc_motor_encoder', {
     terminals: ['a', 'b', 'enc_a', 'enc_b'],
 
@@ -70,7 +80,9 @@ export function registerMiscParts() {
       const R = part.params?.windingR ?? 10;
       const kV = part.params?.kV ?? 0.01;
       const kT = part.params?.kT ?? kV;
-      const J = part.params?.J ?? 0.001;
+      const J = part.params?.J ?? ENCODER_MOTOR_J;
+      const loadTorque = part.params?.loadTorque ?? 0;
+      const friction = part.params?.friction ?? 0;
       const ppr = part.params?.pulsesPerRev ?? 20; // encoder pulses per revolution
       const vcc = read('vcc') || 5.0;
 
@@ -84,7 +96,7 @@ export function registerMiscParts() {
       const vB = read('b');
       const v0 = state.velocity;
       const current = (vA - vB - kV * v0) / R;
-      const v1 = stepMotorVelocity(v0, kT * current, 0, J, dtSec);
+      const v1 = stepMotorVelocity(v0, kT * current, loadTorque, J, dtSec, friction);
       state.velocity = v1;
       state.omega = Math.abs(v1);
       state.direction = motorDirectionOf(v1);
@@ -253,28 +265,35 @@ export function registerMiscParts() {
   });
 
   // ─── Polarized capacitor ──────────────────────────────────────────
-  // Electrically same as regular cap, but tracks whether voltage
-  // polarity is correct (positive terminal should be higher voltage).
-  // Incorrect polarity generates a warning.
+  // An electrolytic: electrically a CAPACITOR. The board gives the solver a
+  // real capacitor across pos/neg (BoardImpl._expandPolarizedCaps, a hidden
+  // `<id>_cap` part, like a motor's winding inductor) -- trapezoidal
+  // companion, error control, getCapVoltage(id). Until 2026-11 this model
+  // stamped a flat 1 MOhm here and nothing else, so an electrolytic never
+  // charged. What THIS model adds is the polarity: `reversed` latches true
+  // while neg sits more than params.reverseVolts (default 0.5 V) above pos,
+  // and the board reports it in getWarnings (type 'polarized-cap-reversed'),
+  // the way it reports an LED wired backwards. params.leakageOhms (optional)
+  // adds the DC leakage a real electrolytic has; absent, it has none.
   registerDevice('polarized_cap', {
     terminals: ['pos', 'neg'],
 
-    init(part) {
-      return { drives: {}, voltage: 0, _reversed: false };
+    init() {
+      return { drives: {}, voltage: 0, reversed: false, _reversed: false };
     },
 
     stamp(ctx, part) {
-      // Behaves as a capacitor — the actual C integration is handled
-      // by the board's cap integrator if this kind is registered there.
-      // For now: high impedance DC (cap blocks DC).
-      ctx.conductance('pos', 'neg', 1 / R_INPUT);
+      const leak = Number(part.params?.leakageOhms);
+      if (Number.isFinite(leak) && leak > 0) ctx.conductance('pos', 'neg', 1 / leak);
     },
 
     update(part, state, read) {
       const vPos = read('pos');
       const vNeg = read('neg');
       state.voltage = vPos - vNeg;
-      state._reversed = state.voltage < -0.5; // significant reverse bias
+      const limit = Number(part.params?.reverseVolts ?? 0.5);
+      state.reversed = state.voltage < -(Number.isFinite(limit) ? Math.abs(limit) : 0.5);
+      state._reversed = state.reversed;
       return false;
     },
   });

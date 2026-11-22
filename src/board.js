@@ -513,6 +513,41 @@ export class BoardImpl {
   }
 
   /**
+   * Give each polarized_cap (electrolytic) to the SOLVER as a real capacitor:
+   * a hidden `<id>_cap` capacitor part on the nets its pos/neg terminals sit
+   * on (a = pos, b = neg). Like the motor windings above it lives only in the
+   * solver view, so DRC, exporters and the drawn netlist keep seeing one
+   * electrolytic; the registered polarized_cap device keeps only the polarity
+   * check. getCapVoltage / branchCurrent / the render state answer for the
+   * drawn id (see _polarizedCapId).
+   */
+  static _expandPolarizedCaps(parts, nets) {
+    const caps = parts.filter((p) => p.kind === 'polarized_cap');
+    if (!caps.length) return { parts, nets };
+    const outParts = [...parts];
+    const outNets = nets.map((n) => ({ ...n, terminals: [...n.terminals] }));
+    for (const p of caps) {
+      const pos = outNets.find((n) => n.terminals.some((t) => t.part === p.id && t.terminal === 'pos'));
+      const neg = outNets.find((n) => n.terminals.some((t) => t.part === p.id && t.terminal === 'neg'));
+      if (!pos || !neg || pos === neg) continue;
+      const hidId = `${p.id}_cap`;
+      const params = { farads: p.params?.farads ?? 0.0001 };
+      for (const k of ['ic', 'initial', 'initialVoltage']) {
+        if (p.params && Object.prototype.hasOwnProperty.call(p.params, k)) params[k] = p.params[k];
+      }
+      outParts.push({ id: hidId, kind: 'capacitor', params, terminals: ['a', 'b'] });
+      pos.terminals.push({ part: hidId, terminal: 'a' });
+      neg.terminals.push({ part: hidId, terminal: 'b' });
+    }
+    return { parts: outParts, nets: outNets };
+  }
+
+  /** The solver capacitor standing for a drawn polarized_cap (or the id itself). */
+  _polarizedCapId(partId) {
+    return this.partMap?.get(partId)?.kind === 'polarized_cap' ? `${partId}_cap` : partId;
+  }
+
+  /**
    * Give each h_bridge (L293D) its output clamp diodes as real SOLVER diodes:
    * per connected output, one from the output up to the bridge's VCC net and
    * one from its GND net up to the output. No new nets — the diodes sit on
@@ -874,7 +909,8 @@ export class BoardImpl {
     // must keep seeing the diode on the net the motor pin is wired to,
     // not one hop into the motor's insides.
     const windingView = BoardImpl._expandMotorWindings(parts, nets);
-    const solveView = BoardImpl._expandBridgeClampDiodes(windingView.parts, windingView.nets);
+    const capView = BoardImpl._expandPolarizedCaps(windingView.parts, windingView.nets);
+    const solveView = BoardImpl._expandBridgeClampDiodes(capView.parts, capView.nets);
     const linearView = expandLm741LinearPoles(solveView.parts, solveView.nets);
     const macroView = BoardImpl._expandOpampMacros(linearView.parts, linearView.nets, this.vcc);
     this._solveParts = macroView.parts;
@@ -2739,6 +2775,11 @@ export class BoardImpl {
       this._mnaCache = this._solveMNA(false);
     }
     this._assertMeasurementSolution(this._mnaCache);
+    // An electrolytic's current is its solver capacitor's (_expandPolarizedCaps).
+    if (this.partMap?.get(partId)?.kind === 'polarized_cap' && (terminal === 'pos' || terminal === 'neg')) {
+      partId = `${partId}_cap`;
+      terminal = terminal === 'pos' ? 'a' : 'b';
+    }
     this._assertDeterminateCurrent(this._mnaCache, partId, terminal);
     const partCurrents = this._mnaCache.branchCurrents.get(partId);
     if (!partCurrents) return 0;
@@ -4611,7 +4652,7 @@ export class BoardImpl {
    * @returns {number}
    */
   getCapVoltage(partId) {
-    return this.capVoltages.get(partId) ?? 0;
+    return this.capVoltages.get(this._polarizedCapId(partId)) ?? 0;
   }
 
   /**
@@ -5159,6 +5200,18 @@ export class BoardImpl {
       }
     }
 
+    // An electrolytic held in reverse (the polarized_cap device latches it).
+    for (const [id, st] of this._deviceStates) {
+      if (!st?.reversed || this.partMap.get(id)?.kind !== 'polarized_cap') continue;
+      warnings.push({
+        severity: 'warning',
+        type: 'polarized-cap-reversed',
+        partId: id,
+        message: `${id}: electrolytic capacitor is reverse-biased (${(-st.voltage).toFixed(1)} V on its negative lead). ` +
+          'Turn it round: + to the more positive side.',
+      });
+    }
+
     // Check for output pins with nothing connected
     for (const part of this.parts) {
       if (part.kind !== 'mcu') continue;
@@ -5245,7 +5298,7 @@ export class BoardImpl {
         voltage: this.nodeVoltage(n.id),
       })),
       capacitors: this.parts
-        .filter(p => p.kind === 'capacitor')
+        .filter(p => p.kind === 'capacitor' || p.kind === 'polarized_cap')
         .map(p => ({ id: p.id, voltage: this.getCapVoltage(p.id) })),
     };
   }
@@ -5312,6 +5365,7 @@ export class BoardImpl {
       if (p.kind === 'led') this.ledHistory.set(p.id, []);
       if (p.kind === 'buzzer') this.buzzerEdges.set(p.id, []);
       if (p.kind === 'capacitor') this.capVoltages.set(p.id, 0);
+      if (p.kind === 'polarized_cap' && this.capVoltages.has(`${p.id}_cap`)) this.capVoltages.set(`${p.id}_cap`, 0);
     }
 
     this._solve();
