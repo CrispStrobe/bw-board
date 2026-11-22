@@ -8,6 +8,9 @@
  *   pressureHpa   hPa           default 1013.25
  *   lightLux      lx            unset (null)
  *   soundDb       dB SPL        unset (null)
+ *   airflowMs     m/s           default 0       (air moving over the bench:
+ *                                                cools parts in the thermal
+ *                                                model, src/thermal.js)
  *
  * The three defaults equal the defaults the sensor models always used, so a
  * project that never touches the world reads exactly what it read before.
@@ -34,9 +37,9 @@
  * @module
  */
 
-/** @typedef {'temperatureC'|'humidityPct'|'pressureHpa'|'lightLux'|'soundDb'} WorldKey */
+/** @typedef {'temperatureC'|'humidityPct'|'pressureHpa'|'lightLux'|'soundDb'|'airflowMs'} WorldKey */
 
-export const WORLD_KEYS = Object.freeze(['temperatureC', 'humidityPct', 'pressureHpa', 'lightLux', 'soundDb']);
+export const WORLD_KEYS = Object.freeze(['temperatureC', 'humidityPct', 'pressureHpa', 'lightLux', 'soundDb', 'airflowMs']);
 
 /** Defaults; null = unset (each part keeps its own legacy fallback). */
 export const WORLD_DEFAULTS = Object.freeze({
@@ -45,6 +48,7 @@ export const WORLD_DEFAULTS = Object.freeze({
   pressureHpa: 1013.25,
   lightLux: null,
   soundDb: null,
+  airflowMs: 0,
 });
 
 /** Valid ranges, used to clamp set() and schedule points. */
@@ -54,6 +58,7 @@ export const WORLD_RANGES = Object.freeze({
   pressureHpa: [300, 1100],
   lightLux: [0, 120000],
   soundDb: [0, 140],
+  airflowMs: [0, 30],
 });
 
 function clampKey (key, v) {

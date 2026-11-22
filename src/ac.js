@@ -28,6 +28,7 @@ import {
   shockleyParams, shockleyEval, shockleyJunctionFromTotal, kneeFromVf, JUNCTION_RD, junctionRd } from './mna.js';
 import { CooMatrix, SparseLU, toCSC } from './sparse.js';
 import { getDevice } from './devices.js';
+import { ntcResistanceAt } from './thermal.js';
 
 const VT = 0.02585;
 
@@ -87,6 +88,7 @@ export function acSweep(args) {
     deviceStates, opRegions, sourceId, freqs, probes,
     nodeRegularizationSiemens = 1e-12, analysisProfile = 'interactive-v1',
     sourceBiasPolicy = 'waveform-at-current-board-time',
+    partTemperatures = null,
   } = args;
   if (!Number.isFinite(nodeRegularizationSiemens) || nodeRegularizationSiemens < 0) {
     throw new Error('acSweep: nodeRegularizationSiemens must be finite and >= 0');
@@ -246,6 +248,13 @@ export function acSweep(args) {
         }
         case 'ldr':
         case 'ntc': {
+          // An NTC in the thermal model is at its own temperature, as in the
+          // DC solve the sweep linearises around (src/thermal.js).
+          const celsius = part.kind === 'ntc' ? partTemperatures?.get(part.id) : undefined;
+          if (Number.isFinite(celsius)) {
+            addG2(netOf(part.id, 'a'), netOf(part.id, 'b'), 1 / ntcResistanceAt(part, celsius));
+            break;
+          }
           const hi = part.kind === 'ldr' ? (P.rDark ?? 1e6) : (P.rCold ?? 1e5);
           const lo = part.kind === 'ldr' ? (P.rLight ?? 100) : (P.rHot ?? 1000);
           const x = controls.get(part.id) ?? 0;
