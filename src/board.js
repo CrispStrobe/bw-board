@@ -6404,6 +6404,17 @@ export class BoardImpl {
         code: r?.converged === true ? 'non-finite-solve-state' : 'transient-solve-not-converged',
         stage, timeSec: atSec,
       };
+      // An exponential transistor card carries only the charge it states. With
+      // none, a regenerative circuit (astable, latch) has no solution past its
+      // switching point, and this failure is the symptom -- say so, by part.
+      const chargeless = (this._solveParts ?? this.parts).filter(p => {
+        const em = (p.kind === 'npn' || p.kind === 'pnp') ? ebersMollParams(p) : null;
+        return em && !(em.cje || em.cjc || em.tf);
+      }).map(p => p.id);
+      if (chargeless.length && r?.converged !== true) {
+        this._transientAccuracyUnmet.hint = `exponential transistor card(s) ${chargeless.join(', ')} `
+          + 'declare no junction charge (cje/cjc/tf); a switching circuit needs it to resolve its edges';
+      }
     };
     // Newton state (junction voltages, region FSMs) at the last accepted
     // point seeds the next step's solve -- see `newtonSeed` in solveMNA.

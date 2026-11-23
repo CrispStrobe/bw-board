@@ -238,3 +238,20 @@ test('opening a switch on a coupled coil pumps a storage capacitor without a min
   assert.ok(peak > 2, `storage capacitor charged to ${peak} V`);
   assert.ok(b.nodeVoltage('st') > 0 && b.nodeVoltage('st') < peak, 'and decays through the LED between pulses');
 });
+
+test('a charge-free exponential card that cannot switch says why, quickly', () => {
+  // The exponential path adds no capacitance a card did not state (it must
+  // keep matching its SPICE deck). Without cje/cjc/tf an astable has no
+  // solution past its first edge; the failure must name the cause rather
+  // than grind (builders reported 87 s of wall time for the first 5 ms).
+  const b = astable({cb: 10e-6, q: {model: 'shockley', is: 1e-14, beta: 100}});
+  const t0 = process.cpuUsage().user;
+  for (let t = 10; t <= 500; t += 10) {
+    b.advanceTo(BigInt(t * 1e6));
+    if (b.transientAnalysisStatus().failure) break;
+  }
+  const failure = b.transientAnalysisStatus().failure;
+  assert.ok(failure, 'the charge-free card cannot cross the edge');
+  assert.match(failure.hint, /Q1, Q2 declare no junction charge/);
+  assert.ok((process.cpuUsage().user - t0) / 1e6 < 10, 'and it fails fast');
+});
