@@ -1574,6 +1574,34 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
     nets = nets.slice();
   }
 
+  // A WINDING END ON NO NET IS IN THE AIR, NOT ON GROUND.
+  //
+  // Ground has no matrix row, so a terminal on no net and a terminal on the
+  // reference both index as `undefined`, and the winding stamps cannot tell
+  // them apart: an inductor's companion injects its history current into the
+  // other end and the transformer's port coupling keeps the missing column as
+  // 0 V. An inductor with one end loose therefore integrated a current
+  // through a short to ground that no circuit had (the step controller ran
+  // into its attempt cap at 63 us), and a transformer secondary with one lead
+  // unconnected lit an LED on the other lead as if that lead were grounded.
+  // Resistors and two-terminal stamps refuse a missing net outright, but a
+  // winding is a coupled element: skipping it would also drop the coupling.
+  // So each such end gets a node of its own, in this solve's private view
+  // only. It floats: the winding's own conductance (or the 1 mOhm DC short)
+  // determines it, and a winding with BOTH ends loose is held by the node
+  // shunt (gmin) like any other island.
+  const WINDING_TERMINALS = { inductor: ['a', 'b'], transformer: ['p1', 'p2', 's1', 's2'] };
+  if (parts.some(p => WINDING_TERMINALS[p.kind])) {
+    const onNet = new Set();
+    for (const net of nets) for (const t of net.terminals) onNet.add(`${t.part}\u0000${t.terminal}`);
+    for (const part of parts) {
+      for (const terminal of WINDING_TERMINALS[part.kind] ?? []) {
+        if (onNet.has(`${part.id}\u0000${terminal}`)) continue;
+        nets.push({ id: `${OPEN_END_PREFIX}${part.id}:${terminal}`, terminals: [{ part: part.id, terminal }] });
+      }
+    }
+  }
+
   // terminal → net id. `findNet` was a linear scan of all nets × all
   // terminals, called several times per element per stamp per NR
   // iteration — the dominant cost on imported boards before the O(n³)
@@ -1918,13 +1946,26 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
     const transistorIds = transient ? null : new Set(parts
       .filter(p => p.kind === 'npn' || p.kind === 'pnp' || p.kind === 'nmos' || p.kind === 'pmos')
       .map(p => p.id));
-    const adopt = (target, source) => {
+    const adopt = (target, source, alsoIf = null) => {
       if (!(source instanceof Map)) return;
       for (const [id, value] of source) {
-        if (target.has(id) && (!transistorIds || transistorIds.has(id))) target.set(id, value);
+        if (target.has(id) && (!transistorIds || transistorIds.has(id) || alsoIf?.(id, value))) target.set(id, value);
       }
     };
-    adopt(diodeVoltages, newtonSeed.diodeVoltages);
+    // A CONDUCTING junction is part of the memory too. A thyristor pair whose
+    // only load is an LED keeps itself on THROUGH that LED: restarting the
+    // LED at 0 V (below its knee, so an open circuit to the first Newton
+    // step) cut the loop's current path, and the first solve after the gate
+    // was released fell straight to the OFF state. Only a junction the seed
+    // had forward-biased past its knee's foot is adopted; an off one keeps
+    // its cold start exactly, as before.
+    const conducting = (id, value) => {
+      const part = partMap.get(id);
+      if (!part || (part.kind !== 'led' && part.kind !== 'diode')) return false;
+      const vf = Number(junctionVf(part));
+      return Number.isFinite(vf) && value > 0.5 * vf;
+    };
+    adopt(diodeVoltages, newtonSeed.diodeVoltages, conducting);
     adopt(bjtVbc, newtonSeed.bjtVbc);
     adopt(bjtVce, newtonSeed.bjtVce);
     adopt(mosVds, newtonSeed.mosVds);
@@ -2238,7 +2279,7 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
   // the same circuit at a tenth of the excitation). All nonlinear state
   // (junction voltages, region FSMs, CC clamps) lives in the enclosing
   // scope, so each rung seeds the next — the point of a continuation.
-  const runNewton = (gmin, srcScale = 1, selectiveShunt = false) => {
+  const runNewton = (gmin, srcScale = 1, selectiveShunt = false, anchor = null, anchorG = 0) => {
   // Rail regions each op-amp has occupied in THIS Newton run; see the
   // cycle break in the region FSM below.
   const railVisits = new Map();
@@ -2725,6 +2766,10 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
         if (determinedByBranch) continue;
       }
       A.add(i, i, gmin);
+      // Pseudo-transient continuation (below): every node also leans on
+      // where it was a moment ago, through `anchorG` -- a node capacitance
+      // over a time step, the backward-Euler companion of C*dV/dt.
+      if (anchor) { A.add(i, i, anchorG); b[i] += anchorG * anchor[i]; }
     }
 
     // Solve
@@ -3223,6 +3268,25 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
   // `opts.blanketShunt` (a caller that already saw this topology need the
   // retry below) skips the selective attempt that is known to be singular.
   let blanketShunt = transient !== null && opts.blanketShunt === true;
+  // Every piece of Newton state a run mutates, so a continuation can rewind
+  // to a point it accepted. Cheap (a handful of small maps); taken for
+  // operating-point solves only, which are the ones with fallback ladders.
+  const snapshotNewton = () => {
+    const maps = [diodeVoltages, mosVsb, mosVdb, mosVds, bjtVbc, bjtVce, bjtVceDamp,
+      bjtVceLastStep, opampRegions, bjtRegions, bjtVceSat, mosRegions, vccsClamps, deviceStamps]
+      .map(m => [m, new Map(m)]);
+    const sol = Float64Array.from(solution);
+    const nl = Float64Array.from(nonlinearIterate);
+    const cc = parts.filter(p => p._ccClampedVolts !== undefined).map(p => [p, p._ccClampedVolts]);
+    return () => {
+      for (const [m, saved] of maps) { m.clear(); for (const [k, v] of saved) m.set(k, v); }
+      solution = Float64Array.from(sol);
+      nonlinearIterate = Float64Array.from(nl);
+      for (const p of parts) delete p._ccClampedVolts;
+      for (const [p, v] of cc) p._ccClampedVolts = v;
+    };
+  };
+  const restoreStart = transient ? null : snapshotNewton();
   converged = runNewton(GMIN, 1, transient !== null && !blanketShunt);
   // A transient step whose selective shunt leaves an ISLAND with no path to
   // the reference (resistors hanging between two high-Z MCU input pins,
@@ -3264,6 +3328,65 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
       if (!runNewton(GMIN, s)) { laddered = false; break; }
     }
     converged = laddered;
+  }
+
+  // Rung (c): PSEUDO-TRANSIENT CONTINUATION, from where the circuit WAS.
+  //
+  // Both ladders above pull toward a fixed point that is not the circuit's:
+  // gmin stepping drags every node toward 0 V, source stepping restarts the
+  // circuit from a tenth of its supply. A regenerative loop whose only load
+  // is a junction defeats both. The thyristor pair (NPN + PNP latch, an LED
+  // its only load) is the measured case: with the LED linearised below its
+  // knee the loop's gain is above one against a 1 nS load, every Newton step
+  // throws the shared node to +740 kV, the PWL limiter brings the LED back
+  // to +0.5 V -- below its knee again -- and the run cycles there until the
+  // budget is gone. The 1e-3 S gmin rung oscillates at the LED knee instead,
+  // and source stepping never turns the pair on at all.
+  //
+  // A real circuit has charge on every node and gets from one state to the
+  // next through time. So does this rung: each node gets a conductance
+  // `g = C/dt` to its own previous voltage (the backward-Euler companion of
+  // a node capacitance), Newton solves one "step", the accepted answer
+  // becomes the next anchor, and g falls as steps succeed (dt grows) and
+  // rises when one fails (dt shrinks). When g has fallen to nothing the
+  // anchor is the DC operating point, and a final run without it confirms
+  // that. The start is the previous solution, so an event (a gate pulse)
+  // moves the circuit to the operating point the dynamics reach from where
+  // it was -- the latch's ON state -- rather than whatever a ladder finds.
+  //
+  // Only reached when everything above failed, so every circuit that
+  // converged before converges to exactly what it did.
+  if (!converged && !transient) {
+    restoreStart();
+    const guess = opts.warmStart?.nodeVoltages instanceof Map ? opts.warmStart.nodeVoltages
+      : opts.nonlinearGuess instanceof Map ? opts.nonlinearGuess : null;
+    let anchor = new Float64Array(dim);
+    if (guess) for (const [netId, index] of nodeIndex) {
+      const v = guess.get(netId);
+      if (Number.isFinite(v)) anchor[index] = v;
+    }
+    const PTRAN_G_START = 1e-2;
+    const PTRAN_G_MAX = 1e2;
+    const PTRAN_G_DONE = 1e-10;
+    let g = PTRAN_G_START;
+    let accepted = snapshotNewton();
+    let done = false;
+    for (let step = 0; step < 300 && g <= PTRAN_G_MAX; step++) {
+      if (runNewton(GMIN, 1, false, anchor, g) && solution.every(Number.isFinite)) {
+        let moved = 0;
+        for (let i = 0; i < nodeCount; i++) moved = Math.max(moved, Math.abs(solution[i] - anchor[i]));
+        anchor = solution.slice(0, dim);
+        accepted = snapshotNewton();
+        if (g <= PTRAN_G_DONE && moved < 1e-6) { done = true; break; }
+        // Grow the step fast while the circuit is barely moving.
+        g /= moved < 0.05 ? 10 : 2;
+      } else {
+        accepted();
+        g *= 4;
+      }
+    }
+    if (done) converged = runNewton(GMIN);
+    if (!converged) accepted();
   }
 
   // THE REFINEMENT. Everything above ran with the blanket node shunt, because
@@ -3391,6 +3514,100 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
     if (moved > 1e-6 || (nonlinearPresent && !nonlinearDevicesValid().valid)) {
       const ok2 = runNewton(GMIN, 1, true);
       if (!ok2 || !allFinite(solution) || (nonlinearPresent && !nonlinearDevicesValid().valid)) restore();
+    }
+  }
+
+  // POWER-ON MUST NOT LAND ON A BALANCE POINT.
+  //
+  // A two-transistor flip-flop with no capacitor has three operating points:
+  // its two stable states and, between them, the symmetric one with both
+  // halves half on. Newton from a cold start finds the symmetric one -- it is
+  // a perfectly valid solution of the DC equations -- and with no capacitor
+  // nothing ever moves the circuit off it: the bench powered up with both
+  // LEDs at about 5 mA until a button was pressed. A real flip-flop never
+  // stays there; noise and the tiniest mismatch tip it within nanoseconds.
+  //
+  // So the board asks a cold power-on solve (`opts.settleMetastable`) to
+  // check. Each node is nudged by a deterministic millivolt pattern and the
+  // circuit is relaxed through pseudo-time (the same node-capacitance rung as
+  // above, anchored to its own last step). Near a STABLE point the nudge
+  // decays and the original answer is kept bit for bit -- a thyristor pair
+  // that powers up off stays off. Near an UNSTABLE one it grows -- the step
+  // is held while it keeps growing, which is exactly when a real circuit is
+  // falling -- until the circuit reaches a state that no longer moves. Which
+  // way it falls is then taken from a second relaxation that starts where
+  // power-on starts, every node at 0 V, so a real imbalance decides (the
+  // flip-flop's 22 k / 27 k base feeds pick the same transistor its base
+  // capacitors do); only a circuit symmetric to the last resistor, which
+  // climbs straight back onto the balance point from there, keeps the side
+  // the nudge chose. The nudge is a fixed function of the node index, so the
+  // same netlist always falls the same way.
+  //
+  // Only for an algebraic circuit (no capacitor or winding: one with storage
+  // powers up through a transient, whose device capacitances already carry
+  // it off the balance point) with at least two transistors (a regenerative
+  // pair needs two gain stages).
+  if (converged && !transient && opts.settleMetastable === true
+    && !parts.some(p => p.kind === 'capacitor' || p.kind === 'inductor' || p.kind === 'transformer')
+    && parts.filter(p => p.kind === 'npn' || p.kind === 'pnp' || p.kind === 'nmos' || p.kind === 'pmos').length >= 2) {
+    const original = snapshotNewton();
+    const x0 = solution.slice(0, nodeCount);
+    const deviation = () => {
+      let d = 0;
+      for (let i = 0; i < nodeCount; i++) d = Math.max(d, Math.abs(solution[i] - x0[i]));
+      return d;
+    };
+    // Pseudo-time relaxation from `anchor`. The step (1/g) is held while the
+    // circuit's motion ACCELERATES -- a regenerative pair falling off its
+    // balance point -- and grows while the motion dies away. Backward Euler
+    // damps an unstable mode once the step outgrows its time constant, so a
+    // schedule that only grew the step would walk back onto the balance point.
+    const relax = (anchor, g) => {
+      let accepted = snapshotNewton();
+      let lastMoved = Infinity;
+      for (let step = 0; step < 400 && g <= 1e6; step++) {
+        if (!runNewton(GMIN, 1, false, anchor, g) || !solution.every(Number.isFinite)) {
+          accepted();
+          g *= 4;
+          lastMoved = Infinity;
+          continue;
+        }
+        accepted = snapshotNewton();
+        let moved = 0;
+        for (let i = 0; i < nodeCount; i++) moved = Math.max(moved, Math.abs(solution[i] - anchor[i]));
+        anchor = solution.slice(0, dim);
+        const accelerating = moved > 1.05 * lastMoved && moved > 1e-9;
+        lastMoved = moved;
+        if (moved > 0.5) g *= 2;            // too coarse a step to follow the fall
+        else if (accelerating) continue;     // falling: keep this step
+        else if (g <= 1e-10) return moved < 1e-6;
+        else g /= 2;
+      }
+      return false;
+    };
+    const fellOff = (anchor, g) => relax(anchor, g) && deviation() > 0.01
+      && runNewton(GMIN) && nonlinearDevicesValid().valid;
+    // Is the answer a balance point at all? Nudge each node by a fixed,
+    // index-derived millivolt pattern (Knuth's multiplicative hash) and
+    // relax: a stable operating point absorbs the nudge and is kept exactly.
+    const NUDGE_V = 1e-3;
+    const nudged = solution.slice(0, dim);
+    for (let i = 0; i < nodeCount; i++) {
+      const h = Math.imul(i + 1, 2654435761) >>> 0;
+      nudged[i] += NUDGE_V * (h / 0x80000000 - 1);
+    }
+    if (fellOff(nudged, 1e3)) {
+      // It was unstable. WHICH WAY a real circuit falls is decided by how it
+      // is switched on: every node starts at 0 V and the pair races up, so a
+      // real imbalance (a stronger base feed on one side) wins, as it does on
+      // the bench. Take that race when it ends somewhere stable; a circuit
+      // symmetric to the last resistor climbs back onto the balance point
+      // instead, and keeps the side the nudge chose.
+      const viaNudge = snapshotNewton();
+      original();
+      if (!fellOff(new Float64Array(dim), 1e-1)) viaNudge();
+    } else {
+      original();
     }
   }
 
@@ -3648,7 +3865,8 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
         // The same smooth law the stamp used, at the converged Vce.
         const vOutX = part.kind === 'npn' ? vC - vE : vE - vC;
         const vJX = part.kind === 'npn' ? vB - vE : vE - vB;
-        ic = ib * bjtForcedBeta(vOutX, beta, /** @type {number} */ (part.params.betaR ?? 1)).f;
+        // A reverse-biased base drives the law with zero (`smoothLawBaseDrive`).
+        ic = (vJX < 0 ? 0 : ib) * bjtForcedBeta(vOutX, beta, /** @type {number} */ (part.params.betaR ?? 1)).f;
         const ibc = pwlStampedCurrent(vJX - vOutX, bjtBcKnee(part), rd, BC_CLAMP_GOFF);
         const polarityX = part.kind === 'npn' ? 1 : -1;
         currents.set('base', -polarityX * (ib + ibc));
@@ -4100,6 +4318,7 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
         inductorVoltagesNext.set(part.id + ':s', vS);
       }
     }
+    dropOpenEnds(nodeVoltages);
     return { nodeVoltages, branchCurrents, indeterminateBranchCurrents, railCurrents,
       capVoltagesNext, capCurrentsNext,
       inductorCurrentsNext, inductorVoltagesNext, converged, opampRegions, deviceStamps, blanketShunt,
@@ -4108,6 +4327,7 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
       railConflicts: railConflicts.length ? [...new Set(railConflicts)] : undefined };
   }
 
+  dropOpenEnds(nodeVoltages);
   return { nodeVoltages, branchCurrents, indeterminateBranchCurrents, railCurrents,
     ...(opts.capVoltages && chargedBjtIds.length ? {deferredBjtChargeIds: chargedBjtIds} : {}),
     converged, opampRegions, deviceStamps, ...regionDiagnostics,
@@ -4181,6 +4401,12 @@ function stampPortCoupling(A, rowNetA, rowNetB, colNetA, colNetB, g, nodeIndex) 
   if (rb !== undefined && cb !== undefined) A.add(rb, cb, g);
 }
 
+/** Solver-private net id prefix for a winding end that is on no net. */
+const OPEN_END_PREFIX = '\u0000open-end:';
+/** The private open-end nodes are read by the extraction, never published. */
+function dropOpenEnds(nodeVoltages) {
+  for (const id of nodeVoltages.keys()) if (id.startsWith(OPEN_END_PREFIX)) nodeVoltages.delete(id);
+}
 const NETS_TERM_MAP = Symbol('bw-term-map');
 /** caller nets array -> {key, map}; see the memo note in solveMNA. */
 const TERM_MAP_MEMO = new WeakMap();
@@ -4896,6 +5122,35 @@ function bjtBcKnee(part) {
   return Number(part.params?.vbc ?? vbe + BC_CLAMP_OFFSET);
 }
 
+/**
+ * THE BASE CURRENT THE SMOOTH OUTPUT LAW AMPLIFIES: the junction's, never a
+ * reverse leak.
+ *
+ * `Ic = Ib * f(Vce)` took Ib straight from the base junction's companion, and
+ * below its knee that companion is nothing but the PWL off conductance -- a
+ * numerical 1 nS regularisation, not a physical current. Reverse-bias the
+ * base and Ib is -1 nS * Vbe; the law then multiplied that by beta and drove
+ * a collector current BACKWARDS through a cut-off transistor: 4.5 nA of
+ * "leak" on a PNP whose base sat 4.5 V above its emitter became 450 nA out of
+ * its collector. On a node with nothing else holding it -- the NPN emitter of
+ * a PNP+NPN relaxation pair, whose only other connection is a dark LED --
+ * that current pushed the node up to the LED's knee foot, where the curve
+ * and the amplified leak chased each other: Newton cycled with a 1.7 mV
+ * period-6 orbit, the step fell to its floor and the transient failed at
+ * 130 ms (20,000 attempts, 70 s of wall time).
+ *
+ * A cut-off transistor conducts nothing from collector to emitter (Ebers-Moll
+ * with both junctions reversed leaves Is-scale currents), so a reverse base
+ * bias drives the law with zero. The value is continuous at Vbe = 0, where
+ * the off-conductance current is zero from either side; a forward-biased
+ * junction below its knee keeps its small amplified current exactly as
+ * before, so every conducting and forward-idling transistor is unchanged.
+ */
+function smoothLawBaseDrive(vAcross, gEq, iEq) {
+  if (vAcross < 0) return { iB0: 0, gB: 0 };
+  return { iB0: gEq * vAcross + iEq, gB: gEq };
+}
+
 /** True when a BJT solves with the smooth output law (`bjtForcedBeta`). */
 export function bjtSmoothOutput(part) {
   return (part.kind === 'npn' || part.kind === 'pnp')
@@ -5033,8 +5288,9 @@ function stampNPN(A, b, part, nets, nodeIndex, groundNetId, diodeVoltages,
     // The smooth output law (`bjtForcedBeta`): Ic = Ib(Vbe) * f(Vce).
     const vce0 = bjtVce.get(part.id);
     const { f, df } = bjtForcedBeta(vce0, beta, /** @type {number} */ (part.params.betaR ?? 1));
-    const iB0 = gEq * vAcross + iEq;
-    const gm = gEq * f;
+    // Only a FORWARD base current is amplified (`smoothLawBaseDrive`).
+    const { iB0, gB } = smoothLawBaseDrive(vAcross, gEq, iEq);
+    const gm = gB * f;
     const go = iB0 * df;
     stampSmoothCollector(A, b, idxC, idxE, idxB, idxE, idxC, idxE, gm, go,
       iB0 * f - gm * vAcross - go * vce0);
@@ -5154,8 +5410,9 @@ function stampPNP(A, b, part, nets, nodeIndex, groundNetId, diodeVoltages, regio
     // into the emitter and out of the collector.
     const vec0 = bjtVce.get(part.id);
     const { f, df } = bjtForcedBeta(vec0, beta, /** @type {number} */ (part.params.betaR ?? 1));
-    const iB0 = gEq * vAcross + iEq;
-    const gm = gEq * f;
+    // Only a FORWARD base current is amplified (`smoothLawBaseDrive`).
+    const { iB0, gB } = smoothLawBaseDrive(vAcross, gEq, iEq);
+    const gm = gB * f;
     const go = iB0 * df;
     stampSmoothCollector(A, b, idxE, idxC, idxE, idxB, idxE, idxC, gm, go,
       iB0 * f - gm * vAcross - go * vec0);
