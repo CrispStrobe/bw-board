@@ -147,6 +147,12 @@ const LOCAL_ONLY = {
   tuning_cap:        { chip_mA: 0, supply_mA: 0 },
   ferrite_coil:      { chip_mA: 0, supply_mA: 0 },
   field_probe:       { chip_mA: 0, supply_mA: 0 },
+  // Sensing transducers (src/sensing-transducers.js): a thermocouple is a
+  // millivolt source, the coil and the electrolysis cell carry what the
+  // circuit drives through them.
+  thermocouple:      { chip_mA: 0, supply_mA: 0 },
+  air_coil:          { chip_mA: "circuit", supply_mA: 0 },
+  electrolysis_cell: { chip_mA: "circuit", supply_mA: 0 },
   bargraph:          { chip_mA: "circuit", supply_mA: "circuit" },
   ir_transmitter:    { chip_mA: "circuit", supply_mA: 20 },
   darlington_driver: { chip_mA: "circuit", supply_mA: "circuit" },

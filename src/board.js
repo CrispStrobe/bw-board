@@ -29,6 +29,7 @@ import {
 import { resolveParams, classDefaults } from './parts-library.js';
 import { acSweep } from './ac.js';
 import { expandTransducers, transducerCard } from './transducers.js';
+import { expandSensingTransducers } from './sensing-transducers.js';
 import { expandRadio, normalizeStations, DEFAULT_STATIONS } from './radio.js';
 import { expandFields } from './fields.js';
 import { validateNetlist } from './validate.js';
@@ -1216,7 +1217,11 @@ export class BoardImpl {
     // Loudspeakers/earphones are voice coils, the radio front end a set of
     // passives plus RF detectors (src/transducers.js, src/radio.js). A
     // circuit with none of these parts passes through untouched.
-    const coilView = expandTransducers(parts, nets);
+    const tdView = expandTransducers(parts, nets);
+    // Thermocouple, hand-wound coil, electrolysis cell (src/sensing-transducers.js).
+    // `_stimuli`: sound and falling magnets that move with time on their own.
+    const coilView = expandSensingTransducers(tdView.parts, tdView.nets);
+    this._stimuli = [tdView.acoustics, coilView.stimulus].filter(Boolean);
     const radioView = expandRadio(coilView.parts, coilView.nets, { controls: () => this.controls });
     this._radio = radioView.radio;
     if (this._radio && this._broadcast) this._radio.setStations(this._broadcast);
@@ -6144,6 +6149,7 @@ export class BoardImpl {
     this._transientAccuracyUnmet = null;
     this._radio?.reset();
     this._fields?.reset();
+    for (const s of this._stimuli ?? []) s.reset();
     // Device models that integrate over time (a motor's speed and winding
     // current) start from rest too; a spinning motor at t = 0 meets a
     // stopped drive and a fresh integrator, a stiff edge the controller
@@ -6915,6 +6921,8 @@ export class BoardImpl {
     if (this._radio) return true;
     // Mains fields and junction noise move with time (src/fields.js).
     if (this._fields?.timeVarying) return true;
+    // Sound at a listening transducer, a magnet falling through a coil.
+    if (this._stimuli?.some(s => s.timeVarying())) return true;
     for (const p of (this._solveParts ?? this.parts)) {
       if ((p.kind === 'vsource' || p.kind === 'isource')
           && p.params && p.params.wave && p.params.wave !== 'dc') {
@@ -7029,6 +7037,10 @@ export class BoardImpl {
     if (fieldStep > 0) {
       maxStepSec = Math.min(maxStepSec, fieldStep);
       basis.push('field-noise-fidelity');
+    }
+    for (const s of this._stimuli ?? []) {
+      const h = s.maxStepSec();
+      if (h > 0) { maxStepSec = Math.min(maxStepSec, h); basis.push('physical-stimulus-fidelity'); }
     }
     for (const [, ch] of this._scopeChannels) {
       if (ch.capture === 'sample' && (ch.type === 'voltage' || ch.currentClock === 'simulation')) {

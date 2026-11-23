@@ -39,6 +39,8 @@
  * @module
  */
 
+import { buildAcoustics, needsVoiceCoil, VOICE_COIL_KIND } from './acoustics.js';
+
 export const SPEAKER_DEFAULTS = Object.freeze({ ohms: 8, henrys: 2e-4, ratedWatts: 0.5, motionalOhms: 20, qm: 2 });
 export const EARPHONE_DEFAULTS = Object.freeze({ ohms: 2000, henrys: 0.1, ratedWatts: 1e-3,
     capacitance: 10e-9, leakOhms: 10e6 });
@@ -72,11 +74,15 @@ export function transducerCard(part) {
 
 /**
  * Solver-only expansion of every speaker and earphone (see the module note).
- * The caller's parts/nets are not mutated.
+ * The caller's parts/nets are not mutated. A transducer that listens (or is
+ * listened to) gets its series resistance as a VOICE_COIL_KIND part, which
+ * also carries the sound EMF (src/acoustics.js); `acoustics` is that
+ * environment, or null when nothing listens.
  */
 export function expandTransducers(parts, nets) {
     const selected = parts.filter(p => p.kind === 'speaker' || p.kind === 'earphone');
-    if (!selected.length) return { parts, nets };
+    if (!selected.length) return { parts, nets, acoustics: null };
+    const acoustics = buildAcoustics(parts);
     const outParts = [...parts];
     const outNets = nets.map(n => ({ ...n, terminals: [...n.terminals] }));
     const netOf = (id, t) => outNets.find(n => n.terminals.some(x => x.part === id && x.terminal === t));
@@ -90,19 +96,29 @@ export function expandTransducers(parts, nets) {
             na.terminals.push({ part: id, terminal: 'a' });
             nb.terminals.push({ part: id, terminal: 'b' });
         };
+        // The series resistance: a plain resistor, or the voice coil with its
+        // sound EMF when the part takes part in an acoustic path.
+        const series = (id, ohms, na, nb) => {
+            if (!needsVoiceCoil(acoustics, p)) { add(id, 'resistor', { ohms }, na, nb); return; }
+            const vc = { id: `${p.id}_vc`, kind: VOICE_COIL_KIND, params: { ohms }, terminals: ['a', 'coil'] };
+            Object.defineProperty(vc, 'acoustic', { value: { env: acoustics, part: p }, enumerable: false });
+            outParts.push(vc);
+            na.terminals.push({ part: vc.id, terminal: 'a' });
+            nb.terminals.push({ part: vc.id, terminal: 'coil' });
+        };
         if (c.crystal) {
             // Piezo crystal: capacitance behind a small series resistance
             // (the element's own), leak across the pins.
             const mid = { id: `n_${p.id}_${COIL_PIN}`, terminals: [{ part: p.id, terminal: COIL_PIN }] };
             outNets.push(mid);
-            add(`${p.id}_esr`, 'resistor', { ohms: 100 }, a, mid);
+            series(`${p.id}_esr`, 100, a, mid);
             add(`${p.id}_cp`, 'capacitor', { farads: c.capacitance }, mid, b);
             add(`${p.id}_leak`, 'resistor', { ohms: c.leakOhms }, a, b);
             continue;
         }
         const coil = { id: `n_${p.id}_${COIL_PIN}`, terminals: [{ part: p.id, terminal: COIL_PIN }] };
         outNets.push(coil);
-        add(`${p.id}_re`, 'resistor', { ohms: c.ohms }, a, coil);
+        series(`${p.id}_re`, c.ohms, a, coil);
         let end = b;
         if (c.resonanceHz > 0) {
             const ws = 2 * Math.PI * c.resonanceHz;
@@ -115,16 +131,16 @@ export function expandTransducers(parts, nets) {
         }
         add(`${p.id}_le`, 'inductor', { henrys: c.henrys }, coil, end);
     }
-    return { parts: outParts, nets: outNets };
+    return { parts: outParts, nets: outNets, acoustics };
 }
 
 /**
  * The transducer's cone signal for one accepted solve: the coil current for
  * a moving-coil part, the terminal voltage for a crystal earphone.
  */
-export function coneSignal(card, read) {
-    if (card.crystal) return read('a') - read('b');
-    return (read('a') - read(COIL_PIN)) / card.ohms;
+export function coneSignal(card, read, emf = 0) {
+    if (card.crystal) return read('a') - read('b') - emf;
+    return (read('a') - read(COIL_PIN) - emf) / card.ohms;
 }
 
 /** Device state for the tone tracker. */
