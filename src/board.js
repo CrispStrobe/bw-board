@@ -5901,14 +5901,26 @@ export class BoardImpl {
     // `43-rc-timing` read 5.0000 V on a capacitor getCapVoltage held at 0
     // (D23). A reactive part the snapshot never saw starts where a new one
     // does: uncharged, at rest.
+    //
+    // Except an op-amp's HIDDEN pole capacitor (ground-sensing-opamp.js): it
+    // is not a part the learner placed but the amplifier's internal state,
+    // and setNetlist seeds it from the bias point. Zeroing it here undid that
+    // seed on every load through the designer (which restores a snapshot of
+    // the EMPTY board it replaced), so every LM358 started railed low and
+    // spent its first tens of microseconds slewing to where it already was --
+    // 76-multimeter took 68 adaptive attempts for a static 1 ms. A pole the
+    // snapshot never saw is seeded again, as setNetlist does.
+    const unseenPoles = new Set();
     for (const p of (this._solveParts ?? this.parts)) {
       if (p.kind === 'capacitor' && !this.capVoltages.has(p.id)) {
         this.capVoltages.set(p.id, 0);
+        if (isHiddenPoleCapacitor(p.id)) unseenPoles.add(p.id);
       }
       if (p.kind === 'inductor' && !this.inductorCurrents.has(p.id)) {
         this.inductorCurrents.set(p.id, 0);
       }
     }
+    if (unseenPoles.size) this._seedOpampPoles(unseenPoles);
     // Trapezoidal history is NOT snapshotted: _solve() below invalidates
     // it, so the first step after a restore re-seeds with BE — cleared
     // here only so stale values never look meaningful in a debugger.
@@ -6011,8 +6023,9 @@ export class BoardImpl {
    * load and reset; drawn capacitors keep the power-on-at-rest rule. A solve
    * that fails leaves the poles at 0 V (the plain power-on start).
    */
-  _seedOpampPoles() {
-    const hidden = (this._solveParts ?? []).filter(p => p.kind === 'capacitor' && isHiddenPoleCapacitor(p.id));
+  _seedOpampPoles(only = null) {
+    const hidden = (this._solveParts ?? []).filter(p => p.kind === 'capacitor' && isHiddenPoleCapacitor(p.id)
+      && (only === null || only.has(p.id)));
     if (!hidden.length) return;
     for (const cap of hidden) this.capVoltages.set(cap.id, 0);
     if (!this.powered) return;

@@ -2431,7 +2431,11 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
             const C = /** @type {number} */ (part.params.farads ?? 0.0001);
             if (!Number.isFinite(C) || C <= 0) break;
             const h = Math.max(transient.dtSec, 1e-15);
-            const trap = transient.method === 'trap';
+            // `integration: 'be'` keeps one capacitor on backward Euler inside
+            // a trapezoidal step: a solver-internal state whose mode is far
+            // faster than any step (the LM358 macromodel's clamped pole) is
+            // damped instead of ringing (ground-sensing-opamp.js).
+            const trap = transient.method === 'trap' && part.params.integration !== 'be';
             const vPrev = transient.capVoltages.get(part.id) ?? 0;
             const iPrev = trap ? (transient.capCurrents?.get(part.id) ?? 0) : 0;
             const resistance = h / ((trap ? 2 : 1) * C);

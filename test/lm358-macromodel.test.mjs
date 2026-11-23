@@ -378,3 +378,87 @@ describe('ideal opamp under positive feedback (gap 5)', () => {
         assert.ok(Math.abs(period - 1.386) < 0.03, `period ${period.toFixed(3)} ms`);
     });
 });
+
+// Round 2: speed. Two causes, each reproduced on its own.
+//
+//  6. The hidden pole capacitor was integrated trapezoidally. In saturation
+//     it sits against the swing clamp (10 S on 1 nF: a 0.1 ns mode), and the
+//     trapezoidal rule never damps a mode that much faster than the step: the
+//     pole alternated about the clamp by ~90 uV forever, Newton lost
+//     convergence on the alternation at any useful step, and a comparator
+//     whose input crept toward its threshold took ~350 attempts per ms at
+//     ~10 ms of wall time each (lab-v-to-f: 163 s of test time).
+//  7. A designer reload (bw-circuit-ui rebuilds the board, then restores the
+//     snapshot of the board it replaced) zeroed the pole that setNetlist had
+//     just seeded from the bias point, so every LM358 started railed low and
+//     slewed back to where it already was (76-multimeter: 10 ms to 1.3 s).
+describe('LM358 simulation cost (round 2)', () => {
+    // lab-v-to-f without the breadboard: an ideal integrator (100 k, 2.2 uF)
+    // ramps down from a 0.89 V input over a 4.5 V reference; an LM358 Schmitt
+    // trigger (10 k in, 47 k feedback) drops its output when the ramp reaches
+    // its lower threshold, and a diode through 15 k resets the integrator.
+    // The trigger's input creeps toward the threshold at ~3 mV/ms: tens of
+    // milliseconds with the comparator saturated a few tens of mV from it.
+    const vToF = () => {
+        const board = new BoardImpl(5.0);
+        board.setNetlist([V('VS', 9), G, V('VR', 4.5), V('VI', 5.39), R('RIN', 100000),
+            { id: 'CI', kind: 'capacitor', params: { farads: 2.2e-6 }, terminals: ['a', 'b'] },
+            { id: 'UI', kind: 'opamp', params: { gain: 1e5, railHigh: 9, railLow: 0 }, terminals: ['inp', 'inn', 'out'] },
+            { id: 'D1', kind: 'diode', params: { vf: 0.7 }, terminals: ['anode', 'cathode'] }, R('RD', 15000),
+            R('RI', 10000), R('RF', 47000), R('RL', 1000),
+            { id: 'L1', kind: 'led', params: { vf: 2, color: 'green' }, terminals: ['anode', 'cathode'] }, LM358], [
+            net('nv', ['VS', 'pos'], ['U1', 'vcc'], ['RL', 'a']),
+            net('ng', ['G', 'gnd'], ['VS', 'neg'], ['VR', 'neg'], ['VI', 'neg'], ['U1', 'gnd']),
+            net('nr', ['VR', 'pos'], ['U1', '1_neg'], ['UI', 'inp']),
+            net('ni', ['VI', 'pos'], ['RIN', 'a']),
+            net('ns', ['RIN', 'b'], ['CI', 'a'], ['UI', 'inn'], ['D1', 'anode']),
+            net('nt', ['UI', 'out'], ['CI', 'b'], ['RI', 'a']),
+            net('nd', ['D1', 'cathode'], ['RD', 'a']),
+            net('np', ['RI', 'b'], ['RF', 'a'], ['U1', '1_pos']),
+            net('na', ['RL', 'b'], ['L1', 'anode']),
+            net('no', ['U1', '1_out'], ['RF', 'b'], ['RD', 'b'], ['L1', 'cathode']),
+        ]);
+        return board;
+    };
+
+    it('a voltage-to-frequency converter keeps its period at a fraction of the work', () => {
+        const board = vToF();
+        const falls = [];
+        let prev = null;
+        for (let k = 1; k <= 1600; k++) {
+            board.advanceTo(BigInt(k) * 500_000n);
+            const high = board.nodeVoltage('no') > 3;
+            if (prev === true && !high) falls.push(k * 0.5);
+            prev = high;
+        }
+        assert.equal(board.transientAnalysisStatus().failure, null);
+        // The same flashes, to the 0.5 ms sample, as the trapezoidal pole
+        // gave (and lab-v-to-f's 2.55 Hz): ramp 4.5 + 0.89 V → 3.86 V and reset.
+        assert.deepEqual(falls, [384, 774]);
+        const { attempts } = board.transientAnalysisStatus().work;
+        // Measured: 14,680 attempts (24.6 s) with the trapezoidal pole,
+        // 3,179 (0.9 s) with the damped one; 1,600 is the advance count.
+        assert.ok(attempts < 5000, `${attempts} adaptive attempts for 800 ms`);
+    });
+
+    it('a designer reload keeps the pole seeded from the bias point', () => {
+        // ×1 follower at 2 V: static, so 1 ms needs a handful of steps.
+        const parts = [V('VS', 9), G, V('VI', 2), R('RL', 10000), LM358];
+        const nets = [
+            net('nv', ['VS', 'pos'], ['U1', 'vcc']),
+            net('ng', ['G', 'gnd'], ['VS', 'neg'], ['VI', 'neg'], ['RL', 'b'], ['U1', 'gnd']),
+            net('ni', ['VI', 'pos'], ['U1', '1_pos']),
+            net('no', ['U1', '1_out'], ['U1', '1_neg'], ['RL', 'a']),
+        ];
+        // What Circuit._syncNetlist does on every load and edit.
+        const snap = new BoardImpl(5.0).snapshot();
+        const board = new BoardImpl(5.0);
+        board.setNetlist(parts, nets);
+        board.restore(snap);
+        assert.ok(Math.abs(board.nodeVoltage('no') - 2) < 1e-3, `t = 0: ${board.nodeVoltage('no')} V`);
+        board.advanceTo(1_000_000n);
+        assert.ok(Math.abs(board.nodeVoltage('no') - 2) < 1e-3, `t = 1 ms: ${board.nodeVoltage('no')} V`);
+        const { attempts } = board.transientAnalysisStatus().work;
+        assert.ok(attempts < 20, `${attempts} adaptive attempts for a static 1 ms`);
+    });
+});

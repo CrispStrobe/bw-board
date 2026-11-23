@@ -49,6 +49,18 @@
  * (at VO = 2 V) sink. Quiescent supply current, input bias/offset, noise and
  * phase reversal are NOT modelled.
  *
+ * POLE INTEGRATION. The hidden pole capacitor is integrated with backward
+ * Euler (`integration: 'be'` on the capacitor), not the trapezoidal rule
+ * the board uses for drawn parts. In saturation the pole rests against the
+ * swing clamp, a 0.1 ns mode (G_CLAMP on cInt), and the trapezoidal rule
+ * does not damp a mode that much faster than the step: the pole alternated
+ * about the clamp by ~90 µV indefinitely, Newton lost convergence on that
+ * alternation at any useful step, and a comparator whose input crept toward
+ * its threshold cost ~350 attempts per simulated ms (lab-v-to-f: 163 s of
+ * test time). Backward Euler damps it in one step and is exact for the
+ * constant-current slew; the step-doubling controller still measures the
+ * pole voltage, so a step is still refused when its error is not met.
+ *
  * INITIAL CONDITION. The hidden pole capacitor is seeded from the bias point
  * of the bench at the instant the netlist is set (BoardImpl seeds it, the way
  * SPICE starts a transient from its operating point), so a static op-amp
@@ -227,7 +239,8 @@ export function expandGroundSensingOpAmps(parts, nets, kinds = GROUND_SENSING_OP
                 { id: stageId, kind: STAGE_KIND,
                     params: { fixedVcc: vccNet ? null : 5.0 },
                     terminals: [...STAGE_TERMINALS] },
-                { id: capId, kind: 'capacitor', params: { farads: POLE_FARADS }, terminals: ['a', 'b'] },
+                // Backward Euler: see POLE INTEGRATION above.
+                { id: capId, kind: 'capacitor', params: { farads: POLE_FARADS, integration: 'be' }, terminals: ['a', 'b'] },
                 { id: rpId, kind: 'resistor', params: { ohms: POLE_OHMS }, terminals: ['a', 'b'] },
             );
             const T = (p, terminal) => ({ part: p, terminal });
