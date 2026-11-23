@@ -214,3 +214,27 @@ test('an LED in an off collector needs no pull-up to switch cleanly', () => {
     if (off) assert.ok(Math.abs(i) < 1e-6, `LED lit while off at ${t} ms: ${i}`);
   }
 });
+
+test('opening a switch on a coupled coil pumps a storage capacitor without a minimum-step failure', () => {
+  // Pulse transfer: a primary pulsed by a switch, the secondary rectified
+  // into a storage capacitor feeding an LED. Opening the switch reverse-biases
+  // the secondary diode by hundreds of volts within one step; the piecewise
+  // junction's symmetric 0.5 V-per-iteration trust region could not walk
+  // there inside the Newton budget, and the transient failed at the 1 ns seed.
+  const b = build([G, V('V', 9, 'vcc'), BTN('SW', 'vcc', 'p'), R('RP', 10, 'p', 'p1'),
+    ['T', 'transformer', {l1: 10e-3, l2: 40e-3, k: 0.9}, {p1: 'p1', p2: 'g', s1: 's', s2: 'g'}],
+    ['D', 'diode', {}, {anode: 's', cathode: 'st'}], C('CS', 100e-6, 'st', 'g'),
+    R('RL', 1000, 'st', 'la'), ['LED', 'led', {}, {anode: 'la', cathode: 'g'}]]);
+  let t = 0, peak = 0;
+  for (let press = 0; press < 3; press++) {
+    b.setControl('SW', 1); t += 20; b.advanceTo(BigInt(t * 1e6));
+    b.setControl('SW', 0);
+    for (let j = 0; j < 10; j++) {
+      t += 10; b.advanceTo(BigInt(t * 1e6));
+      assert.equal(b.transientAnalysisStatus().failure, null, `press ${press + 1}, ${t} ms`);
+      peak = Math.max(peak, b.nodeVoltage('st'));
+    }
+  }
+  assert.ok(peak > 2, `storage capacitor charged to ${peak} V`);
+  assert.ok(b.nodeVoltage('st') > 0 && b.nodeVoltage('st') < peak, 'and decays through the LED between pulses');
+});

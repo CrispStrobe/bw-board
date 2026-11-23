@@ -1835,10 +1835,26 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
   // let a set/reset flip-flop fall back to its unstable half-on point the
   // moment the button was released.
   const newtonSeed = transient?.newtonSeed ?? opts.newtonSeed;
+  /** part id -> its parasitic capacitors, resolved once per solve. */
+  const parasiticsOf = new Map();
+  if (transient) for (const part of parts) {
+    const caps = parasiticCaps(part);
+    if (caps.length) parasiticsOf.set(part.id, caps);
+  }
   if (newtonSeed) {
+    // An operating-point solve adopts only TRANSISTOR state: that is where a
+    // static circuit keeps a memory (a latch), and leaving every diode/LED to
+    // its cold start keeps those circuits' operating points bit-identical to
+    // what they always were (a warm-started LED turned off read 1e-26 V
+    // where the cold start reads exactly 0).
+    const transistorIds = transient ? null : new Set(parts
+      .filter(p => p.kind === 'npn' || p.kind === 'pnp' || p.kind === 'nmos' || p.kind === 'pmos')
+      .map(p => p.id));
     const adopt = (target, source) => {
       if (!(source instanceof Map)) return;
-      for (const [id, value] of source) if (target.has(id)) target.set(id, value);
+      for (const [id, value] of source) {
+        if (target.has(id) && (!transistorIds || transistorIds.has(id))) target.set(id, value);
+      }
     };
     adopt(diodeVoltages, newtonSeed.diodeVoltages);
     adopt(bjtVbc, newtonSeed.bjtVbc);
@@ -2296,7 +2312,7 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
             bjtBaseIndex, bjtCollectorIndex, bjtVce);
           stampBjtTransientCharge(A, b, part, nets, nodeIndex, bjtBaseIndex, bjtCollectorIndex,
             diodeVoltages, bjtVbc, transient);
-          stampParasitics(A, b, part, nets, nodeIndex, transient);
+          stampParasitics(A, b, part, nets, nodeIndex, transient, parasiticsOf.get(part.id));
           break;
 
         case 'pnp':
@@ -2304,17 +2320,17 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
             bjtRegions.get(part.id), bjtVceSat.get(part.id), bjtVbc, bjtBaseIndex, bjtCollectorIndex, bjtVce);
           stampBjtTransientCharge(A, b, part, nets, nodeIndex, bjtBaseIndex, bjtCollectorIndex,
             diodeVoltages, bjtVbc, transient);
-          stampParasitics(A, b, part, nets, nodeIndex, transient);
+          stampParasitics(A, b, part, nets, nodeIndex, transient, parasiticsOf.get(part.id));
           break;
 
         case 'nmos':
           stampNMOS(A, b, part, nets, nodeIndex, groundNetId, diodeVoltages, mosRegions.get(part.id), mosVds, mosVsb, mosVdb);
-          stampParasitics(A, b, part, nets, nodeIndex, transient);
+          stampParasitics(A, b, part, nets, nodeIndex, transient, parasiticsOf.get(part.id));
           break;
 
         case 'pmos':
           stampPMOS(A, b, part, nets, nodeIndex, groundNetId, diodeVoltages, mosRegions.get(part.id), mosVds, mosVsb, mosVdb);
-          stampParasitics(A, b, part, nets, nodeIndex, transient);
+          stampParasitics(A, b, part, nets, nodeIndex, transient, parasiticsOf.get(part.id));
           break;
 
         case 'opamp':
@@ -2756,8 +2772,19 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
         const vth = Math.abs(/** @type {number} */ (
           part.params.vth ?? (part.kind === 'nmos' ? 2.0 : -2.0)));
         vLimited = fetlim(vNew, vOld, vth);
-      } else {
+      } else if (part.kind === 'zener') {
         vLimited = vOld + Math.max(-NR_MAX_STEP, Math.min(NR_MAX_STEP, rawDelta));
+      } else {
+        // A piecewise junction is LINEAR everywhere below its knee, so only a
+        // move UP toward and through the knee needs the trust region. The
+        // symmetric 0.5 V clamp also walked reverse bias half a volt per
+        // iteration: a switch opening on a coupled coil reverse-biased its
+        // secondary diode by hundreds of volts in one step, Newton spent its
+        // whole budget walking there, and the transient failed at minimum step.
+        // Downward and below-zero moves are taken whole; upward moves are
+        // limited to NR_MAX_STEP above max(old, 0). (Zeners keep the symmetric
+        // clamp: their reverse side has the breakdown knee.)
+        vLimited = Math.min(vNew, Math.max(vOld, 0) + NR_MAX_STEP);
       }
       maxDelta = Math.max(maxDelta, Math.abs(rawDelta));
       diodeVoltages.set(part.id, vLimited);
@@ -3195,12 +3222,11 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
   if (converged && !nonlinearDevicesValid().valid) converged = false;
 
   // The converged Newton state, handed back so the next solve can start here.
+  // The maps are this solve's own and are not touched after it returns, so
+  // they are handed over rather than copied (the next solve only reads them).
   const captureNewtonState = () => ({
-    diodeVoltages: new Map(diodeVoltages), bjtVbc: new Map(bjtVbc), bjtVce: new Map(bjtVce),
-    mosVds: new Map(mosVds), mosVsb: new Map(mosVsb), mosVdb: new Map(mosVdb),
-    bjtRegions: new Map(bjtRegions), bjtVceSat: new Map(bjtVceSat),
-    mosRegions: new Map(mosRegions), opampRegions: new Map(opampRegions),
-    vccsClamps: new Map(vccsClamps),
+    diodeVoltages, bjtVbc, bjtVce, mosVds, mosVsb, mosVdb,
+    bjtRegions, bjtVceSat, mosRegions, opampRegions, vccsClamps,
   });
 
   // ─── Extract results ────────────────────────────────────────────────────
@@ -3821,7 +3847,7 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
     for (const part of parts) {
       const currents = branchCurrents.get(part.id);
       if (!currents) continue;
-      for (const cap of parasiticCaps(part)) {
+      for (const cap of parasiticsOf.get(part.id) ?? []) {
         const c = parasiticCompanion(cap, transient);
         if (!c) continue;
         const v = (nodeVoltages.get(findNet(nets, part.id, cap.a)) ?? 0)
@@ -3849,7 +3875,7 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
     const inductorCurrentsNext = new Map();
     const inductorVoltagesNext = new Map();
     for (const part of parts) {
-      for (const cap of parasiticCaps(part)) {
+      for (const cap of parasiticsOf.get(part.id) ?? []) {
         const v = (nodeVoltages.get(findNet(nets, part.id, cap.a)) ?? 0)
           - (nodeVoltages.get(findNet(nets, part.id, cap.b)) ?? 0);
         const c = parasiticCompanion(cap, transient);
@@ -4678,9 +4704,9 @@ export function bjtSmoothOutput(part) {
 }
 
 /** Stamp a part's parasitic capacitors (see PARASITIC_DEFAULTS). */
-function stampParasitics(A, b, part, nets, nodeIndex, transient) {
-  if (!transient) return;
-  for (const cap of parasiticCaps(part)) {
+function stampParasitics(A, b, part, nets, nodeIndex, transient, caps) {
+  if (!transient || !caps) return;
+  for (const cap of caps) {
     const c = parasiticCompanion(cap, transient);
     if (!c) continue;
     const netA = findNet(nets, part.id, cap.a);
