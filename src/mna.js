@@ -1959,7 +1959,12 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
     // was released fell straight to the OFF state. Only a junction the seed
     // had forward-biased past its knee's foot is adopted; an off one keeps
     // its cold start exactly, as before.
+    // Without a gain element there is no bistability, so a junction's last
+    // state cannot be memory: a transistor-free circuit keeps the exact cold
+    // start (an LED switched off reads exactly 0 A, not 1e-36).
+    const hasGain = !!transistorIds && transistorIds.size > 0;
     const conducting = (id, value) => {
+      if (!hasGain) return false;
       const part = partMap.get(id);
       if (!part || (part.kind !== 'led' && part.kind !== 'diode')) return false;
       const vf = Number(junctionVf(part));
