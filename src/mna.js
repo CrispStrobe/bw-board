@@ -4224,7 +4224,7 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
         // override — it may know region physics the companions flatten.
         if (model.branchCurrents) {
           const state = (opts.deviceStates && opts.deviceStates.get(part.id)) || { drives: {} };
-          for (const [t, i] of model.branchCurrents(part, state, read)) {
+          for (const [t, i] of model.branchCurrents(part, state, read, tSeconds)) {
             if (!authoritativeTerminals.has(t)) currents.set(t, i);
           }
         }

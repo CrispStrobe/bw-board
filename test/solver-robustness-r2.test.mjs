@@ -307,3 +307,34 @@ test('a TIP120 still switches a load hard on and off', () => {
     else assert.ok(vc > 8.9, `off: collector ${vc} V`);
   }
 });
+
+// ─── A coasting motor behind a turned-off follower (lab-airflow-sensor) ───
+
+test('a thermostat switching a fan motor off costs a bounded number of steps', () => {
+  // The sensor cools under 4 m/s of air, the comparator drops, the NPN
+  // follower turns off and the motor coasts. That cost ~45k attempts (and a
+  // 1 s advance exhausted its device work) while the thermal model restarted
+  // the integrator every 2 ms and the motor's stepped back-EMF rang its
+  // winding against the transistor's input capacitance.
+  const b = build([G, V('V', 9, 'vcc'),
+    ['RHEAT', 'resistor', {ohms: 470, rth: 200, thermalTau: 2}, {a: 'vcc', b: 'g'}],
+    ['NTC', 'ntc', {r25: 10000, beta: 3950, heatedBy: 'RHEAT', thermalCoupling: 0.8, thermalTau: 2}, {a: 'vcc', b: 's'}],
+    R('RN', 6800, 's', 'g'), R('RS1', 2900, 'vcc', 'set'), R('RS2', 7100, 'set', 'g'),
+    ['U', 'lm358', {}, {vcc: 'vcc', gnd: 'g', '2_pos': 's', '2_neg': 'set', '2_out': 'o',
+      '1_pos': 'g', '1_neg': 'g', '1_out': 'o1'}],
+    R('RBQ', 10000, 'o', 'qb'), Q('Q', 'npn', 'qb', 'vcc', 'e'),
+    ['FAN', 'dc_motor', {J: 5e-6, loadTorque: 0.0005}, {a: 'e', b: 'g'}],
+    ['D', 'diode', {}, {anode: 'e', cathode: 'vcc'}]]);
+  b.world.set('temperatureC', 32);
+  let t = 0;
+  for (; t < 10000; t += 200) b.advanceTo(ms(t + 200));
+  assert.ok(b.getDeviceState('FAN').omega > 10, `warm room: fan runs (${b.getDeviceState('FAN').omega} rad/s)`);
+  b.world.set('airflowMs', 4);
+  const before = b.transientAnalysisStatus().work.attempts;
+  t += 2000; b.advanceTo(ms(t));
+  assert.equal(b.transientAnalysisStatus().failure, null);
+  const attempts = b.transientAnalysisStatus().work.attempts - before;
+  assert.ok(b.getDeviceState('FAN').omega < 1, `cooled: fan stops (${b.getDeviceState('FAN').omega} rad/s)`);
+  assert.ok(attempts < 8000, `${attempts} attempts for the 2 s that switch the fan off`);
+  assert.ok(Math.abs(b.branchCurrent('FAN', 'a')) < 1e-5, 'a coasting motor carries no current');
+});

@@ -5093,7 +5093,15 @@ export class BoardImpl {
    * Opt-in like the model itself: null on every circuit without thermal params.
    */
   _stepThermalBefore(dtSec) {
-    if (this._thermal && dtSec > 0) this._stepThermal(dtSec);
+    if (!this._thermal || !(dtSec > 0)) return;
+    // When the interval is about to be integrated, that integration stamps
+    // the new temperatures itself; an operating-point re-solve here would
+    // only restart it. Measured on lab-airflow-sensor with 4 m/s of air: the
+    // cooling sensor crossed THERMAL_RESOLVE_K every 2 ms, every re-solve
+    // reset the trapezoidal history, and each restart from the 1 ns seed cost
+    // ~65 attempts -- 1,700 per 50 ms while the fan coasted to a stop.
+    const integrated = this._needsMNA() && (this._hasReactive() || this._hasTimeVaryingSource());
+    this._stepThermal(dtSec, !integrated);
   }
 
   /**
@@ -5103,7 +5111,7 @@ export class BoardImpl {
    * by more than THERMAL_RESOLVE_K since the temperatures last stamped -- so a
    * circuit at thermal equilibrium costs no solves at all.
    */
-  _stepThermal(dtSec) {
+  _stepThermal(dtSec, resolve = true) {
     const th = this._thermal;
     if (!th || !(dtSec > 0)) return;
     const air = this._airflowMs();
@@ -5120,7 +5128,7 @@ export class BoardImpl {
       for (const [id, c] of th.temps) moved = Math.max(moved, Math.abs(c - (th.solvedAt.get(id) ?? c)));
       if (moved > THERMAL_RESOLVE_K) {
         th.solvedAt = new Map(th.temps);
-        if (this.powered) this._solve();
+        if (this.powered && resolve) this._solve();
       }
     }
   }
