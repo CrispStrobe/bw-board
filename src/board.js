@@ -30,6 +30,7 @@ import { resolveParams, classDefaults } from './parts-library.js';
 import { acSweep } from './ac.js';
 import { expandTransducers, transducerCard } from './transducers.js';
 import { expandRadio, normalizeStations, DEFAULT_STATIONS } from './radio.js';
+import { expandFields } from './fields.js';
 import { validateNetlist } from './validate.js';
 import { getDevice, initDeviceState, resetDeviceState } from './devices.js';
 import { servoCalibration } from './devices/servo.js';
@@ -239,6 +240,24 @@ const DEFAULT_PWM_HZ = 500;
 const METER_WINDOW_NS = 100_000_000n;
 /** A meter watch nobody has read for this long (sim time) is dropped. */
 const METER_IDLE_NS = 2_000_000_000n;
+
+/**
+ * Irregularity of a sound: the coefficient of variation of its last full
+ * periods (same-direction crossing to same-direction crossing). A tone's
+ * periods repeat (≈ 0); noise crosses at random intervals (≈ 0.5 and more).
+ * @param {bigint[]} edges alternating crossing times
+ */
+function edgeIrregularity(edges) {
+  if (!edges || edges.length < 7) return 0;
+  const periods = [];
+  for (let i = 2; i < edges.length; i++) periods.push(Number(edges[i] - edges[i - 2]));
+  const mean = periods.reduce((a, b) => a + b, 0) / periods.length;
+  if (!(mean > 0)) return 0;
+  const sd = Math.sqrt(periods.reduce((a, b) => a + (b - mean) ** 2, 0) / periods.length);
+  return sd / mean;
+}
+/** Above this irregularity a transducer's sound is reported as noise. */
+const NOISE_IRREGULARITY = 0.25;
 
 // Fixed policies, not arbitrary caller-supplied accuracy or work knobs.
 // v2 allows the existing controller to resolve picosecond model modes;
@@ -1201,7 +1220,13 @@ export class BoardImpl {
     const radioView = expandRadio(coilView.parts, coilView.nets, { controls: () => this.controls });
     this._radio = radioView.radio;
     if (this._radio && this._broadcast) this._radio.setStations(this._broadcast);
-    const genView = BoardImpl._expandFunctionGenerators(radioView.parts, radioView.nets);
+    // Field probes and junctions in reverse breakdown (src/fields.js): the
+    // room's mains wiring, a charged object, the learner's finger; avalanche
+    // noise. A circuit with neither passes through untouched.
+    const fieldView = expandFields(radioView.parts, radioView.nets,
+      { controls: () => this.controls, voltages: () => this.nodeVoltages });
+    this._fields = fieldView.fields;
+    const genView = BoardImpl._expandFunctionGenerators(fieldView.parts, fieldView.nets);
     const photoView = BoardImpl._expandLedPhotocurrents(genView.parts, genView.nets);
     const piezoView = BoardImpl._expandPiezoCapacitance(photoView.parts, photoView.nets);
     const windingView = BoardImpl._expandMotorWindings(piezoView.parts, piezoView.nets);
@@ -3434,7 +3459,18 @@ export class BoardImpl {
     const rms = state.rms ?? 0;
     const level = Math.min(1, card.crystal ? rms : rms / card.ratedAmps);
     const tone = this._piezoTone(state._edges);
-    return { ...tone, level: tone.on ? level : 0, amps: card.crystal ? 0 : rms };
+    const irregularity = tone.on ? edgeIrregularity(state._edges) : 0;
+    return { ...tone, level: tone.on ? level : 0, amps: card.crystal ? 0 : rms,
+      irregularity, noise: irregularity > NOISE_IRREGULARITY };
+  }
+
+  /**
+   * The field environment's state (src/fields.js): mains, each field
+   * probe's position, each junction's breakdown current and its rms noise
+   * current. Null when the circuit has neither.
+   */
+  fieldReport() {
+    return this._fields ? this._fields.report(Number(this.timeNs) / 1e9) : null;
   }
 
   /**
@@ -3701,6 +3737,8 @@ export class BoardImpl {
    */
   setControl(partId, value) {
     this.controls.set(partId, value);
+    // A field probe's knob is a hand moving: it starts now (src/fields.js).
+    this._fields?.onControl(partId, value, Number(this.timeNs) / 1e9);
     this._solveForUserAction();
     this._notifyChange('control', { partId, value });
   }
@@ -5510,7 +5548,8 @@ export class BoardImpl {
     // The rail is edited through its own `volts` param instead (bw-circuit-ui's
     // inline editor offers it), which `_railVolts` honours either way, so a
     // control set by some other route still works and nothing is lost.
-    const controllable = ['potentiometer', 'button', 'switch', 'slide_switch', 'ldr', 'ntc', 'light_sensor', 'vsource', 'tuning_cap'];
+    const controllable = ['potentiometer', 'button', 'switch', 'slide_switch', 'ldr', 'ntc', 'light_sensor', 'vsource', 'tuning_cap',
+      'field_probe'];
     return this.parts
       .filter(p => controllable.includes(p.kind) || lightControlDefault(p) !== null)
       .map(p => lightControlDefault(p) !== null ? {
@@ -5528,7 +5567,8 @@ export class BoardImpl {
         value: this.controls.get(p.id)
           ?? (p.kind === 'vsource' ? (p.params?.volts ?? 5)
             : p.kind === 'slide_switch' ? (p.params?.position ?? 0)
-              : p.kind === 'tuning_cap' ? (p.params?.position ?? 0.5) : 0),
+              : p.kind === 'tuning_cap' ? (p.params?.position ?? 0.5)
+                : p.kind === 'field_probe' ? (p.params?.position ?? 0) : 0),
       }));
   }
 
@@ -6103,6 +6143,7 @@ export class BoardImpl {
     this._transientAttemptOverflow = false;
     this._transientAccuracyUnmet = null;
     this._radio?.reset();
+    this._fields?.reset();
     // Device models that integrate over time (a motor's speed and winding
     // current) start from rest too; a spinning motor at t = 0 meets a
     // stopped drive and a fresh integrator, a stiff edge the controller
@@ -6872,6 +6913,8 @@ export class BoardImpl {
     // An antenna's stations are modulated: the detected programme is a
     // waveform even though no drawn source has one.
     if (this._radio) return true;
+    // Mains fields and junction noise move with time (src/fields.js).
+    if (this._fields?.timeVarying) return true;
     for (const p of (this._solveParts ?? this.parts)) {
       if ((p.kind === 'vsource' || p.kind === 'isource')
           && p.params && p.params.wave && p.params.wave !== 'dc') {
@@ -6981,6 +7024,11 @@ export class BoardImpl {
     if (rfStep > 0) {
       maxStepSec = Math.min(maxStepSec, rfStep);
       basis.push('rf-envelope-fidelity');
+    }
+    const fieldStep = this._fields?.maxStepSec();
+    if (fieldStep > 0) {
+      maxStepSec = Math.min(maxStepSec, fieldStep);
+      basis.push('field-noise-fidelity');
     }
     for (const [, ch] of this._scopeChannels) {
       if (ch.capture === 'sample' && (ch.type === 'voltage' || ch.currentClock === 'simulation')) {
@@ -7492,6 +7540,8 @@ export class BoardImpl {
       // The radio's carrier phasors follow the accepted operating point
       // (src/radio.js: refreshed every few ms, or when a control moved).
       if (this._radio && r?.converged !== false) this._radio.onAccepted(this, atSec, r);
+      // Junction noise follows the accepted breakdown current (src/fields.js).
+      if (this._fields && r?.converged !== false) this._fields.onAccepted(this, atSec, r);
     };
 
     // No capacitor/inductor/device history and no scope grid means this is a
