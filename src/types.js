@@ -70,7 +70,7 @@
  *   | 'h_bridge' | 'stepper' | 'solenoid'
  *   | 'ultrasonic' | 'pir' | 'tilt_sensor' | 'flex_sensor' | 'force_sensor' | 'phototransistor' | 'light_sensor'
  *   | 'neopixel' | 'bargraph'
- *   | 'decade_counter' | 'dff' | 'jkff' | 'darlington_driver' | 'piezo'} PartKind
+ *   | 'decade_counter' | 'dff' | 'jkff' | 'darlington_driver' | 'piezo' | 'lm386'} PartKind
  */
 
 /**
