@@ -440,7 +440,8 @@ function registerLm386() {
         init() { return { drives: {} }; },
         stamp(ctx) {
             ctx.nonlinearCurrents('lm386', (read, scale) => {
-                const v = Object.fromEntries(LM386_STAGE_TERMINALS.map(t => [t, read(t)]));
+                const v = { inp: read('inp'), inn: read('inn'), e1: read('e1'), x: read('x'),
+                    pole: read('pole'), vout: read('vout'), vs: read('vs'), gnd: read('gnd') };
                 const { currents, jacobian } = evaluateLm386Stage(v, scale);
                 return { region: 'smooth', currents, jacobian, residualOhms: LM386_RESIDUAL_OHMS };
             });

@@ -104,7 +104,9 @@ function enable(supply, scale) {
 }
 
 const T = LM386_STAGE_TERMINALS;
-const IDX = Object.fromEntries(T.map((t, i) => [t, i]));
+const NT = T.length;
+const [I_INP, I_INN, I_E1, I_X, I_POLE, I_VOUT, I_VS, I_GND] = [0, 1, 2, 3, 4, 5, 6, 7];
+const SCRATCH = new Float64Array(6 * NT);
 
 /**
  * Terminal currents (positive OUT of the stage into each net) and Jacobian.
@@ -112,26 +114,30 @@ const IDX = Object.fromEntries(T.map((t, i) => [t, i]));
  * @param {number} scale source-stepping scale
  */
 export function evaluateLm386Stage(v, scale = 1) {
-    const n = T.length;
-    const zero = () => new Array(n).fill(0);
+    // Rows live in one scratch buffer (this runs several times per Newton
+    // iteration); only the Maps handed back are allocated per call.
+    const n = NT;
+    const J = SCRATCH;
+    J.fill(0);
+    const F1 = 0, F2 = n, P = 2 * n, O = 3 * n, S = 4 * n, G = 5 * n;
 
-    // Emitter followers: E1 ← +IN, X ← −IN.
+    // Emitter followers: E1 <- +IN, X <- -IN.
     const t1 = Math.tanh(C.gFollow * (v.inp - v.e1) / C.iFollow);
     const iF1 = C.iFollow * t1;
     const g1 = C.gFollow * (1 - t1 * t1);
     const t2 = Math.tanh(C.gFollow * (v.inn - v.x) / C.iFollow);
     const iF2 = C.iFollow * t2;
     const g2 = C.gFollow * (1 - t2 * t2);
-    const rowF1 = zero(); rowF1[IDX.inp] = g1; rowF1[IDX.e1] = -g1;
-    const rowF2 = zero(); rowF2[IDX.inn] = g2; rowF2[IDX.x] = -g2;
+    J[F1 + I_INP] = g1; J[F1 + I_E1] = -g1;
+    J[F2 + I_INN] = g2; J[F2 + I_X] = -g2;
 
     // Balance error: the followers SINK what the networks push into their
-    // nodes, so iF1 − iF2 < 0 means more current into E1 (output too high).
+    // nodes, so iF1 - iF2 < 0 means more current into E1 (output too high).
     const ev = R_T * (iF1 - iF2);
     const tp = Math.tanh(GM * ev / I_SLEW);
     const gp = GM * (1 - tp * tp) * R_T;
-    const rowPole = zero();
-    for (let i = 0; i < n; i++) rowPole[i] = gp * (rowF1[i] - rowF2[i]);
+    J[P + I_INP] = gp * g1; J[P + I_E1] = -gp * g1;
+    J[P + I_INN] = -gp * g2; J[P + I_X] = gp * g2;
     let iPole = I_SLEW * tp;
 
     // Swing window on the pole.
@@ -142,20 +148,18 @@ export function evaluateLm386Stage(v, scale = 1) {
     const [qh, qh1] = knee(v.pole - hi);
     const [ql, ql1] = knee(lo - v.pole);
     iPole += -G_CLAMP * qh + G_CLAMP * ql;
-    rowPole[IDX.pole] += -G_CLAMP * (qh1 + ql1);
-    rowPole[hiFromVs ? IDX.vs : IDX.gnd] += G_CLAMP * qh1;
-    rowPole[IDX.gnd] += G_CLAMP * ql1;
+    J[P + I_POLE] += -G_CLAMP * (qh1 + ql1);
+    J[P + (hiFromVs ? I_VS : I_GND)] += G_CLAMP * qh1;
+    J[P + I_GND] += G_CLAMP * ql1;
 
     // Output stage, enabled by the supply.
     const [k, k1] = enable(v.vs - v.gnd, scale);
-    const d = v.pole - v.vout;
-    const tl = Math.tanh(d / (C.iLimit * C.rOut));
+    const tl = Math.tanh((v.pole - v.vout) / (C.iLimit * C.rOut));
     const f = C.iLimit * tl;
     const f1 = (1 - tl * tl) / C.rOut;
     const iOut = k * f;
-    const rowOut = zero();
-    rowOut[IDX.pole] = k * f1; rowOut[IDX.vout] = -k * f1;
-    rowOut[IDX.vs] += k1 * f; rowOut[IDX.gnd] -= k1 * f;
+    J[O + I_POLE] = k * f1; J[O + I_VOUT] = -k * f1;
+    J[O + I_VS] += k1 * f; J[O + I_GND] -= k1 * f;
 
     // Supply: the sourced part of the output current and the quiescent
     // current come out of VS.
@@ -163,26 +167,24 @@ export function evaluateLm386Stage(v, scale = 1) {
     const src = (iOut + root) / 2;
     const dSrc = (1 + iOut / root) / 2;
     const iq = C.iQuiescent * scale * k;
-    const rowVs = zero();
-    for (let i = 0; i < n; i++) rowVs[i] = -dSrc * rowOut[i];
-    rowVs[IDX.vs] -= C.iQuiescent * scale * k1;
-    rowVs[IDX.gnd] += C.iQuiescent * scale * k1;
+    for (let i = 0; i < n; i++) J[S + i] = -dSrc * J[O + i];
+    J[S + I_VS] -= C.iQuiescent * scale * k1;
+    J[S + I_GND] += C.iQuiescent * scale * k1;
     const iVs = -src - iq;
 
     // GND closes KCL.
     const iGnd = -(iF1 + iF2 + iPole + iOut + iVs);
-    const rowGnd = zero();
-    for (let i = 0; i < n; i++) rowGnd[i] = -(rowF1[i] + rowF2[i] + rowPole[i] + rowOut[i] + rowVs[i]);
+    for (let i = 0; i < n; i++) J[G + i] = -(J[F1 + i] + J[F2 + i] + J[P + i] + J[O + i] + J[S + i]);
 
-    const toMap = (row) => {
+    const row = (base) => {
         const m = new Map();
-        for (let i = 0; i < n; i++) if (row[i] !== 0) m.set(T[i], row[i]);
+        for (let i = 0; i < n; i++) if (J[base + i] !== 0) m.set(T[i], J[base + i]);
         return m;
     };
     return {
         currents: new Map([['e1', iF1], ['x', iF2], ['pole', iPole], ['vout', iOut], ['vs', iVs], ['gnd', iGnd]]),
-        jacobian: new Map([['e1', toMap(rowF1)], ['x', toMap(rowF2)], ['pole', toMap(rowPole)],
-            ['vout', toMap(rowOut)], ['vs', toMap(rowVs)], ['gnd', toMap(rowGnd)]]),
+        jacobian: new Map([['e1', row(F1)], ['x', row(F2)], ['pole', row(P)],
+            ['vout', row(O)], ['vs', row(S)], ['gnd', row(G)]]),
         iOut,
         iSupply: -iVs,
     };
