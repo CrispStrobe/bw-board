@@ -1249,13 +1249,20 @@ export class RadioFrontEnd {
                     if (zc > zd) { b = d; d = c; zd = zc; c = b - g * (b - a); zc = zAt(c); }
                     else { a = c; c = d; zc = zd; d = a + g * (b - a); zd = zAt(d); }
                 }
-                found.push({ hz: Math.exp((a + b) / 2), z: Math.max(zc, zd) });
+                const hz = Math.exp((a + b) / 2), zPeak = Math.max(zc, zd);
+                // Its loaded Q from the Lorentzian |Z| 2 % off the peak: a
+                // band must hold every station on the tank's slopes (FM slope
+                // detection), not just the ones near its top.
+                const z2 = this._windingZ(2 * Math.PI * hz * 1.02, vp, other)[w];
+                const r2 = zPeak / Math.max(z2, 1e-30);
+                const q = r2 > 1 ? Math.sqrt(r2 * r2 - 1) / 0.04 : Infinity;
+                found.push({ hz, z: zPeak, q, halfWidth: Math.max(bandHalfWidthHz(hz), Number.isFinite(q) ? 1.5 * hz / (2 * q) : 0) });
             }
         }
         // Merge resonances that would share a band (the windings of one coil, coupled tanks).
         found.sort((x, y) => y.z - x.z);
         const out = [];
-        for (const r of found) if (!out.some(o => Math.abs(o.hz - r.hz) <= bandHalfWidthHz(o.hz))) out.push(r);
+        for (const r of found) if (!out.some(o => Math.abs(o.hz - r.hz) <= o.halfWidth)) out.push(r);
         this.scans++;
         return out.sort((x, y) => x.hz - y.hz);
     }
@@ -1425,7 +1432,7 @@ export class RadioFrontEnd {
             const members = [];
             stations.forEach((s, k) => {
                 if (assigned.has(k)) return;
-                if (Math.abs(s.hz - r.hz) <= bandHalfWidthHz(r.hz)) { members.push(k); assigned.add(k); }
+                if (Math.abs(s.hz - r.hz) <= (r.halfWidth ?? bandHalfWidthHz(r.hz))) { members.push(k); assigned.add(k); }
             });
             // Centred on its strongest station when it has one: a circuit that
             // only responds then has a still envelope (no rotation to resolve);
