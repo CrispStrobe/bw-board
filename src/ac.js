@@ -120,6 +120,7 @@ export function acSweep(args) {
     sourceBiasPolicy = 'waveform-at-current-board-time',
     partTemperatures = null,
     rf = null,
+    dense = false,
   } = args;
   if (!Number.isFinite(nodeRegularizationSiemens) || nodeRegularizationSiemens < 0) {
     throw new Error('acSweep: nodeRegularizationSiemens must be finite and >= 0');
@@ -138,8 +139,8 @@ export function acSweep(args) {
   const isLimited = (r) => r === 'ilim+' || r === 'ilim-';
 
   const partById = new Map(parts.map(p => [p.id, p]));
-  const source = partById.get(sourceId);
-  if (!source || !['vsource', 'isource'].includes(source.kind)) {
+  const source = partById.get(sourceId) ?? (dense ? { kind: 'none' } : undefined);
+  if (!source || !['vsource', 'isource', 'none'].includes(source.kind)) {
     throw new Error(`acSweep: "${sourceId}" is not a vsource or isource on this bench`);
   }
 
@@ -194,7 +195,7 @@ export function acSweep(args) {
 
   const sourcePos = netOf(sourceId, 'pos');
   const sourceNeg = netOf(sourceId, 'neg');
-  if (!sourcePos || !sourceNeg) {
+  if (!dense && (!sourcePos || !sourceNeg)) {
     throw new Error('acSweep: the swept source must have both terminals connected');
   }
 
@@ -218,7 +219,7 @@ export function acSweep(args) {
       rowIndex.set(p.id, acRows++);
     }
   }
-  if (source.kind === 'vsource' && !rowIndex.has(sourceId)
+  if (!dense && source.kind === 'vsource' && !rowIndex.has(sourceId)
       || source.kind === 'isource'
         && idxOf(sourcePos) === undefined && idxOf(sourceNeg) === undefined) {
     throw new Error('acSweep: the swept source drives only AC-grounded nets');
@@ -227,7 +228,7 @@ export function acSweep(args) {
   const N = nodeCount + acRows;
   const dim = 2 * N; // real-equivalent bordered system
   const profile = { id: analysisProfile, nodeRegularizationSiemens, sourceBiasPolicy };
-  if (nodeCount === 0) return freqs.map(hz => ({ hz, results: new Map(), profile }));
+  if (nodeCount === 0 && !dense) return freqs.map(hz => ({ hz, results: new Map(), profile }));
 
   const A = new CooMatrix(dim);
   const b = new Float64Array(dim);
@@ -266,6 +267,9 @@ export function acSweep(args) {
 
     for (const part of parts) {
       const P = part.params ?? {};
+      // Junctions the radio's envelope solver stamps itself (their
+      // large-signal describing function, src/rf-bands.js).
+      if (rf?.external?.has(part.id)) continue;
       switch (part.kind) {
         case 'resistor':
           addG2(netOf(part.id, 'a'), netOf(part.id, 'b'), 1 / (P.ohms ?? 1000));
@@ -802,6 +806,27 @@ export function acSweep(args) {
     if (!rowIndex.has(p.id)) continue;
     const region = regionOf(p.id);
     if (region !== 'linear') outOfLinear.push({ part: p.id, kind: p.kind, region });
+  }
+
+  // Dense mode (the radio's envelope solver, src/rf-bands.js): the
+  // assembled complex system itself, Y(ω) = G + jB as row-major re/im
+  // arrays, with the indexing that produced it.
+  if (dense) {
+    return {
+      N, nodeCount, nodeIndex, rowIndex, grounded, idxOf,
+      matrix(omega) {
+        fill(omega);
+        const re = new Float64Array(N * N);
+        const im = new Float64Array(N * N);
+        for (let s = 0; s < A.v.length; s++) {
+          const r = A.ri[s], c = A.ci[s], v = A.v[s];
+          if (v === 0) continue;
+          if (r < N && c < N) re[r * N + c] += v;
+          else if (r >= N && c < N) im[(r - N) * N + c] += v;
+        }
+        return { re, im };
+      },
+    };
   }
 
   // ── Sweep: factor once, refactor per point ──────────────────────────

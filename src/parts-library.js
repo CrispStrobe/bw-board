@@ -74,7 +74,9 @@ export const ELECTRICAL_FIELDS = Object.freeze(new Set([
     'gamma', 'phi', 'bulkAtGround',                  // body effect: threshold shifts with source-bulk bias
     'bulkOnSource', 'bulkIs',                                        // bulk-junction saturation current (SPICE IS on an M model)
     'ohms', 'farads', 'henries', 'volts', 'amps',    // passives and sources
-    'kV', 'contactOhms', 'openOhms'                  // motor back-EMF, relay contacts
+    'kV', 'contactOhms', 'openOhms',                 // motor back-EMF, relay contacts
+    'cjo', 'vj', 'm',                                // junction capacitance (varicap: SPICE CJO/VJ/M)
+    'ft', 'cjc'                                      // bipolar at RF: transition frequency, B-C capacitance
 ]));
 
 /**
@@ -121,6 +123,15 @@ const CARDS = {
             + 'junction drops 0.1-0.2 V, which is why it detects weak stations '
             + 'a silicon diode cannot.'
     },
+    // ---- varicap ----------------------------------------------------------
+    'BB910': {
+        id: 'BB910', kind: 'varicap',
+        provenance: 'VHF tuning diode: typical published curve (about 38 pF at '
+            + '1 V reverse falling to ~2.5 pF at 28 V); cjo/vj/m are a SPICE fit '
+            + 'rounded to that curve, NOT measured. The junction law (is, n) is a '
+            + 'silicon signal diode\'s; it only ever leaks.',
+        params: {cjo: 75e-12, vj: 0.7, m: 0.75, is: 1e-14, n: 1, vf: 0.7}
+    },
     // ---- LED --------------------------------------------------------------
     'LED_RED': {
         id: 'LED_RED', kind: 'led', generic: true,
@@ -141,6 +152,15 @@ const CARDS = {
             + "(Bf=200 Is=1e-14)' — the fleet's existing figure, moved here "
             + 'rather than restated; vbe 0.7 is bw-board\'s npn default',
         params: {beta: 200, is: 1e-14, vbe: 0.7}
+    },
+    // ---- VHF bipolar (radio front end) -------------------------------------
+    'BF199': {
+        id: 'BF199', kind: 'npn',
+        provenance: 'silicon RF/IF transistor for VHF stages: typical published '
+            + 'figures (transition frequency ~550 MHz, feedback capacitance '
+            + '~0.3 pF, current gain ~40-100) rounded; NOT measured. ft and cjc '
+            + 'are what the radio front end\'s RF stamp reads (src/radio.js).',
+        params: {beta: 60, is: 1e-14, vbe: 0.7, ft: 550e6, cjc: 0.4e-12}
     },
     '2N2907': {
         id: '2N2907', kind: 'pnp',
@@ -391,8 +411,9 @@ export const spiceModelFor = id => {
     if (!c) return null;
     const p = c.params;
     const num = v => (v === undefined ? null : String(v));
-    if (c.kind === 'diode' || c.kind === 'led') {
-        const bits = [`Is=${num(p.is ?? isFromVf(p))}`, `Rs=${num(p.rs)}`, `N=${num(p.n)}`];
+    if (c.kind === 'diode' || c.kind === 'led' || c.kind === 'varicap') {
+        const bits = [`Is=${num(p.is ?? isFromVf(p))}`, `Rs=${num(p.rs)}`, `N=${num(p.n)}`,
+            `CJO=${num(p.cjo)}`, `VJ=${num(p.vj)}`, `M=${num(p.m)}`];
         return {name: c.id, type: 'D', body: bits.filter(b => !b.endsWith('null')).join(' ')};
     }
     if (c.kind === 'zener') {

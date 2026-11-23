@@ -3478,8 +3478,33 @@ export class BoardImpl {
   /** Re-solve the RF network now, at the last accepted operating point. */
   refreshRadio() {
     if (!this._radio) return null;
-    this._radio.refresh(this, Number(this.timeNs) / 1e9, this._radio._opView(this._mnaCache));
+    this._radio.refresh(this, Number(this.timeNs) / 1e9, this._mnaCache);
     return this.radioReport();
+  }
+
+  /**
+   * The RF network the radio's envelope bands integrate (src/radio.js,
+   * src/rf-bands.js): the small-signal assembly at the operating point,
+   * without the junctions the bands stamp themselves, as a dense builder.
+   */
+  _radioSystem(radio, solution, external) {
+    const view = radio.rfView(this._solveParts, this._solveNets);
+    return acSweep({
+      parts: view.parts,
+      nets: view.nets,
+      pinSources: this._pinSources(),
+      controls: this.controls,
+      vcc: this.vcc,
+      opVoltages: solution.nodeVoltages,
+      opBranchCurrents: currentsIntoTerminals(solution.branchCurrents ?? new Map()),
+      opRegions: solution.opampRegions,
+      deviceStates: this._deviceStates,
+      partTemperatures: this._thermal?.temps ?? null,
+      sourceId: null,
+      freqs: [],
+      rf: { external },
+      dense: true,
+    });
   }
 
   /** The carrier-frequency AC solve the radio front end runs (src/radio.js). */
@@ -5510,7 +5535,9 @@ export class BoardImpl {
     // The rail is edited through its own `volts` param instead (bw-circuit-ui's
     // inline editor offers it), which `_railVolts` honours either way, so a
     // control set by some other route still works and nothing is lost.
-    const controllable = ['potentiometer', 'button', 'switch', 'slide_switch', 'ldr', 'ntc', 'light_sensor', 'vsource', 'tuning_cap'];
+    const controllable = ['potentiometer', 'button', 'switch', 'slide_switch', 'ldr', 'ntc', 'light_sensor', 'vsource', 'tuning_cap',
+      // A ferrite rod turns: 0..1 is 0..360° (src/radio.js, direction finding).
+      'ferrite_coil'];
     return this.parts
       .filter(p => controllable.includes(p.kind) || lightControlDefault(p) !== null)
       .map(p => lightControlDefault(p) !== null ? {
@@ -5528,7 +5555,8 @@ export class BoardImpl {
         value: this.controls.get(p.id)
           ?? (p.kind === 'vsource' ? (p.params?.volts ?? 5)
             : p.kind === 'slide_switch' ? (p.params?.position ?? 0)
-              : p.kind === 'tuning_cap' ? (p.params?.position ?? 0.5) : 0),
+              : p.kind === 'tuning_cap' ? (p.params?.position ?? 0.5)
+                : p.kind === 'ferrite_coil' ? (Number(p.params?.angleDeg ?? 0) / 360) : 0),
       }));
   }
 
