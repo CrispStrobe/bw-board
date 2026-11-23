@@ -24,6 +24,8 @@
 import { registerDevice } from '../devices.js';
 import { GROUND_SENSING_OPAMP_CARD, STAGE_KIND, STAGE_TERMINALS, STAGE_RESIDUAL_OHMS,
     evaluateStage, polePin, GROUND_SENSING_OPAMPS } from '../ground-sensing-opamp.js';
+import { LM386_CARD, LM386_TERMINALS, LM386_STAGE_KIND, LM386_STAGE_TERMINALS, LM386_RESIDUAL_OHMS,
+    LM386_POLE_PIN, evaluateLm386Stage } from '../lm386.js';
 import {LM741_CARD, lm741LinearParameters, assertLm741LinearTopology, assertLm741LinearSolution,
     lm741BiasSupply, lm741BiasSupplyTerminalCurrents, assertLm741BiasSupplyConditions} from '../lm741-linear-pole.js';
 
@@ -394,6 +396,54 @@ function registerGroundSensingOpAmp({ kind, channels, legacyUnwiredFiveVoltSuppl
                 out.set('gnd', out.get('gnd') - snk);
             }
             return out;
+        },
+    });
+}
+
+// LM386 audio power amplifier: the electrical model is the solver-side
+// macromodel in ../lm386.js (hidden gain/bias network, pole and a Newton-
+// solved stage, added by BoardImpl through expandLm386). The package device
+// is what the user drew: no drive, never a re-solve; it reports whether it is
+// powered and maps the output and supply currents onto its own leads.
+function registerLm386() {
+    const C = LM386_CARD;
+    registerDevice('lm386', {
+        terminals: [...LM386_TERMINALS],
+        init() { return { drives: {}, powered: false }; },
+        update(part, state, read) {
+            const supply = read('vs') - (read('gnd') || 0);
+            state.powered = Number.isFinite(supply) && supply >= C.minSupply;
+            return false;
+        },
+        branchCurrents(part, _state, read) {
+            const out = new Map();
+            const vg = read('gnd') || 0;
+            out.set('inp', -(read('inp') - vg) / C.rIn);
+            out.set('inn', -(read('inn') - vg) / C.rIn);
+            const pole = read(LM386_POLE_PIN);
+            if (!pole) return out;     // not expanded (no supply): no currents
+            const v = { inp: read('inp'), inn: read('inn'), e1: read('inp'), x: read('inn'),
+                pole, vout: read('vout'), vs: read('vs'), gnd: vg };
+            const { iOut, iSupply } = evaluateLm386Stage(v, 1);
+            // Bias network VS -> BYPASS -> X and the feedback resistor ride on
+            // the leads they are wired to; the package reports output and
+            // supply, the input resistance, and GND as the balance.
+            const iBias = (read('vs') - read('bypass')) / C.rF;
+            out.set('vout', iOut);
+            out.set('vs', -(iSupply + iBias));
+            out.set('gnd', -([...out.values()].reduce((a, b) => a + b, 0)));
+            return out;
+        },
+    });
+    registerDevice(LM386_STAGE_KIND, {
+        terminals: [...LM386_STAGE_TERMINALS],
+        init() { return { drives: {} }; },
+        stamp(ctx) {
+            ctx.nonlinearCurrents('lm386', (read, scale) => {
+                const v = Object.fromEntries(LM386_STAGE_TERMINALS.map(t => [t, read(t)]));
+                const { currents, jacobian } = evaluateLm386Stage(v, scale);
+                return { region: 'smooth', currents, jacobian, residualOhms: LM386_RESIDUAL_OHMS };
+            });
         },
     });
 }
@@ -817,6 +867,7 @@ export function registerAnalogAmps() {
             });
         },
     });
+    registerLm386();
     registerPrecisionOpAmp('lm741', PRECISION_OP_AMPS.lm741);
     // Solver-only element added by expandLm741LinearPoles only when the opt-in
     // bias/supply domain is selected. It moves the hidden buffer's output

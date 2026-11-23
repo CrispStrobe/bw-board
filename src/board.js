@@ -34,10 +34,11 @@ import { servoCalibration } from './devices/servo.js';
 import { expandLm741LinearPoles } from './lm741-linear-pole.js';
 import { junctionVf, ledVf } from './led-color.js';
 import { expandGroundSensingOpAmps, isHiddenPoleCapacitor, STAGE_KIND as GROUND_SENSING_STAGE } from './ground-sensing-opamp.js';
+import { expandLm386, isLm386PoleCapacitor, LM386_STAGE_KIND } from './lm386.js';
 import { meterQuadraticSegment, meterQuadraticIntegral } from './meter-quadrature.js';
 import { feedI2CSlave } from './devices/i2c-slave.js';
 import { checkCurrentBudget } from './current-ratings.js';
-import { createWorld, bindPartsToHost } from './world.js';
+import { createWorld, bindPartsToHost, lightLevel, lightControlDefault } from './world.js';
 import { junctionModelOf, chooseGroundReference } from './mna.js';
 import { buildThermalEntries, stepThermal, shortestTau } from './thermal.js';
 
@@ -622,18 +623,88 @@ export class BoardImpl {
         outNet.terminals.push(...innerNet.terminals);
         innerNet.terminals = [];
       }
-      const wave = p.wave ?? 'sine';
-      outParts.push({ id: srcId, kind: 'vsource', terminals: ['pos', 'neg'], params: {
-        wave,
-        volts: Number(p.volts ?? p.amplitude ?? 1),
-        freq: Number(p.freq ?? p.frequency ?? 1000),
-        amplitude: Number(p.amplitude ?? 1),
-        offset: Number(p.offset ?? 0),
-        ...(p.duty !== undefined ? { duty: Number(p.duty) } : {}),
-        ...(p.phase !== undefined ? { phase: Number(p.phase) } : {}),
-      } });
+      outParts.push({ id: srcId, kind: 'vsource', terminals: ['pos', 'neg'],
+        params: BoardImpl._functionGenSourceParams(p) });
     }
     return { parts: outParts, nets: outNets.filter((n) => n.terminals.length > 0) };
+  }
+
+  /**
+   * The hidden waveform vsource's params for a function generator's params.
+   * One mapping for the load-time expansion AND for a live knob change
+   * (setPartParam), so a generator edited after load solves exactly as one
+   * loaded with the new value. `waveform` is accepted for `wave` and
+   * `frequency` for `freq`.
+   */
+  static _functionGenSourceParams(p) {
+    return {
+      wave: p.wave ?? p.waveform ?? 'sine',
+      volts: Number(p.volts ?? p.amplitude ?? 1),
+      freq: Number(p.freq ?? p.frequency ?? 1000),
+      amplitude: Number(p.amplitude ?? 1),
+      offset: Number(p.offset ?? 0),
+      ...(p.duty !== undefined ? { duty: Number(p.duty) } : {}),
+      ...(p.phase !== undefined ? { phase: Number(p.phase) } : {}),
+    };
+  }
+
+  /**
+   * Carry a function generator's edited params into its solver-view parts:
+   * the hidden source (`<id>_src`) and output resistor (`<id>_rout`). Before
+   * this, the expansion copied the params once at setNetlist and a knob turned
+   * afterwards (setPartParam 'freq') changed only the drawn part — the bench
+   * kept running at the old frequency. Aliases are kept in step: setting
+   * `frequency` (or `waveform`) on a part that also carries `freq` (`wave`)
+   * updates both, so the value just set is the one that wins.
+   */
+  _syncFunctionGen(part, param, value) {
+    const ALIAS = { frequency: 'freq', freq: 'frequency', waveform: 'wave', wave: 'waveform' };
+    const twin = ALIAS[param];
+    if (twin && part.params[twin] !== undefined) part.params[twin] = value;
+    const solve = this._solveParts ?? [];
+    const src = solve.find((q) => q.id === `${part.id}_src`);
+    if (src) src.params = BoardImpl._functionGenSourceParams(part.params);
+    if (param !== 'rOut') return;
+    const rOut = Number(value);
+    const r = solve.find((q) => q.id === `${part.id}_rout`);
+    if (r) {
+      // A generator loaded with an output resistance keeps the element; 0
+      // becomes a 1 µΩ link rather than a topology change mid-run.
+      r.params = { ...r.params, ohms: rOut > 0 ? rOut : 1e-6 };
+    } else if (rOut > 0) {
+      this._recordRefusedControl(part.id, 'rOut',
+        'a generator loaded with rOut 0 has no output resistor to change; reload the netlist');
+    }
+  }
+
+  /**
+   * An LED that opted into a photocurrent (params.photoSensitivity > 0, amps
+   * at full light) gets a hidden `led_photocurrent` element across the same
+   * two nets: light x photoSensitivity, out of the anode, in parallel with the
+   * LED's own junction (the LED used backwards as a light sensor). The light
+   * is read off the LED itself (world.js lightLevel: setControl on the LED's
+   * id, else its `light` param, else the world). Every other LED is left
+   * exactly as drawn, so a circuit without the param builds nothing here.
+   */
+  static _expandLedPhotocurrents(parts, nets) {
+    const leds = parts.filter((p) => p.kind === 'led' && Number(p.params?.photoSensitivity) > 0);
+    if (!leds.length) return { parts, nets };
+    const outParts = [...parts];
+    const outNets = nets.map((n) => ({ ...n, terminals: [...n.terminals] }));
+    for (const led of leds) {
+      const a = outNets.find((n) => n.terminals.some((t) => t.part === led.id && t.terminal === 'anode'));
+      const k = outNets.find((n) => n.terminals.some((t) => t.part === led.id && t.terminal === 'cathode'));
+      if (!a || !k || a === k) continue;
+      const id = `${led.id}_photo`;
+      const hidden = { id, kind: 'led_photocurrent', terminals: ['anode', 'cathode'],
+        params: { photoSensitivity: Number(led.params.photoSensitivity) } };
+      // The drawn LED, for its light: not enumerable, so nothing serialises it.
+      Object.defineProperty(hidden, 'lightOf', { value: led, enumerable: false });
+      a.terminals.push({ part: id, terminal: 'anode' });
+      k.terminals.push({ part: id, terminal: 'cathode' });
+      outParts.push(hidden);
+    }
+    return { parts: outParts, nets: outNets };
   }
 
   /**
@@ -1108,15 +1179,18 @@ export class BoardImpl {
     // must keep seeing the diode on the net the motor pin is wired to,
     // not one hop into the motor's insides.
     const genView = BoardImpl._expandFunctionGenerators(parts, nets);
-    const piezoView = BoardImpl._expandPiezoCapacitance(genView.parts, genView.nets);
+    const photoView = BoardImpl._expandLedPhotocurrents(genView.parts, genView.nets);
+    const piezoView = BoardImpl._expandPiezoCapacitance(photoView.parts, photoView.nets);
     const windingView = BoardImpl._expandMotorWindings(piezoView.parts, piezoView.nets);
     const capView = BoardImpl._expandPolarizedCaps(windingView.parts, windingView.nets);
     const solveView = BoardImpl._expandBridgeClampDiodes(capView.parts, capView.nets);
     const lm741View = expandLm741LinearPoles(solveView.parts, solveView.nets);
     // LM358/LM324 macromodel (src/ground-sensing-opamp.js); only when its
     // solver stage is registered, i.e. registerAnalogAmps() has run.
-    const linearView = getDevice(GROUND_SENSING_STAGE)
+    const gsView = getDevice(GROUND_SENSING_STAGE)
       ? expandGroundSensingOpAmps(lm741View.parts, lm741View.nets) : lm741View;
+    // LM386 audio power amp macromodel (src/lm386.js), same pattern.
+    const linearView = getDevice(LM386_STAGE_KIND) ? expandLm386(gsView.parts, gsView.nets) : gsView;
     const macroView = BoardImpl._expandOpampMacros(linearView.parts, linearView.nets, this.vcc);
     // An IR transmitter IS an IR LED electrically. The solver sees it as an
     // `led` of the same id (so its branch current and the LED junction model,
@@ -3910,6 +3984,7 @@ export class BoardImpl {
     }
     if (!part.params) part.params = {};
     part.params[param] = value;
+    if (part.kind === 'function_gen') this._syncFunctionGen(part, param, value);
     this._solveForUserAction();
     this._notifyChange('param', { partId, param, value });
   }
@@ -5038,11 +5113,31 @@ export class BoardImpl {
     th.solvedAt = new Map(th.temps);
   }
 
-  /** The air speed over the bench (world airflowMs), m/s. */
+  /**
+   * The air speed over the bench, m/s: the world's airflowMs plus what this
+   * board's fans move. A motor (dc_motor / gearmotor / dc_motor_encoder) with
+   * params.airflowGain (m/s per rad/s of shaft speed) adds
+   * airflowGain x |speed|, so a thermostat that switches a fan on can cool its
+   * own self-heated sensor. Motors without the param move no air.
+   */
   _airflowMs() {
     const v = Number(this._world.get('airflowMs', Number(this.timeNs) / 1e9));
-    return Number.isFinite(v) ? v : 0;
+    let air = Number.isFinite(v) ? v : 0;
+    if (this._fanPartsOf !== this.parts) {
+      this._fanPartsOf = this.parts;
+      this._fanParts = (this.parts ?? []).filter((p) => DRIVEN_MOTOR_KINDS.has(p.kind)
+        && Number(p.params?.airflowGain) > 0);
+    }
+    for (const p of this._fanParts) {
+      const st = this._deviceStates.get(p.id);
+      const w = Math.abs(Number(st?.velocity ?? st?.omega ?? 0));
+      if (Number.isFinite(w)) air += Number(p.params.airflowGain) * w;
+    }
+    return Math.max(0, air);
   }
+
+  /** Effective airflow over the bench, m/s (world plus fans; see _airflowMs). */
+  effectiveAirflowMs() { return this._airflowMs(); }
 
   /**
    * Watts each thermal part dissipates in the live solve: the sum over its
@@ -5243,8 +5338,13 @@ export class BoardImpl {
     // control set by some other route still works and nothing is lost.
     const controllable = ['potentiometer', 'button', 'switch', 'slide_switch', 'ldr', 'ntc', 'light_sensor', 'vsource'];
     return this.parts
-      .filter(p => controllable.includes(p.kind))
-      .map(p => ({
+      .filter(p => controllable.includes(p.kind) || lightControlDefault(p) !== null)
+      .map(p => lightControlDefault(p) !== null ? {
+        // Light-sensing parts take the LDR's control path (world.js
+        // lightLevel): the value is the light they see now -- a set control,
+        // else their `light` param or the world's light, else their default.
+        id: p.id, kind: p.kind, value: lightLevel(p, lightControlDefault(p)),
+      } : ({
         id: p.id, kind: p.kind,
         // A vcc symbol IS a bench supply, and the solver has honoured
         // `params.volts` on it for as long as the 3.3 V rail has existed — but
@@ -6003,7 +6103,7 @@ export class BoardImpl {
   }
 
   /**
-   * Start every LM358/LM324 macromodel pole at the bench's bias point, as a
+   * Start every LM358/LM324/LM386 macromodel pole at the bench's bias point, as a
    * SPICE transient starts from its operating point: solve the instant with
    * the hidden pole capacitors left out (open) and every drawn capacitor at
    * its stored voltage, then store each pole's voltage across its capacitor.
@@ -6012,7 +6112,8 @@ export class BoardImpl {
    * that fails leaves the poles at 0 V (the plain power-on start).
    */
   _seedOpampPoles() {
-    const hidden = (this._solveParts ?? []).filter(p => p.kind === 'capacitor' && isHiddenPoleCapacitor(p.id));
+    const hidden = (this._solveParts ?? []).filter(p => p.kind === 'capacitor'
+      && (isHiddenPoleCapacitor(p.id) || isLm386PoleCapacitor(p.id)));
     if (!hidden.length) return;
     for (const cap of hidden) this.capVoltages.set(cap.id, 0);
     if (!this.powered) return;
@@ -6358,6 +6459,8 @@ export class BoardImpl {
     if (this._thermal) return true;
     for (const p of this.parts) {
       if (MNA_ONLY_KINDS.has(p.kind) || getDevice(p.kind)) return true;
+      // An LED with a photocurrent carries a hidden solver element.
+      if (p.kind === 'led' && Number(p.params?.photoSensitivity) > 0) return true;
       // An opted-in Shockley junction is beyond the walker's knee
       // vocabulary: letting the walker answer nodeVoltage while the
       // instruments answer from the exponential model is two truths on
