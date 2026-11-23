@@ -13,12 +13,13 @@
 //
 // Oracles are datasheet numbers (TI SLOS068 LM358: 100 dB, 1 MHz, 0.3 V/µs,
 // VOH ≈ VCC − 1.5 V, 40 mA source, 20+ mA sink) and hand arithmetic. Wall
-// bounds are ~10× the measured time on the development machine: they catch
-// the stall (orders of magnitude), not ordinary noise.
+// bounds sit far above the measured time and far below the old stall: they
+// catch the stall (orders of magnitude), not machine load.
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { BoardImpl } from '../src/board.js';
 import { registerAllDevices } from '../src/index.js';
+import { perfHint } from './helpers/perf-hint.mjs';
 
 registerAllDevices();
 
@@ -44,12 +45,14 @@ describe('LM358 audio-rate gain stage (gap 1: the stall)', () => {
         return board;
     };
 
-    it('10 ms in one advance is fast (was > 100 s in a builder bench, 1.7 s per 2 ms here)', () => {
+    it('10 ms in one advance is fast (was > 100 s in a builder bench)', () => {
         const board = bench();
         const t0 = performance.now();
         board.advanceTo(10_000_000n);
         const wall = performance.now() - t0;
-        assert.ok(wall < 3000, `10 ms of a ×101 audio stage took ${wall.toFixed(0)} ms of wall time`);
+        // Base engine: 133 s for this on a loaded box; ~0.3–1.5 s now.
+        assert.ok(wall < 20000, `10 ms of a ×101 audio stage took ${wall.toFixed(0)} ms of wall time`
+            + perfHint('Wall-clock cost of 10 ms of an audio-rate LM358 stage'));
         assert.equal(board._transientAccuracyUnmet, null);
     });
 
@@ -193,7 +196,8 @@ describe('LM358 with a capacitor in the loop (integrator, triangle generator)', 
         const v1 = board.nodeVoltage('no');
         // 0.5 V / (10 kΩ · 100 nF) = 0.5 V/ms upward.
         assert.ok(Math.abs((v1 - v0) / 2 - 0.5) < 0.005, `ramp ${((v1 - v0) / 2).toFixed(4)} V/ms`);
-        assert.ok(performance.now() - t0 < 3000);
+        const wall = performance.now() - t0;
+        assert.ok(wall < 20000, `2 ms of integrator took ${wall.toFixed(0)} ms` + perfHint('Wall-clock cost of an LM358 integrator'));
     });
 
     it('a Schmitt + integrator triangle generator runs at its designed, slew-corrected period', () => {
@@ -239,7 +243,8 @@ describe('LM358 with a capacitor in the loop (integrator, triangle generator)', 
         // bound (10 µs × 3 V/ms = 30 mV below, 15 µs × 4.495 V/ms = 67 mV above).
         assert.ok(lo <= 3.136 && lo > 3.136 - 0.035 && hi >= 6.543 && hi < 6.543 + 0.072,
             `triangle ${lo.toFixed(3)} … ${hi.toFixed(3)} V`);
-        assert.ok(wall < 60000, `12 ms of triangle generator took ${wall.toFixed(0)} ms`);
+        assert.ok(wall < 60000, `12 ms of triangle generator took ${wall.toFixed(0)} ms`
+            + perfHint('Wall-clock cost of an LM358 triangle generator'));
     });
 });
 
@@ -268,7 +273,8 @@ describe('LM358 slow integrators and charge packets (builder 3)', () => {
         for (let ms = 10n; ms <= 10000n; ms += 10n) board.advanceTo(ms * 1_000_000n);
         const wall = performance.now() - t0;
         assert.ok(Math.abs(board.nodeVoltage('no') - 4.6) < 0.001, `10 s ramp end ${board.nodeVoltage('no')}`);
-        assert.ok(wall < 60000, `10 s integrator took ${wall.toFixed(0)} ms`);
+        assert.ok(wall < 60000, `10 s integrator took ${wall.toFixed(0)} ms`
+            + perfHint('Wall-clock cost of a 10 s LM358 integrator'));
     });
 
     it('a diode charge pump steps the integrator once per rising edge, by C1·ΔV/C', () => {
