@@ -1360,6 +1360,62 @@ function shockleyCompanion(vAcross, vf, rd, is, n) {
  *             bjtRegionDiagnostics?: Map<string, Readonly<{region: string, saturationVoltage: number|null}>>,
  *             converged?: boolean }}
  */
+/**
+ * The reference node of a bench with NO gnd symbol: the negative terminal of
+ * its main supply. Exported so the board can say which node it chose.
+ *
+ * It used to be the first `vsource` neg terminal in NET order, which on a
+ * stack of sources (two cells in series, a split supply) could be the MIDDLE
+ * of the stack — every reading then came out relative to an arbitrary node
+ * and changed when the nets were listed in another order. Now: among supply
+ * parts (vsource, any *battery* kind) the candidates are the BOTTOMS of stacks — a
+ * negative terminal no other supply's positive terminal feeds — and the one
+ * under the tallest stack wins (most supplies in series, then the largest
+ * total volts, then part order). Deterministic, and the node a scope ground
+ * clip goes on.
+ *
+ * @returns {{netId: string, partId: string, stacked: number}|null}
+ */
+export function chooseGroundReference(parts, nets) {
+  const netOf = new Map();
+  for (const net of nets) for (const t of net.terminals) netOf.set(`${t.part}\0${t.terminal}`, net.id);
+  const supplies = [];
+  for (const part of parts) {
+    if (part.kind !== 'vsource' && !/battery/.test(part.kind)) continue;
+    const pos = netOf.get(`${part.id}\0pos`), neg = netOf.get(`${part.id}\0neg`);
+    if (neg === undefined) continue;
+    const v = Number(part.params?.volts);
+    supplies.push({ part, pos, neg, volts: Number.isFinite(v) ? Math.abs(v) : 0 });
+  }
+  if (!supplies.length) return null;
+  const byNeg = new Map();
+  for (const s of supplies) {
+    if (!byNeg.has(s.neg)) byNeg.set(s.neg, []);
+    byNeg.get(s.neg).push(s);
+  }
+  const posNets = new Set(supplies.map((s) => s.pos).filter((n) => n !== undefined));
+  const height = (s) => {
+    let count = 0, volts = 0, cur = s;
+    const seen = new Set();
+    while (cur && !seen.has(cur.part.id)) {
+      seen.add(cur.part.id);
+      count++; volts += cur.volts;
+      cur = cur.pos !== undefined ? (byNeg.get(cur.pos) ?? []).find((x) => !seen.has(x.part.id)) : null;
+    }
+    return { count, volts };
+  };
+  let candidates = supplies.filter((s) => !posNets.has(s.neg));
+  if (!candidates.length) candidates = supplies;
+  let best = null, bestH = null;
+  for (const s of candidates) {
+    const h = height(s);
+    if (!best || h.count > bestH.count || (h.count === bestH.count && h.volts > bestH.volts)) {
+      best = s; bestH = h;
+    }
+  }
+  return { netId: best.neg, partId: best.part.id, stacked: bestH.count };
+}
+
 export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
   const powerOff = opts.powerOff ?? false;
   const testNodeA = opts.testNodeA;
@@ -1450,19 +1506,7 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
     // against a node no net maps to, pin current has no return path, and
     // a battery-fed board with pin-driven LEDs reads brightness 0 forever.
     // (spec-updates/ground-fallback-vsource-neg.md, 2026-08-10)
-    if (!groundNetId) {
-      outer:
-      for (const net of nets) {
-        for (const t of net.terminals) {
-          if (t.terminal !== 'neg') continue;
-          const part = partMap.get(t.part);
-          if (part && part.kind === 'vsource') {
-            groundNetId = net.id;
-            break outer;
-          }
-        }
-      }
-    }
+    if (!groundNetId) groundNetId = chooseGroundReference(parts, nets)?.netId ?? null;
   }
 
   // Assign node indices (skip ground and, when power is off, skip nets that
@@ -1885,6 +1929,54 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
     }
   }
 
+  // WARM START. A discrete event (a control change, a pin write) asks what
+  // the circuit does NEXT, not which operating point Newton finds from zero.
+  // For a bistable network the two are different questions: a two-transistor
+  // latch without a capacitor has two valid solutions, and restarting every
+  // junction at 0 V picked the same one after every event, so releasing SET
+  // flipped the latch straight back. Starting from the previous solution's
+  // junction voltages and regions lands on the state the circuit is in; a
+  // circuit with one solution converges to that same solution either way.
+  const warm = opts.warmStart;
+  const warmStarted = !newtonSeed && !!(warm && warm.nodeVoltages instanceof Map && warm.nodeVoltages.size
+    && diodeVoltages.size);
+  if (warmStarted) {
+    const wv = (partId, terminal) => {
+      const n = findNet(nets, partId, terminal);
+      if (n === undefined || n === groundNetId || mergedGndIds.has(n)) return 0;
+      const v = warm.nodeVoltages.get(n);
+      return Number.isFinite(v) ? v : 0;
+    };
+    for (const part of parts) {
+      if (!diodeVoltages.has(part.id)) continue;
+      const k = part.kind;
+      if (k === 'npn' || k === 'pnp') {
+        const s = k === 'npn' ? 1 : -1;
+        diodeVoltages.set(part.id, s * (wv(part.id, 'base') - wv(part.id, 'emitter')));
+        if (bjtVbc.has(part.id)) bjtVbc.set(part.id, s * (wv(part.id, 'base') - wv(part.id, 'collector')));
+        const region = warm.bjtRegions?.get(part.id);
+        if (region === 'active' || region === 'saturated') bjtRegions.set(part.id, region);
+        const sat = warm.bjtVceSat?.get(part.id);
+        if (Number.isFinite(sat)) bjtVceSat.set(part.id, sat);
+      } else if (k === 'nmos' || k === 'pmos') {
+        const s = k === 'nmos' ? 1 : -1;
+        diodeVoltages.set(part.id, s * (wv(part.id, 'gate') - wv(part.id, 'source')));
+        if (mosVds.has(part.id)) mosVds.set(part.id, s * (wv(part.id, 'drain') - wv(part.id, 'source')));
+        if (mosVsb.has(part.id)) mosVsb.set(part.id, s * (wv(part.id, 'source') - wv(part.id, 'bulk')));
+        if (mosVdb.has(part.id)) mosVdb.set(part.id, s * (wv(part.id, 'drain') - wv(part.id, 'bulk')));
+        const region = warm.mosRegions?.get(part.id);
+        if (typeof region === 'string') mosRegions.set(part.id, region);
+      } else {
+        diodeVoltages.set(part.id, wv(part.id, 'anode') - wv(part.id, 'cathode'));
+      }
+    }
+    if (warm.opampRegions instanceof Map) {
+      for (const [id, region] of warm.opampRegions) {
+        if (opampRegions.has(id) && typeof region === 'string') opampRegions.set(id, region);
+      }
+    }
+  }
+
   // Newton–Raphson iterations
   const NR_TOL = 1e-6;
   // Junction-voltage damping: an exponential nonlinearity can fling NR across
@@ -2140,6 +2232,13 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
   // Rail regions each op-amp has occupied in THIS Newton run; see the
   // cycle break in the region FSM below.
   const railVisits = new Map();
+  // A warm start can meet the step tolerance on its FIRST iteration, where a
+  // cold start meets it only after the quadratic tail has shrunk the error
+  // far below it. Take one more (cheap, already-converged) iteration so a
+  // warm-started answer is as tightly converged as a cold one -- currents
+  // read back from the final linearization then close KCL to the same
+  // precision either way.
+  let polishPending = warmStarted;
   for (let iter = 0; iter < MAX_NR_ITER; iter++) {
     // Clear values; the assembled pattern survives for factor reuse.
     A.reset();
@@ -3097,7 +3196,8 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
     }
     if ((diodeVoltages.size === 0 && opampRegions.size === 0 && !ccChanged && !deviceCheck.present)
         || (maxDelta < NR_TOL && !regionChanged && !ccChanged && deviceCheck.valid)) {
-      return true;
+      if (!polishPending) return true;
+      polishPending = false;
     }
   }
   return false;
@@ -3997,7 +4097,7 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
       capVoltagesNext, capCurrentsNext,
       inductorCurrentsNext, inductorVoltagesNext, converged, opampRegions, deviceStamps, blanketShunt,
       newtonState: converged ? captureNewtonState() : undefined,
-      ...regionDiagnostics,
+      ...regionDiagnostics, warmState: { bjtRegions, bjtVceSat, mosRegions },
       railConflicts: railConflicts.length ? [...new Set(railConflicts)] : undefined };
   }
 
@@ -4005,6 +4105,7 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
     ...(opts.capVoltages && chargedBjtIds.length ? {deferredBjtChargeIds: chargedBjtIds} : {}),
     converged, opampRegions, deviceStamps, ...regionDiagnostics,
     newtonState: converged ? captureNewtonState() : undefined,
+    warmState: { bjtRegions, bjtVceSat, mosRegions },
     railConflicts: railConflicts.length ? [...new Set(railConflicts)] : undefined };
 }
 

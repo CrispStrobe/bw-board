@@ -164,6 +164,7 @@
  *   board is powered. A real DMM measures resistance with the power OFF.
  *
  * @property {(part: string) => number} ledBrightness
+ * @property {(part: string) => number} [ledBrightnessNow] instantaneous, no 20 ms window
  *   0…1, current × PWM duty integrated over ~20 ms.
  *
  * @property {(pin: PinId, percent: number, opts?: {hz?: number, pulseUs?: number}) => boolean} setPwm
