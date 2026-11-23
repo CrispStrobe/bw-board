@@ -101,19 +101,28 @@ test('a saturated NPN agrees with ngspice on the exponential path', () => {
         + 'saturated and the test is measuring the wrong region');
 });
 
-test('the piecewise default is untouched, and the two models differ here', () => {
-    // The separating state. Without the second half, a change that routed
-    // EVERYTHING through Ebers-Moll would pass the test above and silently move
-    // every corpus number.
+test('the piecewise default keeps its knee base and now saturates like Ebers-Moll', () => {
+    // The default's base junction is still the knee, so V(base) is unchanged.
     const pwl = motorBench('pwl');
     assert.ok(Math.abs(pwl.vb - 0.741564) < 1e-4,
-        `piecewise V(base) ${pwl.vb}, expected 0.741564 — the default has moved`);
-    assert.ok(Math.abs(pwl.vc - 0.067245) < 1e-4,
-        `piecewise V(collector) ${pwl.vc}, expected 0.067245 — the default has moved`);
+        `piecewise V(base) ${pwl.vb}, expected 0.741564 — the knee has moved`);
+    // Its collector used to read 0.067245 V with a collector current of ZERO
+    // while the 10 Ohm load passed 0.49 A -- a saturated clamp whose Vce(sat)
+    // fixed point and current readback disagreed. The default's output law is
+    // now Ebers-Moll's forced-beta characteristic (`bjtForcedBeta`), so the
+    // collector lands within 1.2 mV of ngspice's 0.147347 and the collector
+    // current IS the load current.
+    assert.ok(Math.abs(pwl.vc - 0.147347) < 2e-3,
+        `piecewise V(collector) ${pwl.vc} against ngspice 0.147347`);
+    assert.ok(Math.abs(pwl.ic + (5 - pwl.vc) / 10) < 1e-6,
+        `collector current ${pwl.ic} must be the load current ${(5 - pwl.vc) / 10}`);
+    assert.ok(Math.abs(pwl.ib + pwl.ic + pwl.ie) < 1e-9, 'KCL at the device');
 
+    // The separating state is now the base: the routing switch must still
+    // reach the BJT, and the exponential junction reads ngspice's 0.815 V.
     const em = motorBench('shockley');
-    assert.ok(Math.abs(em.vc - pwl.vc) > 0.05,
-        'the two models return the same collector voltage, so the routing switch is not '
+    assert.ok(Math.abs(em.vb - pwl.vb) > 0.05,
+        'the two models return the same base voltage, so the routing switch is not '
         + 'reaching the BJT and neither assertion above is about what it says it is');
 });
 

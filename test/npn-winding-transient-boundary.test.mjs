@@ -204,6 +204,19 @@ test('opt-in final BJT diagnostics preserve actual transient solves and do not a
     const {bjtRegionDiagnostics,...values} = inspected;
     assert.deepEqual(values,normal,'inspection changes no solved observable or stored state');
     const q = bjtRegionDiagnostics.get('Q');
+    if (params.vceSat === undefined && !params.model) {
+      // The default's output is the smooth forced-beta law, which has no
+      // clamp: the diagnostic names the region by the forced beta at the
+      // solved Vce (saturated below 95 % of beta) and reports that Vce.
+      const vce = inspected.nodeVoltages.get('collector');
+      const x = Math.exp(vce/.02585), forced = (x-2)/(1+x/100);
+      assert.equal(q.region,forced < 95 ? 'saturated' : 'active');
+      assert.equal(q.saturationVoltage,forced < 95 ? vce : null);
+      assert.equal(Object.isFrozen(q),true);
+      bjtRegionDiagnostics.clear();
+      assert.equal(solve(true).bjtRegionDiagnostics.size,1,'caller cannot mutate retained solver regions');
+      continue;
+    }
     assert.equal(q.region,params.model === 'shockley' ? 'ebers-moll' : 'saturated');
     if (params.model) assert.equal(q.saturationVoltage,null,'junction model has no clamp authority');
     else {
@@ -218,7 +231,12 @@ test('opt-in final BJT diagnostics preserve actual transient solves and do not a
   }
 });
 
-test('default floor-scale voltage disagreement precedes any BJT region change', () => {
+test('default startup crosses the saturation boundary without a floor-scale disagreement', () => {
+  // The default used to reach this window in its saturated CLAMP region, where
+  // a 10 ns trapezoidal step and two 5 ns steps disagreed by more than the
+  // accuracy scale (the 5 ps clamp/RC mode) and the controller had to walk the
+  // step down to the floor. Its output is now the smooth forced-beta law, and
+  // the same trial steps agree within the unchanged scale.
   const b = winding({vceSat:null});
   b.advanceToLive(19853n,{maxSteps:16});
   assert.equal(b.transientAnalysisStatus().accuracyMet,true);
@@ -230,13 +248,10 @@ test('default floor-scale voltage disagreement precedes any BJT region change', 
         inductorCurrents:previous.inductorCurrentsNext ?? b.inductorCurrents,
         inductorVoltages:previous.inductorVoltagesNext ?? b.inductorVoltages}});
   const full = solve(19863,1e-8),first = solve(19858,5e-9),half = solve(19863,5e-9,first);
-  for (const result of [full,first,half]) {
-    assert.equal(result.converged,true);
-    assert.equal(result.bjtRegionDiagnostics.get('Q').region,'saturated');
-  }
+  for (const result of [full,first,half]) assert.equal(result.converged,true);
   const vf = full.nodeVoltages.get('collector'),vh = half.nodeVoltages.get('collector');
   const scale = 1e-6+1e-4*Math.max(Math.abs(vf),Math.abs(vh));
-  assert.ok(Math.abs(vf-vh)/scale>1,'genuine voltage disagreement, not an event exemption');
+  assert.ok(Math.abs(vf-vh)/scale<1,`full/half disagreement ${Math.abs(vf-vh)/scale} of the scale`);
   assert.equal(b.transientAnalysisStatus().accuracyMet,true,
     'isolated trial solves do not mutate or clear the board history');
 });
