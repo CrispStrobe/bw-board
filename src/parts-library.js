@@ -76,7 +76,7 @@ export const ELECTRICAL_FIELDS = Object.freeze(new Set([
     'ohms', 'farads', 'henries', 'volts', 'amps',    // passives and sources
     'kV', 'contactOhms', 'openOhms',                 // motor back-EMF, relay contacts
     'cjo', 'vj', 'm',                                // junction capacitance (varicap: SPICE CJO/VJ/M)
-    'ft', 'cjc'                                      // bipolar at RF: transition frequency, B-C capacitance
+    'ft', 'cjc', 'cfb'                               // bipolar at RF: transition frequency, B-C capacitance (cfb: RF-only, no transient charge)
 ]));
 
 /**
@@ -158,9 +158,11 @@ const CARDS = {
         id: 'BF199', kind: 'npn',
         provenance: 'silicon RF/IF transistor for VHF stages: typical published '
             + 'figures (transition frequency ~550 MHz, feedback capacitance '
-            + '~0.3 pF, current gain ~40-100) rounded; NOT measured. ft and cjc '
-            + 'are what the radio front end\'s RF stamp reads (src/radio.js).',
-        params: {beta: 60, is: 1e-14, vbe: 0.7, ft: 550e6, cjc: 0.4e-12}
+            + '~0.3 pF, current gain ~40-100) rounded; NOT measured. ft and cfb '
+            + '(the feedback capacitance, used by the RF bands only: a cjc here '
+            + 'would ask the transient solve for an Ebers-Moll charge model) are '
+            + 'what the radio front end\'s RF stamp reads (src/radio.js).',
+        params: {beta: 60, is: 1e-14, vbe: 0.7, ft: 550e6, cfb: 0.4e-12}
     },
     '2N2907': {
         id: '2N2907', kind: 'pnp',

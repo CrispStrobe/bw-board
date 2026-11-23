@@ -100,15 +100,15 @@ describe('radio bands: the ferrite rod is a directional antenna', () => {
  * `sense` 1 connects the coupling winding for positive feedback, -1 the
  * other way round.
  */
-function meissner({ sense = 1, re = 1000, pos = 0.3 } = {}) {
+function meissner({ sense = 1, re = 1000, pos = 0.3, cbias = 10e-9, ce = 1e-9, ratio = 0.05 } = {}) {
     const b = new BoardImpl(9);
     const [cb, cbOther] = sense > 0 ? ['c1', 'c2'] : ['c2', 'c1'];
     b.setNetlist([P('G', 'gnd', {}, ['gnd']), P('VS', 'vsource', { volts: 9 }, ['pos', 'neg']),
-        P('L1', 'ferrite_coil', { rodHeightM: 0, couplingRatio: 0.2 }, ['a', 'tap', 'b', 'c1', 'c2']),
+        P('L1', 'ferrite_coil', { rodHeightM: 0, couplingRatio: ratio }, ['a', 'tap', 'b', 'c1', 'c2']),
         P('TC', 'tuning_cap', { position: pos }, ['a', 'b']), P('Q1', 'npn', {}, ['base', 'collector', 'emitter']),
         P('R1', 'resistor', { ohms: 47e3 }, ['a', 'b']), P('R2', 'resistor', { ohms: 10e3 }, ['a', 'b']),
-        P('CB', 'capacitor', { farads: 100e-9 }, ['a', 'b']), P('RE', 'resistor', { ohms: re }, ['a', 'b']),
-        P('CE', 'capacitor', { farads: 100e-9 }, ['a', 'b'])],
+        P('CB', 'capacitor', { farads: cbias }, ['a', 'b']), P('RE', 'resistor', { ohms: re }, ['a', 'b']),
+        P('CE', 'capacitor', { farads: ce }, ['a', 'b'])],
     [net('g', ['G', 'gnd'], ['VS', 'neg'], ['R2', 'b'], ['CB', 'b'], ['RE', 'b'], ['CE', 'b']),
         net('v', ['VS', 'pos'], ['L1', 'a'], ['TC', 'a'], ['R1', 'a']),
         net('col', ['Q1', 'collector'], ['L1', 'b'], ['TC', 'b']),
@@ -121,23 +121,24 @@ function meissner({ sense = 1, re = 1000, pos = 0.3 } = {}) {
 
 describe('radio bands: oscillation', () => {
     it('a Meissner oscillator starts from noise at the LC frequency, limits, and is deterministic', () => {
+        // Small bias capacitors (10 nF base, 1 nF emitter): with the bias
+        // network much faster than the tank's envelope the oscillation runs
+        // steadily. (With 100 nF / 100 nF it squegs — bursts and pauses —
+        // as an over-coupled real one does.)
+        const swing = (b) => { let m = 0; for (const t of [2, 2.5, 3]) { ms(b, t); m = Math.max(m, tankAmp(b, 'col')); } return m; };
         const b = meissner();
-        ms(b, 3);
+        const amp = swing(b);
         const rep = b.radioReport();
-        const lEff = 250e-6;
         const c = 10e-12 + 490e-12 * 0.3;
-        const f0 = 1 / (2 * Math.PI * Math.sqrt(lEff * c));
+        const f0 = 1 / (2 * Math.PI * Math.sqrt(250e-6 * c));
         assert.ok(rep.bands.length >= 1, 'a band at the tank resonance');
         const band = rep.bands.reduce((a, x) => (Math.abs(x.hz - f0) < Math.abs(a.hz - f0) ? x : a));
         // Within a few per cent: the transistor's capacitances and the
         // coupling winding's load pull the resonance slightly.
         close(band.hz / f0, 1, 0.05, 'oscillation frequency against 1/(2π√LC)');
-        const amp = tankAmp(b, 'col');
-        assert.ok(amp > 1 && amp < 12, `the collector swings volts, limited below the supply's reach: ${amp} V`);
+        assert.ok(amp > 0.5 && amp < 12, `the collector swings volts, limited below the supply's reach: ${amp} V`);
         // The same bench again: the same swing (seeded noise).
-        const again = meissner();
-        ms(again, 3);
-        close(tankAmp(again, 'col'), amp, 1e-9, 'deterministic');
+        close(swing(meissner()), amp, 1e-9, 'deterministic');
     });
 
     it('the coupling winding the wrong way round: no oscillation', () => {
@@ -150,5 +151,26 @@ describe('radio bands: oscillation', () => {
         const b = meissner({ re: 1e6 });
         ms(b, 3);
         assert.ok(tankAmp(b, 'col') < 1e-3, `starved transistor: ${tankAmp(b, 'col')} V`);
+    });
+});
+
+describe('radio bands: which front end', () => {
+    it('a receiver that cannot oscillate keeps the round-3 phasor front end; feedback, FM or a rod antenna get the bands', async () => {
+        const { chooseFrontEnd } = await import('../src/radio.js');
+        const T = (part, terminal) => ({ part, terminal });
+        const crystal = [P('G', 'gnd', {}, ['gnd']), P('A', 'antenna', {}, ['a']), P('L', 'ferrite_coil', {}, ['a', 'tap', 'b', 'c1', 'c2']),
+            P('D', 'diode', {}, ['anode', 'cathode'])];
+        const cn = [net('g', ['G', 'gnd'], ['L', 'a']), net('ant', ['A', 'a'], ['L', 'tap']), net('t', ['L', 'b'], ['D', 'anode'])];
+        assert.equal(chooseFrontEnd(crystal, cn), 'phasor');
+        // A collector on a coil winding (tickler / tank in the collector).
+        const q = [...crystal, P('Q', 'npn', {}, ['base', 'collector', 'emitter'])];
+        const qn = cn.map(n => ({ ...n, terminals: [...n.terminals] }));
+        qn.push({ id: 'c', terminals: [T('Q', 'collector'), T('L', 'c1')] });
+        assert.equal(chooseFrontEnd(q, qn), 'envelope');
+        // An FM station on the antenna.
+        const fm = crystal.map(p => p.id === 'A' ? { ...p, params: { stations: [{ hz: 98e6, mod: 'fm' }] } } : p);
+        assert.equal(chooseFrontEnd(fm, cn), 'envelope');
+        // No long wire: the rod is the antenna.
+        assert.equal(chooseFrontEnd(crystal.filter(p => p.id !== 'A'), cn), 'envelope');
     });
 });

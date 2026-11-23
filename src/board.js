@@ -3478,8 +3478,29 @@ export class BoardImpl {
   /** Re-solve the RF network now, at the last accepted operating point. */
   refreshRadio() {
     if (!this._radio) return null;
-    this._radio.refresh(this, Number(this.timeNs) / 1e9, this._mnaCache);
+    const solution = this._radio._opView ? this._radio._opView(this._mnaCache) : this._mnaCache;
+    this._radio.refresh(this, Number(this.timeNs) / 1e9, solution);
     return this.radioReport();
+  }
+
+  /** The carrier-frequency AC solve the round-3 phasor front end runs (src/radio.js). */
+  _radioSweep(sourceId, freqs, solution, rf, radio) {
+    const view = radio.rfView(this._solveParts, this._solveNets);
+    return acSweep({
+      parts: view.parts,
+      nets: view.nets,
+      pinSources: this._pinSources(),
+      controls: this.controls,
+      vcc: this.vcc,
+      opVoltages: solution.nodeVoltages,
+      opBranchCurrents: currentsIntoTerminals(solution.branchCurrents ?? new Map()),
+      opRegions: solution.opampRegions,
+      deviceStates: this._deviceStates,
+      partTemperatures: this._thermal?.temps ?? null,
+      sourceId,
+      freqs,
+      rf,
+    });
   }
 
   /**
@@ -3507,25 +3528,6 @@ export class BoardImpl {
     });
   }
 
-  /** The carrier-frequency AC solve the radio front end runs (src/radio.js). */
-  _radioSweep(sourceId, freqs, solution, rf, radio) {
-    const view = radio.rfView(this._solveParts, this._solveNets);
-    return acSweep({
-      parts: view.parts,
-      nets: view.nets,
-      pinSources: this._pinSources(),
-      controls: this.controls,
-      vcc: this.vcc,
-      opVoltages: solution.nodeVoltages,
-      opBranchCurrents: currentsIntoTerminals(solution.branchCurrents ?? new Map()),
-      opRegions: solution.opampRegions,
-      deviceStates: this._deviceStates,
-      partTemperatures: this._thermal?.temps ?? null,
-      sourceId,
-      freqs,
-      rf,
-    });
-  }
 
   /**
    * An ACTIVE buzzer has a built-in oscillator: sustained DC across it

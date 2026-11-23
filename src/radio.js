@@ -73,6 +73,7 @@
  */
 
 import { junctionVf } from './led-color.js';
+import { resolveParams } from './parts-library.js';
 import { chooseGroundReference, smoothVov, mosK } from './mna.js';
 import {
     VT, lnI0, besselGain, expCapped, describeLaw, cluFactor, cluSolve, mulberry32, gaussPair,
@@ -425,6 +426,7 @@ function ferriteWindings(part, has) {
 export function expandRadio(parts, nets, opts) {
     const kinds = new Set(['antenna', 'earth', 'tuning_cap', 'ferrite_coil', 'air_coil', 'varicap']);
     if (!parts.some(p => kinds.has(p.kind))) return { parts, nets, radio: null };
+    if (chooseFrontEnd(parts, nets) === 'phasor') return expandRadioPhasor(parts, nets, opts);
     let outParts = [...parts];
     const outNets = nets.map(n => ({ ...n, terminals: [...n.terminals] }));
     const netOf = (id, t) => outNets.find(n => n.terminals.some(x => x.part === id && x.terminal === t)) ?? null;
@@ -450,7 +452,9 @@ export function expandRadio(parts, nets, opts) {
         // Varicap: a diode whose junction capacitance the RF network sees
         // (its few tens of pF are invisible at audio, where the transient
         // solve keeps it a plain diode).
-        if (p.kind === 'varicap') return { ...p, kind: 'diode', params: { ...VARICAP_DEFAULTS, ...p.params }, varicap: true };
+        // Its part card first (the board resolves cards after this
+        // expansion, and the defaults must not shadow the card's numbers).
+        if (p.kind === 'varicap') return { ...p, kind: 'diode', params: { ...VARICAP_DEFAULTS, ...resolveParams(p.params ?? {}) }, varicap: true };
         return p;
     });
 
@@ -629,6 +633,167 @@ export function expandRadio(parts, nets, opts) {
     return { parts: outParts, nets: outNets, radio };
 }
 
+/**
+ * Which front end a circuit gets. The envelope bands whenever the circuit
+ * could do something a linear phasor cannot: an RF coil winding sharing a
+ * (non-supply) net with a transistor's collector, emitter, drain or source
+ * (a tickler, a tank in the collector: feedback), a MOSFET, an air-core coil
+ * or a varicap (VHF work), FM or Morse stations, linked rods or a rod with
+ * its own broadcast, or no long wire at all (the rod is the antenna).
+ * Otherwise the round-3 phasor front end, whose numbers every round-3
+ * receiver was measured on.
+ */
+export function chooseFrontEnd(parts, nets) {
+    const byId = new Map(parts.map(p => [p.id, p]));
+    const coilT = (p, t) => (p.kind === 'ferrite_coil' && ['a', 'tap', 'b', 'c1', 'c2'].includes(t)) || (p.kind === 'air_coil');
+    const outT = (p, t) => ((p.kind === 'npn' || p.kind === 'pnp') && (t === 'collector' || t === 'emitter'))
+        || ((p.kind === 'nmos' || p.kind === 'pmos') && (t === 'drain' || t === 'source'));
+    if (parts.some(p => ['air_coil', 'varicap', 'nmos', 'pmos'].includes(p.kind))) return 'envelope';
+    if (parts.some(p => p.kind === 'ferrite_coil' && (p.params?.linkTo || Array.isArray(p.params?.stations)))) return 'envelope';
+    const antennas = parts.filter(p => p.kind === 'antenna');
+    if (!antennas.length) return 'envelope';
+    for (const a of antennas) for (const s of a.params?.stations ?? []) if (s?.mod && s.mod !== 'am') return 'envelope';
+    for (const n of nets) {
+        const ps = n.terminals.map(t => [byId.get(t.part), t.terminal]).filter(([p]) => p);
+        if (ps.some(([p]) => p.kind === 'gnd' || p.kind === 'vcc' || p.kind === 'vsource' || p.kind === 'earth')) continue;
+        if (ps.some(([p, t]) => coilT(p, t)) && ps.some(([p, t]) => outT(p, t))) return 'envelope';
+    }
+    return 'phasor';
+}
+
+function expandRadioPhasor(parts, nets, opts) {
+    const kinds = new Set(['antenna', 'earth', 'tuning_cap', 'ferrite_coil']);
+    if (!parts.some(p => kinds.has(p.kind))) return { parts, nets, radio: null };
+    let outParts = [...parts];
+    const outNets = nets.map(n => ({ ...n, terminals: [...n.terminals] }));
+    const netOf = (id, t) => outNets.find(n => n.terminals.some(x => x.part === id && x.terminal === t)) ?? null;
+    const T = (part, terminal) => ({ part, terminal });
+    const add = (part, ends) => {
+        outParts.push(part);
+        ends.forEach(([n, t]) => n.terminals.push(T(part.id, t)));
+    };
+
+    // Tuning capacitor: the solver's own capacitor, its farads read live
+    // from the knob, so turning it needs no new netlist and keeps the
+    // capacitor's stored voltage.
+    outParts = outParts.map(p => {
+        if (p.kind !== 'tuning_cap') return p;
+        const params = { ...p.params };
+        Object.defineProperty(params, 'farads', {
+            enumerable: true,
+            get: () => tuningCapFarads(p, opts.controls?.()?.get(p.id)),
+        });
+        return { ...p, kind: 'capacitor', params };
+    });
+
+    // Ferrite coil: transient view uses the engine's inductor/transformer;
+    // the RF view swaps in the full coupled set.
+    const coupled = [];
+    for (const p of parts.filter(q => q.kind === 'ferrite_coil')) {
+        const has = (t) => !!netOf(p.id, t);
+        const fw = ferriteWindings(p, has);
+        const wn = fw.windings.filter(w => netOf(p.id, w.a) !== netOf(p.id, w.b));
+        if (wn.length !== fw.windings.length || !wn.length) continue;
+        const hidden = [];
+        const ends = (w) => [netOf(p.id, w.a), netOf(p.id, w.b)];
+        if (wn.length === 1) {
+            const [na, nb] = ends(wn[0]);
+            const id = `${p.id}_L0`;
+            add({ id, kind: 'inductor', params: { henrys: fw.L[0][0] }, terminals: ['a', 'b'] }, [[na, 'a'], [nb, 'b']]);
+            hidden.push(id);
+        } else {
+            const [p1, p2] = ends(wn[0]);
+            const [s1, s2] = ends(wn[1]);
+            const id = `${p.id}_T01`;
+            add({ id, kind: 'transformer', terminals: ['p1', 'p2', 's1', 's2'],
+                params: { l1: fw.L[0][0], l2: fw.L[1][1], k: fw.L[0][1] / Math.sqrt(fw.L[0][0] * fw.L[1][1]) } },
+            [[p1, 'p1'], [p2, 'p2'], [s1, 's1'], [s2, 's2']]);
+            hidden.push(id);
+            if (wn.length === 3) {
+                const [na, nb] = ends(wn[2]);
+                const lid = `${p.id}_L2`;
+                add({ id: lid, kind: 'inductor', params: { henrys: fw.L[2][2] }, terminals: ['a', 'b'] }, [[na, 'a'], [nb, 'b']]);
+                hidden.push(lid);
+            }
+        }
+        // RF damping in the TIME domain only. The tank's ~1 MHz natural mode
+        // carries no information at audio rate (the RF solve owns it), but
+        // an undamped LC in the transient integrator rings at every kick
+        // the detector gives it and the step controller then resolves that
+        // ringing. A resistor ωL (at 1 MHz) across each winding damps the
+        // mode to Q ≈ 1 and is invisible at audio, where the winding is a
+        // short (ωL ≈ 1.6 Ω at 1 kHz against ~1.6 kΩ). Removed in the RF view.
+        wn.forEach((w, i) => {
+            const id = `${p.id}_damp${i}`;
+            const [na, nb] = ends(w);
+            add({ id, kind: 'resistor', params: { ohms: 2 * Math.PI * 1e6 * fw.L[i][i] }, terminals: ['a', 'b'] },
+                [[na, 'a'], [nb, 'b']]);
+            hidden.push(id);
+        });
+        const terminals = wn.flatMap((_, i) => [`w${i}a`, `w${i}b`]);
+        coupled.push({
+            remove: hidden,
+            part: { id: `${p.id}_rf`, kind: COUPLED_INDUCTORS_KIND, terminals, params: { L: fw.L, q: fw.q } },
+            nets: wn.flatMap((w, i) => [[netOf(p.id, w.a).id, `w${i}a`], [netOf(p.id, w.b).id, `w${i}b`]]),
+        });
+    }
+
+    // Antennas and earth.
+    const antennas = parts.filter(p => p.kind === 'antenna' && netOf(p.id, 'a'));
+    const earths = parts.filter(p => p.kind === 'earth' && netOf(p.id, 'earth'));
+    // Without an antenna nothing carries RF: the parts are plain passives.
+    if (!antennas.length) return { parts: outParts, nets: outNets, radio: null };
+    const earthNet = { id: EARTH_NET, terminals: [] };
+    outNets.push(earthNet);
+    const R = (id, ohms, a, b) => add({ id, kind: 'resistor', params: { ohms }, terminals: ['a', 'b'] }, [[a, 'a'], [b, 'b']]);
+    const Cp = (id, farads, a, b) => add({ id, kind: 'capacitor', params: { farads }, terminals: ['a', 'b'] }, [[a, 'a'], [b, 'b']]);
+    for (const e of earths) R(`@rf:${e.id}:earth`, Math.max(0.1, num(e.params?.ohms, EARTH_OHMS)), netOf(e.id, 'earth'), earthNet);
+    if (!earths.length) {
+        // No earth stake: the antenna's return is the circuit's own
+        // capacitance to its surroundings (a counterpoise). Weak, as it is.
+        const refId = chooseGroundReference(outParts, outNets)?.netId;
+        const ref = outNets.find(n => n.id === refId) ?? netOf(antennas[0].id, 'a');
+        Cp('@rf:counterpoise', COUNTERPOISE_FARADS, earthNet, ref);
+        R('@rf:counterpoise_leak', 1e9, earthNet, ref);
+    }
+    const antennaSpecs = [];
+    for (const a of antennas) {
+        const P = a.params ?? {};
+        const emf = { id: `@rf:${a.id}:emf`, terminals: [] };
+        const mid = { id: `@rf:${a.id}:r`, terminals: [] };
+        outNets.push(emf, mid);
+        const srcId = `@rf:${a.id}:emf`;
+        add({ id: srcId, kind: 'vsource', params: { volts: 0 }, terminals: ['pos', 'neg'] }, [[emf, 'pos'], [earthNet, 'neg']]);
+        R(`@rf:${a.id}:rant`, Math.max(0.1, num(P.ohms, ANTENNA_DEFAULTS.ohms)), emf, mid);
+        Cp(`@rf:${a.id}:cant`, Math.max(1e-15, num(P.farads, ANTENNA_DEFAULTS.farads)), mid, netOf(a.id, 'a'));
+        antennaSpecs.push({ id: a.id, sourceId: srcId, heightM: Math.max(0, num(P.heightM, ANTENNA_DEFAULTS.heightM)),
+            stations: Array.isArray(P.stations) ? normalizeStations(P.stations) : null });
+    }
+
+    // Detectors: every diode and transistor junction can rectify.
+    const radio = new PhasorFrontEnd({ antennas: antennaSpecs, detectors: [], coupled });
+    for (const p of parts) {
+        let terms;
+        if (p.kind === 'diode') terms = ['anode', 'cathode'];
+        else if (p.kind === 'npn' || p.kind === 'pnp') terms = ['base', 'collector', 'emitter'];
+        else continue;
+        const j = p.kind === 'diode' ? ['anode', 'cathode'] : ['base', 'emitter'];
+        const n0 = netOf(p.id, j[0]);
+        const n1 = netOf(p.id, j[1]);
+        if (!n0 || !n1 || n0 === n1) continue;
+        const wired = terms.filter(t => netOf(p.id, t));
+        const id = `@rf:${p.id}:det`;
+        const hidden = { id, kind: RF_DETECT_KIND, params: {}, terminals: wired };
+        const det = { id, partId: p.id, kind: p.kind, of: p, index: radio.detectors.length,
+            nets: [n0.id, n1.id], wired, testId: `@rf:${p.id}:itest` };
+        Object.defineProperty(hidden, 'rfDetector', { value: det, enumerable: false });
+        Object.defineProperty(det, 'radio', { value: radio, enumerable: false });
+        radio.detectors.push(det);
+        add(hidden, wired.map(t => [netOf(p.id, t), t]));
+    }
+    return { parts: outParts, nets: outNets, radio };
+}
+
 // ─── The RF bands ───────────────────────────────────────────────────────
 
 const REFRESH_SEC = 5e-3;
@@ -645,10 +810,11 @@ const IS_TAU_SEC = 2e-3;
 const REBOUND_SEC = 0.1e-3;
 const CURRENT_TAU_SEC = 20e-6;
 const LOAD_TAU_SEC = 1e-3;
+const RETUNE_SEC = 1e-3;
 const DEFAULT_LOAD_OHMS = 47e3;
 
 /** Half-width of a band around its centre: catches the 9/10 kHz MW neighbours and an FM station's swing. */
-export const bandHalfWidthHz = (hz) => Math.max(SLOW_BEAT_HZ, hz * 1e-3);
+export const bandHalfWidthHz = (hz) => Math.max(SLOW_BEAT_HZ, hz * 1e-2);
 
 const sq = (r, i) => r * r + i * i;
 
@@ -770,7 +936,7 @@ export class RadioFrontEnd {
                 const isEff = !d.generic ? card.is
                     : conducting ? ic * (beta + 1) / beta * Math.exp(-Math.min(vbe, 1.5) / VT) : NaN;
                 return { vbe, vbc, ic, saturated, card, isEff, beta,
-                    ft: Math.max(1e6, num(P.ft, 300e6)), cjc: num(P.cjc, 4e-12), cje: num(P.cje, 0) };
+                    ft: Math.max(1e6, num(P.ft, 300e6)), cjc: num(P.cfb, num(P.cjc, 4e-12)), cje: num(P.cje, 0) };
             }
             const s = d.kind === 'pmos' ? -1 : 1;
             const vgs = s * (nv(d.nets[0]) - nv(d.nets[1]));
@@ -1156,6 +1322,9 @@ export class RadioFrontEnd {
         this._portCache.t = NaN;
         const key = JSON.stringify([...(board.controls ?? new Map())]);
         if (key !== this._controlsKey) { this._controlsKey = key; this._dirty = true; this._tScan = -Infinity; }
+        // A varicap's bias moved (its tuning voltage settling after the pot
+        // turned): the resonance moved with it; look again.
+        if (!this._dirty && tSec - this._tScan >= RETUNE_SEC && this._varicapMoved()) { this._dirty = true; this._tScan = -Infinity; }
         if (this._dirty || tSec - this._tRefresh >= REFRESH_SEC) this.refresh(board, tSec, solution);
         else if (this._biasMoved() && tSec - (this._tBound ?? -Infinity) >= REBOUND_SEC) {
             // The operating point moved (a bias network charging, a pot
@@ -1165,6 +1334,17 @@ export class RadioFrontEnd {
             this._biasAtBound = this._bias;
             for (const b of this._bands) b._bound();
         }
+    }
+
+    /** Has a varicap's reverse voltage moved by more than 50 mV since the last scan? */
+    _varicapMoved() {
+        const a = this._biasAtScan, b = this._bias;
+        if (!a || !b || a.length !== b.length) { this._biasAtScan = b; return false; }
+        for (let i = 0; i < b.length; i++) {
+            if (!this.detectors[i].of.varicap) continue;
+            if (Math.abs((b[i].v ?? 0) - (a[i].v ?? 0)) > 0.05) return true;
+        }
+        return false;
     }
 
     /** Has a junction's operating current moved by a fifth since the bands were last bounded? */
@@ -1191,6 +1371,7 @@ export class RadioFrontEnd {
             if (tSec - this._tScan >= RESCAN_SEC || !this._resonances) {
                 this._resonances = this._scan(vpNow, other);
                 this._tScan = tSec;
+                this._biasAtScan = this._bias;
             }
             this._rebuildBands(stations, tSec);
             this._biasAtBound = this._bias;
@@ -1660,14 +1841,415 @@ class RfBand {
         if (i > 0) this.hist = h.slice(i);
     }
 
-    /** Drop the history integrated past t (unused: the band runs ahead on the last accepted bias). */
-    commit(tSec) {
-        const h = this.hist;
-        let i = h.length - 1;
-        while (i > 0 && h[i].t > tSec) i--;
-        const keep = h[i];
-        if (keep.X) { this.X = keep.X; }
-        this.t = keep.t;
-        this.hist = [keep];
+}
+
+// ─── The round-3 phasor front end ───────────────────────────────────────
+//
+// For a circuit in which nothing can oscillate at RF — no RF coil winding
+// shares a net with a transistor's output, no FM or Morse station, a long
+// wire as the only antenna — the carrier is solved, as in round 3, as a
+// linear phasor per station at the smoothed operating point, with
+// detection by the cycle-averaged junction law at audio rate. The envelope
+// bands above would give the same answers up to the tank's sideband
+// attenuation, at several times the cost; keeping this path keeps every
+// round-3 receiver's numbers exactly (chooseFrontEnd below decides).
+
+const P_REFRESH_SEC = 2e-3;
+const P_BLEND_SEC = 1e-3;
+const P_IDC_TAU_SEC = 1e-3;
+const P_DEFAULT_LOAD_OHMS = 47e3;
+const P_OP_TAU_SEC = 5e-3;
+
+const p_cadd = (a, b) => [a[0] + b[0], a[1] + b[1]];
+const p_csub = (a, b) => [a[0] - b[0], a[1] - b[1]];
+const p_cmul = (a, b) => [a[0] * b[0] - a[1] * b[1], a[0] * b[1] + a[1] * b[0]];
+const p_cscale = (a, k) => [a[0] * k, a[1] * k];
+const p_cdiv = (a, b) => { const d = b[0] * b[0] + b[1] * b[1]; return [(a[0] * b[0] + a[1] * b[1]) / d, (a[1] * b[0] - a[0] * b[1]) / d]; };
+/** Phasor of v(n0) − v(n1) from an acSweep result map (n1 null: to ground). */
+function p_phasorOf(results, n0, n1) {
+    const at = (n) => {
+        const r = n ? results.get(n) : null;
+        if (!r) return [0, 0];
+        const th = r.phaseDeg * Math.PI / 180;
+        return [r.mag * Math.cos(th), r.mag * Math.sin(th)];
+    };
+    return p_csub(at(n0), n1 ? at(n1) : [0, 0]);
+}
+const P_SLOW_BEAT_HZ = 10e3;
+const P_ENVELOPE_POINTS_PER_CYCLE = 10;
+const P_THETA16 = Array.from({ length: 16 }, (_, i) => [Math.cos((i + 0.5) * Math.PI / 8), Math.sin((i + 0.5) * Math.PI / 8)]);
+
+export class PhasorFrontEnd {
+    constructor({ antennas, detectors, coupled }) {
+        this.antennas = antennas;
+        this.detectors = detectors;
+        this.coupled = coupled;
+        this.stations = normalizeStations(DEFAULT_STATIONS);
+        this.reset();
+    }
+
+    reset() {
+        this._H = null;        // per detector: per station [re, im] (target)
+        this._Hprev = null;    // blended-from
+        this._tRefresh = -Infinity;
+        this._dirty = true;
+        this._controlsKey = '';
+        this._idc = new Map(); // detector id -> smoothed DC current
+        this._lastAcceptSec = null;
+        this._drive = new Map();     // junction / compression factors used by the RF solve
+        this._netPhasors = null;
+        this._groups = null;
+        this._opEma = null;
+        this.error = null;
+        this.refreshes = 0;
+    }
+
+    /** Stations seen by the antennas (union; each antenna's override wins for it). */
+    allStations() {
+        const out = [...this.stations];
+        for (const a of this.antennas) for (const s of a.stations ?? []) if (!out.some(o => o.id === s.id)) out.push(s);
+        return out;
+    }
+
+    setStations(list) {
+        this.stations = normalizeStations(list);
+        this._dirty = true;
+    }
+
+    /** EMF (V peak) station `s` induces in antenna `a`. */
+    emf(a, s) {
+        const own = a.stations ? a.stations.find(x => x.id === s.id) : s;
+        return own ? own.fieldVPerM * a.heightM : 0;
+    }
+
+    /**
+     * Upper bound on the transient step that keeps the programme and the
+     * audible beats resolved.
+     */
+    maxStepSec() {
+        const st = this.allStations();
+        let f = 0;
+        for (const s of st) f = Math.max(f, audioMaxHz(s.audio));
+        for (let i = 0; i < st.length; i++) for (let j = i + 1; j < st.length; j++) {
+            const d = Math.abs(st[i].hz - st[j].hz);
+            if (d > 0 && d <= P_SLOW_BEAT_HZ) f = Math.max(f, d);
+        }
+        return f > 0 ? 1 / (P_ENVELOPE_POINTS_PER_CYCLE * f) : null;
+    }
+
+    _phasor(d, k, tSec) {
+        const H = this._H[d][k];
+        const P = this._Hprev?.[d]?.[k];
+        if (!P) return H;
+        const w = Math.min(1, Math.max(0, (tSec - this._tRefresh) / P_BLEND_SEC));
+        if (w >= 1) return H;
+        return [P[0] + (H[0] - P[0]) * w, P[1] + (H[1] - P[1]) * w];
+    }
+
+    /** RF envelope (V peak) across detector `d`'s junction at time t. */
+    amplitude(d, tSec) {
+        if (!this._H) return 0;
+        const st = this._stationList;
+        const g = this._groups[d];
+        if (!g) return 0;
+        let sr = 0, si = 0, b2 = 0;
+        const fr = st[g.ref].hz;
+        for (const k of g.slow) {
+            const s = st[k];
+            const env = Math.max(0, 1 + s.depth * programmeValue(s.audio, tSec));
+            const [hr, hi] = this._phasor(d, k, tSec);
+            const ph = 2 * Math.PI * (s.hz - fr) * tSec;
+            const c = Math.cos(ph), sn = Math.sin(ph);
+            sr += env * (hr * c - hi * sn);
+            si += env * (hr * sn + hi * c);
+        }
+        for (const k of g.fast) {
+            const s = st[k];
+            const env = Math.max(0, 1 + s.depth * programmeValue(s.audio, tSec));
+            const [hr, hi] = this._phasor(d, k, tSec);
+            b2 += env * env * (hr * hr + hi * hi);
+        }
+        const a = Math.hypot(sr, si);
+        if (!(b2 > 0)) return a;
+        const b = Math.sqrt(b2);
+        let m = 0;
+        for (const [c, s] of P_THETA16) m += Math.hypot(a + b * c, b * s);
+        return m / 16;
+    }
+
+    /** Called by the board after every accepted transient step. */
+    onAccepted(board, tSec, solution) {
+        // Smoothed junction voltage and DC current of each detector: their
+        // ratio is the DC load the detector works into, which fixes its
+        // carrier-level operating point (see refresh()). Smoothed over ~1 ms:
+        // both follow the programme alike, so their ratio does not, and a
+        // switch-on transient is forgotten quickly.
+        const dt = this._lastAcceptSec === null ? 0 : Math.max(0, tSec - this._lastAcceptSec);
+        this._lastAcceptSec = tSec;
+        const alpha = dt > 0 ? 1 - Math.exp(-dt / P_IDC_TAU_SEC) : 1;
+        for (const d of this.detectors) {
+            const env = this._H ? this.amplitude(d.index, tSec) : 0;
+            const { v, i } = this._junctionDc(d, solution, env);
+            const prev = this._idc.get(d.id);
+            if (!prev) this._idc.set(d.id, { v, i });
+            else { prev.v += (v - prev.v) * alpha; prev.i += (i - prev.i) * alpha; }
+        }
+        this._kindOf ??= new Map((board._solveParts ?? []).filter(p => p.kind === 'npn' || p.kind === 'pnp')
+            .map(p => [p.id, p.kind]));
+        this._smoothOperatingPoint(solution, dt);
+        const key = JSON.stringify([...(board.controls ?? new Map())]);
+        if (key !== this._controlsKey) { this._controlsKey = key; this._dirty = true; }
+        if (this._dirty || tSec - this._tRefresh >= P_REFRESH_SEC) this.refresh(board, tSec, this._opView(solution));
+    }
+
+    /**
+     * The operating point the carrier is linearised at, smoothed over ~5 ms.
+     * A transistor's bias swings at audio rate (in a reflex receiver by
+     * volts); sampling that swing every refresh would turn the RF gain into
+     * a staircase at the refresh rate. The carrier-level gain follows the
+     * mean bias; its modulation by the programme is not modelled.
+     */
+    _smoothOperatingPoint(solution, dt) {
+        if (!solution?.nodeVoltages) return;
+        const a = dt > 0 ? 1 - Math.exp(-dt / P_OP_TAU_SEC) : 1;
+        const ema = this._opEma ?? (this._opEma = { v: new Map(), bc: new Map() });
+        for (const [id, v] of solution.nodeVoltages) {
+            const p = ema.v.get(id);
+            ema.v.set(id, p === undefined ? v : p + (v - p) * a);
+        }
+        for (const [id, m] of solution.branchCurrents ?? []) {
+            const kind = this._kindOf?.get(id);
+            if (kind !== 'npn' && kind !== 'pnp') continue;
+            let e = ema.bc.get(id);
+            if (!e) { e = new Map(m); ema.bc.set(id, e); continue; }
+            for (const [t, i] of m) e.set(t, (e.get(t) ?? i) + (i - (e.get(t) ?? i)) * a);
+        }
+    }
+
+    _opView(solution) {
+        if (!this._opEma) return solution;
+        const bc = new Map(solution.branchCurrents ?? []);
+        for (const [id, m] of this._opEma.bc) bc.set(id, m);
+        return { ...solution, nodeVoltages: this._opEma.v, branchCurrents: bc };
+    }
+
+    /** Junction voltage and DC current (forward sense) of detector d in a solution. */
+    _junctionDc(d, solution, env) {
+        const bc = solution?.branchCurrents?.get(d.partId);
+        const nv = (id) => solution?.nodeVoltages?.get(id) ?? 0;
+        const card = junctionCard(d.of);
+        const sign = d.kind === 'pnp' ? -1 : 1;
+        const v = sign * (nv(d.nets[0]) - nv(d.nets[1]));
+        const [delta] = rectificationCurrent(v, env, card.is, card.nVt);
+        let base = 0;
+        if (bc) {
+            // Raw branch currents are OUT of the part at each terminal.
+            if (d.kind === 'diode') base = -(bc.get('anode') ?? 0);
+            else base = sign * -(bc.get('base') ?? 0);
+        }
+        return { v, i: base + (d.kind === 'diode' ? delta : delta / (card.beta + 1)) };
+    }
+
+    /**
+     * Carrier-level describing-function conductance of a diode detector with
+     * an RF swing A, at the bias it settles to on its DC load: the averaged
+     * current Is·e^{v/nVt}·I0(x) − Is flows into the load, so with the load
+     * R (estimated from the smoothed junction voltage and current) v solves
+     * Is·(e^{v/nVt}·I0(x) − 1) = −v/R, and G = (I + Is)·g(x)/nVt.
+     * A detector held in forward conduction by its bias (v > 0) keeps its
+     * measured current instead.
+     */
+    _diodeG(d, A) {
+        const card = junctionCard(d.of);
+        const x = A / card.nVt;
+        const L = lnI0(x);
+        const m = this._idc.get(d.id) ?? { v: 0, i: 0 };
+        let iAvg;
+        if (m.v > 0 && m.i > 0) {
+            iAvg = m.i + card.is;
+        } else {
+            const rl = (m.i > 1e-10 && m.v < -1e-5) ? Math.min(1e8, Math.max(10, -m.v / m.i)) : P_DEFAULT_LOAD_OHMS;
+            const h = (v) => card.is * (Math.exp(Math.min(700, v / card.nVt + L)) - 1) + v / rl;
+            let lo = -(A + 2), hi = 0.5;
+            for (let k = 0; k < 60; k++) { const mid = (lo + hi) / 2; if (h(mid) > 0) hi = mid; else lo = mid; }
+            const v = (lo + hi) / 2;
+            iAvg = card.is * Math.exp(Math.min(700, v / card.nVt + L));
+        }
+        return iAvg * besselGain(x) / card.nVt;
+    }
+
+    /**
+     * Solve the RF network at every carrier (see the module note) with the
+     * board's small-signal AC solver. Diode detectors are closed in one step
+     * from each detector's Thevenin equivalent: the carrier amplitude A
+     * across the junction solves A² = Σ_k |Voc_k / (1 + Z_k·G(A))|², which
+     * is monotone in A (bisection); transistors are compressed by g(x) by
+     * fixed-point iteration.
+     */
+    refresh(board, tSec, solution) {
+        this._dirty = false;
+        const stations = this.allStations();
+        this._stationList = stations;
+        if (!this.antennas.length || !stations.length || !solution?.nodeVoltages) {
+            this._tRefresh = tSec;
+            return;
+        }
+        const prevBlend = this._H && this._groups ? this.detectors.map((_, d) => stations.map((__, k) => this._phasor(d, k, tSec))) : null;
+        const freqs = stations.map(s => s.hz);
+        const sq = ([re, im]) => re * re + im * im;
+        let result = null;
+        try {
+            for (const d of this.detectors) {
+                if (!this._drive.has(d.id)) this._drive.set(d.id, d.kind === 'diode' ? this._diodeG(d, 0) : 1);
+            }
+            for (let pass = 0; pass < 3; pass++) {
+                result = this._solveCarriers(board, solution, freqs, stations, this._rfOptions());
+                let change = 0;
+                for (const d of this.detectors) {
+                    const old = this._drive.get(d.id);
+                    let next;
+                    if (d.kind === 'diode') {
+                        // Thevenin per carrier with this detector's G removed.
+                        const zin = board._radioSweep(d.testId, freqs, solution, this._rfOptions(), this)
+                            .map(pt => p_phasorOf(pt.results, d.nets[0], d.nets[1]));
+                        const zth = zin.map(z => p_cdiv(z, p_csub([1, 0], p_cscale(z, old))));
+                        const voc = result.det[d.index].map((vk, k) => p_cmul(vk, p_cadd([1, 0], p_cscale(zth[k], old))));
+                        const aOf = (A, G) => Math.sqrt(voc.reduce((acc, v, k) => acc + sq(v) / sq(p_cadd([1, 0], p_cscale(zth[k], G))), 0));
+                        let lo = 0, hi = Math.sqrt(voc.reduce((acc, v) => acc + sq(v), 0));
+                        for (let k = 0; k < 50 && hi > 0; k++) {
+                            const mid = (lo + hi) / 2;
+                            if (aOf(mid, this._diodeG(d, mid)) > mid) lo = mid; else hi = mid;
+                        }
+                        next = this._diodeG(d, (lo + hi) / 2);
+                    } else {
+                        const A = Math.sqrt(result.det[d.index].reduce((acc, v) => acc + sq(v), 0));
+                        next = besselGain(A / junctionCard(d.of).nVt);
+                        if (old > 0) next = Math.sqrt(old * next);
+                    }
+                    if (Math.abs(next - old) > 0.01 * Math.max(Math.abs(old), 1e-30)) change++;
+                    this._drive.set(d.id, next);
+                }
+                if (!change) break;
+            }
+            result = this._solveCarriers(board, solution, freqs, stations, this._rfOptions());
+            this.error = null;
+        } catch (err) {
+            this.error = String(err?.message ?? err);
+            this._tRefresh = tSec;
+            return;
+        }
+        this._Hprev = prevBlend;
+        this._H = result.det;
+        this._netPhasors = result.nets;
+        this._tRefresh = tSec;
+        this.refreshes++;
+        // Beat groups per detector.
+        this._groups = this.detectors.map((d) => {
+            let ref = 0, best = -1;
+            stations.forEach((s, k) => {
+                const m = sq(this._H[d.index][k]);
+                if (m > best) { best = m; ref = k; }
+            });
+            const slow = [], fast = [];
+            stations.forEach((s, k) => (Math.abs(s.hz - stations[ref].hz) <= P_SLOW_BEAT_HZ ? slow : fast).push(k));
+            return { ref, slow, fast };
+        });
+    }
+
+    _rfOptions() {
+        const junctionG = new Map();
+        const bjtCompression = new Map();
+        for (const d of this.detectors) {
+            const g = this._drive.get(d.id);
+            if (g === undefined) continue;
+            if (d.kind === 'diode') junctionG.set(d.partId, g);
+            else bjtCompression.set(d.partId, g);
+        }
+        return { junctionG, bjtCompression };
+    }
+
+    _solveCarriers(board, solution, freqs, stations, rf) {
+        const det = this.detectors.map(() => stations.map(() => [0, 0]));
+        const nets = new Map();
+        for (const a of this.antennas) {
+            const sweep = board._radioSweep(a.sourceId, freqs, solution, rf, this);
+            sweep.forEach((pt, k) => {
+                const e = this.emf(a, stations[k]);
+                if (!e) return;
+                for (const d of this.detectors) {
+                    const p = p_cscale(p_phasorOf(pt.results, d.nets[0], d.nets[1]), e);
+                    det[d.index][k][0] += p[0];
+                    det[d.index][k][1] += p[1];
+                }
+                for (const netId of pt.results.keys()) {
+                    let m = nets.get(netId);
+                    if (!m) { m = stations.map(() => [0, 0]); nets.set(netId, m); }
+                    const p = p_cscale(p_phasorOf(pt.results, netId, null), e);
+                    m[k][0] += p[0];
+                    m[k][1] += p[1];
+                }
+            });
+        }
+        return { det, nets };
+    }
+
+    /** The solver view the RF solve runs on: the ferrite coils fully coupled, no detector companions. */
+    rfView(parts, nets) {
+        if (this._view && this._view.src === parts) return this._view;
+        const drop = new Set(this.coupled.flatMap(c => c.remove));
+        const outParts = parts.filter(p => p.kind !== RF_DETECT_KIND && !drop.has(p.id));
+        const outNets = nets.map(n => ({ ...n, terminals: n.terminals.filter(t => !drop.has(t.part) && !t.part.endsWith(':det')) }));
+        const byId = new Map(outNets.map(n => [n.id, n]));
+        for (const c of this.coupled) {
+            outParts.push(c.part);
+            for (const [netId, t] of c.nets) byId.get(netId)?.terminals.push({ part: c.part.id, terminal: t });
+        }
+        // A 1 A test current across each diode detector (AC-open unless it is
+        // the swept source): its response is the junction's driving-point
+        // impedance, for the Thevenin equivalent in refresh().
+        for (const d of this.detectors) {
+            if (d.kind !== 'diode') continue;
+            outParts.push({ id: d.testId, kind: 'isource', params: { amps: 0 }, terminals: ['pos', 'neg'] });
+            byId.get(d.nets[0])?.terminals.push({ part: d.testId, terminal: 'pos' });
+            byId.get(d.nets[1])?.terminals.push({ part: d.testId, terminal: 'neg' });
+        }
+        this._view = { src: parts, parts: outParts, nets: outNets };
+        return this._view;
+    }
+
+    /** The swing at detector d's junction (rf_detect, src/devices/radio-parts.js). */
+    junctionDrive(d, tSec) {
+        const A = this.amplitude(d, tSec);
+        const det = this.detectors[d];
+        return [{ L: A > 0 ? lnI0(A / junctionCard(det.of).nVt) : 0, A }];
+    }
+
+    /** No envelope bands on this path. */
+    bandAmplitudes() { return []; }
+
+    /** Per-station RF phasor amplitudes at a net (V peak) from the last refresh. */
+    netAmplitudes(netId) {
+        const m = this._netPhasors?.get(netId);
+        if (!m) return null;
+        return this._stationList.map((s, k) => ({ id: s.id, hz: s.hz, volts: Math.hypot(m[k][0], m[k][1]) }));
+    }
+
+    report(tSec) {
+        const st = this._stationList ?? this.allStations();
+        return {
+            stations: st.map(s => ({ ...s })),
+            refreshes: this.refreshes,
+            error: this.error,
+            detectors: this.detectors.map(d => ({
+                id: d.partId, kind: d.kind,
+                carriers: st.map((s, k) => {
+                    const h = this._H?.[d.index]?.[k] ?? [0, 0];
+                    return { id: s.id, hz: s.hz, volts: Math.hypot(h[0], h[1]) };
+                }),
+                envelope: this.amplitude(d.index, tSec),
+                junctionVolts: this._idc.get(d.id)?.v ?? 0,
+                dcAmps: this._idc.get(d.id)?.i ?? 0,
+            })),
+        };
     }
 }
