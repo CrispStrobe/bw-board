@@ -359,6 +359,28 @@ describe('555 timer: control pin absent from every net', () => {
     });
   }
 
+  // The event-localization probe (board.js _locateDeviceEvent) gave the model
+  // a read() with no `connected`, so an open CV read 0 V there: every probe
+  // saw the upper threshold at 0, "found" a flip just after each step start,
+  // and the integrator crawled -- pc67 with CV open took 623,000 attempts for
+  // 30 ms against 1,900 with CV decoupled through 10 nF. An open CV must cost
+  // what a wired, divider-only CV costs.
+  it('open CV costs no more solver work than a floating CV net', () => {
+    const run = (nets) => {
+      const board = new BoardImpl(5.0);
+      board.setNetlist(makeAstableCircuit().parts, nets);
+      for (let ms = 1; ms <= 500; ms++) board.advanceTo(BigInt(ms) * 1_000_000n);
+      assert.equal(board.transientAnalysisStatus().failure, null);
+      return { attempts: board.transientAnalysisStatus().work.attempts, v: board.nodeVoltage('net_cap') };
+    };
+    const { nets } = makeAstableCircuit();
+    const wired = run(nets);
+    const open = run(openCv('timer_555').nets);
+    assert.ok(open.attempts < 1.5 * wired.attempts,
+      `open CV took ${open.attempts} attempts, a floating CV net ${wired.attempts}`);
+    assert.ok(Math.abs(open.v - wired.v) < 0.05, `same waveform: ${open.v} vs ${wired.v}`);
+  });
+
   it('556: an open CV on either section oscillates too', () => {
     const board = new BoardImpl(5.0);
     const parts = [

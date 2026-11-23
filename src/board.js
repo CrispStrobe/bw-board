@@ -7330,11 +7330,20 @@ export class BoardImpl {
         const model = getDevice(part.kind);
         if (!model || !model.update || model.eventLocalization === false || model.measurement
           || model.transientUpdateContext === true || model.gpioFollowsPinStates) continue;
-        const read = (at) => (terminal) => {
-          const n = this._netForTerminal(part.id, terminal);
-          if (!n) return 0;
-          const ov = this._digitalOverlay.get(n);
-          return ov !== undefined ? ov : (at.get(n) ?? 0);
+        const read = (at) => {
+          const r = (terminal) => {
+            const n = this._netForTerminal(part.id, terminal);
+            if (!n) return 0;
+            const ov = this._digitalOverlay.get(n);
+            return ov !== undefined ? ov : (at.get(n) ?? 0);
+          };
+          // The same question the accepted update can ask (`_updateDevices`).
+          // Without it an open 555 CV read 0 V in the probe only: the upper
+          // threshold sat at 0, every probe "found" a flip just past the step
+          // start, and the integrator crawled (pc67 with CV open: 623,000
+          // attempts for 30 ms against 1,900 with CV decoupled).
+          r.connected = (terminal) => Boolean(this._netForTerminal(part.id, terminal));
+          return r;
         };
         this._eventProbeCandidates.push({ part, model, read });
       }
