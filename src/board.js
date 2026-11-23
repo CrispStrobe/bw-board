@@ -3262,8 +3262,10 @@ export class BoardImpl {
     }
     // A piezo element keeps its own crossing times (devices/digital-ics.js):
     // it is driven by whatever is across it, not by one MCU pin.
-    const edges = this.partMap?.get(partId)?.kind === 'piezo'
-      ? this._deviceStates.get(partId)?._edges : this.buzzerEdges.get(partId);
+    if (this.partMap?.get(partId)?.kind === 'piezo') {
+      return this._piezoTone(this._deviceStates.get(partId)?._edges);
+    }
+    const edges = this.buzzerEdges.get(partId);
     if (!edges || edges.length < 2) return this._buzzerDcTone(partId);
 
     // Measure period from the last two edges
@@ -3280,6 +3282,24 @@ export class BoardImpl {
 
     const hz = 1e9 / (2 * halfPeriodNs); // two edges = one full period
     return { hz, on: true };
+  }
+
+  /**
+   * A piezo's pitch from its crossing times, which alternate rising and
+   * falling. Two neighbours are one HALF-period only at 50 % duty -- a 555 or
+   * a Schmitt-gate oscillator is lopsided, and through a series resistor the
+   * piezo's own voltage is a lopsided RC wave (lab-nand-pips read 526 Hz for
+   * a 567 Hz gate) -- so the period is taken between crossings of the same
+   * direction, averaged over up to the last four periods.
+   */
+  _piezoTone(edges) {
+    if (!edges || edges.length < 3) return { hz: 0, on: false };
+    const last = edges[edges.length - 1];
+    if (this.timeNs - last > 100_000_000n) return { hz: 0, on: false };
+    const periods = Math.min(4, Math.floor((edges.length - 1) / 2));
+    const spanNs = Number(last - edges[edges.length - 1 - 2 * periods]);
+    if (!(spanNs > 0)) return { hz: 0, on: false };
+    return { hz: 1e9 * periods / spanNs, on: true };
   }
 
   /**
@@ -5901,14 +5921,26 @@ export class BoardImpl {
     // `43-rc-timing` read 5.0000 V on a capacitor getCapVoltage held at 0
     // (D23). A reactive part the snapshot never saw starts where a new one
     // does: uncharged, at rest.
+    //
+    // Except an op-amp's HIDDEN pole capacitor (ground-sensing-opamp.js): it
+    // is not a part the learner placed but the amplifier's internal state,
+    // and setNetlist seeds it from the bias point. Zeroing it here undid that
+    // seed on every load through the designer (which restores a snapshot of
+    // the EMPTY board it replaced), so every LM358 started railed low and
+    // spent its first tens of microseconds slewing to where it already was --
+    // 76-multimeter took 68 adaptive attempts for a static 1 ms. A pole the
+    // snapshot never saw is seeded again, as setNetlist does.
+    const unseenPoles = new Set();
     for (const p of (this._solveParts ?? this.parts)) {
       if (p.kind === 'capacitor' && !this.capVoltages.has(p.id)) {
         this.capVoltages.set(p.id, 0);
+        if (isHiddenPoleCapacitor(p.id)) unseenPoles.add(p.id);
       }
       if (p.kind === 'inductor' && !this.inductorCurrents.has(p.id)) {
         this.inductorCurrents.set(p.id, 0);
       }
     }
+    if (unseenPoles.size) this._seedOpampPoles(unseenPoles);
     // Trapezoidal history is NOT snapshotted: _solve() below invalidates
     // it, so the first step after a restore re-seeds with BE — cleared
     // here only so stale values never look meaningful in a debugger.
@@ -6011,8 +6043,9 @@ export class BoardImpl {
    * load and reset; drawn capacitors keep the power-on-at-rest rule. A solve
    * that fails leaves the poles at 0 V (the plain power-on start).
    */
-  _seedOpampPoles() {
-    const hidden = (this._solveParts ?? []).filter(p => p.kind === 'capacitor' && isHiddenPoleCapacitor(p.id));
+  _seedOpampPoles(only = null) {
+    const hidden = (this._solveParts ?? []).filter(p => p.kind === 'capacitor' && isHiddenPoleCapacitor(p.id)
+      && (only === null || only.has(p.id)));
     if (!hidden.length) return;
     for (const cap of hidden) this.capVoltages.set(cap.id, 0);
     if (!this.powered) return;
@@ -7330,11 +7363,20 @@ export class BoardImpl {
         const model = getDevice(part.kind);
         if (!model || !model.update || model.eventLocalization === false || model.measurement
           || model.transientUpdateContext === true || model.gpioFollowsPinStates) continue;
-        const read = (at) => (terminal) => {
-          const n = this._netForTerminal(part.id, terminal);
-          if (!n) return 0;
-          const ov = this._digitalOverlay.get(n);
-          return ov !== undefined ? ov : (at.get(n) ?? 0);
+        const read = (at) => {
+          const r = (terminal) => {
+            const n = this._netForTerminal(part.id, terminal);
+            if (!n) return 0;
+            const ov = this._digitalOverlay.get(n);
+            return ov !== undefined ? ov : (at.get(n) ?? 0);
+          };
+          // The same question the accepted update can ask (`_updateDevices`).
+          // Without it an open 555 CV read 0 V in the probe only: the upper
+          // threshold sat at 0, every probe "found" a flip just past the step
+          // start, and the integrator crawled (pc67 with CV open: 623,000
+          // attempts for 30 ms against 1,900 with CV decoupled).
+          r.connected = (terminal) => Boolean(this._netForTerminal(part.id, terminal));
+          return r;
         };
         this._eventProbeCandidates.push({ part, model, read });
       }

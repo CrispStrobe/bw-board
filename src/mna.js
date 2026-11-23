@@ -1385,9 +1385,20 @@ function shockleyCompanion(vAcross, vf, rd, is, n) {
  *
  * @returns {{netId: string, partId: string, stacked: number}|null}
  */
+// caller nets array -> terminal key -> net id. solveMNA asks for the
+// reference on EVERY solve of a bench without a gnd symbol, and rebuilding
+// this map (a string key per terminal) was 10 % of lab-nand-pips' transient
+// profile. Keyed on the array's identity, like TERM_MAP_MEMO below: the board
+// hands the same nets array to every solve until setNetlist builds a new one.
+const GROUND_REFERENCE_NET_MEMO = new WeakMap();
+
 export function chooseGroundReference(parts, nets) {
-  const netOf = new Map();
-  for (const net of nets) for (const t of net.terminals) netOf.set(`${t.part}\0${t.terminal}`, net.id);
+  let netOf = GROUND_REFERENCE_NET_MEMO.get(nets);
+  if (!netOf) {
+    netOf = new Map();
+    for (const net of nets) for (const t of net.terminals) netOf.set(`${t.part}\0${t.terminal}`, net.id);
+    GROUND_REFERENCE_NET_MEMO.set(nets, netOf);
+  }
   const supplies = [];
   for (const part of parts) {
     if (part.kind !== 'vsource' && !/battery/.test(part.kind)) continue;
@@ -2431,7 +2442,17 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
             const C = /** @type {number} */ (part.params.farads ?? 0.0001);
             if (!Number.isFinite(C) || C <= 0) break;
             const h = Math.max(transient.dtSec, 1e-15);
-            const trap = transient.method === 'trap';
+            // `dampedBy: {part, channel}` puts one solver-internal capacitor
+            // on backward Euler inside a trapezoidal step while that device's
+            // published state says its mode is far faster than any step (the
+            // LM358 macromodel's pole on its swing clamp): damped instead of
+            // ringing (ground-sensing-opamp.js, POLE INTEGRATION). The state
+            // changes only on accepted steps, so every trial of one step
+            // integrates the same way.
+            const damp = part.params.dampedBy;
+            const damped = damp
+              && opts.deviceStates?.get(damp.part)?.poleClamped?.[damp.channel] === true;
+            const trap = transient.method === 'trap' && !damped;
             const vPrev = transient.capVoltages.get(part.id) ?? 0;
             const iPrev = trap ? (transient.capCurrents?.get(part.id) ?? 0) : 0;
             const resistance = h / ((trap ? 2 : 1) * C);

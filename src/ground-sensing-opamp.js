@@ -49,6 +49,21 @@
  * (at VO = 2 V) sink. Quiescent supply current, input bias/offset, noise and
  * phase reversal are NOT modelled.
  *
+ * POLE INTEGRATION. While a pole rests on its swing clamp, its hidden
+ * capacitor is integrated with backward Euler instead of the trapezoidal
+ * rule (`dampedBy` on the capacitor names the package part and channel; the
+ * package's update() publishes `poleClamped` per channel after every
+ * accepted step). On the clamp the pole is a 0.1 ns mode (G_CLAMP on cInt),
+ * and the trapezoidal rule does not damp a mode that much faster than the
+ * step: the pole alternated about the clamp by ~90 µV for as long as the
+ * amplifier stayed saturated, Newton lost convergence on that alternation at
+ * any useful step, and a comparator whose input crept toward its threshold
+ * cost ~350 attempts per simulated ms (lab-v-to-f: 163 s of test time).
+ * Backward Euler damps it in one step. Off the clamp the pole keeps the
+ * trapezoidal rule: there its dynamics are the amplifier's gain-bandwidth,
+ * and first-order integration of them cost a x101 audio stage 3.5x the
+ * steps (lab-attenuator-gain).
+ *
  * INITIAL CONDITION. The hidden pole capacitor is seeded from the bias point
  * of the bench at the instant the netlist is set (BoardImpl seeds it, the way
  * SPICE starts a transient from its operating point), so a static op-amp
@@ -227,7 +242,9 @@ export function expandGroundSensingOpAmps(parts, nets, kinds = GROUND_SENSING_OP
                 { id: stageId, kind: STAGE_KIND,
                     params: { fixedVcc: vccNet ? null : 5.0 },
                     terminals: [...STAGE_TERMINALS] },
-                { id: capId, kind: 'capacitor', params: { farads: POLE_FARADS }, terminals: ['a', 'b'] },
+                // Damped while clamped: see POLE INTEGRATION above.
+                { id: capId, kind: 'capacitor', params: { farads: POLE_FARADS, dampedBy: { part: part.id, channel: ch } },
+                    terminals: ['a', 'b'] },
                 { id: rpId, kind: 'resistor', params: { ohms: POLE_OHMS }, terminals: ['a', 'b'] },
             );
             const T = (p, terminal) => ({ part: p, terminal });
