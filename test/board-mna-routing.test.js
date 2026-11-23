@@ -106,7 +106,18 @@ test('a LOADED pot wiper routes to MNA; an ADC wiper stays on the walker', () =>
   // ngspice deck for the loaded-pot topology. It is pinned so a further change
   // is noticed; the diode itself is oracled in the two tests above, and if this
   // number ever needs defending it needs its own deck first.
-  assert.ok(Math.abs(vW - 1.8485) < 0.005, `loaded wiper sags to 1.8485, got ${vW.toFixed(4)}`);
+  // RE-DERIVED for round 3: the LED is exponential by default. Its Thevenin
+  // loop (2.5 V, 2500 + 220 ohm) against n*Vt*ln(I/Is + 1) + I*rs, with Is
+  // calibrated to 2.0 V at 20 mA through rs = 10 and n = 1.8, by bisection
+  // here: 1.6836 V (1.8485 with the knee).
+  const nVt = 1.8 * 0.02585, is = 0.02 / (Math.exp((2.0 - 0.02 * 10) / nVt) - 1);
+  let lo = 0, hi = 0.001;
+  for (let k = 0; k < 200; k++) {
+    const i = (lo + hi) / 2;
+    if (i * 2730 + nVt * Math.log(i / is + 1) < 2.5) lo = i; else hi = i;
+  }
+  const want = 2.5 - lo * 2500;
+  assert.ok(Math.abs(vW - want) < 0.002, `loaded wiper sags to ${want.toFixed(4)}, got ${vW.toFixed(4)}`);
   const residual = (5 - vW) / 5000 - vW / 5000 - (vW - vL) / 220;
   assert.ok(Math.abs(residual) < 1e-6,
     `KCL closes at the wiper: residual ${(residual * 1e3).toFixed(4)} mA`);

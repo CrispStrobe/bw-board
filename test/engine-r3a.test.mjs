@@ -1,4 +1,5 @@
-// Round 3 (2026-11-23): the transient controller's Richardson error factor.
+// Round 3 (2026-11-23): the transient controller's Richardson error factor and
+// the exponential default junction's reverse region.
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {BoardImpl} from '../src/board.js';
@@ -51,4 +52,26 @@ test('step doubling scales its estimate by 1/(2^p - 1): fewer steps, error still
   const ref = rlcReference(0.01);
   const v = b.nodeVoltage('o');
   assert.ok(Math.abs(v - ref) < 5e-5, `v(o) ${v}, reference ${ref}`);
+});
+
+test('the exponential junction has no gap in reverse: 0.995 Is has a voltage', () => {
+  // shockleyEval used to switch to a flat -Is below -5 nVt, dropping the
+  // e^-5 = 0.67 % of Is the exponential still carries there: no voltage gave
+  // a reverse current between 0.9933 Is and Is, so a diode turning off on an
+  // inductor (which forces its current through that range) had no Newton
+  // solution at any step size.
+  const nVt = 1.752 * VT;
+  const is = 0.020 / (Math.exp((0.7 - 0.020 * 0.568) / nVt) - 1);
+  const b = new BoardImpl(5);
+  b.setNetlist([
+    {id: 'G', kind: 'gnd', params: {}, terminals: ['gnd']},
+    {id: 'I', kind: 'isource', params: {amps: -0.995 * is}, terminals: ['pos', 'neg']},
+    {id: 'D', kind: 'diode', params: {}, terminals: ['anode', 'cathode']},
+  ], [
+    {id: 'a', terminals: [{part: 'I', terminal: 'pos'}, {part: 'D', terminal: 'anode'}]},
+    {id: 'g', terminals: [{part: 'G', terminal: 'gnd'}, {part: 'I', terminal: 'neg'}, {part: 'D', terminal: 'cathode'}]},
+  ]);
+  const v = b.nodeVoltage('a');
+  const want = nVt * Math.log(1 - 0.995);
+  assert.ok(Math.abs(v - want) < 2e-3, `V(anode) ${v}, exponential says ${want}`);
 });

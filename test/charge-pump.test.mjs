@@ -9,7 +9,9 @@
 //
 // The oracles are self-calibrating: the diode's effective forward drop
 // is MEASURED from the same engine first (a diode is Vf + rd·I here,
-// piecewise-linear), then the classic formulas predict the pump outputs:
+// piecewise-linear: `model: 'pwl'` on every diode, since round 3 made the
+// exponential the default and a single calibrated Vf is the knee's premise),
+// then the classic formulas predict the pump outputs:
 //   Villard doubler,  ±Vpk square:  Vout ≈ +(2·Vpk − 2·Vf)
 //   Diode inverter,  0..+Vpk pulse: Vout ≈ −(Vpk − 2·Vf)
 // A solver that mis-integrates the cap hand-off or lets a clamp leak
@@ -26,7 +28,7 @@ function measureDiodeDrop() {
   const parts = [
     { id: 'vs', kind: 'vsource', params: { volts: 5 }, terminals: ['pos', 'neg'] },
     { id: 'r1', kind: 'resistor', params: { ohms: 4700 }, terminals: ['a', 'b'] },
-    { id: 'd1', kind: 'diode', params: {}, terminals: ['anode', 'cathode'] },
+    { id: 'd1', kind: 'diode', params: { model: 'pwl' }, terminals: ['anode', 'cathode'] },
     { id: 'g1', kind: 'gnd', params: {}, terminals: ['gnd'] },
   ];
   const nets = [
@@ -67,8 +69,8 @@ describe('charge pumps vs hand math (the cluster-6b gate)', () => {
     const parts = [
       { id: 'vs', kind: 'vsource', params: { wave: 'square', amplitude: 5, offset: 0, freq: 1000, volts: 0 }, terminals: ['pos', 'neg'] },
       { id: 'c1', kind: 'capacitor', params: { farads: 1e-6 }, terminals: ['a', 'b'] },
-      { id: 'd1', kind: 'diode', params: {}, terminals: ['anode', 'cathode'] }, // clamp: gnd → A
-      { id: 'd2', kind: 'diode', params: {}, terminals: ['anode', 'cathode'] }, // steer: A → out
+      { id: 'd1', kind: 'diode', params: { model: 'pwl' }, terminals: ['anode', 'cathode'] }, // clamp: gnd → A
+      { id: 'd2', kind: 'diode', params: { model: 'pwl' }, terminals: ['anode', 'cathode'] }, // steer: A → out
       { id: 'c2', kind: 'capacitor', params: { farads: 1e-6 }, terminals: ['a', 'b'] },
       { id: 'rl', kind: 'resistor', params: { ohms: 1e6 }, terminals: ['a', 'b'] },
       { id: 'g1', kind: 'gnd', params: {}, terminals: ['gnd'] },
@@ -90,8 +92,8 @@ describe('charge pumps vs hand math (the cluster-6b gate)', () => {
     const parts = [
       { id: 'vs', kind: 'vsource', params: { wave: 'pulse', amplitude: 5, offset: 0, freq: 1000, duty: 0.5, volts: 0 }, terminals: ['pos', 'neg'] },
       { id: 'c1', kind: 'capacitor', params: { farads: 1e-6 }, terminals: ['a', 'b'] },
-      { id: 'd1', kind: 'diode', params: {}, terminals: ['anode', 'cathode'] }, // clamp: A → gnd
-      { id: 'd2', kind: 'diode', params: {}, terminals: ['anode', 'cathode'] }, // steer: out → A
+      { id: 'd1', kind: 'diode', params: { model: 'pwl' }, terminals: ['anode', 'cathode'] }, // clamp: A → gnd
+      { id: 'd2', kind: 'diode', params: { model: 'pwl' }, terminals: ['anode', 'cathode'] }, // steer: out → A
       { id: 'c2', kind: 'capacitor', params: { farads: 1e-6 }, terminals: ['a', 'b'] },
       { id: 'rl', kind: 'resistor', params: { ohms: 1e6 }, terminals: ['a', 'b'] },
       { id: 'g1', kind: 'gnd', params: {}, terminals: ['gnd'] },

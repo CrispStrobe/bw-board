@@ -74,7 +74,9 @@ describe('saturated PNP stamps its base junction (source honesty 2)', () => {
             { id: 'rb', kind: 'resistor', params: { ohms: 10000 }, terminals: ['a', 'b'] },
             { id: 'sw', kind: 'switch', params: {}, terminals: ['a', 'b'] },
             { id: 'rl', kind: 'resistor', params: { ohms: 1000 }, terminals: ['a', 'b'] },
-            { id: 'led', kind: 'led', params: { vf: 2 }, terminals: ['anode', 'cathode'] },
+            // The load LED keeps the knee: the 3.109 mA below is the PNP's
+            // number, derived with it (round 3 made LEDs exponential by default).
+            { id: 'led', kind: 'led', params: { vf: 2, model: 'pwl' }, terminals: ['anode', 'cathode'] },
         ];
         const nets = [
             { id: 'n_vcc', terminals: [{ part: 'vcc1', terminal: 'vcc' }, { part: 'q1', terminal: 'emitter' }] },

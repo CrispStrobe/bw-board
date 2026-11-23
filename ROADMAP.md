@@ -139,6 +139,12 @@ drift. The flip is one coordinated change: route all junction benches past
 the walker (or teach the walker the exponential), flip the default, and
 re-measure the shipped corpus WITH the examples owner in the same landing.
 Blocked on: corpus re-measurement scheduling. Not on code.
+**Landed 2026-11-23 (round 3, user ruling):** diodes and LEDs are exponential by
+default (`junctionModelOf`, `DEFAULT_EXPONENTIAL_KINDS`); every bench with one is
+solved by MNA, so the walker never answers a knee beside an exponential
+instrument. `params.model:'pwl'` and `JUNCTION_ROUTING.mode = 'pwl' | 'headroom'`
+keep the old models selectable. The gallery values that moved are listed in
+kosmos-cleanroom/R3A-GALLERY-MOVES.md for the examples owner's re-measurement.
 
 ### E1.4 Convergence fallback ladder — `src/mna.js` (GATED)
 When plain NR fails, do not report failure immediately: try GMIN stepping (raise GMIN,

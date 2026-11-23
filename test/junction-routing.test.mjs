@@ -50,7 +50,31 @@ test('a part with an explicit model always gets it, whatever the policy says', (
     }
 });
 
-test('the threshold routes by headroom, and it is the derived one', () => {
+// Round 3 (2026-11-23, user ruling): 'auto' makes every diode and LED
+// exponential. The per-circuit headroom routing measured above is the
+// 'headroom' policy now; the tests of that routing select it explicitly.
+const underPolicy = (mode, fn) => {
+    const before = JUNCTION_ROUTING.mode;
+    JUNCTION_ROUTING.mode = mode;
+    try { return fn(); } finally { JUNCTION_ROUTING.mode = before; }
+};
+
+test('auto: diodes and LEDs are exponential whatever their headroom; pwl stays one parameter away', () => {
+    for (const kind of ['led', 'diode']) {
+        assert.equal(junctionModelOf({kind, params: {}}, 99), 'shockley', `${kind} at 99 V headroom`);
+        assert.equal(junctionModelOf({kind, params: {}}, undefined), 'shockley', `${kind} with no headroom`);
+        assert.equal(junctionModelOf({kind, params: {model: 'pwl'}}, -99), 'pwl', `explicit pwl ${kind}`);
+    }
+    // Not widened to other junction kinds: their defaults are their own.
+    assert.equal(junctionModelOf({kind: 'zener', params: {}}, undefined), 'pwl');
+    assert.equal(junctionModelOf({kind: 'npn', params: {}}, undefined), 'pwl');
+    const above = chain(1, 2.0, 5.0);
+    for (const p of above._solveParts.filter(p => p.kind === 'led')) {
+        assert.equal(p._junctionModel, 'shockley', 'a high-headroom LED is stamped exponential under auto');
+    }
+});
+
+test('the threshold routes by headroom, and it is the derived one', () => underPolicy('headroom', () => {
     // MNA_HEADROOM_V is not a taste. Sweeping supply headroom against the worst
     // PWL/Shockley disagreement over R and topology gives a curve that
     // asymptotes at ~13.7%: 100% at cut-off, 32.8% at 1 V, 18.7% at 2 V, 13.7%
@@ -63,7 +87,7 @@ test('the threshold routes by headroom, and it is the derived one', () => {
     assert.equal(junctionModelOf(bare, MNA_HEADROOM_V - 0.01), 'shockley', 'just below the threshold must route to MNA');
     assert.equal(junctionModelOf(bare, MNA_HEADROOM_V + 0.01), 'pwl', 'just above it must stay on the walker');
     assert.equal(junctionModelOf(bare, -1), 'shockley', 'a circuit below cut-off must never be left to the knee');
-});
+}));
 
 test('the toggle reaches a real solve, in both directions', () => {
     // The escape hatch has to WORK, or it is a comment. A single LED at 5 V is
@@ -75,15 +99,18 @@ test('the toggle reaches a real solve, in both directions', () => {
         const iPwl = chain(1, 2.0, 5.0).branchCurrent('LED1', 'anode');
         JUNCTION_ROUTING.mode = 'shockley';
         const iShk = chain(1, 2.0, 5.0).branchCurrent('LED1', 'anode');
+        JUNCTION_ROUTING.mode = 'headroom';
+        const iHeadroom = chain(1, 2.0, 5.0).branchCurrent('LED1', 'anode');
         JUNCTION_ROUTING.mode = 'auto';
         const iAuto = chain(1, 2.0, 5.0).branchCurrent('LED1', 'anode');
 
         assert.ok(Math.abs(iPwl - iShk) > 1e-6,
             'forcing shockley produced the same current as forcing pwl — the toggle is not '
             + `reaching the solve (both ${(iPwl * 1000).toFixed(4)} mA)`);
-        assert.equal(iAuto, iPwl,
-            'a single LED at 5 V has 3 V of headroom, above the threshold, so auto must agree '
-            + 'with pwl here — if it does not, the routing is not using the threshold');
+        assert.equal(iHeadroom, iPwl,
+            'a single LED at 5 V has 3 V of headroom, above the threshold, so the headroom '
+            + 'policy must agree with pwl here — if it does not, the routing is not using the threshold');
+        assert.equal(iAuto, iShk, 'auto makes an LED exponential (round 3)');
     } finally { JUNCTION_ROUTING.mode = before; }
 });
 
@@ -118,7 +145,7 @@ test('the qualitative failure is gone: a conducting circuit is not reported dark
         `current ${(i * 1e6).toFixed(1)} uA is not within 1 % of ngspice's 151.42 uA`);
 });
 
-test('the model is resolved ONCE per solve, so stamp and read cannot disagree', () => {
+test('the model is resolved ONCE per solve, so stamp and read cannot disagree', () => underPolicy('headroom', () => {
     // mna.js's junctionCurrent says "must match what was stamped". If the model
     // were decided per call site, a matrix stamped for one model could be read
     // with the other — silently, as a wrong current rather than an error. The
@@ -136,4 +163,4 @@ test('the model is resolved ONCE per solve, so stamp and read cannot disagree', 
     for (const p of above._solveParts.filter(p => p.kind === 'led')) {
         assert.equal(p._junctionModel, 'pwl', 'a high-headroom circuit must be stamped pwl');
     }
-});
+}));

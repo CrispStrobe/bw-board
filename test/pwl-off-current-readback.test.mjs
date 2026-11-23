@@ -11,7 +11,7 @@ for (const kind of ['diode','led']) for (const volts of [-5,0,.1]) {
     b.setNetlist([
       {id:'V',kind:'vsource',params:{volts},terminals:['pos','neg']},
       {id:'G',kind:'gnd',params:{},terminals:['gnd']},
-      {id:'D',kind,params:{vf:kind === 'led' ? 2 : .7},terminals:['anode','cathode']},
+      {id:'D',kind,params:{vf:kind === 'led' ? 2 : .7, model:'pwl'},terminals:['anode','cathode']},
     ],[
       net('source',['V','pos'],['D','anode']),
       net('zero',['V','neg'],['D','cathode'],['G','gnd']),
@@ -38,7 +38,7 @@ function winding({baseOhms = 1000, mode = 'quasi', vceSat = .2,
     {id:'Q',kind:'npn',params:transistorParams,terminals:['base','collector','emitter']},
     {id:'L',kind:'inductor',params:{henrys:.005},terminals:['a','b']},
     {id:'RW',kind:'resistor',params:{ohms:10},terminals:['a','b']},
-    {id:'D',kind:'diode',params:{vf:.7},terminals:['anode','cathode']},
+    {id:'D',kind:'diode',params:{vf:.7,model:'pwl'},terminals:['anode','cathode']},
   ],[
     net('supply',['V','vcc'],['L','a'],['D','cathode']),
     net('zero',['G','gnd'],['Q','emitter']),

@@ -308,27 +308,28 @@ function pwlStampedCurrent(v, vf, rd, gOff = PWL_OFF_G) {
  * @returns {{ gEq: number, iEq: number }}
  */
 /**
- * Junction model resolution — OPT-IN Shockley via `params.model:
- * 'shockley'`; the sharp-knee PWL stays the default.
- *
- * Why not Shockley-by-default yet: the closed-form walker answers LED
- * benches with the knee, so a default flip makes nodeVoltage (walker) and
- * branchCurrent (MNA) disagree by ~4 % on the same bench — the
- * two-solvers-two-truths trap — and silently moves every LED/diode value
- * in the shipped example corpus. The flip is a coordinated change (walker
- * routing + corpus re-measurement together), tracked as ROADMAP E1.3b;
- * the machinery (companion, pnjlim, extraction) is complete and tested
- * behind the param. Ideality: LEDs 1.8, silicon 1.0, via params.n.
+ * Junction model resolution. Diodes and LEDs are exponential (Shockley) by
+ * default since round 3 (2026-11-23); `params.model: 'pwl'` keeps the
+ * sharp knee on a part. Before that the knee was the default and the
+ * exponential was opt-in or routed by headroom (E1.3b): the closed-form
+ * walker answers knee circuits, and the flip moves every LED value at low
+ * current. Both costs were accepted: a bench with an exponential junction
+ * is solved by MNA (`_needsMNA`), so walker and instruments still give one
+ * answer, and the gallery values that moved are listed for re-measurement.
+ * Ideality and saturation current come from the part's card
+ * (parts-library.js) or its class defaults.
  */
 /**
  * THE JUNCTION-ROUTING POLICY, in one place, with a toggle.
  *
- * 'auto'     — per-circuit: Shockley where the walker's knee model is not
- *              adequate, PWL where it is. The default, and what the E1.3b
- *              measurement supports.
- * 'shockley' — every junction exponential. The E1.3b full flip, kept reachable
- *              so it can be turned on wholesale the day the ~4x solve cost is
- *              acceptable, without re-deriving any of this.
+ * 'auto'     — the default. Diodes and LEDs exponential
+ *              (DEFAULT_EXPONENTIAL_KINDS); every other junction kind keeps
+ *              its own default (piecewise unless its card says otherwise).
+ * 'headroom' — the E1.3b per-circuit routing that was the default until
+ *              round 3: exponential where the supply barely clears a junction
+ *              chain (< MNA_HEADROOM_V), the knee elsewhere. Kept selectable
+ *              so that routing and its tests stay measurable.
+ * 'shockley' — every junction exponential, BJTs and zeners included.
  * 'pwl'      — every junction piecewise. The pre-E1.3b behaviour, kept so a
  *              regression can be bisected against it rather than argued about.
  *
@@ -337,7 +338,10 @@ function pwlStampedCurrent(v, vf, rd, gOff = PWL_OFF_G) {
  */
 export const JUNCTION_ROUTING = {mode: 'auto'};
 
-/** The headroom below which the walker stops being adequate. Derived; see board.js. */
+/** Kinds whose junction is exponential unless the part or the policy says pwl. */
+export const DEFAULT_EXPONENTIAL_KINDS = new Set(['led', 'diode']);
+
+/** The headroom below which the walker stops being adequate ('headroom' mode). Derived; see board.js. */
 export const MNA_HEADROOM_V = 2.0;
 
 /**
@@ -726,14 +730,23 @@ export const kneeFromVf = (vf, rd = JUNCTION_RD, iRated = JUNCTION_I_RATED) =>
  * The model this junction will actually be solved with.
  *
  * `headroomV` is the supply margin over the total forward drop, or undefined
- * where the caller cannot compute it — in which case 'auto' keeps today's
- * behaviour (opt-in only) rather than guessing.
+ * where the caller cannot compute it. Only the 'headroom' policy reads it
+ * for a diode or LED; with none it falls back to the knee rather than
+ * guessing.
  */
 export function junctionModelOf(part, headroomV) {
   const explicit = part?.params?.model;
   if (explicit === 'shockley' || explicit === 'pwl') return explicit;
   if (JUNCTION_ROUTING.mode === 'shockley') return 'shockley';
   if (JUNCTION_ROUTING.mode === 'pwl') return 'pwl';
+  // DIODES AND LEDS ARE EXPONENTIAL BY DEFAULT (round 3, user ruling
+  // 2026-11-23). The knee answers an LED at a fraction of a milliamp as
+  // dark or as a straight line; the exponential, calibrated so the part
+  // drops its (per-colour) vf at its rated 20 mA (shockleyParams), is right
+  // at both ends. `params.model: 'pwl'` keeps the piecewise knee on one part
+  // and `JUNCTION_ROUTING.mode = 'pwl'` on all of them. Zeners and BJTs are
+  // not covered by this: their defaults stay as they were.
+  if (JUNCTION_ROUTING.mode !== 'headroom' && DEFAULT_EXPONENTIAL_KINDS.has(part?.kind)) return 'shockley';
   if (typeof headroomV !== 'number' || !Number.isFinite(headroomV)) return 'pwl';
   return headroomV < MNA_HEADROOM_V ? 'shockley' : 'pwl';
 }
@@ -1163,9 +1176,15 @@ function shockleyEval(vJ, p) {
   // old 1e-12 FLOOR on the slope, which looked like the same thing and is not
   // -- see JUNCTION_GMIN for the measurement that separates them. In forward
   // bias the term is ~7e-13 A against milliamps, so nothing there moves.
-  if (vClamped < -5 * p.nVt) {
-    return { i: -p.is + JUNCTION_GMIN * vClamped, gj: JUNCTION_GMIN };
-  }
+  // NO REVERSE CUT-OFF. This branch used to return the flat `-is` below
+  // -5 nVt, which drops the e^-5 = 0.67 % of Is the exponential still carries
+  // there: a JUMP in current at -5 nVt, with no voltage on either side that
+  // gives a reverse current between 0.9933 Is and Is. A diode turning off on
+  // an inductor passes through exactly that range (the winding forces its
+  // current through zero into reverse), so Newton had no solution to find
+  // and the transient failed at the minimum step (regenerative-switching:
+  // 'opening a switch on a coupled coil...'). The full exponential is
+  // continuous, underflows harmlessly to -Is, and GMIN keeps the slope.
   const expV = Math.exp(vClamped / p.nVt);
   return {
     i: p.is * (expV - 1) + JUNCTION_GMIN * vClamped,
@@ -1180,18 +1199,65 @@ function shockleyEval(vJ, p) {
 function shockleyJunctionFromTotal(vTotal, vJ0, p) {
   if (!(p.rs > 0)) return vTotal;
   let vJ = vJ0;
-  for (let k = 0; k < 40; k++) {
+  // The scalar Newton needs its own junction limiting: 4 nVt per step.
+  let done = false;
+  for (let k = 0; k < 40 && !done; k++) {
     const { i, gj } = shockleyEval(vJ, p);
     const resid = vJ + i * p.rs - vTotal;
-    if (Math.abs(resid) < 1e-12) break;
+    if (Math.abs(resid) < 1e-12) { done = true; break; }
     let step = resid / (1 + gj * p.rs);
-    // The scalar Newton needs its own junction limiting.
     if (step > p.nVt * 4) step = p.nVt * 4;
     if (step < -p.nVt * 4) step = -p.nVt * 4;
     vJ -= step;
-    if (Math.abs(step) < 1e-12) break;
+    if (Math.abs(step) < 1e-12) done = true;
+  }
+  if (done) return vJ;
+  // NOT THERE AFTER 40 LIMITED STEPS: the junction has to travel further
+  // than 40 x 4 nVt = 7.2 V (a winding throwing a reverse-biased diode to
+  // -1e10 V in one solve, or back). The limited answer was returned as is,
+  // so every outer Newton iteration saw the remaining distance as
+  // non-convergence and the transient failed at the minimum step
+  // (regenerative-switching: 'opening a switch on a coupled coil...').
+  // Finish with the limit applied only where the exponential is, above
+  // 0 V; below it the junction is a GMIN-sized linear branch and a whole
+  // step is safe (the piecewise junctions' trust region,
+  // `max(old, 0) + NR_MAX_STEP`). Junctions that got there within 40 steps,
+  // which is every one that did before, take exactly the path they took.
+  for (let k = 0; k < 80; k++) {
+    const { i, gj } = shockleyEval(vJ, p);
+    const resid = vJ + i * p.rs - vTotal;
+    if (Math.abs(resid) <= 1e-12 * Math.max(1, Math.abs(vTotal))) break;
+    let step = resid / (1 + gj * p.rs);
+    const target = vJ - step;
+    const hi = Math.max(vJ, 0) + p.nVt * 4;
+    const lo = vJ > 0 ? vJ - p.nVt * 4 : -Infinity;
+    if (target > hi) step = vJ - hi;
+    else if (target < lo) step = vJ - lo;
+    vJ -= step;
+    if (Math.abs(step) <= 1e-12 * Math.max(1, Math.abs(vJ))) break;
   }
   return vJ;
+}
+
+/**
+ * The current through an exponential LED (or diode) in series with
+ * `rSeries` ohms across `vDiff` volts, anode positive: the closed-form
+ * walker's answer for an LED chain on the same device the MNA stamps
+ * (junctionOpts, shockleyParams with the per-colour vf as the rated-current
+ * anchor, JUNCTION_GMIN in parallel, the bench temperature shift). Solved as
+ * the scalar vJ + (rs + rSeries)*i(vJ) = vDiff, which is monotone, by the
+ * same limited Newton that recovers a junction from a branch voltage.
+ * null when the part is not on the exponential path.
+ * @param {Part} part @param {number} vDiff @param {number} rSeries
+ * @param {number} [temperatureC]
+ */
+export function ledSeriesCurrent(part, vDiff, rSeries, temperatureC = 25) {
+  const opts = junctionOpts(part);
+  if (!opts) return null;
+  const vf = /** @type {number} */ (junctionVf(part)) + (temperatureC - 25) * JUNCTION_TEMPCO_V_PER_K;
+  const p = shockleyParams(opts, vf);
+  const vJ = shockleyJunctionFromTotal(vDiff, 0, { ...p, rs: p.rs + Math.max(rSeries, 0) });
+  return shockleyEval(vJ, p).i;
 }
 
 /** Fixed junction thermal voltage used by the current DC junction models. */
@@ -1301,13 +1367,8 @@ function shockleyCompanion(vAcross, vf, rd, is, n) {
   // Clamp vAcross to avoid overflow in exp
   const vClamped = Math.min(vAcross, nVt * 80);
 
-  if (vClamped < -5 * nVt) {
-    // Deep reverse bias: the saturation current in parallel with GMIN. The
-    // Norton current is `i - g*V` = `(-is + GMIN*V) - GMIN*V` = `-is`, which is
-    // why the source term is the plain saturation current and the conductance
-    // carries the GMIN.
-    return { gEq: JUNCTION_GMIN, iEq: -is };
-  }
+  // Reverse bias needs no branch of its own: the exponential underflows to
+  // -is with GMIN in parallel, continuously (see shockleyEval).
 
   const expV = Math.exp(vClamped / nVt);
   const iD = is * (expV - 1) + JUNCTION_GMIN * vClamped;
@@ -2979,6 +3040,23 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
         const vJnew = shockleyJunctionFromTotal(vNew, vOld, lim.p);
         rawDelta = vJnew - vOld;
         vLimited = pnjlim(vJnew, vOld, lim.nVt, lim.vcrit);
+        // CURRENT CONVERGENCE (SPICE's diode convergence test, a current
+        // check beside a RELATIVE voltage check). A junction can sit on a
+        // node held by nothing stiffer than GMIN-sized leakages -- the four
+        // reverse-biased L293D clamp diodes around a coasting motor -- where
+        // rounding alone moves its voltage by microvolts per iteration while
+        // its current moves by attoamps. The absolute 1 uV test then never
+        // passes: Newton two-cycled at 8 uV for its whole budget at every
+        // step size (h-bridge 'EN low on a spinning motor': 43,749 attempts
+        // for 1 ms, 159 with the knee). Such a move is converged when the
+        // junction current it implies changes by less than 1 pA and the
+        // voltage by less than 1e-3 of itself + NR_TOL (ngspice's ABSTOL,
+        // RELTOL and VNTOL). Anything carrying real current still has to meet
+        // the 1 uV test.
+        if (Math.abs(rawDelta) >= NR_TOL && !lim.noRs) {
+          const di = Math.abs(shockleyEval(vJnew, lim.p).i - shockleyEval(vOld, lim.p).i);
+          if (di < 1e-12 && Math.abs(rawDelta) <= 1e-3 * Math.abs(vJnew) + NR_TOL) rawDelta = 0;
+        }
       } else if (part.kind === 'nmos' || part.kind === 'pmos') {
         // The stored variable is vGS (nmos) / vSG (pmos), so the effective
         // threshold is |vth| in both senses.
@@ -3415,6 +3493,47 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
     if (!converged) accepted();
   }
 
+  // Rung (c) for ONE TRANSIENT STEP, on request only (`opts.transientRescue`:
+  // the board asks when the step is already at its minimum size, the point
+  // where it would otherwise record the transient as failed). Within a step
+  // of 1e-15 s every storage element is a fixed source, so what remains is an
+  // algebraic Newton problem, and the same pseudo-time homotopy applies,
+  // anchored at the last accepted node voltages; the final run without the
+  // anchor is the step's own equations, so the physics is unchanged.
+  // Measured case: an optocoupler output switching on while an exponential
+  // diode pump conducts (photo-compliance). Plain Newton two-cycled at every
+  // step size down to 1e-15 s: the diode's pnjlim-limited forward step and
+  // the opto's 0.5 V-damped linearization point chased each other (collector
+  // iterate -0.72 / -1.22 V, the linear solve answering +5.39 / -2.39 V).
+  // Only failing minimum-size steps reach this, so no converging solve
+  // changes.
+  if (!converged && transient && opts.transientRescue === true) {
+    const guess = opts.warmStart?.nodeVoltages instanceof Map ? opts.warmStart.nodeVoltages
+      : opts.nonlinearGuess instanceof Map ? opts.nonlinearGuess : null;
+    let anchor = new Float64Array(dim);
+    if (guess) for (const [netId, index] of nodeIndex) {
+      const v = guess.get(netId);
+      if (Number.isFinite(v)) anchor[index] = v;
+    }
+    let g = 1e-2;
+    let accepted = snapshotNewton();
+    let done = false;
+    for (let step = 0; step < 300 && g <= 1e2; step++) {
+      if (runNewton(GMIN, 1, false, anchor, g) && solution.every(Number.isFinite)) {
+        let moved = 0;
+        for (let i = 0; i < nodeCount; i++) moved = Math.max(moved, Math.abs(solution[i] - anchor[i]));
+        anchor = solution.slice(0, dim);
+        accepted = snapshotNewton();
+        if (g <= 1e-10 && moved < 1e-6) { done = true; break; }
+        g /= moved < 0.05 ? 10 : 2;
+      } else {
+        accepted();
+        g *= 4;
+      }
+    }
+    if (done) converged = runNewton(GMIN);
+  }
+
   // THE REFINEMENT. Everything above ran with the blanket node shunt, because
   // that shunt is the continuation that makes a hard operating point converge.
   // Now that the junction state is seeded by a converged solve, the same
@@ -3569,12 +3688,20 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
   // the nudge chose. The nudge is a fixed function of the node index, so the
   // same netlist always falls the same way.
   //
-  // Only for an algebraic circuit (no capacitor or winding: one with storage
-  // powers up through a transient, whose device capacitances already carry
-  // it off the balance point) with at least two transistors (a regenerative
-  // pair needs two gain stages).
+  // Only for an algebraic circuit with at least two transistors (a
+  // regenerative pair needs two gain stages). A capacitor holding its stored
+  // voltage (`capVoltages`: the power-on solve holds every one at 0 V) is a
+  // voltage source at this instant, so a circuit with capacitors is algebraic
+  // here too. It used to be excluded on the grounds that its power-on
+  // transient carries it off the balance point; that held only by rounding
+  // noise. A toggle flip-flop with steering capacitors, symmetric to the
+  // last resistor, stayed balanced through 20 ms -- both halves at 1.56 V --
+  // as soon as the junction model changed the noise (round 3, exponential
+  // diodes), or with a different first advance. Windings stay excluded:
+  // their instantaneous model is not a held state.
+  let fellOffBalance = false;
   if (converged && !transient && opts.settleMetastable === true
-    && !parts.some(p => p.kind === 'capacitor' || p.kind === 'inductor' || p.kind === 'transformer')
+    && !parts.some(p => p.kind === 'inductor' || p.kind === 'transformer')
     && parts.filter(p => p.kind === 'npn' || p.kind === 'pnp' || p.kind === 'nmos' || p.kind === 'pmos').length >= 2) {
     const original = snapshotNewton();
     const x0 = solution.slice(0, nodeCount);
@@ -3632,6 +3759,7 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
       const viaNudge = snapshotNewton();
       original();
       if (!fellOff(new Float64Array(dim), 1e-1)) viaNudge();
+      fellOffBalance = true;
     } else {
       original();
     }
@@ -4357,6 +4485,7 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
   return { nodeVoltages, branchCurrents, indeterminateBranchCurrents, railCurrents,
     ...(opts.capVoltages && chargedBjtIds.length ? {deferredBjtChargeIds: chargedBjtIds} : {}),
     converged, opampRegions, deviceStamps, ...regionDiagnostics,
+    ...(fellOffBalance ? {fellOffBalance} : {}),
     newtonState: converged ? captureNewtonState() : undefined,
     warmState: { bjtRegions, bjtVceSat, mosRegions },
     railConflicts: railConflicts.length ? [...new Set(railConflicts)] : undefined };

@@ -152,7 +152,9 @@ test('actual RC charge retains ordinary interval equivalence and its independent
     ordinary.advanceTo(t-1000000n);ordinary.advanceTo(t);
     assert.equal(receipt.completed,true);
     assert.equal(live.nodeVoltage('out'),ordinary.nodeVoltage('out'));
-    assert.ok(Math.abs(live.nodeVoltage('out')-(1-Math.exp(-Number(t)/1e6)))<1e-4);
+    // 2e-4: the default profile's steps now spend its 1e-4 relative
+    // tolerance (Richardson factor, round 3); measured 1.6e-4 (8.4e-5 before).
+    assert.ok(Math.abs(live.nodeVoltage('out')-(1-Math.exp(-Number(t)/1e6)))<2e-4);
     assert.equal(live.transientAnalysisStatus().failure,null);
   }
 });
