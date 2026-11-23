@@ -39,7 +39,7 @@ import { meterQuadraticSegment, meterQuadraticIntegral } from './meter-quadratur
 import { feedI2CSlave } from './devices/i2c-slave.js';
 import { checkCurrentBudget } from './current-ratings.js';
 import { createWorld, bindPartsToHost, lightLevel, lightControlDefault } from './world.js';
-import { junctionModelOf, chooseGroundReference } from './mna.js';
+import { junctionModelOf, chooseGroundReference, ledSeriesCurrent } from './mna.js';
 import { buildThermalEntries, stepThermal, shortestTau } from './thermal.js';
 
 /** Re-solve when a thermal-model part has moved this far (K) since it last stamped. */
@@ -250,6 +250,11 @@ const TRANSIENT_ANALYSIS_PROFILES = Object.freeze({
     // Restart the trapezoidal history once before accepting a floor step
     // whose error did not shrink with the step (see _integrateTransientMNA).
     floorHistoryRestart: true,
+    // Scale the step-doubling difference to the accepted result's own error
+    // by 1/(2^p - 1) (LOCAL ERROR ESTIMATE in _integrateTransientMNA). The
+    // fixed v1 and precision policies keep their recorded behaviour: every
+    // step held to a third of the stated tolerance.
+    richardsonLte: true,
   }),
   'interactive-v1': Object.freeze({
     id: 'interactive-v1', relativeTolerance: 1e-4,
@@ -6580,7 +6585,10 @@ export class BoardImpl {
       // instruments answer from the exponential model is two truths on
       // one bench (spec-updates/shockley-junction-limiting.md).
       // The stamp from setNetlist — the same answer the solver will use.
-      if ((p.kind === 'led' || p.kind === 'diode') && (p._junctionModel ?? junctionModelOf(p)) === 'shockley') return true;
+      // A DIODE, that is: an exponential LED in a plain chain is one scalar
+      // equation the walker solves on the MNA's own device (_solveLedChain,
+      // ledSeriesCurrent), so it stays on the closed-form path.
+      if (p.kind === 'diode' && (p._junctionModel ?? junctionModelOf(p)) === 'shockley') return true;
     }
     // A potentiometer with a LOADED wiper is beyond the walker:
     // _solvePot answers the unloaded midpoint while _solveLedChain treats
@@ -7131,7 +7139,9 @@ export class BoardImpl {
    * Step control is step-doubling: one trapezoidal step of h against two of
    * h/2; the element states (capacitor voltages, inductor currents) carry
    * the error norm, the half-step result is the accepted one, and h scales
-   * by err^(-1/3) (trap is order 2). The first step after any discrete
+   * by err^(-1/3) (trap is order 2). The difference between the two is
+   * scaled to the accepted result's own error by Richardson's 1/(2^p - 1)
+   * (see LOCAL ERROR ESTIMATE below). The first step after any discrete
    * event (`_trapValid` false — setPin/setControl/power/netlist/device
    * flip) runs BE to re-seed the trapezoidal history; square/pulse source
    * edges truncate the step so the edge is a solve point, never straddled,
@@ -7257,10 +7267,22 @@ export class BoardImpl {
       && !this._mnaCache?.deferredBjtChargeIds?.length ? this._mnaCache : null;
     const warmOf = (r) => r ? { warmStart: { nodeVoltages: r.nodeVoltages,
       opampRegions: r.opampRegions, ...(r.warmState ?? {}) } } : {};
-    const solveStep = (tStart, hs, method, cvS, ilS, ccS, lvS, seedS = seed) => {
+    // The minimum-step rescue (below) continues Newton through pseudo-time,
+    // i.e. through node charge. An exponential transistor card that declares
+    // no junction charge has, by its own statement, no continuous way across
+    // a regenerative edge, and its failure is a diagnostic it must keep
+    // (markSolveFailure names it), so such a board gets no rescue.
+    const rescueAllowed = !(this._solveParts ?? this.parts).some(p => {
+      const em = (p.kind === 'npn' || p.kind === 'pnp') ? ebersMollParams(p) : null;
+      return em && !(em.cje || em.cjc || em.tf);
+    });
+    const solveStep = (tStart, hs, method, cvS, ilS, ccS, lvS, seedS = seed, rescue = false) => {
       nSolves++;
       const r = this._solveLiveMNA(pinSources, {
-        ...warmOf(res ?? entrySolution),
+        // At the minimum step only: let solveMNA continue a failed Newton
+        // through pseudo-time (`transientRescue`) before the step is lost.
+        ...(rescue && rescueAllowed ? { transientRescue: true } : {}),
+        ...warmOf(res ?? entrySolution ?? coldEntry),
         tSeconds: tStart + hs,
         temperatureC: this.temperatureC,
         partTemperatures: this._thermal?.temps,
@@ -7290,6 +7312,40 @@ export class BoardImpl {
     let cc = this.capCurrents;
     let lv = this.inductorVoltages;
     let trapReady = this._trapValid;
+    // POWER-ON ON A BALANCE POINT, WITH STORAGE. The transient from time
+    // zero starts from every capacitor at its stored voltage, which is an
+    // algebraic circuit at that instant. When that circuit is a
+    // regenerative pair sitting exactly on its balance point (a toggle
+    // flip-flop symmetric to the last resistor), the transient has nothing
+    // to fall with but rounding noise, and a step that outgrows the pair's
+    // nanosecond time constant damps even that: whether it fell depended on
+    // how the first advance was chunked and on the junction model's rounding
+    // (it stayed balanced for 20 ms with exponential steering diodes). The
+    // power-on solve falls off it deterministically (`settleMetastable`);
+    // when it did, the device input capacitances start charged to where it
+    // fell -- they are picofarads, charged within nanoseconds of power-on --
+    // so the transient begins on one side. A stable power-on point is left
+    // exactly as it was, and nothing else is seeded.
+    let coldEntry = null;
+    if (t0 <= 0 && !trapReady && this.powered && this._hasDeviceCapacitance()) {
+      const op = this._solveLiveMNA(pinSources, {
+        tSeconds: t0, temperatureC: this.temperatureC,
+        partTemperatures: this._thermal?.temps, capVoltages: cv,
+        deviceStates: this._deviceStates, qualifiedSources: qual,
+        settleMetastable: true });
+      if (op?.converged && op.fellOffBalance) {
+        cv = new Map(cv);
+        for (const part of this._solveParts) {
+          for (const cap of parasiticCaps(part)) {
+            const value = (op.nodeVoltages.get(this._netForTerminal(part.id, cap.a)) ?? 0)
+              - (op.nodeVoltages.get(this._netForTerminal(part.id, cap.b)) ?? 0);
+            if (Number.isFinite(value)) cv.set(cap.key, value);
+          }
+        }
+        seed = op.newtonState ?? seed;
+        coldEntry = op;
+      }
+    }
     let t = t0;
     let h = Math.min(Math.max(this._transH, H_MIN), hMax, dtSec);
     let attempts = 0;
@@ -7376,6 +7432,11 @@ export class BoardImpl {
     // so an advance costs and answers the same however the caller chunks it,
     // and a stuck controller is still stopped within one window's budget.
     const ATTEMPT_WINDOW_SEC = 0.01;
+    // Capacitors a device may put on backward Euler inside a trapezoidal
+    // step (`dampedBy`); the local error estimate treats them as first order
+    // while they are.
+    const dampedCaps = (this._solveParts ?? []).filter(
+      (p) => p.kind === 'capacitor' && p.params?.dampedBy);
     let windowAttempts = 0;
     let windowEnd = t + ATTEMPT_WINDOW_SEC;
     let fatalTrialFailure = false;
@@ -7427,6 +7488,9 @@ export class BoardImpl {
           hSeed = Math.max(H_MIN, hSeed / 8);
           r = solveStep(t, hSeed, 'be', cv, il, cc, lv);
         }
+        if (!validTransientSolution(r) && hSeed <= H_MIN * 1.000001) {
+          r = solveStep(t, hSeed, 'be', cv, il, cc, lv, seed, true);
+        }
         t += hSeed;
         accept(r, t, null, 'be');
         // Only a seed that reached the edge crossed it.
@@ -7451,16 +7515,62 @@ export class BoardImpl {
         trapReady = false;
         return true;
       };
-      const full = solveStep(t, hEff, 'trap', cv, il, cc, lv);
+      // A trial at the minimum step that Newton cannot solve gets one rescue
+      // solve (pseudo-time continuation inside solveMNA) before it is fatal.
+      const atMinStep = hEff <= H_MIN * 1.000001;
+      const trial = (...args) => {
+        const r = solveStep(...args);
+        return validTransientSolution(r) || !atMinStep ? r
+          : solveStep(...args.slice(0, 7), args[7] ?? seed, true);
+      };
+      const full = trial(t, hEff, 'trap', cv, il, cc, lv);
       if (rejectTrial(full)) { if (fatalTrialFailure) break; continue; }
-      const h1 = solveStep(t, hEff / 2, 'trap', cv, il, cc, lv);
+      const h1 = trial(t, hEff / 2, 'trap', cv, il, cc, lv);
       if (rejectTrial(h1)) { if (fatalTrialFailure) break; continue; }
-      const h2 = solveStep(t + hEff / 2, hEff / 2, 'trap',
+      const h2 = trial(t + hEff / 2, hEff / 2, 'trap',
         h1.capVoltagesNext ?? cv, h1.inductorCurrentsNext ?? il,
         h1.capCurrentsNext ?? cc, h1.inductorVoltagesNext ?? lv, h1.newtonState ?? seed);
       if (rejectTrial(h2)) { if (fatalTrialFailure) break; continue; }
 
-      let err = 0;
+      // LOCAL ERROR ESTIMATE: RICHARDSON, NOT THE RAW DIFFERENCE.
+      //
+      // A method of order p has a local error C*h^(p+1) per step. The full
+      // step y_F carries C*h^(p+1); the two half steps y_H carry
+      // 2*C*(h/2)^(p+1) = C*h^(p+1)/2^p. So
+      //
+      //     y_F - y_H = C*h^(p+1) * (1 - 2^-p)
+      //     error(y_H) = C*h^(p+1)/2^p = (y_F - y_H) / (2^p - 1)
+      //
+      // y_H is the result accepted below, so its error is the difference
+      // divided by 2^p - 1: 3 for the trapezoidal rule (p = 2), 1 for
+      // backward Euler (p = 1). Comparing the raw difference against the
+      // tolerance held every trapezoidal step to a third of it -- 3^(1/3) =
+      // 1.44x shorter steps than the tolerance asks for. (No Gear/BDF2 here:
+      // the controlled steps are trapezoidal; BE runs only as the
+      // uncontrolled seed, and inside a trapezoidal step for a capacitor a
+      // device marks `dampedBy` while its pole is clamped.)
+      //
+      // A BE capacitor inside the step is first order, so its own state takes
+      // the factor 1 and the step-size exponent of a first-order error,
+      // -1/2. The node voltages mix every state, so while any capacitor is on
+      // BE in this attempt they take the conservative first-order estimate
+      // too. The flag changes only on accepted steps, so the full step and
+      // both half steps integrated the same way.
+      let firstOrder = null;
+      if (profile.richardsonLte) for (const cap of dampedCaps) {
+        const damp = cap.params.dampedBy;
+        if (this._deviceStates.get(damp.part)?.poleClamped?.[damp.channel] === true) {
+          (firstOrder ??= new Set()).add(cap.id);
+        }
+      }
+      const TRAP_RICHARDSON = profile.richardsonLte ? 3 : 1; // 2^2 - 1
+      const BE_RICHARDSON = 1;                                // 2^1 - 1
+      const nodeFactor = firstOrder ? BE_RICHARDSON : TRAP_RICHARDSON;
+      let errTrap = 0;
+      let errBe = 0;
+      const note = (e, beState) => {
+        if (beState) errBe = Math.max(errBe, e); else errTrap = Math.max(errTrap, e);
+      };
       // The accepted public observables include node voltages, not only the
       // capacitor-voltage / inductor-current state.
       // A state-only estimate can look excellent while an inductor voltage
@@ -7470,18 +7580,27 @@ export class BoardImpl {
       for (const [id, vH] of h2.nodeVoltages ?? []) {
         const vF = full.nodeVoltages?.get(id) ?? 0;
         const sc = ABSTOL_V + RELTOL * Math.max(Math.abs(vH), Math.abs(vF));
-        err = Math.max(err, Math.abs(vF - vH) / sc);
+        note(Math.abs(vF - vH) / (nodeFactor * sc), firstOrder !== null);
       }
       for (const [id, vH] of h2.capVoltagesNext ?? []) {
         const vF = full.capVoltagesNext?.get(id) ?? 0;
         const sc = ABSTOL_V + RELTOL * Math.max(Math.abs(vH), Math.abs(vF));
-        err = Math.max(err, Math.abs(vF - vH) / sc);
+        const be = firstOrder?.has(id) === true;
+        note(Math.abs(vF - vH) / ((be ? BE_RICHARDSON : TRAP_RICHARDSON) * sc), be);
       }
       for (const [id, iH] of h2.inductorCurrentsNext ?? []) {
         const iF = full.inductorCurrentsNext?.get(id) ?? 0;
         const sc = ABSTOL_I + RELTOL * Math.max(Math.abs(iH), Math.abs(iF));
-        err = Math.max(err, Math.abs(iF - iH) / sc);
+        note(Math.abs(iF - iH) / (TRAP_RICHARDSON * sc), false);
       }
+      // Math.max keeps a NaN (a bailed solve), which is reported as non-finite.
+      const err = Math.max(errTrap, errBe);
+      // Step-size factor: a local error of order q = p + 1 scales as h^q, so
+      // the step that meets the tolerance is h * err^(-1/q). Each class of
+      // state proposes its own; the smaller wins.
+      const stepFactor = () => Math.min(
+        errTrap > 0 ? Math.pow(errTrap, -1 / 3) : Infinity,
+        errBe > 0 ? Math.pow(errBe, -1 / 2) : Infinity);
 
       const atFloor = hEff <= H_MIN * 1.000001 && err > 1;
       // An error that does not shrink with the step is not truncation error:
@@ -7539,10 +7658,10 @@ export class BoardImpl {
           };
         }
         if (atEdge) trapReady = false;
-        const grow = err > 0 ? Math.min(2, 0.9 * Math.pow(err, -1 / 3)) : 2;
+        const grow = err > 0 ? Math.min(2, 0.9 * stepFactor()) : 2;
         h = Math.min(Math.max(hEff * grow, H_MIN), hMax);
       } else {
-        h = Math.max(hEff * Math.max(0.2, 0.9 * Math.pow(err, -1 / 3)), H_MIN);
+        h = Math.max(hEff * Math.max(0.2, 0.9 * stepFactor()), H_MIN);
       }
     }
 
@@ -8365,8 +8484,20 @@ export class BoardImpl {
     const vDiff = anodeSource.vTh - cathodeSource.vTh;
     const rTotal = anodeSource.rTh + rd + cathodeSource.rTh;
 
+    // THE EXPONENTIAL LED (the default since round 3) is a scalar equation
+    // on the same Thevenin loop, solved on the device the MNA stamps
+    // (mna.js ledSeriesCurrent), so the walker keeps answering plain LED
+    // chains -- a setPin on a blink bench stays a closed-form update rather
+    // than a full Newton solve -- and gives the MNA's answer.
+    const solved = this._solveParts?.find((p) => p.id === led.id) ?? led;
+    const exponential = (solved._junctionModel ?? junctionModelOf(solved)) === 'shockley'
+      ? ledSeriesCurrent(solved, vDiff, anodeSource.rTh + cathodeSource.rTh, this.temperatureC)
+      : null;
+
     let current;
-    if (vDiff >= vf) {
+    if (exponential !== null) {
+      current = exponential;
+    } else if (vDiff >= vf) {
       // Forward biased, above threshold
       current = (vDiff - vf) / rTotal;
     } else {

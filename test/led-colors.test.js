@@ -107,7 +107,7 @@ describe('LED colors: brightness ordering', () => {
 // express. test/measurements/repro/bsource-oracle.mjs.
 //
 //   name      vf    brightness   ngspice     i          note
-//   infrared  1.2   0.11111111   0.11595419  2319.08uA  PWL-routed, see below
+//   infrared  1.2   0.11595419   0.11595419  2319.08uA  (0.11111111 when PWL-routed)
 //   red       1.8   0.08759903   0.08759902  1751.98uA
 //   orange    2.0   0.07819254   0.07819254  1563.85uA
 //   yellow    2.1   0.07350071   0.07350073  1470.01uA
@@ -116,14 +116,12 @@ describe('LED colors: brightness ordering', () => {
 //   white     3.4   0.01436790   0.01436790   287.36uA  vf ABOVE the rail
 //   UV        3.8   0.00101072   0.00101073    20.21uA  vf ABOVE the rail
 //
-// Every row agrees with the oracle to 0.0000 % EXCEPT infrared, at +4.18 %.
-// That is not an error: infrared on 3.3 V has 2.1 V of headroom, above
-// MNA_HEADROOM_V = 2.0, so it is the one colour here the router leaves on the
-// piecewise walker, and 4.18 % is the piecewise-vs-exponential shape gap that
-// junction-rs-divergence.test.mjs records. It is the routing threshold visible
-// in a corpus, which is worth keeping in front of us rather than smoothing.
+// Every row agrees with the oracle to 0.0000 %. Infrared used to read
+// 0.11111111, 4.18 % off: with 2.1 V of headroom on 3.3 V it was the one
+// colour the old headroom router (MNA_HEADROOM_V = 2.0) left on the piecewise
+// knee. Since round 3 every LED is exponential, and infrared meets ngspice too.
 const B_AT_33 = {
-  infrared: 0.11111111, red: 0.08759903, orange: 0.07819254, yellow: 0.07350071,
+  infrared: 0.11595419, red: 0.08759903, orange: 0.07819254, yellow: 0.07350071,
   green: 0.06881777, blue: 0.02297462, white: 0.01436790, UV: 0.00101072,
 };
 

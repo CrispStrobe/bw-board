@@ -30,14 +30,30 @@ function bench() {
   return b;
 }
 
-test('pin sinking low lights the battery-fed LED: I=(5-2)/(1000+25), brightness 0.1463', () => {
+// The exponential LED (the default since round 3) in series with `ohms`
+// across `volts`: n*Vt*ln(I/Is + 1) + I*rs + I*ohms = volts, Is calibrated so
+// the part drops vf at 20 mA through rs = 10 (n = 1.8). Bisection.
+function ledLoopAmps(volts, ohms, vf = 2.0) {
+  const nVt = 1.8 * 0.02585, rs = 10, is = 0.02 / (Math.exp((vf - 0.02 * rs) / nVt) - 1);
+  let lo = 0, hi = volts / ohms;
+  for (let k = 0; k < 200; k++) {
+    const i = (lo + hi) / 2;
+    if (nVt * Math.log(i / is + 1) + i * (rs + ohms) < volts) lo = i; else hi = i;
+  }
+  return lo;
+}
+
+test('pin sinking low lights the battery-fed LED: the exponential loop through 1000 + 25 ohm, brightness 0.1587', () => {
   const b = bench();
   b.setPin('P1.0', 'quasi', false);
   b.advanceTo(10n * 1000000n);
   const brightness = b.ledBrightness('led1');
-  // Hand oracle: (5 - 2) / (1000 + 25) = 2.927 mA; / 20 mA = 0.14634
-  assert.ok(Math.abs(brightness - 0.1463) < 0.01,
-    `expected ~0.1463, got ${brightness}`);
+  // Hand oracle: the knee's (5 - 2) / (1000 + 25) = 2.927 mA (0.1463) until
+  // round 3; the exponential LED drops less than its rated 2.0 V at 3 mA:
+  // 3.17 mA, 0.1587.
+  const want = ledLoopAmps(5, 1025) / 0.02;
+  assert.ok(Math.abs(brightness - want) < 0.01,
+    `expected ~${want.toFixed(4)}, got ${brightness}`);
 });
 
 test('pin high (quasi): no sink, LED dark', () => {
@@ -84,7 +100,9 @@ test('battery-only loop (no pins, no gnd) still solves as before', () => {
   );
   b.setPower(true);
   b.advanceTo(1n * 1000000n);
-  // (5 - 2) / 1000 = 3 mA → 0.15
-  assert.ok(Math.abs(b.ledBrightness('led1') - 0.15) < 0.01,
-    `expected ~0.15, got ${b.ledBrightness('led1')}`);
+  // (5 - 2) / 1000 = 3 mA → 0.15 with the knee; the exponential red LED
+  // (vf 2.0 given explicitly) carries 3.25 mA → 0.1626.
+  const want = ledLoopAmps(5, 1000) / 0.02;
+  assert.ok(Math.abs(b.ledBrightness('led1') - want) < 0.01,
+    `expected ~${want.toFixed(4)}, got ${b.ledBrightness('led1')}`);
 });

@@ -196,9 +196,16 @@ test('the same latch without any capacitor settles consistently on every event',
 
 // ─── 6. A balanced bistable at power-on ───────────────────────────────────
 
-function flipFlop(x1, x2) {
+// The collector LEDs keep the piecewise knee here (round 3 made LEDs
+// exponential by default). The race below decides only when cold Newton lands
+// ON the balance point, which it does with the knee; with exponential LEDs
+// Newton lands directly in a stable state (measured: L1 for all three feeds),
+// so the race that these tests pin is never consulted. That case is covered
+// by 'with exponential LEDs it still powers up in one state' below.
+function flipFlop(x1, x2, ledModel = 'pwl') {
+  const LEDm = (id, a, k, color) => [id, 'led', {color, ...(ledModel ? {model: ledModel} : {})}, {anode: a, cathode: k}];
   return build([G, V('V', 9, 'vcc'),
-    R('R1', 1000, 'vcc', 'a1'), LED('L1', 'a1', 'c1'), R('R2', 1000, 'vcc', 'a2'), LED('L2', 'a2', 'c2', 'green'),
+    R('R1', 1000, 'vcc', 'a1'), LEDm('L1', 'a1', 'c1', 'red'), R('R2', 1000, 'vcc', 'a2'), LEDm('L2', 'a2', 'c2', 'green'),
     R('X1', x1, 'c1', 'b2'), R('X2', x2, 'c2', 'b1'),
     Q('Q1', 'npn', 'b1', 'c1', 'g'), Q('Q2', 'npn', 'b2', 'c2', 'g'),
     BTN('SET', 'b1', 'g'), BTN('RESET', 'b2', 'g')]);
@@ -213,6 +220,20 @@ test('a capacitor-free flip-flop powers up in one state, not balanced', () => {
     assert.equal(off.length, 1);
     // The stronger base feed wins the race, as with the bench's base caps.
     if (winner) assert.equal(on[0], winner, `${x1}/${x2}`);
+  }
+});
+
+test('with exponential LEDs it still powers up in one state, and sets and resets', () => {
+  for (const [x1, x2] of [[22000, 27000], [27000, 22000], [22000, 22000]]) {
+    const b = flipFlop(x1, x2, null);
+    b.advanceTo(ms(1));
+    const on = ['L1', 'L2'].filter(id => mA(b, id) > 5), off = ['L1', 'L2'].filter(id => mA(b, id) < 1);
+    assert.equal(on.length, 1, `${x1}/${x2}: L1 ${mA(b, 'L1')} mA, L2 ${mA(b, 'L2')} mA`);
+    assert.equal(off.length, 1);
+    b.setControl('SET', 1); b.advanceTo(ms(2)); b.setControl('SET', 0); b.advanceTo(ms(3));
+    assert.ok(mA(b, 'L2') > 5 && mA(b, 'L1') < 1, `SET: L1 ${mA(b, 'L1')} mA, L2 ${mA(b, 'L2')} mA`);
+    b.setControl('RESET', 1); b.advanceTo(ms(4)); b.setControl('RESET', 0); b.advanceTo(ms(5));
+    assert.ok(mA(b, 'L1') > 5 && mA(b, 'L2') < 1, `RESET: L1 ${mA(b, 'L1')} mA, L2 ${mA(b, 'L2')} mA`);
   }
 });
 

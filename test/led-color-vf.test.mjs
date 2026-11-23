@@ -81,8 +81,15 @@ describe('ir_transmitter is an IR LED', () => {
     });
 
     it('at 50 µA it is still a junction near its knee (was 0.0055 V)', () => {
-        const { v } = drop(IR, (5 - 1.1) / 50e-6);
-        assert.ok(v > 0.9 && v < 1.3, `IR LED at 50 µA: ${v} V`);
+        const { v, i } = drop(IR, (5 - 1.1) / 50e-6);
+        // The exponential LED (the default since round 3): Is calibrated so
+        // the part drops its IR vf of 1.3 V at 20 mA through rs = 10, n = 1.8.
+        // At ~54 µA that is 0.82 V -- the junction's real low-current drop,
+        // where the knee used to read ~1.1 V.
+        const nVt = 1.8 * 0.02585, rs = 10;
+        const is = 0.020 / (Math.exp((1.3 - 0.020 * rs) / nVt) - 1);
+        const want = nVt * Math.log(i / is + 1) + i * rs;
+        assert.ok(Math.abs(v - want) < 1e-3 && v > 0.7 && v < 1.3, `IR LED at 50 µA: ${v} V, want ${want} V`);
     });
 
     it('blocks in reverse', () => {

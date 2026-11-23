@@ -34,10 +34,17 @@
  * has to be built at a rail where the bystander CROSSES the threshold, or this
  * file is a true test of a claim it cannot see fail.
  */
-import test from 'node:test';
+import test, { before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { BoardImpl } from '../src/board.js';
-import { JUNCTION_GMIN, MNA_HEADROOM_V } from '../src/mna.js';
+import { JUNCTION_GMIN, JUNCTION_ROUTING, MNA_HEADROOM_V } from '../src/mna.js';
+
+// Since round 3 diodes and LEDs are exponential by default and nothing routes
+// by headroom; the heuristic this file guards is the 'headroom' policy, kept
+// selectable. Every test here runs under it.
+let savedMode;
+before(() => { savedMode = JUNCTION_ROUTING.mode; JUNCTION_ROUTING.mode = 'headroom'; });
+after(() => { JUNCTION_ROUTING.mode = savedMode; });
 
 const VCC = 5.0, VF = 2.0;
 

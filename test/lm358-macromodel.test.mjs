@@ -280,8 +280,12 @@ describe('LM358 slow integrators and charge packets (builder 3)', () => {
     it('a diode charge pump steps the integrator once per rising edge, by C1·ΔV/C', () => {
         // 100 Hz 0–5 V square → 10 nF → D1 into the virtual ground; D2 from
         // the 4.5 V reference resets the pump capacitor on falling edges.
-        // Each rising edge moves 10 nF × (5 V − two diode drops ≈ 1.1 V) =
-        // ~39 nC into 1 µF: a −39 mV step, and nothing between edges.
+        // Each rising edge moves 10 nF × (5 V − two diode drops) into 1 µF:
+        // a −39 mV step with the piecewise knee (drops ≈ 1.1 V, the transfer
+        // stops dead at the knee), −46.5 mV with the default exponential
+        // diodes since round 3 (the transfer tails off through the junctions'
+        // low-current region instead, ending a few hundred mV lower), and
+        // nothing between edges.
         const board = integrator([
             V('VP', 0, { wave: 'square', freq: 100, amplitude: 2.5, offset: 2.5 }),
             { id: 'C1', kind: 'capacitor', params: { farads: 10e-9 }, terminals: ['a', 'b'] },
@@ -300,7 +304,7 @@ describe('LM358 slow integrators and charge packets (builder 3)', () => {
         for (let i = 1; i < settled.length; i++) {
             const d = settled[i] - settled[i - 1];
             const edge = i % 10 === 0;   // sample i is at (i + 0.5) ms
-            if (edge) assert.ok(d < -0.030 && d > -0.045, `step at ${i + 0.5} ms: ${(d * 1000).toFixed(1)} mV`);
+            if (edge) assert.ok(d < -0.030 && d > -0.050, `step at ${i + 0.5} ms: ${(d * 1000).toFixed(1)} mV`);
             else assert.ok(Math.abs(d) < 0.001, `no step at ${i + 0.5} ms: ${(d * 1000).toFixed(2)} mV`);
         }
     });
@@ -435,7 +439,10 @@ describe('LM358 simulation cost (round 2)', () => {
         assert.equal(board.transientAnalysisStatus().failure, null);
         // The same flashes, to the 0.5 ms sample, as the trapezoidal pole
         // gave (and lab-v-to-f's 2.55 Hz): ramp 4.5 + 0.89 V → 3.86 V and reset.
-        assert.deepEqual(falls, [384, 774]);
+        // [384, 774] with the piecewise reset diode and LED; the exponential
+        // ones (the default since round 3) shift the reset level and the
+        // falls by 0.5 / 1.5 ms (0.2 %).
+        assert.deepEqual(falls, [383.5, 772.5]);
         const { attempts } = board.transientAnalysisStatus().work;
         // Measured: 14,680 attempts (24.6 s) with the trapezoidal pole,
         // 2,464 (0.6 s) damped while clamped; 1,600 is the advance count.
