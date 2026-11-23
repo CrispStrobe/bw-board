@@ -283,6 +283,33 @@ describe('radio: transistor receivers', () => {
     });
 });
 
+describe('radio: receiver with a loudspeaker', () => {
+    it('crystal-set detector into an LM386 drives a speaker with the station', () => {
+        const b = new BoardImpl(5);
+        b.setNetlist([P('G', 'gnd', {}, ['gnd']), P('VS', 'vsource', { volts: 9 }, ['pos', 'neg']), P('E', 'earth', {}, ['earth']),
+            P('ANT', 'antenna', {}, ['a']), P('L1', 'ferrite_coil', {}, ['a', 'tap', 'b', 'c1', 'c2']),
+            P('TC', 'tuning_cap', { position: 0.527 }, ['a', 'b']), P('D1', 'diode', { part: '1N34A' }, ['anode', 'cathode']),
+            P('C1', 'capacitor', { farads: 2.2e-9 }, ['a', 'b']), P('R1', 'resistor', { ohms: 47e3 }, ['a', 'b']),
+            P('CI', 'capacitor', { farads: 100e-9 }, ['a', 'b']),
+            P('U1', 'lm386', {}, ['gain1', 'inn', 'inp', 'gnd', 'vout', 'vs', 'bypass', 'gain8']),
+            P('CO', 'polarized_cap', { farads: 220e-6 }, ['pos', 'neg']), P('SPK', 'speaker', {}, ['a', 'b'])],
+        [net('g', ['G', 'gnd'], ['VS', 'neg'], ['E', 'earth'], ['L1', 'a'], ['TC', 'b'], ['C1', 'b'], ['R1', 'b'],
+            ['U1', 'gnd'], ['U1', 'inn'], ['SPK', 'b']),
+        net('v', ['VS', 'pos'], ['U1', 'vs']), net('ant', ['ANT', 'a'], ['L1', 'tap']),
+        net('tank', ['L1', 'b'], ['TC', 'a'], ['D1', 'anode']),
+        net('out', ['D1', 'cathode'], ['C1', 'a'], ['R1', 'a'], ['CI', 'a']), net('in', ['CI', 'b'], ['U1', 'inp']),
+        net('ao', ['U1', 'vout'], ['CO', 'pos']), net('spk', ['CO', 'neg'], ['SPK', 'a'])]);
+        b.setBroadcast([tone('a', 400, 612)]);
+        b.setPower(true);
+        ms(b, 20);
+        const t = b.buzzerTone('SPK');
+        close(t.hz, 400, 8, 'the station from the loudspeaker');
+        // ~0.2 V p-p of audio from the detector, ×20: a good fraction of the
+        // speaker's rating (MEASURED 2026-11-23: level 0.83, 0.21 A rms).
+        assert.ok(t.level > 0.5, `loud: level ${t.level}, ${t.amps} A rms`);
+    });
+});
+
 describe('radio: reflex receiver', () => {
     it('one transistor amplifies the carrier and, after the diode, the audio again', () => {
         // Base on the coupling winding; the bottom of that winding ('bb') is
