@@ -1135,6 +1135,7 @@ export class BoardImpl {
 
   setNetlist(parts, nets) {
     this._newtonSeed = null; // junction/region state belongs to the old netlist
+    this._nonConvergedAtNs = null; // a failure on the old netlist says nothing about this one
     this._ledFanout = undefined; // netlist changed: recompute the fan-out memo
     this._wiperLoaded = undefined; // ditto for the loaded-wiper routing memo
     this._wiperMcuPins = undefined; // and the MCU pins sitting on a wiper net
@@ -1590,6 +1591,10 @@ export class BoardImpl {
           // An unconnected pin reads 0 V, indistinguishable from a grounded
           // one; models whose open pin has its own internal bias ask here.
           read.connected = (terminal) => Boolean(f.terminalNets.get(terminal));
+          read.sameNet = (t1, t2) => {
+            const n = f.terminalNets.get(t1);
+            return Boolean(n) && n === f.terminalNets.get(t2);
+          };
           model.update(f.part, state, read, this.timeNs);
         }
       }
@@ -2047,7 +2052,9 @@ export class BoardImpl {
         this.timeNs = nextT;
         const dtSec = Number(nextT - cursor) / 1e9;
 
-        // Integrate reactive components for this sub-interval
+        // Integrate reactive components for this sub-interval -- after the
+        // thermal model has moved over it (`_stepThermalBefore`).
+        this._stepThermalBefore(dtSec);
         if (dtSec > 0) {
           if (this._needsMNA() && (this._hasReactive() || this._hasTimeVaryingSource())) {
             this._integrateTransientMNA(dtSec);
@@ -2114,6 +2121,7 @@ export class BoardImpl {
       // No devices: original fast path
       this.timeNs = tNs;
 
+      if (tNs > prevNs) this._stepThermalBefore(Number(tNs - prevNs) / 1e9);
       if (tNs > prevNs && (this.powered || this._hasReactive())) {
         const dtSec = Number(tNs - prevNs) / 1e9;
         if (this._needsMNA() && (this._hasReactive() || this._hasTimeVaryingSource())) {
@@ -2128,10 +2136,6 @@ export class BoardImpl {
         }
       }
     }
-
-    // The thermal model follows the interval's dissipation (opt-in; null on
-    // every circuit without thermal params).
-    if (this._thermal) this._stepThermal(Number(tNs - prevNs) / 1e9);
 
     // Record LED current samples at this timestamp
     this._recordLedSamples();
@@ -5188,13 +5192,41 @@ export class BoardImpl {
   }
 
   /**
+   * THE THERMAL MODEL MOVES BEFORE THE CIRCUIT IS INTEGRATED OVER THE SAME
+   * INTERVAL, NOT AFTER IT.
+   *
+   * It used to step at the very end of an advance, after the circuit had been
+   * integrated over the whole interval at the OLD temperatures. Its re-solve
+   * then changed the NTC's resistance and every junction's drop, but anything
+   * with dynamics of its own -- an LM358 comparator's output pole and slew,
+   * a motor -- had no time left to respond, so a comparator whose inputs had
+   * crossed read the old output until the NEXT advance (and a learner who
+   * changed the room temperature saw nothing until the following frame).
+   * Stepping the temperatures over each sub-interval first, from the power
+   * dissipated at its start (each thermal step is exact for its held power),
+   * lets the circuit's own integration respond to them in the same advance.
+   * Opt-in like the model itself: null on every circuit without thermal params.
+   */
+  _stepThermalBefore(dtSec) {
+    if (!this._thermal || !(dtSec > 0)) return;
+    // When the interval is about to be integrated, that integration stamps
+    // the new temperatures itself; an operating-point re-solve here would
+    // only restart it. Measured on lab-airflow-sensor with 4 m/s of air: the
+    // cooling sensor crossed THERMAL_RESOLVE_K every 2 ms, every re-solve
+    // reset the trapezoidal history, and each restart from the 1 ns seed cost
+    // ~65 attempts -- 1,700 per 50 ms while the fan coasted to a stop.
+    const integrated = this._needsMNA() && (this._hasReactive() || this._hasTimeVaryingSource());
+    this._stepThermal(dtSec, !integrated);
+  }
+
+  /**
    * Step the thermal model over `dtSec` of simulated time. Sub-steps at a
    * quarter of the shortest effective time constant (each step is exact for
    * its held power), and re-solves the circuit only when some part has moved
    * by more than THERMAL_RESOLVE_K since the temperatures last stamped -- so a
    * circuit at thermal equilibrium costs no solves at all.
    */
-  _stepThermal(dtSec) {
+  _stepThermal(dtSec, resolve = true) {
     const th = this._thermal;
     if (!th || !(dtSec > 0)) return;
     const air = this._airflowMs();
@@ -5211,7 +5243,7 @@ export class BoardImpl {
       for (const [id, c] of th.temps) moved = Math.max(moved, Math.abs(c - (th.solvedAt.get(id) ?? c)));
       if (moved > THERMAL_RESOLVE_K) {
         th.solvedAt = new Map(th.temps);
-        if (this.powered) this._solve();
+        if (this.powered && resolve) this._solve();
       }
     }
   }
@@ -5677,6 +5709,20 @@ export class BoardImpl {
           'approximate.',
       });
     }
+    // A transient step that failed outright (Newton at minimum step, a
+    // non-finite state) is refused by every instrument; say so here too, so a
+    // UI that only reads node voltages is not left showing a stale state.
+    const unmet = this._transientAccuracyUnmet;
+    if (unmet && unmet.code !== 'step-attempt-budget-exceeded') {
+      const accuracyOnly = /accuracy-unmet|error-estimate/.test(unmet.code);
+      warnings.push({
+        severity: accuracyOnly ? 'warning' : 'danger',
+        code: accuracyOnly ? 'transient-accuracy-unmet' : 'transient-solve-failed',
+        message: `Transient simulation ${accuracyOnly ? 'could not meet its accuracy' : 'failed'} at ` +
+          `t = ${(unmet.timeSec * 1e3).toFixed(3)} ms (${unmet.code}${unmet.hint ? `: ${unmet.hint}` : ''})` +
+          (accuracyOnly ? ' — waveforms there are approximate.' : ' — the voltages shown are not a solution.'),
+      });
+    }
 
     // No gnd symbol: say which node the readings are relative to.
     if (this._solveParts?.length && !this._solveParts.some((p) => p.kind === 'gnd')) {
@@ -5709,8 +5755,17 @@ export class BoardImpl {
     if (this._lastSolveConverged === false) {
       warnings.push({
         severity: 'danger',
+        code: 'solve-not-converged',
         message: 'Circuit did not converge — voltages shown are approximate. ' +
           'This can happen with circuits that have no stable operating point.',
+      });
+    } else if (this._nonConvergedAtNs != null) {
+      warnings.push({
+        severity: 'warning',
+        code: 'solve-not-converged-earlier',
+        message: `Circuit did not converge at t = ${(Number(this._nonConvergedAtNs) / 1e6).toFixed(3)} ms. ` +
+          'It has converged since, but a circuit that remembers a state (a latch, a flip-flop) ' +
+          'may have lost it there; switch the power off and on to start clean.',
       });
     }
 
@@ -6208,8 +6263,11 @@ export class BoardImpl {
       return solveMNA(this._solveParts, this._solveNets, this._pinSources(), this.controls, this.vcc, options);
     }
     // The live circuit continues from where it was (see `newtonSeed`).
+    // A live solve with no Newton state to continue from is the circuit being
+    // switched on: let it fall off a balance point (`settleMetastable`).
     const result = this._solveLiveMNA(this._pinSources(),
-      { ...options, newtonSeed: this._newtonSeed ?? undefined });
+      { ...options, newtonSeed: this._newtonSeed ?? undefined,
+        settleMetastable: !this._newtonSeed && !warmFrom });
     if (result?.newtonState) this._newtonSeed = result.newtonState;
     return result;
   }
@@ -6825,6 +6883,13 @@ export class BoardImpl {
     // Returning the last iterate as if it were an answer is the numerical
     // form of the silent-degradation bug.
     this._lastSolveConverged = res.converged !== false;
+    // And it must KEEP saying so. A static latch remembers its state only
+    // through the previous solution, so a solve that failed lost that memory:
+    // the next event's solve converges happily -- to the wrong state (a
+    // thyristor that should have latched reads off) -- and `converged`
+    // alone would then report nothing. Remember the first failure until
+    // the netlist changes or power is cycled; getWarnings names it.
+    if (res.converged === false && this._nonConvergedAtNs == null) this._nonConvergedAtNs = this.timeNs;
     for (const ch of this._scopeChannels.values()) this._scopeMeasurementFailed(ch, res);
     if (this._meterWatches.size > 0 && !res.deferredBjtChargeIds?.length) this._recordMeterSamples();
   }
@@ -6989,6 +7054,12 @@ export class BoardImpl {
       // An unconnected pin reads 0 V, indistinguishable from a grounded one;
       // a model whose open pin has an internal bias (555 CV) asks here.
       read.connected = (terminal) => Boolean(this._netForTerminal(part.id, terminal));
+      // Whether two of this part's terminals are wired together (a gate's
+      // output fed back into an input of the same chip).
+      read.sameNet = (t1, t2) => {
+        const n = this._netForTerminal(part.id, t1);
+        return Boolean(n) && n === this._netForTerminal(part.id, t2);
+      };
       this._attachMeasurementValidity(model, read, solution);
       if (model.transientUpdateContext === true) read.transient = acceptedTransient;
       try {
@@ -7252,10 +7323,28 @@ export class BoardImpl {
     let localizations = 0;
     let eventTarget = null;
 
+    // THE BACKSTOP IS PER WINDOW OF SIMULATED TIME, NOT PER CALL. A runaway
+    // is a controller that stops making progress, and 20,000 attempts inside
+    // one 10 ms window is that. A long advance over a smooth fast source is
+    // not: one 60 ms advance over a 3 kHz sine needs ~2,500 accepted steps
+    // per 5 ms at the profile's 1 uV floor, and the per-call cap stopped it
+    // at 47 ms although the same interval in 5 ms calls completed. Each
+    // window now gets the profile's budget (and its own event localizations),
+    // so an advance costs and answers the same however the caller chunks it,
+    // and a stuck controller is still stopped within one window's budget.
+    const ATTEMPT_WINDOW_SEC = 0.01;
+    let windowAttempts = 0;
+    let windowEnd = t + ATTEMPT_WINDOW_SEC;
     let fatalTrialFailure = false;
-    while (t < tEnd - 1e-15 && attempts < MAX_ATTEMPTS) {
+    while (t < tEnd - 1e-15 && windowAttempts < MAX_ATTEMPTS) {
+      if (t >= windowEnd) {
+        windowAttempts = 0;
+        localizations = 0;
+        windowEnd = t + ATTEMPT_WINDOW_SEC;
+      }
       this._chargeBoundedAdvanceWork('attempts');
       attempts++;
+      windowAttempts++;
       let hEff = Math.min(h, tEnd - t, hMax);
       const requestedEnd = t + hEff;
       const barrier = this._transientStepBarrier(t, requestedEnd);
@@ -7280,8 +7369,21 @@ export class BoardImpl {
         const nextCorner = this._nextSourceEdgeSec(t);
         const featureSeed = nextCorner !== null && nextCorner > t + 1e-15
           ? (nextCorner - t) / 10 : Infinity;
-        const hSeed = Math.min(hEff, H_SEED, featureSeed);
-        const r = solveStep(t, hSeed, 'be', cv, il, cc, lv);
+        let hSeed = Math.min(hEff, H_SEED, featureSeed);
+        let r = solveStep(t, hSeed, 'be', cv, il, cc, lv);
+        // A seed whose Newton fails is refined like any trial, down to the
+        // floor, before its failure is recorded: right after an event that
+        // leaves a regenerative pair balanced (an astable's keys pressed with
+        // both bases at the knee), the 1 ns step was the one that could not
+        // converge, and accepting it failed the whole transient.
+        while (!validTransientSolution(r) && hSeed > H_MIN * 1.000001
+          && windowAttempts < MAX_ATTEMPTS) {
+          this._chargeBoundedAdvanceWork('attempts');
+          attempts++;
+          windowAttempts++;
+          hSeed = Math.max(H_MIN, hSeed / 8);
+          r = solveStep(t, hSeed, 'be', cv, il, cc, lv);
+        }
         t += hSeed;
         accept(r, t, null, 'be');
         // Only a seed that reached the edge crossed it.
@@ -7411,7 +7513,7 @@ export class BoardImpl {
       if (!this._transientAccuracyUnmet) {
         this._transientAccuracyUnmet = {
           code: 'step-attempt-budget-exceeded', timeSec: t,
-          stepSec: tEnd - t, attempts, maxAttempts: MAX_ATTEMPTS,
+          stepSec: tEnd - t, attempts: windowAttempts, maxAttempts: MAX_ATTEMPTS,
         };
       }
     }
@@ -7808,6 +7910,7 @@ export class BoardImpl {
     if (!this.powered) {
       this._liveSolveError = null;
       this._lastSolveConverged = true;
+      this._nonConvergedAtNs = null; // power cycled: every remembered state is gone
       this._updateDevices(this.timeNs, null, true);
       return;
     }

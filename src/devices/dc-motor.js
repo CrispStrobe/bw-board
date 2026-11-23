@@ -73,6 +73,32 @@ export function motorDirectionOf(v) {
   return v > STOPPED_RAD_S ? 'forward' : v < -STOPPED_RAD_S ? 'reverse' : 'stopped';
 }
 
+/**
+ * THE BACK-EMF IS A RAMP, NOT A STAIRCASE.
+ *
+ * The speed is stepped in `update()`, once per accepted solve or device
+ * sub-step, and the EMF used to jump to each new speed. A jump of kV x the
+ * speed change, applied to the winding inductance behind a node held by
+ * nothing but a transistor's 5 pF input capacitance (an emitter follower
+ * whose transistor has just turned off, the motor coasting), rang that LC at
+ * about 1 MHz after every update: ~1,800 integration attempts per 50 ms of
+ * coast-down, 45k attempts and ~30 s of wall time for the airflow bench's
+ * fan to stop, and a 1 s advance ran out of device sub-step work.
+ *
+ * Between updates the stamp now carries the speed forward at the last step's
+ * acceleration, from the time of that update, so the EMF the network sees is
+ * continuous; it is clamped at zero rather than reversing (the mechanics stop
+ * a coasting rotor at zero, `stepMotorVelocity`). At the update instant the
+ * offset is zero, so every published solution reads the stepped speed itself.
+ */
+function emfVelocity(state, tSec) {
+  const v = state.velocity ?? state.omega;
+  const a = state._emfAccel;
+  if (!a || !Number.isFinite(tSec) || !(tSec > state._emfAtSec)) return v;
+  const w = v + a * (tSec - state._emfAtSec);
+  return (v > 0 && w < 0) || (v < 0 && w > 0) ? 0 : w;
+}
+
 /** Read winding resistance: accept R as alias for windingR */
 function getR(part) {
   return part.params?.windingR ?? part.params?.R ?? classDefaults('dc_motor').ohms;
@@ -111,6 +137,7 @@ export function registerDCMotor() {
       state.direction = 'stopped';
       state.current = 0;
       state._lastTNs = 0n;
+      state._emfAccel = 0;
     },
 
     stamp(ctx, part, state) {
@@ -134,7 +161,7 @@ export function registerDCMotor() {
       // phantom, a period-2h oscillator, a 1e35 V series blow-up) are
       // written up at the expansion site.
       void L;
-      ctx.theveninBetween('a', 'b', kV * (state.velocity ?? state.omega), R);
+      ctx.theveninBetween('a', 'b', kV * emfVelocity(state, ctx.tSeconds), R);
     },
 
     // Terminal currents, so an ammeter probe on a motor lead reads the
@@ -147,10 +174,11 @@ export function registerDCMotor() {
     // Sign follows the resistor convention in mna.js (current out of the
     // part at the terminal), so a meter placed in either lead agrees with
     // one placed in a series resistor.
-    branchCurrents(part, state, read) {
+    branchCurrents(part, state, read, tSeconds) {
       const R = getR(part);
       const kV = part.params?.kV ?? classDefaults('dc_motor').kV;
-      const i = (read('a') - read('b') - kV * (state.velocity ?? state.omega)) / R;
+      // The EMF the stamp used at this solve's time (`emfVelocity`).
+      const i = (read('a') - read('b') - kV * emfVelocity(state, tSeconds)) / R;
       return new Map([['a', -i], ['b', i]]);
     },
 
@@ -183,15 +211,17 @@ export function registerDCMotor() {
 
       // Mechanical dynamics (signed; see stepMotorVelocity).
       const v1 = stepMotorVelocity(v0, kT * current, loadTorque, J, dtSec, friction);
+      // What the stamp has been extrapolating to this instant (`emfVelocity`).
+      const predicted = emfVelocity(state, Number(tNs) / 1e9);
       state.velocity = v1;
       state.omega = Math.abs(v1);
       state.direction = motorDirectionOf(v1);
+      state._emfAccel = (v1 - v0) / dtSec;
+      state._emfAtSec = Number(tNs) / 1e9;
 
-      // Re-solve if omega changed significantly (affects back-EMF stamp)
-      if (Math.abs(v1 - v0) > 0.1) {
-        return true;
-      }
-      return false;
+      // Re-solve if the back-EMF the network saw missed the new speed by
+      // enough to matter (a steady acceleration is already in the ramp).
+      return Math.abs(v1 - predicted) > 0.1;
     },
   });
 }

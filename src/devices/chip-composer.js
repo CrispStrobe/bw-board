@@ -277,6 +277,7 @@ function buildChipModel(def) {
         const schmitt = def.gates.some(g => g.type.startsWith('schmitt'))
           ? schmittThresholds(part, vcc) : null;
         if (schmitt && !state._schmitt) state._schmitt = {};
+        const pending = [];
         for (const g of def.gates) {
           const inputs = g.type.startsWith('schmitt')
             ? g.inputs.map(p => {
@@ -288,10 +289,11 @@ function buildChipModel(def) {
           const fn = LOGIC[g.type];
           const result = fn ? fn(inputs) : 0;
           const newDrive = { vTh: result ? vcc : 0, rTh: R_OUT };
-          if ((state.drives[g.output]?.vTh ?? -1) !== newDrive.vTh) {
-            state.drives[g.output] = newDrive;
-            changed = true;
-          }
+          if ((state.drives[g.output]?.vTh ?? -1) !== newDrive.vTh) pending.push({ g, newDrive });
+        }
+        for (const { g, newDrive } of serializeRaces(pending, read)) {
+          state.drives[g.output] = newDrive;
+          changed = true;
         }
       }
 
@@ -335,6 +337,36 @@ function buildChipModel(def) {
       return changed;
     },
   };
+}
+
+/**
+ * ONE GATE OF A RACE SWITCHES AT A TIME.
+ *
+ * Every gate of a chip is evaluated against the same solved voltages and has
+ * no propagation delay, so two gates wired into each other's inputs that
+ * want to switch together (a cross-coupled NAND latch at power-on, both
+ * outputs low, each input seeing the other low) switched TOGETHER: both high,
+ * so both inputs high, so both low again -- a race with a period of one
+ * solve. Event-driven it froze inconsistent (both outputs high, which no
+ * NAND latch with both inputs high can hold); in transient every accepted
+ * step flipped both, the step fell to its floor and the 74HC132 latch hit
+ * the step-attempt cap a few hundred nanoseconds after power-on.
+ *
+ * Real gates never switch at the same instant; the faster one wins and the
+ * slower one then sees its new output. So when several gate outputs change in
+ * one pass and one of them feeds another's input (`read.sameNet`), only the
+ * first such gate in pin order switches now; the rest are evaluated again,
+ * against the re-solved network, on the board's next pass (the device
+ * fixpoint re-runs because this pass reported a change). Gates that change
+ * together WITHOUT feeding each other -- four inverters on one clock -- still
+ * switch together, and a flip-flop's clocked sampling is untouched.
+ */
+function serializeRaces(pending, read) {
+  if (pending.length < 2 || typeof read.sameNet !== 'function') return pending;
+  const feeds = (a, b) => b.g.inputs.some(pin => read.sameNet(a.g.output, pin));
+  const racing = pending.filter(a => pending.some(b => b !== a && (feeds(a, b) || feeds(b, a))));
+  if (racing.length < 2) return pending;
+  return pending.filter(e => !racing.includes(e) || e === racing[0]);
 }
 
 // ─── Custom chips (sequential logic beyond simple gates/FFs) ────────────
