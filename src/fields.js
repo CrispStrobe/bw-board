@@ -28,16 +28,15 @@
  *
  *     i = d/dt[ C·(e − v) ] = C·d(e − v)/dt + (e − v)·dC/dt.
  *
- * The first term is the solver's own capacitor with its farads read live
- * (as the tuning capacitor's are), so the integrator keeps its history; the
- * second is a conductance dC/dt in parallel (negative while the coupling
- * shrinks), known in closed form from the hand's path. A charged ruler held
- * still therefore leaves the charge it induced (a MOSFET gate keeps it), a
- * moving one drives a current (a Darlington's LED flickers only while the
- * ruler moves), and a whole circuit swinging against earth (a mains
- * adaptor) sees the coupling it really has. The live capacitance is taken
- * at the latest accepted instant, one step behind during a movement; the
- * dC/dt term, which carries the moving charge, is exact.
+ * It is realised exactly with the solver's own (fixed) capacitor: maxFarads
+ * from the probe to a hidden node that a controlled source, fed from the
+ * source side, holds at v + x(t)·(e − v). The capacitor then carries
+ * maxFarads·d/dt[x·(e − v)] = d/dt[C·(e − v)], with its history kept by the
+ * integrator. A charged ruler held still therefore leaves the charge it
+ * induced (a MOSFET gate keeps it), a moving one drives a current (a
+ * Darlington's LED flickers only while the ruler moves), and a whole
+ * circuit swinging against earth (a mains adaptor) sees the coupling it
+ * really has.
  *
  * THE KNOB is the distance: 0 = far away, 1 = as close as it gets, with the
  * coupling linear in the knob position. A knob change is a hand moving: the
@@ -125,6 +124,7 @@ export const BREAKDOWN_DEFAULTS = Object.freeze({ ibv: 10e-6, n: 1, noiseFactor:
 export const BREAKDOWN_KIND = 'junction_breakdown';
 export const FIELD_EMF_KIND = 'field_emf';
 export const FIELD_CONTACT_KIND = 'field_contact';
+export const FIELD_COUPLER_KIND = 'field_coupler';
 const EARTH_NET = '@field:earth';
 const COMMON_LEAK_OHMS = 1e12;
 const BODY_LEAK_OHMS = 1e10;
@@ -133,7 +133,6 @@ const IDC_TAU_SEC = 2e-4;     // smoothing of the breakdown current that sets th
 const FIELD_STEP_PER_CYCLE = 40;
 const MOVE_STEPS = 20;
 const NOISY_AMPS = 1e-8;    // below this a breakdown junction's noise is not resolved
-const MIN_COUPLING_FARADS = 1e-21;
 const CONTACT_FLOOR_SIEMENS = 1e-15;
 const CHARGE_MAX_FARADS = 0.1e-12;  // a ruler a few cm from a short wire
 
@@ -346,18 +345,19 @@ export function expandFields(parts, nets, opts = {}) {
                 add(part, [[na, 'a'], [nb, 'b']]);
             };
             // A coupling capacitance C(t) = maxFarads·x(t) between a source
-            // node and the probe: the solver's capacitor with its farads
-            // read live (C·dv/dt, the charge it holds follows the voltage
-            // across it) and in parallel the conductance dC/dt (v·dC/dt,
-            // the charge a moving coupling moves). Together d(C·v)/dt.
-            const coupling = (id, maxFarads, na, nb) => {
-                const params = {};
-                Object.defineProperty(params, 'farads', {
-                    enumerable: true,
-                    get: () => Math.max(MIN_COUPLING_FARADS, maxFarads * env.position(pi, env.now)),
-                });
-                add({ id, kind: 'capacitor', params, terminals: ['a', 'b'] }, [[na, 'a'], [nb, 'b']]);
-                conductance(`${id}:move`, na, nb, (t) => maxFarads * env.velocity(pi, t));
+            // node p and the probe a, exactly: a FIXED capacitor maxFarads
+            // from a to a hidden node m that a controlled source, drawing
+            // its current from p, holds at v(m) = v(a) + x(t)·(v(p) − v(a)).
+            // The capacitor then carries maxFarads·d/dt[x·(v(p) − v(a))] =
+            // d/dt[C(t)·(v(p) − v(a))]: a moving coupling moves charge, a
+            // still one keeps it, and the solver's own capacitor holds the
+            // history.
+            const coupling = (id, maxFarads, np, na) => {
+                const m = hiddenNet(`${id}:m`);
+                add({ id, kind: 'capacitor', params: { farads: maxFarads }, terminals: ['a', 'b'] }, [[m, 'a'], [na, 'b']]);
+                const ctl = { id: `${id}:x`, kind: FIELD_COUPLER_KIND, params: {}, terminals: ['m', 'a', 'p'] };
+                Object.defineProperty(ctl, 'fieldCoupler', { value: { position: (t) => env.position(pi, t) }, enumerable: false });
+                add(ctl, [[m, 'm'], [na, 'a'], [np, 'p']]);
             };
             const pe = hiddenNet(`@field:${p.id}:emf`);
             if (card.source === 'mains') {
@@ -478,16 +478,6 @@ export class FieldEnvironment {
 
     /** EMF of source k at time t. */
     emf(k, t) { return this.sources[k](t); }
-
-    /** The probe's speed dx/dt (1/s) at time t. */
-    velocity(i, t) {
-        const p = this.probes[i];
-        const T = p.card.moveSeconds;
-        if (p.x0 === p.target || !(T > 0)) return 0;
-        const s = (t - p.t0) / T;
-        if (s <= 0 || s >= 1) return 0;
-        return (p.target - p.x0) * Math.PI / (2 * T) * Math.sin(Math.PI * s);
-    }
 
     /** The latest time the environment has seen (accepted step or control). */
     get now() { return this._now; }
