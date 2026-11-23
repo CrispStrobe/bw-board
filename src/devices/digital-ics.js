@@ -198,13 +198,16 @@ export function registerDigitalICs() {
   // SOUND: the element sounds at the frequency of the voltage across it.
   // update() counts crossings of the mid-level of the recent swing (with
   // hysteresis, so ripple and the RC charging tail are not counted) and
-  // keeps the crossing times; BoardImpl.buzzerTone() reads them the way it
-  // reads a buzzer's pin edges.
+  // keeps the crossing times, alternately rising and falling;
+  // BoardImpl.buzzerTone() reads the pitch from crossings of the SAME
+  // direction (one whole period whatever the duty). Each crossing is placed
+  // where the voltage crossed its threshold, interpolated between this
+  // sample and the last, not at the solver step that noticed it.
   registerDevice('piezo', {
     terminals: ['a', 'b'],
 
     init() {
-      return { drives: {}, _lastV: 0, frequency: 0, _lo: 0, _hi: 0, _level: 0, _edges: [] };
+      return { drives: {}, _lastV: 0, _lastNs: null, frequency: 0, _lo: 0, _hi: 0, _level: 0, _edges: [] };
     },
 
     stamp(ctx, part) {
@@ -214,7 +217,11 @@ export function registerDigitalICs() {
 
     update(part, state, read, tNs) {
       const v = read('a') - read('b');
+      const vPrev = state._lastV;
+      const nsPrev = state._lastNs ?? null;
+      const ns = Number(tNs);
       state._lastV = v;
+      state._lastNs = ns;
       // Envelope of the swing, decaying slowly toward the present value so a
       // level change is followed without remembering forever.
       if (!state._edges) state._edges = [];
@@ -227,7 +234,14 @@ export function registerDigitalICs() {
       const level = v > mid + hyst ? 1 : v < mid - hyst ? -1 : 0;
       if (level !== 0 && level !== state._level) {
         if (state._level !== 0) {
-          state._edges.push(BigInt(tNs));
+          // The threshold this crossing passed, and the instant it passed it
+          // on the straight line from the previous sample.
+          const threshold = mid + level * hyst;
+          let at = ns;
+          if (nsPrev !== null && nsPrev < ns && (vPrev - threshold) * (v - threshold) < 0) {
+            at = nsPrev + (ns - nsPrev) * (threshold - vPrev) / (v - vPrev);
+          }
+          state._edges.push(BigInt(Math.round(at)));
           if (state._edges.length > 16) state._edges.shift();
         }
         state._level = level;

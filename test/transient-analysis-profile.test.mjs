@@ -248,7 +248,12 @@ describe('bounded transient numerical-analysis profile', () => {
   });
 
   it('keeps the v2 attempt backstop binding and refuses renewable live work after exhaustion', () => {
-    const board = rcBoard({wave:'spice-sine',offset:0,amplitude:2,freq:16000,
+    // The backstop binds per 10 ms window of simulated time (a long advance
+    // over a smooth source is not a runaway; see _integrateTransientMNA). A
+    // 16 kHz drive needs ~1,500 attempts per ms and so no longer exhausts a
+    // window; at 64 kHz the same RC exhausts the first one at 3.6 ms, which
+    // is the identical failure, receipt and refusal this test has always held.
+    const board = rcBoard({wave:'spice-sine',offset:0,amplitude:2,freq:64000,
       td:0,theta:0,phase:0},5000,1e-9,'interactive-v2');
     board.advanceTo(100000000n);
     const status = board.transientAnalysisStatus();

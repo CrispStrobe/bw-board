@@ -7,7 +7,7 @@ import {shaftElectricalStep} from '../mechanical-shaft.js';
 
 import { registerDevice } from '../devices.js';
 import { stepMotorVelocity, motorDirectionOf } from './dc-motor.js';
-import { ambient } from '../world.js';
+import { lightLevel } from '../world.js';
 import { photodiodeCurrent, solarCellParams, solarCellCurrent } from '../photo-junctions.js';
 
 const R_OUT = 50;
@@ -47,12 +47,39 @@ export function registerTier1Parts() {
       });
     },
     update(part, state) {
-      const light = ambient(part, 'light', 0);
+      const light = lightLevel(part, 0);
       const iMax = part.params?.iMax ?? 0.001; // 1mA at full light
       const newCurrent = light * iMax;
       if (Math.abs(newCurrent - state._current) < 1e-7) return false;
       state._current = newCurrent;
       return true;
+    },
+  });
+
+  // ─── LED photocurrent (solver-only) ───────────────────────────────
+  // Added by BoardImpl._expandLedPhotocurrents across an LED that set
+  // params.photoSensitivity (amps at full light): a light-proportional
+  // current out of the anode, in parallel with the LED's own junction, which
+  // is what clamps it in forward bias (the LED's photovoltaic open-circuit
+  // voltage) — so, unlike the photodiode, it needs no junction of its own.
+  // The light is the drawn LED's (`part.lightOf`), on the LDR control path.
+  // Solver-only parts get no device state (the board initialises state for
+  // drawn parts), so the current is evaluated at stamp time, which is also
+  // what makes a setControl or a world change take effect in the same solve.
+  const ledPhotoAmps = (part) => Math.max(0, lightLevel(part.lightOf ?? part, 0))
+    * Number(part.params?.photoSensitivity ?? 0);
+  registerDevice('led_photocurrent', {
+    terminals: ['anode', 'cathode'],
+    init() { return { drives: {} }; },
+    stamp(ctx, part) {
+      const i = ledPhotoAmps(part);
+      if (!i) return;
+      ctx.current('anode', i);
+      ctx.current('cathode', -i);
+    },
+    branchCurrents(part) {
+      const i = ledPhotoAmps(part);
+      return new Map([['anode', i], ['cathode', -i]]);
     },
   });
 
@@ -136,7 +163,7 @@ export function registerTier1Parts() {
   registerDevice('solar_cell', {
     terminals: ['pos', 'neg'],
     init(part) {
-      return { drives: {}, _light: ambient(part, 'light', 1.0) };
+      return { drives: {}, _light: lightLevel(part, 1.0) };
     },
     stamp(ctx, part, state) {
       if (!ctx.netFor('pos') || !ctx.netFor('neg')) return;
@@ -156,7 +183,7 @@ export function registerTier1Parts() {
       });
     },
     update(part, state) {
-      const light = ambient(part, 'light', 1.0);
+      const light = lightLevel(part, 1.0);
       if (Math.abs(light - state._light) < 0.01) return false;
       state._light = light;
       return true;

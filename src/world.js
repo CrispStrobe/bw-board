@@ -408,6 +408,43 @@ export function ambient (part, param, fallback) {
   return w !== undefined ? w : fallback;
 }
 
+/**
+ * The light level (0 = dark, 1 = full) a light-sensing part sees, on the SAME
+ * control path as the LDR: a value set with board.setControl(part.id, x) wins,
+ * else the part's own `light` param, else the world's light, else `fallback`.
+ * Before 2026-11-23 only the LDR (and the light_sensor module) answered
+ * setControl; a phototransistor, photodiode or solar cell moved only through
+ * its `light` param, so the light slider a panel offers for an LDR did
+ * nothing to them.
+ * @param {object} part
+ * @param {number} fallback
+ */
+export function lightLevel (part, fallback) {
+  const host = PART_HOST.get(part);
+  const c = host?.controls?.get?.(part?.id);
+  if (typeof c === 'number' && Number.isFinite(c)) return c;
+  return ambient(part, 'light', fallback);
+}
+
+/** Light-sensing kinds on the LDR control path, with their dark/legacy default. */
+export const LIGHT_CONTROL_DEFAULTS = Object.freeze({
+  phototransistor: 0, photodiode: 0, solar_cell: 1, ambient_light: 0.5,
+});
+
+/**
+ * The default light level of a part that takes the light control path, or
+ * null when it does not. An LED takes it only when it opted into a
+ * photocurrent (params.photoSensitivity > 0).
+ * @param {object} part
+ * @returns {number|null}
+ */
+export function lightControlDefault (part) {
+  if (!part) return null;
+  if (Object.hasOwn(LIGHT_CONTROL_DEFAULTS, part.kind)) return LIGHT_CONTROL_DEFAULTS[part.kind];
+  if (part.kind === 'led' && Number(part.params?.photoSensitivity) > 0) return 0;
+  return null;
+}
+
 // ─── Surfaces: colour and distance sensors without a 3D scene (step 3) ─────
 
 /** @typedef {{r?: number, g?: number, b?: number, distanceCm?: number}} WorldSurface */

@@ -15,6 +15,11 @@ import { classDefaults } from '../parts-library.js';
 
 const R_INPUT = 1e6;
 const R_OUT = 50;
+/** TIP120 law (see the registration): pair beta, base knee slope, saturation. */
+const TIP120_BETA = 1000;
+const TIP120_RD_BASE = 200;
+const TIP120_VSAT_OFFSET = 0.5;
+const TIP120_VSAT_WIDTH = 0.1;
 
 /**
  * Register analog IC and discrete device models.
@@ -28,9 +33,27 @@ const R_OUT = 50;
 export function registerAnalogICs() {
 
   // ─── TIP120 Darlington transistor ─────────────────────────────────
-  // Behavioral: base current × beta (1000 typ) = collector current.
-  // Vbe = 2 × 0.7V = 1.4V (two junctions). Vce_sat ≈ 2V.
-  // Simplified: if Vbe > 1.4V, collector sinks up to the available current.
+  // ONE NEWTON-SOLVED LAW, like the optocoupler below (2026-11-23).
+  //
+  // It was a switch: `update()` turned a 2 Ohm collector-emitter resistor on
+  // when Vbe passed 1.4 V and off below it. That is a fine model of a
+  // Darlington slammed hard on or off, and no model at all of one working
+  // LINEARLY -- an emitter follower, a current regulator, an op-amp loop
+  // holding a motor's speed. There the switch is a relay in a feedback loop:
+  // on, the emitter rises past base - 1.4 V, so off; off, it falls, so on.
+  // It flipped at every solve with no time between flips, the integrator's
+  // step fell to its femtosecond floor at t = 24.5 ns, and an LM358 driving
+  // a TIP120 into an encoder motor (lab-motor-speed) never finished its
+  // first millisecond: the advance ran out of device sub-step work.
+  //
+  // Now the base takes the pair's two junctions as one smooth knee at `vbe`
+  // (1.4 V; `ledSegment`, rd = 200 Ohm, exponentially dark below), beside
+  // the `rBase` input resistance it always had, and the collector passes
+  // beta x that base current (the card's beta, 1000), shaped by a logistic
+  // saturation centred `VSAT_OFFSET` above the emitter: a Darlington cannot
+  // pull its collector below the output transistor's own base, so it
+  // saturates near 0.6-0.9 V instead of at 2 Ohm. On or off it is the same
+  // switch as before; in between it is an amplifier.
   registerDevice('tip120', {
     terminals: ['base', 'collector', 'emitter'],
 
@@ -38,7 +61,7 @@ export function registerAnalogICs() {
       return { drives: {}, _on: false };
     },
 
-    stamp(ctx, part, state) {
+    stamp(ctx, part) {
       // Base: high impedance (Darlington input). The value is READ from
       // `classDefaults('tip120').rBase` rather than derived from R_INPUT here,
       // because the SPICE exporter has to reproduce this exact resistance and a
@@ -47,25 +70,41 @@ export function registerAnalogICs() {
       const d = classDefaults('tip120');
       const rBase = Number(part.params?.rBase) > 0 ? Number(part.params.rBase) : d.rBase;
       ctx.conductance('base', 'emitter', 1 / rBase);
-
-      if (state._on) {
-        // Saturated: collector-emitter is a low resistance
-        const rCeSat = part.params?.rceSat ?? classDefaults('tip120').rceSat;
-        ctx.conductance('collector', 'emitter', 1 / rCeSat);
-      }
+      if (!ctx.netFor('base') || !ctx.netFor('emitter')) return;
+      const vbeKnee = part.params?.vbe ?? d.vbe;
+      const beta = Number(part.params?.beta) > 0 ? Number(part.params.beta) : TIP120_BETA;
+      const out = Boolean(ctx.netFor('collector'));
+      ctx.nonlinearCurrents('darlington', (read, scale) => {
+        const vbe = read('base') - read('emitter');
+        const [iB, gB] = ledSegment(vbe, vbeKnee * scale, TIP120_RD_BASE);
+        const currents = new Map([['base', -iB], ['emitter', iB]]);
+        const jacobian = new Map([
+          ['base', new Map([['base', -gB], ['emitter', gB]])],
+          ['emitter', new Map([['base', gB], ['emitter', -gB]])],
+        ]);
+        if (out) {
+          // Only the junction current is amplified, not its 1 uS leakage.
+          const ion = Math.max(iB - 1e-6 * vbe, 0);
+          const gon = iB - 1e-6 * vbe > 0 ? gB - 1e-6 : 0;
+          const x = (read('collector') - read('emitter') - TIP120_VSAT_OFFSET) / TIP120_VSAT_WIDTH;
+          const sh = 1 / (1 + Math.exp(-Math.max(-50, Math.min(50, x))));
+          const dsh = sh * (1 - sh) / TIP120_VSAT_WIDTH;
+          const ic = beta * ion * sh;
+          const dB = beta * gon * sh;
+          const dC = beta * ion * dsh;
+          currents.set('collector', -ic);
+          currents.set('emitter', iB + ic);
+          jacobian.set('collector', new Map([['base', -dB], ['emitter', dB + dC], ['collector', -dC]]));
+          jacobian.set('emitter', new Map([['base', gB + dB], ['emitter', -gB - dB - dC], ['collector', dC]]));
+        }
+        return { region: 'smooth', currents, jacobian, residualOhms: 1e5 };
+      });
     },
 
     update(part, state, read) {
-      const vBase = read('base');
-      const vEmitter = read('emitter');
-      const vbe = vBase - vEmitter;
-      // 2 x 0.7 V, declared in classDefaults so the exporter reads the same number.
-      const vbeThreshold = part.params?.vbe ?? classDefaults('tip120').vbe;
-
-      const shouldBeOn = vbe > vbeThreshold;
-      if (shouldBeOn === state._on) return false;
-      state._on = shouldBeOn;
-      return true;
+      // Reporting only: the electrical law is solved inside the network.
+      state._on = read('base') - read('emitter') > (part.params?.vbe ?? classDefaults('tip120').vbe);
+      return false;
     },
   });
 
