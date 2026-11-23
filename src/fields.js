@@ -28,15 +28,20 @@
  *
  *     i = d/dt[ C·(e − v) ] = C·d(e − v)/dt + (e − v)·dC/dt.
  *
- * It is realised exactly with the solver's own (fixed) capacitor: maxFarads
- * from the probe to a hidden node that a controlled source, fed from the
- * source side, holds at v + x(t)·(e − v). The capacitor then carries
- * maxFarads·d/dt[x·(e − v)] = d/dt[C·(e − v)], with its history kept by the
- * integrator. A charged ruler held still therefore leaves the charge it
- * induced (a MOSFET gate keeps it), a moving one drives a current (a
- * Darlington's LED flickers only while the ruler moves), and a whole
- * circuit swinging against earth (a mains adaptor) sees the coupling it
- * really has.
+ * For a source at a fixed potential e(t) against earth (the cable, the
+ * ruler) the current splits as d/dt[C·e] − d/dt[C·v]: the first is a known
+ * current injected between earth and the probe (so no node carries the
+ * source's hundreds of volts, where solver tolerances would turn into stray
+ * nanoamps), the second a coupling C(t) from the probe to earth. A coupling
+ * C(t) between two circuit nodes p and a (earth and the probe; the finger
+ * and the plate through paper) is realised exactly with the solver's own
+ * fixed capacitor maxFarads from a to a hidden node that a controlled
+ * source, fed from p, holds at v(a) + x(t)·(v(p) − v(a)): the capacitor then
+ * carries d/dt[C·(v(p) − v(a))] with its history kept by the integrator. A
+ * charged ruler held still therefore leaves the charge it induced (a MOSFET
+ * gate keeps it), a moving one drives a current (a Darlington's LED
+ * flickers only while the ruler moves), and a whole circuit swinging
+ * against earth (a mains adaptor) sees the coupling it really has.
  *
  * THE KNOB is the distance: 0 = far away, 1 = as close as it gets, with the
  * coupling linear in the knob position. A knob change is a hand moving: the
@@ -125,6 +130,7 @@ export const BREAKDOWN_KIND = 'junction_breakdown';
 export const FIELD_EMF_KIND = 'field_emf';
 export const FIELD_CONTACT_KIND = 'field_contact';
 export const FIELD_COUPLER_KIND = 'field_coupler';
+export const FIELD_INJECT_KIND = 'field_inject';
 const EARTH_NET = '@field:earth';
 const COMMON_LEAK_OHMS = 1e12;
 const BODY_LEAK_OHMS = 1e10;
@@ -359,17 +365,29 @@ export function expandFields(parts, nets, opts = {}) {
                 Object.defineProperty(ctl, 'fieldCoupler', { value: { position: (t) => env.position(pi, t) }, enumerable: false });
                 add(ctl, [[m, 'm'], [na, 'a'], [np, 'p']]);
             };
-            const pe = hiddenNet(`@field:${p.id}:emf`);
-            if (card.source === 'mains') {
-                emf(`@field:${p.id}:emf`, pe, earth, (t) => env.mainsAt(t));
-                coupling(`@field:${p.id}:couple`, card.maxFarads, pe, a);
-            } else if (card.source === 'charge') {
-                emf(`@field:${p.id}:emf`, pe, earth, () => card.rodVolts);
-                coupling(`@field:${p.id}:couple`, card.maxFarads, pe, a);
+            // An ideal source e(t) against earth through C(t) = maxFarads·x:
+            //   i = d/dt[C·(e − v)] = d/dt[C·e] − d/dt[C·v]
+            // with v the probe against earth. The first term is a known
+            // current (no node ever carries the source's hundreds of
+            // volts, so no solver tolerance turns into a stray current);
+            // the second a coupling C(t) from the probe to earth.
+            const inject = (id, rate) => {
+                const part = { id, kind: FIELD_INJECT_KIND, params: {}, terminals: ['a', 'e'] };
+                Object.defineProperty(part, 'fieldInject', { value: { amps: rate }, enumerable: false });
+                add(part, [[a, 'a'], [earth, 'e']]);
+            };
+            if (card.source === 'mains' || card.source === 'charge') {
+                const mains = card.source === 'mains';
+                const e = mains ? (t) => env.mainsAt(t) : () => card.rodVolts;
+                const de = mains ? (t) => env.mainsRate(t) : () => 0;
+                inject(`@field:${p.id}:inject`,
+                    (t) => card.maxFarads * (env.velocity(pi, t) * e(t) + env.position(pi, t) * de(t)));
+                coupling(`@field:${p.id}:couple`, card.maxFarads, earth, a);
             } else {
                 // The body: its share of the mains behind its own
                 // capacitance; touched through the skin (a resistance) or
                 // through paper (a capacitance).
+                const pe = hiddenNet(`@field:${p.id}:emf`);
                 const body = hiddenNet(`@field:${p.id}:body`);
                 emf(`@field:${p.id}:emf`, pe, earth, (t) => card.bodyShare * env.mainsAt(t));
                 C(`@field:${p.id}:cbody`, card.bodyFarads, pe, body);
@@ -454,6 +472,12 @@ export class FieldEnvironment {
         return this.mains.volts * Math.SQRT2 * Math.sin(2 * Math.PI * this.mains.hz * t);
     }
 
+    /** d/dt of the mains voltage at time t. */
+    mainsRate(t) {
+        const w = 2 * Math.PI * this.mains.hz;
+        return this.mains.volts * Math.SQRT2 * w * Math.cos(w * t);
+    }
+
     /** A probe's position at time t (the hand's path toward the knob). */
     position(i, t) {
         const p = this.probes[i];
@@ -478,6 +502,16 @@ export class FieldEnvironment {
 
     /** EMF of source k at time t. */
     emf(k, t) { return this.sources[k](t); }
+
+    /** The probe's speed dx/dt (1/s) at time t. */
+    velocity(i, t) {
+        const p = this.probes[i];
+        const T = p.card.moveSeconds;
+        if (p.x0 === p.target || !(T > 0)) return 0;
+        const s = (t - p.t0) / T;
+        if (s <= 0 || s >= 1) return 0;
+        return (p.target - p.x0) * Math.PI / (2 * T) * Math.sin(Math.PI * s);
+    }
 
     /** The latest time the environment has seen (accepted step or control). */
     get now() { return this._now; }

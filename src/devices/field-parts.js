@@ -8,10 +8,10 @@
  */
 
 import { registerDevice } from '../devices.js';
-import { BREAKDOWN_KIND, FIELD_EMF_KIND, FIELD_CONTACT_KIND, FIELD_COUPLER_KIND, breakdownCurrent, bandNoise } from '../fields.js';
+import { BREAKDOWN_KIND, FIELD_EMF_KIND, FIELD_CONTACT_KIND, FIELD_COUPLER_KIND, FIELD_INJECT_KIND, breakdownCurrent, bandNoise } from '../fields.js';
 
 const EMF_OHMS = 1;
-const COUPLER_SIEMENS = 1;
+const COUPLER_SIEMENS = 1e-3;
 
 export function registerFieldParts() {
     // ─── Field probe ────────────────────────────────────────────────────
@@ -43,6 +43,20 @@ export function registerFieldParts() {
             if (!c) return;
             const g = c.siemens(ctx.tSeconds ?? 0);
             if (g !== 0) ctx.conductance('a', 'b', g);
+        },
+    });
+
+    // ─── Field current (solver-only) ────────────────────────────────────
+    // A known current d/dt[C·e] from the room's earth e into the probe a.
+    registerDevice(FIELD_INJECT_KIND, {
+        terminals: ['a', 'e'],
+        init() { return { drives: {} }; },
+        stamp(ctx, part) {
+            const f = part.fieldInject;
+            if (!f) return;
+            const amps = f.amps(ctx.tSeconds ?? 0);
+            ctx.current('a', amps);
+            ctx.current('e', -amps);
         },
     });
 
