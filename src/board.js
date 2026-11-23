@@ -7131,7 +7131,9 @@ export class BoardImpl {
    * Step control is step-doubling: one trapezoidal step of h against two of
    * h/2; the element states (capacitor voltages, inductor currents) carry
    * the error norm, the half-step result is the accepted one, and h scales
-   * by err^(-1/3) (trap is order 2). The first step after any discrete
+   * by err^(-1/3) (trap is order 2). The difference between the two is
+   * scaled to the accepted result's own error by Richardson's 1/(2^p - 1)
+   * (see LOCAL ERROR ESTIMATE below). The first step after any discrete
    * event (`_trapValid` false — setPin/setControl/power/netlist/device
    * flip) runs BE to re-seed the trapezoidal history; square/pulse source
    * edges truncate the step so the edge is a solve point, never straddled,
@@ -7376,6 +7378,11 @@ export class BoardImpl {
     // so an advance costs and answers the same however the caller chunks it,
     // and a stuck controller is still stopped within one window's budget.
     const ATTEMPT_WINDOW_SEC = 0.01;
+    // Capacitors a device may put on backward Euler inside a trapezoidal
+    // step (`dampedBy`); the local error estimate treats them as first order
+    // while they are.
+    const dampedCaps = (this._solveParts ?? []).filter(
+      (p) => p.kind === 'capacitor' && p.params?.dampedBy);
     let windowAttempts = 0;
     let windowEnd = t + ATTEMPT_WINDOW_SEC;
     let fatalTrialFailure = false;
@@ -7460,7 +7467,45 @@ export class BoardImpl {
         h1.capCurrentsNext ?? cc, h1.inductorVoltagesNext ?? lv, h1.newtonState ?? seed);
       if (rejectTrial(h2)) { if (fatalTrialFailure) break; continue; }
 
-      let err = 0;
+      // LOCAL ERROR ESTIMATE: RICHARDSON, NOT THE RAW DIFFERENCE.
+      //
+      // A method of order p has a local error C*h^(p+1) per step. The full
+      // step y_F carries C*h^(p+1); the two half steps y_H carry
+      // 2*C*(h/2)^(p+1) = C*h^(p+1)/2^p. So
+      //
+      //     y_F - y_H = C*h^(p+1) * (1 - 2^-p)
+      //     error(y_H) = C*h^(p+1)/2^p = (y_F - y_H) / (2^p - 1)
+      //
+      // y_H is the result accepted below, so its error is the difference
+      // divided by 2^p - 1: 3 for the trapezoidal rule (p = 2), 1 for
+      // backward Euler (p = 1). Comparing the raw difference against the
+      // tolerance held every trapezoidal step to a third of it -- 3^(1/3) =
+      // 1.44x shorter steps than the tolerance asks for. (No Gear/BDF2 here:
+      // the controlled steps are trapezoidal; BE runs only as the
+      // uncontrolled seed, and inside a trapezoidal step for a capacitor a
+      // device marks `dampedBy` while its pole is clamped.)
+      //
+      // A BE capacitor inside the step is first order, so its own state takes
+      // the factor 1 and the step-size exponent of a first-order error,
+      // -1/2. The node voltages mix every state, so while any capacitor is on
+      // BE in this attempt they take the conservative first-order estimate
+      // too. The flag changes only on accepted steps, so the full step and
+      // both half steps integrated the same way.
+      let firstOrder = null;
+      for (const cap of dampedCaps) {
+        const damp = cap.params.dampedBy;
+        if (this._deviceStates.get(damp.part)?.poleClamped?.[damp.channel] === true) {
+          (firstOrder ??= new Set()).add(cap.id);
+        }
+      }
+      const TRAP_RICHARDSON = 3; // 2^2 - 1
+      const BE_RICHARDSON = 1;   // 2^1 - 1
+      const nodeFactor = firstOrder ? BE_RICHARDSON : TRAP_RICHARDSON;
+      let errTrap = 0;
+      let errBe = 0;
+      const note = (e, beState) => {
+        if (beState) errBe = Math.max(errBe, e); else errTrap = Math.max(errTrap, e);
+      };
       // The accepted public observables include node voltages, not only the
       // capacitor-voltage / inductor-current state.
       // A state-only estimate can look excellent while an inductor voltage
@@ -7470,18 +7515,27 @@ export class BoardImpl {
       for (const [id, vH] of h2.nodeVoltages ?? []) {
         const vF = full.nodeVoltages?.get(id) ?? 0;
         const sc = ABSTOL_V + RELTOL * Math.max(Math.abs(vH), Math.abs(vF));
-        err = Math.max(err, Math.abs(vF - vH) / sc);
+        note(Math.abs(vF - vH) / (nodeFactor * sc), firstOrder !== null);
       }
       for (const [id, vH] of h2.capVoltagesNext ?? []) {
         const vF = full.capVoltagesNext?.get(id) ?? 0;
         const sc = ABSTOL_V + RELTOL * Math.max(Math.abs(vH), Math.abs(vF));
-        err = Math.max(err, Math.abs(vF - vH) / sc);
+        const be = firstOrder?.has(id) === true;
+        note(Math.abs(vF - vH) / ((be ? BE_RICHARDSON : TRAP_RICHARDSON) * sc), be);
       }
       for (const [id, iH] of h2.inductorCurrentsNext ?? []) {
         const iF = full.inductorCurrentsNext?.get(id) ?? 0;
         const sc = ABSTOL_I + RELTOL * Math.max(Math.abs(iH), Math.abs(iF));
-        err = Math.max(err, Math.abs(iF - iH) / sc);
+        note(Math.abs(iF - iH) / (TRAP_RICHARDSON * sc), false);
       }
+      // Math.max keeps a NaN (a bailed solve), which is reported as non-finite.
+      const err = Math.max(errTrap, errBe);
+      // Step-size factor: a local error of order q = p + 1 scales as h^q, so
+      // the step that meets the tolerance is h * err^(-1/q). Each class of
+      // state proposes its own; the smaller wins.
+      const stepFactor = () => Math.min(
+        errTrap > 0 ? Math.pow(errTrap, -1 / 3) : Infinity,
+        errBe > 0 ? Math.pow(errBe, -1 / 2) : Infinity);
 
       const atFloor = hEff <= H_MIN * 1.000001 && err > 1;
       // An error that does not shrink with the step is not truncation error:
@@ -7539,10 +7593,10 @@ export class BoardImpl {
           };
         }
         if (atEdge) trapReady = false;
-        const grow = err > 0 ? Math.min(2, 0.9 * Math.pow(err, -1 / 3)) : 2;
+        const grow = err > 0 ? Math.min(2, 0.9 * stepFactor()) : 2;
         h = Math.min(Math.max(hEff * grow, H_MIN), hMax);
       } else {
-        h = Math.max(hEff * Math.max(0.2, 0.9 * Math.pow(err, -1 / 3)), H_MIN);
+        h = Math.max(hEff * Math.max(0.2, 0.9 * stepFactor()), H_MIN);
       }
     }
 
