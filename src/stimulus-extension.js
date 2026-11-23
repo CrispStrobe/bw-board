@@ -40,6 +40,7 @@ const translations = {
     'stim.world.pressureHpa': 'air pressure (hPa)',
     'stim.world.lightLux': 'light (lx)',
     'stim.world.soundDb': 'sound (dB)',
+    'stim.world.airflowMs': 'airflow (m/s)',
   },
   de: {
     'stim.name':       'Umgebung',
@@ -54,6 +55,7 @@ const translations = {
     'stim.world.pressureHpa': 'Luftdruck (hPa)',
     'stim.world.lightLux': 'Licht (lx)',
     'stim.world.soundDb': 'Schall (dB)',
+    'stim.world.airflowMs': 'Luftstrom (m/s)',
   },
   fr: {
     'stim.name':       'Environnement',
@@ -68,6 +70,7 @@ const translations = {
     'stim.world.pressureHpa': 'pression (hPa)',
     'stim.world.lightLux': 'lumière (lx)',
     'stim.world.soundDb': 'son (dB)',
+    'stim.world.airflowMs': 'flux d\'air (m/s)',
   },
 };
 

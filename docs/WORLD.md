@@ -12,6 +12,7 @@ Source: `src/world.js`. Tests: `test/world.test.mjs`, `test/stimulus.test.js`.
 | `pressureHpa` | hPa | 1013.25 | 300…1100 |
 | `lightLux` | lx | unset | 0…120 000 |
 | `soundDb` | dB SPL | unset | 0…140 |
+| `airflowMs` | m/s | 0 | air over the bench, 0…30: cools parts in the opt-in thermal model (`src/thermal.js`) |
 
 The three set defaults equal the fallbacks the sensor models always used, so a
 project that never touches the world reads exactly what it read before. Light

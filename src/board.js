@@ -39,6 +39,12 @@ import { feedI2CSlave } from './devices/i2c-slave.js';
 import { checkCurrentBudget } from './current-ratings.js';
 import { createWorld, bindPartsToHost } from './world.js';
 import { junctionModelOf, chooseGroundReference } from './mna.js';
+import { buildThermalEntries, stepThermal, shortestTau } from './thermal.js';
+
+/** Re-solve when a thermal-model part has moved this far (K) since it last stamped. */
+const THERMAL_RESOLVE_K = 0.02;
+/** Thermal sub-steps per advance before the remainder is taken in one exact step. */
+const THERMAL_MAX_SUBSTEPS = 400;
 import {
   nextSpiceExpCorner, nextSpicePulseCorner, nextSpicePwlCorner, nextSpiceSineCorner,
   spiceSineDerivative, spiceSineIntegral,
@@ -651,6 +657,41 @@ export class BoardImpl {
   }
 
   /**
+   * Give each polarized_cap (electrolytic) to the SOLVER as a real capacitor:
+   * a hidden `<id>_cap` capacitor part on the nets its pos/neg terminals sit
+   * on (a = pos, b = neg). Like the motor windings above it lives only in the
+   * solver view, so DRC, exporters and the drawn netlist keep seeing one
+   * electrolytic; the registered polarized_cap device keeps only the polarity
+   * check. getCapVoltage / branchCurrent / the render state answer for the
+   * drawn id (see _polarizedCapId).
+   */
+  static _expandPolarizedCaps(parts, nets) {
+    const caps = parts.filter((p) => p.kind === 'polarized_cap');
+    if (!caps.length) return { parts, nets };
+    const outParts = [...parts];
+    const outNets = nets.map((n) => ({ ...n, terminals: [...n.terminals] }));
+    for (const p of caps) {
+      const pos = outNets.find((n) => n.terminals.some((t) => t.part === p.id && t.terminal === 'pos'));
+      const neg = outNets.find((n) => n.terminals.some((t) => t.part === p.id && t.terminal === 'neg'));
+      if (!pos || !neg || pos === neg) continue;
+      const hidId = `${p.id}_cap`;
+      const params = { farads: p.params?.farads ?? 0.0001 };
+      for (const k of ['ic', 'initial', 'initialVoltage']) {
+        if (p.params && Object.prototype.hasOwnProperty.call(p.params, k)) params[k] = p.params[k];
+      }
+      outParts.push({ id: hidId, kind: 'capacitor', params, terminals: ['a', 'b'] });
+      pos.terminals.push({ part: hidId, terminal: 'a' });
+      neg.terminals.push({ part: hidId, terminal: 'b' });
+    }
+    return { parts: outParts, nets: outNets };
+  }
+
+  /** The solver capacitor standing for a drawn polarized_cap (or the id itself). */
+  _polarizedCapId(partId) {
+    return this.partMap?.get(partId)?.kind === 'polarized_cap' ? `${partId}_cap` : partId;
+  }
+
+  /**
    * Give each h_bridge (L293D) its output clamp diodes as real SOLVER diodes:
    * per connected output, one from the output up to the bridge's VCC net and
    * one from its GND net up to the output. No new nets — the diodes sit on
@@ -1018,7 +1059,8 @@ export class BoardImpl {
     const genView = BoardImpl._expandFunctionGenerators(parts, nets);
     const piezoView = BoardImpl._expandPiezoCapacitance(genView.parts, genView.nets);
     const windingView = BoardImpl._expandMotorWindings(piezoView.parts, piezoView.nets);
-    const solveView = BoardImpl._expandBridgeClampDiodes(windingView.parts, windingView.nets);
+    const capView = BoardImpl._expandPolarizedCaps(windingView.parts, windingView.nets);
+    const solveView = BoardImpl._expandBridgeClampDiodes(capView.parts, capView.nets);
     const lm741View = expandLm741LinearPoles(solveView.parts, solveView.nets);
     // LM358/LM324 macromodel (src/ground-sensing-opamp.js); only when its
     // solver stage is registered, i.e. registerAnalogAmps() has run.
@@ -1061,6 +1103,13 @@ export class BoardImpl {
           p._junctionModel = junctionModelOf(p, this._junctionHeadroomFor(p));
         }
       }
+    }
+    // THE OPT-IN THERMAL MODEL (src/thermal.js): parts with rth / heatedBy
+    // get a temperature; every other circuit builds nothing here.
+    {
+      const entries = buildThermalEntries(this._solveParts);
+      this._thermal = entries ? { entries, temps: new Map() } : null;
+      this._resetThermal();
     }
     // A new netlist is a new bench: every reactive part starts at rest.
     // The clear has to come BEFORE the seeding below, not after it — it
@@ -1945,6 +1994,10 @@ export class BoardImpl {
         }
       }
     }
+
+    // The thermal model follows the interval's dissipation (opt-in; null on
+    // every circuit without thermal params).
+    if (this._thermal) this._stepThermal(Number(tNs - prevNs) / 1e9);
 
     // Record LED current samples at this timestamp
     this._recordLedSamples();
@@ -2929,6 +2982,11 @@ export class BoardImpl {
       this._mnaCache = this._solveMNA(false);
     }
     this._assertMeasurementSolution(this._mnaCache);
+    // An electrolytic's current is its solver capacitor's (_expandPolarizedCaps).
+    if (this.partMap?.get(partId)?.kind === 'polarized_cap' && (terminal === 'pos' || terminal === 'neg')) {
+      partId = `${partId}_cap`;
+      terminal = terminal === 'pos' ? 'a' : 'b';
+    }
     this._assertDeterminateCurrent(this._mnaCache, partId, terminal);
     const partCurrents = this._mnaCache.branchCurrents.get(partId);
     if (!partCurrents) return 0;
@@ -3998,6 +4056,7 @@ export class BoardImpl {
       // and reports its ideal gain (spec-updates/ac-operating-region.md).
       opRegions: op.opampRegions,
       deviceStates: this._deviceStates,
+      partTemperatures: this._thermal?.temps ?? null,
       sourceId,
       freqs,
       probes,
@@ -4890,7 +4949,96 @@ export class BoardImpl {
    * @returns {number}
    */
   getCapVoltage(partId) {
-    return this.capVoltages.get(partId) ?? 0;
+    return this.capVoltages.get(this._polarizedCapId(partId)) ?? 0;
+  }
+
+  // ─── Thermal model (opt-in, src/thermal.js) ─────────────────────────────
+
+  /**
+   * A part's temperature in the thermal model, degrees C, or null when the
+   * part does not take part (no rth / heatedBy; it is at the bench).
+   * @param {string} partId
+   * @returns {number|null}
+   */
+  partTemperature(partId) {
+    return this._thermal?.temps.get(partId) ?? null;
+  }
+
+  /** Every thermal-model part's temperature: [{id, celsius}] ([] without). */
+  partTemperatures() {
+    return this._thermal ? [...this._thermal.temps].map(([id, celsius]) => ({ id, celsius })) : [];
+  }
+
+  /** Back to the bench: every thermal part at the bench temperature. */
+  _resetThermal() {
+    const th = this._thermal;
+    if (!th) return;
+    const bench = this.temperatureC;
+    for (const e of th.entries) th.temps.set(e.id, bench);
+    th.solvedAt = new Map(th.temps);
+  }
+
+  /** The air speed over the bench (world airflowMs), m/s. */
+  _airflowMs() {
+    const v = Number(this._world.get('airflowMs', Number(this.timeNs) / 1e9));
+    return Number.isFinite(v) ? v : 0;
+  }
+
+  /**
+   * Watts each thermal part dissipates in the live solve: the sum over its
+   * terminals of V(net) x current INTO the part (branchCurrents are out of
+   * the part, hence the sign).
+   * @returns {Map<string, number>}
+   */
+  _thermalPowers() {
+    const out = new Map();
+    if (!this.powered) return out;
+    let sol = this._mnaCache;
+    if (!sol) {
+      try { sol = this._mnaCache = this._solveMNA(false); } catch { return out; }
+    }
+    if (!sol || sol.converged === false) return out;
+    for (const e of this._thermal.entries) {
+      const currents = sol.branchCurrents.get(e.id);
+      if (!currents) continue;
+      let p = 0;
+      for (const [terminal, i] of currents) {
+        const net = this._netForTerminal(e.id, terminal);
+        const v = net ? (sol.nodeVoltages.get(net) ?? 0) : 0;
+        if (Number.isFinite(v) && Number.isFinite(i)) p -= v * i;
+      }
+      out.set(e.id, p);
+    }
+    return out;
+  }
+
+  /**
+   * Step the thermal model over `dtSec` of simulated time. Sub-steps at a
+   * quarter of the shortest effective time constant (each step is exact for
+   * its held power), and re-solves the circuit only when some part has moved
+   * by more than THERMAL_RESOLVE_K since the temperatures last stamped -- so a
+   * circuit at thermal equilibrium costs no solves at all.
+   */
+  _stepThermal(dtSec) {
+    const th = this._thermal;
+    if (!th || !(dtSec > 0)) return;
+    const air = this._airflowMs();
+    const bench = this.temperatureC;
+    const hMax = shortestTau(th.entries, air) / 4;
+    let remaining = dtSec;
+    for (let i = 0; remaining > 0; i++) {
+      // Bounded work per advance: the last step takes the rest (still exact
+      // for its held power, merely coarser in the coupling).
+      const h = i >= THERMAL_MAX_SUBSTEPS ? remaining : Math.min(remaining, hMax);
+      stepThermal(th.entries, th.temps, this._thermalPowers(), bench, air, h);
+      remaining -= h;
+      let moved = 0;
+      for (const [id, c] of th.temps) moved = Math.max(moved, Math.abs(c - (th.solvedAt.get(id) ?? c)));
+      if (moved > THERMAL_RESOLVE_K) {
+        th.solvedAt = new Map(th.temps);
+        if (this.powered) this._solve();
+      }
+    }
   }
 
   /**
@@ -5456,6 +5604,18 @@ export class BoardImpl {
       }
     }
 
+    // An electrolytic held in reverse (the polarized_cap device latches it).
+    for (const [id, st] of this._deviceStates) {
+      if (!st?.reversed || this.partMap.get(id)?.kind !== 'polarized_cap') continue;
+      warnings.push({
+        severity: 'warning',
+        type: 'polarized-cap-reversed',
+        partId: id,
+        message: `${id}: electrolytic capacitor is reverse-biased (${(-st.voltage).toFixed(1)} V on its negative lead). ` +
+          'Turn it round: + to the more positive side.',
+      });
+    }
+
     // Check for output pins with nothing connected
     for (const part of this.parts) {
       if (part.kind !== 'mcu') continue;
@@ -5542,8 +5702,9 @@ export class BoardImpl {
         voltage: this.nodeVoltage(n.id),
       })),
       capacitors: this.parts
-        .filter(p => p.kind === 'capacitor')
+        .filter(p => p.kind === 'capacitor' || p.kind === 'polarized_cap')
         .map(p => ({ id: p.id, voltage: this.getCapVoltage(p.id) })),
+      ...(this._thermal ? { temperatures: this.partTemperatures() } : {}),
     };
   }
 
@@ -5612,6 +5773,13 @@ export class BoardImpl {
       if (p.kind === 'buzzer') this.buzzerEdges.set(p.id, []);
       if (p.kind === 'capacitor') this.capVoltages.set(p.id, 0);
     }
+    for (const p of (this._solveParts ?? [])) {
+      if (p.kind === 'capacitor' && !this.capVoltages.has(p.id) && this.partMap.get(p.id.replace(/_cap$/, ''))?.kind === 'polarized_cap') {
+        this.capVoltages.set(p.id, 0);
+      }
+    }
+    // A reset is a new run: every part in the thermal model is back at the bench.
+    this._resetThermal();
     this._seedOpampPoles();
 
     this._solve();
@@ -5641,6 +5809,7 @@ export class BoardImpl {
       controls: new Map(this.controls),
       capVoltages: new Map(this.capVoltages),
       inductorCurrents: new Map(this.inductorCurrents),
+      ...(this._thermal ? { partTemperatures: new Map(this._thermal.temps) } : {}),
     };
   }
 
@@ -5661,6 +5830,9 @@ export class BoardImpl {
     // A switch the snapshot never saw starts in its authored position.
     this._seedInitialControls();
     this.capVoltages = new Map(snap.capVoltages);
+    if (this._thermal && snap.partTemperatures) {
+      for (const [id, c] of snap.partTemperatures) if (this._thermal.temps.has(id)) this._thermal.temps.set(id, c);
+    }
     this.inductorCurrents = new Map(snap.inductorCurrents ?? []);
     // A snapshot older than a part carries no state for it, and the designer
     // restores exactly such a snapshot after every edit: `Circuit._syncNetlist`
@@ -5709,6 +5881,7 @@ export class BoardImpl {
       tSeconds,
       dcSources,
       temperatureC: this.temperatureC,
+      partTemperatures: this._thermal?.temps,
       deviceStates,
       qualifiedSources: this._qualifiedSources(),
       powerOff: !this.powered,
@@ -5757,6 +5930,7 @@ export class BoardImpl {
       this.controls, this.vcc, {
         powerOff: false,
         temperatureC: this.temperatureC,
+        partTemperatures: this._thermal?.temps,
         capacitorsOpen: true,
         tSeconds: Number(this.timeNs) / 1e9,
         deviceStates: this._deviceStates,
@@ -5821,6 +5995,7 @@ export class BoardImpl {
         ...(warmFrom.warmState ?? {}) } } : {}),
       powerOff,
       temperatureC: this.temperatureC,
+      partTemperatures: this._thermal?.temps,
       testNodeA,
       testNodeB,
       testCurrent,
@@ -6119,6 +6294,8 @@ export class BoardImpl {
       if (ch.type === 'voltage' && ch.referenceNetId !== null
           && (ch.inputOhms !== null || ch.inputFarads !== null)) return true;
     }
+    // A part at its own temperature (thermal model) is beyond the walker.
+    if (this._thermal) return true;
     for (const p of this.parts) {
       if (MNA_ONLY_KINDS.has(p.kind) || getDevice(p.kind)) return true;
       // An opted-in Shockley junction is beyond the walker's knee
@@ -6776,6 +6953,7 @@ export class BoardImpl {
         ...warmOf(res ?? entrySolution),
         tSeconds: tStart + hs,
         temperatureC: this.temperatureC,
+        partTemperatures: this._thermal?.temps,
         transient: { dtSec: hs, method, capVoltages: cvS, inductorCurrents: ilS,
           capCurrents: ccS, inductorVoltages: lvS, newtonSeed: seedS ?? undefined },
         deviceStates: this._deviceStates,

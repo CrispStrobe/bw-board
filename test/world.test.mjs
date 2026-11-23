@@ -22,9 +22,10 @@ test('defaults equal the legacy sensor fallbacks; light and sound start unset', 
   assert.equal(w.get('pressureHpa'), 1013.25);
   assert.equal(w.get('lightLux'), null);
   assert.equal(w.get('soundDb'), null);
+  assert.equal(w.get('airflowMs'), 0, 'still air (thermal model, src/thermal.js)');
   assert.ok(w.isDefault());
   assert.deepEqual(w.toJSON(), {});
-  assert.deepEqual(Object.keys(WORLD_DEFAULTS), ['temperatureC', 'humidityPct', 'pressureHpa', 'lightLux', 'soundDb']);
+  assert.deepEqual(Object.keys(WORLD_DEFAULTS), ['temperatureC', 'humidityPct', 'pressureHpa', 'lightLux', 'soundDb', 'airflowMs']);
 });
 
 test('a part with no explicit param reads the world; unset light keeps the legacy fallback', () => {

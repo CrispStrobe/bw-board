@@ -28,6 +28,7 @@
  */
 import { junctionVf } from './led-color.js';
 import { getDevice } from './devices.js';
+import { JUNCTION_TEMPCO_V_PER_K, ntcResistanceAt } from './thermal.js';
 import { CooMatrix, SparseLU, toCSC } from './sparse.js';
 import { spiceExpValue, spicePulseVoltage, spicePwlValue, spiceSineValue } from './source-waveforms.js';
 
@@ -839,7 +840,15 @@ export function ebersMollParams(part) {
       || !Number.isFinite(rb) || rb < 0 || !Number.isFinite(rc) || rc < 0
       || !Number.isFinite(cje) || cje < 0 || !Number.isFinite(cjc) || cjc < 0
       || !Number.isFinite(tf) || tf < 0) return null;
-  return { is, nVt: n * JUNCTION_THERMAL_VOLTAGE, bf, br, vaf, ikf, rb, rc,
+  // A part in the thermal model (src/thermal.js) is at its own temperature:
+  // the saturation current rises so VBE at a held current falls by
+  // JUNCTION_TEMPCO_V_PER_K per kelvin from 25 C -- the shift effVf applies to
+  // the piecewise junctions, expressed as IS. Parts outside the model are
+  // untouched (the card is the oracle's).
+  const celsius = partTemperatures?.get(part.id);
+  const isT = celsius === undefined ? is
+    : is * Math.exp(-(celsius - 25) * JUNCTION_TEMPCO_V_PER_K / (n * JUNCTION_THERMAL_VOLTAGE));
+  return { is: isT, nVt: n * JUNCTION_THERMAL_VOLTAGE, bf, br, vaf, ikf, rb, rc,
     cje, cjc, tf };
 }
 
@@ -1427,7 +1436,8 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
   // stale state); solveMNA is synchronous and never re-enters, and a
   // worker thread has its own module instance.
   benchTemperatureC = opts.temperatureC ?? 25;
-  tempVfShiftV = (benchTemperatureC - 25) * -0.002;
+  tempVfShiftV = (benchTemperatureC - 25) * JUNCTION_TEMPCO_V_PER_K;
+  partTemperatures = opts.partTemperatures && opts.partTemperatures.size ? opts.partTemperatures : null;
   const transient = opts.transient ?? null;
   const chargedBjtIds = [];
   for (const part of parts) {
@@ -2888,7 +2898,7 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
             vcrit: junctionVcrit(emLim.is, emLim.nVt), noRs: true }
         : (part.kind === 'led' || part.kind === 'diode' || explicitShockleyZener)
           ? junctionLimitParams(part,
-              effVf(/** @type {number} */ (junctionVf(part))))
+              effVf(/** @type {number} */ (junctionVf(part)), part))
           : null;
       if (lim) {
         // The solve gives TOTAL branch volts; the NR state is the
@@ -3023,7 +3033,7 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
       // The smooth output law has no regions either (`bjtForcedBeta`).
       if (bjtVce.has(part.id)) continue;
       const beta = /** @type {number} */ (part.params.beta ?? 100);
-      const vbe = effVf(/** @type {number} */ (part.params.vbe ?? 0.7));
+      const vbe = effVf(/** @type {number} */ (part.params.vbe ?? 0.7), part);
       const vceSat = /** @type {number} */ (part.params.vceSat ?? bjtVceSat.get(part.id) ?? 0.2);
       const netC = findNet(nets, part.id, 'collector');
       const netE = findNet(nets, part.id, 'emitter');
@@ -3521,7 +3531,7 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
       // A bare LED is a ~2 V junction; a bare diode is silicon, 0.7 V.
       // (Sweep finding 2026-08-15: both defaulted to 2.0, so an
       // unparameterized diode behaved exactly like an LED.)
-      const vf = effVf(/** @type {number} */ (junctionVf(part)));
+      const vf = effVf(/** @type {number} */ (junctionVf(part)), part);
       const rd = junctionRd(part); // bulk resistance, per kind
       const vAcross = vAnode - vCathode;
       // Same model as the stamp — a PWL current read off a Shockley solve
@@ -3539,7 +3549,7 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
       // The forward junction shifts with temperature; vz stays put —
       // zener/avalanche tempco is a different, weaker physics and
       // pretending −2 mV/°C would be invention (E2.2 scope note).
-      const vf = effVf(/** @type {number} */ (part.params.vf ?? 0.7));
+      const vf = effVf(/** @type {number} */ (part.params.vf ?? 0.7), part);
       const vz = /** @type {number} */ (part.params.vz ?? 5.1);
       const rd = 10;
       const rzener = /** @type {number} */ (part.params.rz ?? 5);
@@ -3573,7 +3583,7 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
       const vC = netC ? (nodeVoltages.get(netC) ?? 0) : 0;
       const vE = netE ? (nodeVoltages.get(netE) ?? 0) : 0;
       const beta = /** @type {number} */ (part.params.beta ?? 100);
-      const vbeThresh = /** @type {number} */ (part.params.vbe ?? 0.7);
+      const vbeThresh = effVf(/** @type {number} */ (part.params.vbe ?? 0.7), part);
       const rd = 10;
 
       // THE SAME Vce(sat) THE STAMP USED. Reading the constant here while the
@@ -3784,10 +3794,7 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
         const light = controls.get(part.id) ?? 0;
         ohms = Math.max(0.001, rDark * Math.pow(rLight / rDark, light));
       } else {
-        const rCold = /** @type {number} */ (part.params.rCold ?? 100000);
-        const rHot = /** @type {number} */ (part.params.rHot ?? 1000);
-        const temp = controls.get(part.id) ?? 0;
-        ohms = Math.max(0.001, rCold * Math.pow(rHot / rCold, temp));
+        ohms = /** @type {number} */ (controlledResistance(part, controls, partCelsius(part)));
       }
       const i = (vA - vB) / ohms;
       currents.set('a', -i);
@@ -4121,8 +4128,23 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
 let tempVfShiftV = 0;
 /** The bench temperature itself, for device ctx (same lifetime rules). */
 let benchTemperatureC = 25;
-/** A junction's effective forward drop at the bench temperature. */
-const effVf = (raw) => raw + tempVfShiftV;
+/**
+ * Per-part temperatures from the opt-in thermal model (src/thermal.js), set
+ * per solve like the two above: part id -> degrees C. A part in this map is
+ * at ITS temperature, not the bench's; every other part is at the bench.
+ * @type {Map<string, number>|null}
+ */
+let partTemperatures = null;
+/** The temperature-model celsius of a part, or undefined when it has none. */
+const partCelsius = (part) => partTemperatures?.get(part.id);
+/**
+ * A junction's effective forward drop at its own temperature: the part's
+ * thermal-model temperature when it has one, else the bench (E2.2).
+ */
+const effVf = (raw, part) => {
+  const c = part ? partCelsius(part) : undefined;
+  return raw + (c === undefined ? tempVfShiftV : (c - 25) * JUNCTION_TEMPCO_V_PER_K);
+};
 
 /**
  * A transformer's inverse inductance matrix Γ = L⁻¹ (E3.4,
@@ -4251,7 +4273,7 @@ function stampDiode(A, b, part, nets, nodeIndex, groundNetId, diodeVoltages) {
   const anodeNet = findNet(nets, part.id, 'anode');
   const cathodeNet = findNet(nets, part.id, 'cathode');
   if (!anodeNet || !cathodeNet) return;
-  const vf = effVf(/** @type {number} */ (junctionVf(part)));
+  const vf = effVf(/** @type {number} */ (junctionVf(part)), part);
   const rd = junctionRd(part);
 
   const vAcross = diodeVoltages.get(part.id) ?? 0;
@@ -4675,7 +4697,7 @@ function stampTwoTerminal(A, netA, netB, g, nodeIndex) {
  * @param {Map<string, number>} [controls]
  * @returns {number|null} ohms, or null when the kind is not a controlled passive
  */
-export function controlledResistance(part, controls = new Map()) {
+export function controlledResistance(part, controls = new Map(), celsius = undefined) {
   if (part.kind === 'ldr') {
     const rDark = /** @type {number} */ (part.params?.rDark ?? 1000000);
     const rLight = /** @type {number} */ (part.params?.rLight ?? 100);
@@ -4683,6 +4705,9 @@ export function controlledResistance(part, controls = new Map()) {
     return Math.max(rDark * Math.pow(rLight / rDark, light), 0.001);
   }
   if (part.kind === 'ntc') {
+    // In the thermal model the NTC is a thermistor at its own temperature
+    // (beta equation, src/thermal.js); otherwise its 0..1 control.
+    if (Number.isFinite(celsius)) return ntcResistanceAt(part, /** @type {number} */ (celsius));
     const rCold = /** @type {number} */ (part.params?.rCold ?? 100000);
     const rHot = /** @type {number} */ (part.params?.rHot ?? 1000);
     const temp = controls.get(part.id) ?? 0;
@@ -4692,7 +4717,7 @@ export function controlledResistance(part, controls = new Map()) {
 }
 
 function stampVariableResistor(A, b, part, nets, nodeIndex, groundNetId, controls) {
-  const ohms = /** @type {number} */ (controlledResistance(part, controls));
+  const ohms = /** @type {number} */ (controlledResistance(part, controls, partCelsius(part)));
   const netA = findNet(nets, part.id, 'a');
   const netB = findNet(nets, part.id, 'b');
   stampTwoTerminal(A, netA, netB, 1 / ohms, nodeIndex);
@@ -4921,7 +4946,10 @@ function stampSmoothCollector(A, b, inIdx, outIdx, jp, jn, op, on, gm, go, ieq) 
 function stampNPN(A, b, part, nets, nodeIndex, groundNetId, diodeVoltages,
   region = 'active', vceSatEff = undefined, bjtVbc, bjtBaseIndex, bjtCollectorIndex, bjtVce) {
   const beta = /** @type {number} */ (part.params.beta ?? 100);
-  const vbe = /** @type {number} */ (part.params.vbe ?? 0.7);
+  // The junction at its own temperature (bench, or the thermal model's):
+  // the same effVf the region FSM already read -- the stamp did not, so at
+  // any bench but 25 C the two described different transistors.
+  const vbe = effVf(/** @type {number} */ (part.params.vbe ?? 0.7), part);
   const rd = 10; // base-emitter dynamic resistance
   // Explicit param wins (a typed number was meant); otherwise the value the
   // region loop derived from this part's own drive.
@@ -5056,7 +5084,10 @@ function stampNPN(A, b, part, nets, nodeIndex, groundNetId, diodeVoltages,
  */
 function stampPNP(A, b, part, nets, nodeIndex, groundNetId, diodeVoltages, region = 'active', vceSatEff = undefined, bjtVbc, bjtBaseIndex, bjtCollectorIndex, bjtVce) {
   const beta = /** @type {number} */ (part.params.beta ?? 100);
-  const vbe = /** @type {number} */ (part.params.vbe ?? 0.7);
+  // The junction at its own temperature (bench, or the thermal model's):
+  // the same effVf the region FSM already read -- the stamp did not, so at
+  // any bench but 25 C the two described different transistors.
+  const vbe = effVf(/** @type {number} */ (part.params.vbe ?? 0.7), part);
   const rd = 10;
 
   const netB = findNet(nets, part.id, 'base');
@@ -5288,7 +5319,7 @@ export function zenerBreakdown(vRev, bv, ibv, rs, nVt) {
  */
 function stampZener(A, b, part, nets, nodeIndex, groundNetId, diodeVoltages) {
   if (!findNet(nets, part.id, 'anode') || !findNet(nets, part.id, 'cathode')) return;
-  const vf = effVf(/** @type {number} */ (part.params.vf ?? 0.7)); // vz stays put (see the branch-current twin)
+  const vf = effVf(/** @type {number} */ (part.params.vf ?? 0.7), part); // vz stays put (see the branch-current twin)
   const vz = /** @type {number} */ (part.params.vz ?? 5.1);
   const rd = 10;
   const rzener = /** @type {number} */ (part.params.rz ?? 5); // zener dynamic R
