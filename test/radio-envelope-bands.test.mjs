@@ -100,7 +100,7 @@ describe('radio bands: the ferrite rod is a directional antenna', () => {
  * `sense` 1 connects the coupling winding for positive feedback, -1 the
  * other way round.
  */
-function meissner({ sense = 1, re = 1000, pos = 0.3, cbias = 10e-9, ce = 1e-9, ratio = 0.05, henrys = 250e-6, stations = [] } = {}) {
+function meissner({ sense = 1, re = 1000, pos = 0.3, cbias = 10e-9, ce = 1e-9, ratio = 0.05, henrys = 250e-6, stations = [], extra = [], extraNets = {} } = {}) {
     const b = new BoardImpl(9);
     const [cb, cbOther] = sense > 0 ? ['c1', 'c2'] : ['c2', 'c1'];
     b.setNetlist([P('G', 'gnd', {}, ['gnd']), P('VS', 'vsource', { volts: 9 }, ['pos', 'neg']),
@@ -108,12 +108,13 @@ function meissner({ sense = 1, re = 1000, pos = 0.3, cbias = 10e-9, ce = 1e-9, r
         P('TC', 'tuning_cap', { position: pos }, ['a', 'b']), P('Q1', 'npn', {}, ['base', 'collector', 'emitter']),
         P('R1', 'resistor', { ohms: 47e3 }, ['a', 'b']), P('R2', 'resistor', { ohms: 10e3 }, ['a', 'b']),
         P('CB', 'capacitor', { farads: cbias }, ['a', 'b']), P('RE', 'resistor', { ohms: re }, ['a', 'b']),
-        P('CE', 'capacitor', { farads: ce }, ['a', 'b'])],
-    [net('g', ['G', 'gnd'], ['VS', 'neg'], ['R2', 'b'], ['CB', 'b'], ['RE', 'b'], ['CE', 'b']),
+        P('CE', 'capacitor', { farads: ce }, ['a', 'b']), ...extra],
+    [net('g', ['G', 'gnd'], ['VS', 'neg'], ['R2', 'b'], ['CB', 'b'], ['RE', 'b'], ['CE', 'b'], ...(extraNets.g ?? [])),
         net('v', ['VS', 'pos'], ['L1', 'a'], ['TC', 'a'], ['R1', 'a']),
         net('col', ['Q1', 'collector'], ['L1', 'b'], ['TC', 'b']),
-        net('bias', ['R1', 'b'], ['R2', 'a'], ['CB', 'a'], ['L1', cbOther]),
-        net('base', ['Q1', 'base'], ['L1', cb]), net('e', ['Q1', 'emitter'], ['RE', 'a'], ['CE', 'a'])]);
+        net('bias', ['R1', 'b'], ['R2', 'a'], ['CB', 'a'], ['L1', cbOther], ...(extraNets.bias ?? [])),
+        net('base', ['Q1', 'base'], ['L1', cb], ...(extraNets.base ?? [])), net('e', ['Q1', 'emitter'], ['RE', 'a'], ['CE', 'a'], ...(extraNets.e ?? [])),
+        ...(extraNets.more ?? [])]);
     b.setBroadcast(stations);
     b.setPower(true);
     return b;
@@ -167,6 +168,37 @@ describe('radio bands: oscillation', () => {
         ms(b, 2);
         const perMs = b.transientAnalysisStatus().work.solves - w0;
         assert.ok(perMs < 12000, `oscillating, ${perMs} solves per simulated ms`);
+    });
+
+    it('an RF-size capacitor (a Colpitts feedback cap) is an RF part too', () => {
+        // Gap found building the super-regenerator: 3.3 pF and 10 pF around a
+        // VHF transistor were sub-nanosecond modes in the transient solve,
+        // the limiting state of most of its steps. Up to 47 pF they belong to
+        // the RF view; the 10 nF bias capacitor stays where it is.
+        const b = meissner({ extra: [P('CX', 'capacitor', { farads: 22e-12 }, ['a', 'b'])], extraNets: { base: [['CX', 'a']], e: [['CX', 'b']] } });
+        ms(b, 0.5);
+        assert.ok(!b._solveParts.some(p => p.id === 'CX'), '22 pF left out of the transient solve');
+        assert.ok(b._radio.rfView(b._solveParts, b._solveNets).parts.some(p => p.id === 'CX'), '…and kept in the RF view');
+        assert.ok(b._solveParts.some(p => p.id === 'CB'), 'the 10 nF bias capacitor stays in the transient solve');
+    });
+
+    it('a quenched oscillator: the band grows and collapses with the bias the quench sets', () => {
+        // A 2 kHz sine (3 V peak) into the bias divider through 4.7 kΩ swings
+        // the base past cut-off and back. The oscillation lives in the band,
+        // the quench in the transient solve: each half cycle the stage gains
+        // (the band grows from noise to volts) and loses (it dies away), and
+        // the tank stays the band's while the stage is cut off.
+        const b = meissner({ extra: [P('FQ', 'function_gen', { wave: 'sine', freq: 2000, amplitude: 3 }, ['out', 'gnd']), P('RQ', 'resistor', { ohms: 4700 }, ['a', 'b'])],
+            extraNets: { bias: [['RQ', 'b']], g: [['FQ', 'gnd']], more: [net('q', ['FQ', 'out'], ['RQ', 'a'])] } });
+        ms(b, 2);
+        const w0 = b.transientAnalysisStatus().work.solves;
+        let lo = Infinity, hi = 0;
+        for (let k = 1; k <= 50; k++) { ms(b, 2 + k * 0.01); const a = tankAmp(b, 'col'); lo = Math.min(lo, a); hi = Math.max(hi, a); }
+        assert.equal(b.transientAnalysisStatus().failure, null);
+        assert.ok(hi > 0.5, `each quench cycle the oscillation builds up: ${hi.toFixed(3)} V`);
+        assert.ok(lo < 0.01 * hi, `…and collapses: down to ${lo.toExponential(2)} V`);
+        const perMs = (b.transientAnalysisStatus().work.solves - w0) / 0.5;
+        assert.ok(perMs < 30000, `${perMs} solves per simulated ms (cut off: hundreds; oscillating while the quench sweeps the bias: tens of thousands)`);
     });
 
     it('the coupling winding the wrong way round: no oscillation', () => {

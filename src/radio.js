@@ -512,7 +512,16 @@ export function expandRadio(parts, nets, opts) {
         outParts = outParts.filter(p => {
             if (p.kind !== 'capacitor') return true;
             const na = netOf(p.id, 'a'), nb = netOf(p.id, 'b');
-            if (!na || !nb || !pairs.has(key(na.id, nb.id))) return true;
+            if (!na || !nb) return true;
+            // Also every capacitor of RF size (Colpitts feedback, coupling
+            // into a detector): at the ≤ 100 kHz the transient solve
+            // resolves, 47 pF is above 34 kΩ, while across a junction whose
+            // rectified current the bands keep changing it is the same
+            // nanosecond mode. Larger ones (a grid-leak 100 pF, bypasses)
+            // carry audio and quench and stay.
+            const farads = Number(p.params?.farads);
+            const rfSize = Number.isFinite(farads) && farads <= RF_ONLY_FARADS && !p.params?.position;
+            if (!pairs.has(key(na.id, nb.id)) && !rfSize) return true;
             rfOnly.push({ part: p, nets: [[na.id, 'a'], [nb.id, 'b']] });
             na.terminals = na.terminals.filter(t => t.part !== p.id);
             nb.terminals = nb.terminals.filter(t => t.part !== p.id);
@@ -626,6 +635,23 @@ export function expandRadio(parts, nets, opts) {
                 stations: Array.isArray(P.stations) ? normalizeStations(P.stations) : null });
         }
     }
+
+    // A generic transistor's transient input capacitance (mna.js parasitics:
+    // 5 pF B-E, a convergence aid for switching loops) is an RF-scale part.
+    // The bands already carry the junction's capacitance at RF (Cπ from fT);
+    // in the time domain, across a junction whose rectified current the
+    // bands change continuously, it was a sub-nanosecond mode the step
+    // control chased (a quenched VHF stage: the limiting state in 963 of
+    // 1507 steps). Off for the transistors the bands stamp.
+    outParts = outParts.map(p => {
+        if ((p.kind === 'npn' || p.kind === 'pnp') && p.params?.model !== 'shockley' && p.params?.cpi === undefined) {
+            return { ...p, params: { ...p.params, cpi: 0 } };
+        }
+        if ((p.kind === 'nmos' || p.kind === 'pmos') && p.params?.parasitics === undefined) {
+            return { ...p, params: { ...p.params, parasitics: false } };
+        }
+        return p;
+    });
 
     // Junctions: every diode, transistor and MOSFET can rectify and is
     // stamped into the RF bands by its describing function.
@@ -832,9 +858,11 @@ const ENVELOPE_POINTS_PER_CYCLE = 10;
 const ROTATION_STEPS = 16;
 const H_TARGET_MAX = 20e-6;
 const NOISE_SEED = 0x5eed1234;
+const RF_ONLY_FARADS = 47e-12;
+const SIGMA_FOLLOW = 2e5;
 const IS_TAU_SEC = 2e-3;
 const REBOUND_SEC = 0.1e-3;
-const CURRENT_TAU_SEC = 20e-6;
+const CURRENT_TAU_SEC = 5e-6;
 const LOAD_TAU_SEC = 1e-3;
 const RETUNE_SEC = 1e-3;
 const DEFAULT_LOAD_OHMS = 47e3;
@@ -1254,6 +1282,47 @@ export class RadioFrontEnd {
     _scan(vp, other) {
         const { windings } = this._sys;
         if (!windings.length) return [];
+        // The tanks' own resonances: transistors without gain while looking
+        // (their capacitances stay). With the gain of the moment a stage
+        // that a quench has just driven hard, or cut off, shows its tank
+        // pulled, damped or not at all, and a band could miss it.
+        const bias = this._bias;
+        const saved = bias?.map(b => b?.ic);
+        bias?.forEach(b => { if (b && b.ic !== undefined) b.ic = 0; });
+        try { return this._scanAt(vp, other); }
+        finally { bias?.forEach((b, i) => { if (b && saved[i] !== undefined) b.ic = saved[i]; }); }
+    }
+
+    /** The peak of a winding's |Z| within ±8 % of hz (golden section), as _scanAt reports one; null if none. */
+    _refine(hz, vp, other) {
+        const bias = this._bias;
+        const saved = bias?.map(b => b?.ic);
+        bias?.forEach(b => { if (b && b.ic !== undefined) b.ic = 0; });
+        try {
+            let best = null;
+            this._sys.windings.forEach((_, w) => {
+                const zAt = (lf) => this._windingZ(2 * Math.PI * Math.exp(lf), vp, other)[w];
+                let a = Math.log(hz * 0.92), b = Math.log(hz * 1.08);
+                const g = (Math.sqrt(5) - 1) / 2;
+                let c = b - g * (b - a), d = a + g * (b - a);
+                let zc = zAt(c), zd = zAt(d);
+                for (let it = 0; it < 36 && b - a > 2e-6; it++) {
+                    if (zc > zd) { b = d; d = c; zd = zc; c = b - g * (b - a); zc = zAt(c); }
+                    else { a = c; c = d; zc = zd; d = a + g * (b - a); zd = zAt(d); }
+                }
+                const f = Math.exp((a + b) / 2), z = Math.max(zc, zd);
+                if (f < hz * 0.921 || f > hz * 1.079) return;
+                const z2 = this._windingZ(2 * Math.PI * f * 1.02, vp, other)[w];
+                const r2 = z / Math.max(z2, 1e-30);
+                const q = r2 > 1 ? Math.sqrt(r2 * r2 - 1) / 0.04 : 0;
+                if (q >= 5 && (!best || z > best.z)) best = { hz: f, z, q, halfWidth: Math.max(bandHalfWidthHz(f), 1.5 * f / (2 * q)) };
+            });
+            return best;
+        } finally { bias?.forEach((b, i) => { if (b && saved[i] !== undefined) b.ic = saved[i]; }); }
+    }
+
+    _scanAt(vp, other) {
+        const { windings } = this._sys;
         const n = Math.ceil(Math.log10(SCAN_HI_HZ / SCAN_LO_HZ) * SCAN_PER_DECADE);
         const fs = Array.from({ length: n + 1 }, (_, i) => SCAN_LO_HZ * 10 ** (i / SCAN_PER_DECADE));
         const Z = fs.map(f => this._windingZ(2 * Math.PI * f, vp, other));
@@ -1286,6 +1355,8 @@ export class RadioFrontEnd {
             }
         }
         // Merge resonances that would share a band (the windings of one coil, coupled tanks).
+        // A peak broader than Q ≈ 5 is no tank a band could follow.
+        for (let i = found.length - 1; i >= 0; i--) if (!(found[i].q >= 5)) found.splice(i, 1);
         found.sort((x, y) => y.z - x.z);
         const out = [];
         for (const r of found) if (!out.some(o => Math.abs(o.hz - r.hz) <= o.halfWidth)) out.push(r);
@@ -1346,6 +1417,8 @@ export class RadioFrontEnd {
             const r = (b.i > 1e-10 && b.v < -1e-5) ? Math.min(1e8, Math.max(10, -b.v / b.i)) : null;
             const p = prevBias?.[i]?.rLoad;
             b.rLoad = r === null ? (p ?? DEFAULT_LOAD_OHMS) : (p === undefined ? r : p + (r - p) * wl);
+            const vs = prevBias?.[i]?.vSlow;
+            b.vSlow = vs === undefined ? b.v : vs + (b.v - vs) * wl;
         });
         this._biasPrev = this._bias;
         this._lastSolution = solution;
@@ -1354,7 +1427,7 @@ export class RadioFrontEnd {
         for (const b of this._bands) b.prune(tSec);
         this._portCache.t = NaN;
         const key = JSON.stringify([...(board.controls ?? new Map())]);
-        if (key !== this._controlsKey) { this._controlsKey = key; this._dirty = true; this._tScan = -Infinity; }
+        if (key !== this._controlsKey) { this._controlsKey = key; this._dirty = true; this._tScan = -Infinity; this._controlsMoved = true; }
         // A varicap's bias moved (its tuning voltage settling after the pot
         // turned): the resonance moved with it; look again.
         if (!this._dirty && tSec - this._tScan >= RETUNE_SEC && this._varicapMoved()) { this._dirty = true; this._tScan = -Infinity; }
@@ -1375,7 +1448,10 @@ export class RadioFrontEnd {
         if (!a || !b || a.length !== b.length) { this._biasAtScan = b; return false; }
         for (let i = 0; i < b.length; i++) {
             if (!this.detectors[i].of.varicap) continue;
-            if (Math.abs((b[i].v ?? 0) - (a[i].v ?? 0)) > 0.05) return true;
+            // The varicap's bias over the last millisecond (vSlow): its
+            // tuning voltage settling, not a quench or the programme riding
+            // on the tank it tunes.
+            if (Math.abs((b[i].vSlow ?? b[i].v ?? 0) - (a[i].vSlow ?? a[i].v ?? 0)) > 0.05) return true;
         }
         return false;
     }
@@ -1402,7 +1478,25 @@ export class RadioFrontEnd {
             const other = this._otherAmplitudes(null);
             const vpNow = this._portsAt(null);
             if (tSec - this._tScan >= RESCAN_SEC || !this._resonances) {
-                this._resonances = this._scan(vpNow, other);
+                const before = this._resonances ?? [];
+                const controlsMoved = this._controlsMoved === true;
+                this._controlsMoved = false;
+                const fresh = this._scan(vpNow, other);
+                // A coarse grid can step over a sharp VHF peak it found
+                // before (12 % between points against a ~1 % wide tank):
+                // look again closely around every resonance the bands are
+                // following before letting it go.
+                const near = (a, b) => Math.abs(a.hz - b.hz) <= Math.max(a.halfWidth ?? 0, b.halfWidth ?? 0);
+                for (const old of before) {
+                    if (fresh.some(r => near(r, old))) continue;
+                    // Not found again, not even close by: a tank does not
+                    // vanish while its controls stand still — keep following
+                    // it (a quench can leave the stage cut off, or driven
+                    // hard, at the instant of a scan).
+                    const again = (!controlsMoved && this._refine(old.hz, vpNow, other)) || (controlsMoved ? null : old);
+                    if (again && !fresh.some(r => near(r, again))) fresh.push(again);
+                }
+                this._resonances = fresh.sort((x, y) => x.hz - y.hz);
                 this._tScan = tSec;
                 this._biasAtScan = this._bias;
             }
@@ -1768,9 +1862,42 @@ class RfBand {
         this.kMax = Math.max(0, Math.min(K_MAX, Math.floor(Math.log2(hT / H_UNIT))));
         this.k = Math.min(this.k, this.kMax);
         this._sinceBound = 0;
+        this.hBound = hT;
+        // How the growth rate moves with the transistors' current: one more
+        // mode estimate with every bipolar current 30 % up. Between bounds the
+        // substep then follows the bias the transient solve sets (a quench
+        // swinging the stage across its threshold 25 000 times a second)
+        // without a full re-estimate per substep.
+        const bias = r._bias;
+        const sumIc = (bs) => (bs ?? []).reduce((a, b) => a + (b?.ic ?? 0), 0);
+        this._icRef = sumIc(bias);
+        this._sigma0 = Math.max(...modes.map(m => m[0]));
+        this._dSigma = 0;
+        if (bias && this._icRef > 0) {
+            const saved = bias.map(b => b?.ic);
+            bias.forEach(b => { if (b && b.ic !== undefined) b.ic *= 1.3; });
+            try {
+                const m1 = r._modes(this.omega, this.integ.portVoltages(this.X), r._otherAmplitudes(this));
+                this._dSigma = (Math.max(...m1.map(m => m[0])) - this._sigma0) / 0.3;
+            } finally { bias.forEach((b, i) => { if (b && saved[i] !== undefined) b.ic = saved[i]; }); }
+        }
+    }
+
+    /** The substep ceiling for the bias now (see _bound): growth extrapolated from the current. */
+    _kForBias() {
+        if (!(this._dSigma > 0) || !(this._icRef > 0)) return this.kMax;
+        const ic = (this.radio._bias ?? []).reduce((a, b) => a + (b?.ic ?? 0), 0);
+        const sigma = this._sigma0 + this._dSigma * (ic / this._icRef - 1);
+        // Only a clear growth (an e-fold in under 5 µs): an oscillation that
+        // its own compression holds wobbles around σ = 0, and following those
+        // wobbles cost a steady oscillator half its speed.
+        if (!(sigma > SIGMA_FOLLOW)) return this.kMax;
+        const k = Math.floor(Math.log2(0.15 / sigma / H_UNIT));
+        return Math.max(0, Math.min(this.kMax, K_MAX, k));
     }
 
     portVoltages() { return this.integ ? this.integ.portVoltages(this.X) : []; }
+
 
     _source(t) {
         const N = this.X.re.length;
@@ -1808,6 +1935,8 @@ class RfBand {
             // While it grows, the growth rate changes with the swing (the
             // junctions compress): re-estimate it every few dozen substeps.
             if (this.growth > 0 && ++this._sinceBound >= 48) this._bound();
+            const kBias = this._kForBias();
+            if (this.k > kBias) this.k = kBias;
             const other = r._otherAmplitudes(this);
             const stamps = (vp) => r._stamps(this.omega, vp, other);
             const v0 = this.integ.portVoltages(this.X);
