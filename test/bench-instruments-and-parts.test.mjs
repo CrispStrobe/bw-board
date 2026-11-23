@@ -152,3 +152,33 @@ test('a piezo straight on an op-amp output does not pin it (lab-attenuator-gain 
   b.setControl('IN', 0.5);
   assert.ok(Math.abs(b.nodeVoltage('o') - 0.5) < 0.01, `follower output ${b.nodeVoltage('o')}`);
 });
+
+// buzzerTone() read a piezo's pitch from its last two crossings, i.e. ONE
+// half-period, and doubled it. That is the period only at 50 % duty: a 555 or
+// a Schmitt-gate oscillator is not symmetric, and through a series resistor
+// the piezo's own voltage is a lopsided RC wave (lab-nand-pips: 526 Hz for a
+// 567 Hz gate). The crossings were also stamped at the solver's step times,
+// not where the voltage crossed. The pitch is the same-direction crossing
+// interval, with each crossing interpolated inside its step.
+for (const [duty, through] of [[0.25, 0], [0.3, 10000], [0.7, 10000]]) {
+  test(`a piezo reads its true pitch at ${duty * 100} % duty${through ? ` through ${through / 1000} k` : ''}`, () => {
+    const hz = 567;
+    const b = new BoardImpl(5);
+    const parts = [{ id: 'F', kind: 'function_gen', params: { wave: 'square', freq: hz, amplitude: 2.5, offset: 2.5, duty }, terminals: ['out', 'gnd'] },
+      { id: 'G', kind: 'gnd', params: {}, terminals: ['gnd'] },
+      { id: 'P', kind: 'piezo', params: {}, terminals: ['a', 'b'] }];
+    const nets = [net('g', ['G', 'gnd'], ['F', 'gnd'], ['P', 'b'])];
+    if (through) {
+      parts.push({ id: 'R', kind: 'resistor', params: { ohms: through }, terminals: ['a', 'b'] });
+      nets.push(net('o', ['F', 'out'], ['R', 'a']), net('p', ['R', 'b'], ['P', 'a']));
+    } else {
+      nets.push(net('o', ['F', 'out'], ['P', 'a']));
+    }
+    b.setNetlist(parts, nets);
+    b.setPower(true);
+    for (let ms = 1; ms <= 40; ms++) b.advanceTo(BigInt(ms) * 1_000_000n);
+    const tone = b.buzzerTone('P');
+    assert.equal(tone.on, true);
+    assert.ok(Math.abs(tone.hz - hz) < 0.5, `${tone.hz} Hz for ${hz} Hz`);
+  });
+}

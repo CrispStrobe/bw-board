@@ -3262,8 +3262,10 @@ export class BoardImpl {
     }
     // A piezo element keeps its own crossing times (devices/digital-ics.js):
     // it is driven by whatever is across it, not by one MCU pin.
-    const edges = this.partMap?.get(partId)?.kind === 'piezo'
-      ? this._deviceStates.get(partId)?._edges : this.buzzerEdges.get(partId);
+    if (this.partMap?.get(partId)?.kind === 'piezo') {
+      return this._piezoTone(this._deviceStates.get(partId)?._edges);
+    }
+    const edges = this.buzzerEdges.get(partId);
     if (!edges || edges.length < 2) return this._buzzerDcTone(partId);
 
     // Measure period from the last two edges
@@ -3280,6 +3282,24 @@ export class BoardImpl {
 
     const hz = 1e9 / (2 * halfPeriodNs); // two edges = one full period
     return { hz, on: true };
+  }
+
+  /**
+   * A piezo's pitch from its crossing times, which alternate rising and
+   * falling. Two neighbours are one HALF-period only at 50 % duty -- a 555 or
+   * a Schmitt-gate oscillator is lopsided, and through a series resistor the
+   * piezo's own voltage is a lopsided RC wave (lab-nand-pips read 526 Hz for
+   * a 567 Hz gate) -- so the period is taken between crossings of the same
+   * direction, averaged over up to the last four periods.
+   */
+  _piezoTone(edges) {
+    if (!edges || edges.length < 3) return { hz: 0, on: false };
+    const last = edges[edges.length - 1];
+    if (this.timeNs - last > 100_000_000n) return { hz: 0, on: false };
+    const periods = Math.min(4, Math.floor((edges.length - 1) / 2));
+    const spanNs = Number(last - edges[edges.length - 1 - 2 * periods]);
+    if (!(spanNs > 0)) return { hz: 0, on: false };
+    return { hz: 1e9 * periods / spanNs, on: true };
   }
 
   /**
