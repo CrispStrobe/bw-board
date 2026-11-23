@@ -28,8 +28,10 @@ split it; the module note in src/radio.js has the derivations.
 1. **RF is linear and solved as phasors.** The antenna is an EMF
    (field × effective height) behind its resistance and its capacitance to
    earth. The engine's own small-signal AC solver (src/ac.js) solves the
-   whole circuit at every station's carrier, linearised at the present
-   audio-rate operating point: tank, tap, coupling winding (all windings of
+   whole circuit at every station's carrier, linearised at the operating
+   point smoothed over 5 ms (a reflex receiver's bias swings by volts at
+   audio rate; sampling it at each refresh made the RF gain a staircase and
+   the receiver motorboat): tank, tap, coupling winding (all windings of
    the ferrite coil fully coupled, with loss from its Q), transistors at
    gm = Ic/Vt with Cπ from fT. Output: the complex carrier voltage across
    every junction, per station. Refreshed every 2 ms of simulated time and

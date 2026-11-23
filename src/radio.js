@@ -16,8 +16,8 @@
  *      at its own frequency. The antenna is a voltage source (EMF = field
  *      strength × effective height) behind its radiation/loss resistance and
  *      its capacitance to earth. The whole circuit — tank, tap, coupling
- *      winding, transistors as small-signal gain stages at their present
- *      audio-rate operating point — is solved by the engine's small-signal
+ *      winding, transistors as small-signal gain stages at their operating
+ *      point smoothed over 5 ms — is solved by the engine's small-signal
  *      AC solver (src/ac.js) at each carrier frequency. That gives, per
  *      station k and per detecting junction d, the complex RF voltage V_dk
  *      across the junction. Tuning, selectivity (tank Q, the tap's loading),
