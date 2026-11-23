@@ -108,7 +108,13 @@ function invertSmall(M) {
  *   (non-Ebers-Moll) transistor is linearised at its operating collector
  *   current (gm = Ic/Vt, gπ = gm/β, Cπ = gm/(2π·fT) with params.ft, default
  *   300 MHz, Cμ = params.cjc, default 4 pF) instead of the piecewise knee,
- *   scaled by `bjtCompression` under a large base swing. Absent: unchanged.
+ *   scaled by `bjtCompression` under a large base swing (the round-3 phasor
+ *   front end). `external` (a Set of part ids) leaves those parts out of
+ *   the assembly entirely: the envelope bands stamp those junctions by their
+ *   describing function themselves (src/rf-bands.js). Absent: unchanged.
+ * @param {boolean} [args.dense] - return the assembled complex system
+ *   instead of sweeping: {N, nodeCount, nodeIndex, rowIndex, grounded, idxOf,
+ *   matrix(omega) -> {re, im}} (row-major N×N). `sourceId` may then be absent.
  * @returns {Array<{hz: number, results: Map<string, {mag: number, phaseDeg: number}>,
  *   outOfLinear?: Array<{part: string, kind: string, region: string}>}>}
  */
