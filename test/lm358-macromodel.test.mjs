@@ -387,7 +387,8 @@ describe('ideal opamp under positive feedback (gap 5)', () => {
 //     pole alternated about the clamp by ~90 uV forever, Newton lost
 //     convergence on the alternation at any useful step, and a comparator
 //     whose input crept toward its threshold took ~350 attempts per ms at
-//     ~10 ms of wall time each (lab-v-to-f: 163 s of test time).
+//     ~10 ms of wall time each (lab-v-to-f: 163 s of test time). While the
+//     pole is on its clamp it is now integrated with backward Euler.
 //  7. A designer reload (bw-circuit-ui rebuilds the board, then restores the
 //     snapshot of the board it replaced) zeroed the pole that setNetlist had
 //     just seeded from the bias point, so every LM358 started railed low and
@@ -437,7 +438,7 @@ describe('LM358 simulation cost (round 2)', () => {
         assert.deepEqual(falls, [384, 774]);
         const { attempts } = board.transientAnalysisStatus().work;
         // Measured: 14,680 attempts (24.6 s) with the trapezoidal pole,
-        // 3,179 (0.9 s) with the damped one; 1,600 is the advance count.
+        // 2,464 (0.6 s) damped while clamped; 1,600 is the advance count.
         assert.ok(attempts < 5000, `${attempts} adaptive attempts for 800 ms`);
     });
 
@@ -460,5 +461,47 @@ describe('LM358 simulation cost (round 2)', () => {
         assert.ok(Math.abs(board.nodeVoltage('no') - 2) < 1e-3, `t = 1 ms: ${board.nodeVoltage('no')} V`);
         const { attempts } = board.transientAnalysisStatus().work;
         assert.ok(attempts < 20, `${attempts} adaptive attempts for a static 1 ms`);
+    });
+});
+
+describe('LM358 pole damping stays off the linear amplifier (round 2)', () => {
+    // Backward Euler on the pole in EVERY regime cost a x101 audio stage 3.5x
+    // the steps (lab-attenuator-gain: 6,816 attempts against 1,775 per 50 ms):
+    // off the clamp the pole carries the gain-bandwidth dynamics, which want
+    // the second-order rule. Damping is applied only while the package says
+    // the pole is on its clamp.
+    it('a linear stage keeps the trapezoidal pole; a saturated one is flagged', () => {
+        const board = new BoardImpl(5.0);
+        board.setNetlist([V('VS', 12), G,
+            V('FG', 0, { wave: 'sine', freq: 1000, amplitude: 0.01, offset: 0.05 }),
+            V('VC', 3), V('VR', 2.5),
+            R('RF', 100000), R('RG', 1000), R('RL', 10000), R('RL2', 10000), LM358], [
+            net('nv', ['VS', 'pos'], ['U1', 'vcc']),
+            net('ng', ['G', 'gnd'], ['VS', 'neg'], ['FG', 'neg'], ['VC', 'neg'], ['VR', 'neg'],
+                ['RG', 'b'], ['RL', 'b'], ['RL2', 'b'], ['U1', 'gnd']),
+            net('np', ['FG', 'pos'], ['U1', '1_pos']),
+            net('nn', ['U1', '1_neg'], ['RF', 'a'], ['RG', 'a']),
+            net('no', ['U1', '1_out'], ['RF', 'b'], ['RL', 'a']),
+            // channel 2: a comparator with 0.5 V of overdrive, railed high
+            net('c2p', ['VC', 'pos'], ['U1', '2_pos']),
+            net('c2n', ['VR', 'pos'], ['U1', '2_neg']),
+            net('c2o', ['U1', '2_out'], ['RL2', 'a']),
+        ]);
+        let linear = 0, clamped = 0, steps = 0;
+        for (let us = 50n; us <= 5000n; us += 50n) {
+            board.advanceTo(us * 1000n);
+            const s = board.getDeviceState('U1');
+            steps++;
+            if (s.poleClamped['1']) linear++;
+            if (s.poleClamped['2']) clamped++;
+        }
+        assert.equal(linear, 0, 'the x101 stage never sat on its clamp');
+        assert.equal(clamped, steps, 'the comparator sat on its clamp throughout');
+        // VOH = 12 − 1.5 V less the 50 Ω output drop at ~1.05 mA into 10 k.
+        assert.ok(Math.abs(board.nodeVoltage('c2o') - 10.448) < 0.01, `comparator high ${board.nodeVoltage('c2o')} V`);
+        const { attempts } = board.transientAnalysisStatus().work;
+        // Measured 235 attempts for these 5 ms (100 advances); 679 with
+        // backward Euler on the linear pole as well.
+        assert.ok(attempts < 400, `${attempts} attempts`);
     });
 });

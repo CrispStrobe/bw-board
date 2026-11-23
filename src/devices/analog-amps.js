@@ -333,6 +333,9 @@ const ADA4522_1_SPEC = Object.freeze({
 // a re-solve — it reports supply/common-mode state and maps the stage
 // currents back onto its own leads for the instruments.
 
+/** Volts inside the swing window within which a pole counts as clamped. */
+const POLE_CLAMP_BAND = 1e-3;
+
 function registerGroundSensingOpAmp({ kind, channels, legacyUnwiredFiveVoltSupply }) {
     const C = GROUND_SENSING_OPAMP_CARD;
     const channelTerminals = channels.flatMap(ch => [`${ch}_pos`, `${ch}_neg`, `${ch}_out`]);
@@ -343,12 +346,17 @@ function registerGroundSensingOpAmp({ kind, channels, legacyUnwiredFiveVoltSuppl
     };
     registerDevice(kind, {
         terminals: ['vcc', 'gnd', ...channelTerminals],
+        // update() publishes status (supply, common-mode range, which pole is
+        // on its swing clamp) and never changes the circuit, so there is no
+        // instant inside a step for the board to localize.
+        eventLocalization: false,
 
         init() {
             return {
                 drives: {},
                 powered: false,
                 inputCommonMode: Object.fromEntries(channels.map(ch => [ch, 'unknown'])),
+                poleClamped: Object.fromEntries(channels.map(ch => [ch, false])),
             };
         },
 
@@ -357,6 +365,17 @@ function registerGroundSensingOpAmp({ kind, channels, legacyUnwiredFiveVoltSuppl
             const powered = Number.isFinite(vcc) && Number.isFinite(gnd) && vcc - gnd >= C.minSupply;
             state.powered = powered;
             if (!state.inputCommonMode) state.inputCommonMode = {};
+            if (!state.poleClamped) state.poleClamped = {};
+            // A pole resting on its swing clamp is a 0.1 ns mode; the solver
+            // integrates its hidden capacitor with backward Euler while it is
+            // there (ground-sensing-opamp.js, POLE INTEGRATION).
+            const lo = gnd + C.outLowHeadroom;
+            const hi = Math.max(lo, vcc - C.outHighHeadroom);
+            for (const ch of channels) {
+                const pole = read(polePin(ch));
+                state.poleClamped[ch] = pole !== 0
+                    && (pole > hi - POLE_CLAMP_BAND || pole < lo + POLE_CLAMP_BAND);
+            }
             const inputHi = vcc - C.inputHighHeadroom;
             for (const ch of channels) {
                 if (!powered) { state.inputCommonMode[ch] = 'unpowered'; continue; }
