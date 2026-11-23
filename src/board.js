@@ -32,6 +32,7 @@ import { expandTransducers, transducerCard } from './transducers.js';
 import { expandSensingTransducers } from './sensing-transducers.js';
 import { expandRadio, normalizeStations, DEFAULT_STATIONS } from './radio.js';
 import { expandFields } from './fields.js';
+import { expandOptics, pathKnobRest, LIGHT_PATH_KIND } from './optics.js';
 import { validateNetlist } from './validate.js';
 import { getDevice, initDeviceState, resetDeviceState } from './devices.js';
 import { servoCalibration } from './devices/servo.js';
@@ -1233,7 +1234,11 @@ export class BoardImpl {
     this._fields = fieldView.fields;
     const genView = BoardImpl._expandFunctionGenerators(fieldView.parts, fieldView.nets);
     const photoView = BoardImpl._expandLedPhotocurrents(genView.parts, genView.nets);
-    const piezoView = BoardImpl._expandPiezoCapacitance(photoView.parts, photoView.nets);
+    // Optical links (src/optics.js): a receiver a light_path points at gets a
+    // hidden photocurrent fed by its emitter's solved current.
+    const opticView = expandOptics(photoView.parts, photoView.nets, { controls: () => this.controls });
+    this._optics = opticView.optics;
+    const piezoView = BoardImpl._expandPiezoCapacitance(opticView.parts, opticView.nets);
     const windingView = BoardImpl._expandMotorWindings(piezoView.parts, piezoView.nets);
     const capView = BoardImpl._expandPolarizedCaps(windingView.parts, windingView.nets);
     const solveView = BoardImpl._expandBridgeClampDiodes(capView.parts, capView.nets);
@@ -1250,8 +1255,14 @@ export class BoardImpl {
     // knee and limiting are the LED's) with the IR forward voltage unless the
     // part declares its own vf. The public part stays an `ir_transmitter`:
     // it is not a visible LED, and its device model still reports emission.
+    // A laser diode likewise: an LED (red junction, 2.2 V) whose LIGHT is a
+    // threshold law (src/optics.js); `opticalKind` keeps the drawn kind.
     this._solveParts = macroView.parts.map(p => p.kind === 'ir_transmitter'
-      ? { ...p, kind: 'led', params: { color: 'ir', ...p.params } } : p);
+      ? { ...p, kind: 'led', params: { color: 'ir', ...p.params } }
+      : p.kind === 'laser_diode'
+        ? Object.defineProperty({ ...p, kind: 'led', params: { color: 'red', vf: 2.2, ...p.params } },
+          'opticalKind', { value: 'laser_diode', enumerable: false })
+        : p);
     this._solveNets = macroView.nets;
     this._macroFallbacks = macroView.notes;
 
@@ -5294,6 +5305,23 @@ export class BoardImpl {
   }
 
   /** Back to the bench: every thermal part at the bench temperature. */
+  /** Temperature lookup for the optical model: own (thermal) else bench. */
+  _opticalTempOf() {
+    const temps = this._thermal?.temps;
+    const bench = this.temperatureC ?? 25;
+    return (id) => temps?.get(id) ?? bench;
+  }
+
+  /**
+   * Optical links (src/optics.js): emitters' radiant power (mW) and each
+   * receiver's optical light (0..1 full-light scale) and photocurrent, or
+   * null when the circuit has no light_path.
+   * @returns {{emitters: Record<string, number>, receivers: Record<string, {light: number, amps: number}>}|null}
+   */
+  opticalReport() {
+    return this._optics ? this._optics.report(Number(this.timeNs) / 1e9) : null;
+  }
+
   _resetThermal() {
     const th = this._thermal;
     if (!th) return;
@@ -5554,7 +5582,7 @@ export class BoardImpl {
     // inline editor offers it), which `_railVolts` honours either way, so a
     // control set by some other route still works and nothing is lost.
     const controllable = ['potentiometer', 'button', 'switch', 'slide_switch', 'ldr', 'ntc', 'light_sensor', 'vsource', 'tuning_cap',
-      'field_probe'];
+      'field_probe', LIGHT_PATH_KIND];
     return this.parts
       .filter(p => controllable.includes(p.kind) || lightControlDefault(p) !== null)
       .map(p => lightControlDefault(p) !== null ? {
@@ -5573,7 +5601,8 @@ export class BoardImpl {
           ?? (p.kind === 'vsource' ? (p.params?.volts ?? 5)
             : p.kind === 'slide_switch' ? (p.params?.position ?? 0)
               : p.kind === 'tuning_cap' ? (p.params?.position ?? 0.5)
-                : p.kind === 'field_probe' ? (p.params?.position ?? 0) : 0),
+                : p.kind === 'field_probe' ? (p.params?.position ?? 0)
+                  : p.kind === LIGHT_PATH_KIND ? pathKnobRest(p) : 0),
       }));
   }
 
@@ -6150,6 +6179,7 @@ export class BoardImpl {
     this._radio?.reset();
     this._fields?.reset();
     for (const s of this._stimuli ?? []) s.reset();
+    this._optics?.reset();
     // Device models that integrate over time (a motor's speed and winding
     // current) start from rest too; a spinning motor at t = 0 meets a
     // stopped drive and a fresh integrator, a stiff edge the controller
@@ -6923,6 +6953,8 @@ export class BoardImpl {
     if (this._fields?.timeVarying) return true;
     // Sound at a listening transducer, a magnet falling through a coil.
     if (this._stimuli?.some(s => s.timeVarying())) return true;
+    // A plucked string modulates its light path in time.
+    if (this._optics?.hasModulation()) return true;
     for (const p of (this._solveParts ?? this.parts)) {
       if ((p.kind === 'vsource' || p.kind === 'isource')
           && p.params && p.params.wave && p.params.wave !== 'dc') {
@@ -7028,6 +7060,11 @@ export class BoardImpl {
       maxStepSec = Math.min(maxStepSec, profile.authoredMaxStepSec);
       basis.push('authored-analysis-maximum');
     }
+    const opticStep = this._optics?.maxStepSec();
+    if (opticStep > 0) {
+      maxStepSec = Math.min(maxStepSec, opticStep);
+      basis.push('optical-modulation-fidelity');
+    }
     const rfStep = this._radio?.maxStepSec();
     if (rfStep > 0) {
       maxStepSec = Math.min(maxStepSec, rfStep);
@@ -7061,8 +7098,12 @@ export class BoardImpl {
     // Devices react to the solved voltages (a gate sees its input change),
     // may change what they drive, and the network is re-solved — to a
     // bounded fixpoint, so a chain of gates settles within one event.
+    // Optical links join the fixpoint: a receiver whose light moved with its
+    // emitter's new current is re-solved too (src/optics.js).
     for (let round = 0; round < 10; round++) {
-      if (!this._updateDevices()) break;
+      const devices = this._updateDevices();
+      const optical = this._optics ? this._optics.observe(res, this._opticalTempOf()) : false;
+      if (!devices && !optical) break;
       res = this._solveMNA(false, undefined, undefined, undefined, res.converged !== false ? res : warmFrom);
       this._adoptSolution(res);
     }
@@ -7554,6 +7595,17 @@ export class BoardImpl {
       if (this._radio && r?.converged !== false) this._radio.onAccepted(this, atSec, r);
       // Junction noise follows the accepted breakdown current (src/fields.js).
       if (this._fields && r?.converged !== false) this._fields.onAccepted(this, atSec, r);
+      // Optical links: the receivers' light follows this step's emitter
+      // currents from the next step on (src/optics.js: no restart, no shrink).
+      if (this._optics && r?.converged !== false) {
+        this._optics.observe(r, this._opticalTempOf(), atSec);
+        // An emitter that switched is a discontinuity at its receiver: restart
+        // the trapezoidal history and look closely, as for a device flip.
+        if (this._optics.lastEdge) {
+          trapReady = false;
+          h = Math.max(H_MIN, h / 4);
+        }
+      }
     };
 
     // No capacitor/inductor/device history and no scope grid means this is a
@@ -7569,7 +7621,15 @@ export class BoardImpl {
       attempts = 1;
       // Keep the established first-step diagnostic stage (`be`). With no
       // storage, BE and trapezoidal stamp the identical algebraic system.
-      const direct = solveStep(t0, dtSec, 'be', cv, il, cc, lv);
+      let direct = solveStep(t0, dtSec, 'be', cv, il, cc, lv);
+      // Optical links read the emitters of the LAST solution: with no storage
+      // the endpoint is algebraic, so iterate it until the light holds still.
+      for (let k = 0; k < 6 && this._optics && validTransientSolution(direct)
+        && this._optics.observe(direct, this._opticalTempOf()); k++) {
+        const again = solveStep(t0, dtSec, 'be', cv, il, cc, lv);
+        if (!validTransientSolution(again)) break;
+        direct = again;
+      }
       if (validTransientSolution(direct)) {
         t = tEnd;
         accept(direct, t, null, 'be');

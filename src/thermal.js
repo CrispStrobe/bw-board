@@ -64,6 +64,10 @@ export const THERMAL_DEFAULTS = Object.freeze({
   diode: Object.freeze({ rth: 300, tau: 10 }),
   zener: Object.freeze({ rth: 300, tau: 10 }),
   led: Object.freeze({ rth: 300, tau: 10 }),
+  // Light receivers: their temperature changes their optical sensitivity
+  // (src/optics.js); a 5 mm / TO-18 package, like the LED.
+  phototransistor: Object.freeze({ rth: 300, tau: 10 }),
+  photodiode: Object.freeze({ rth: 300, tau: 10 }),
 });
 
 /** Silicon junction forward-drop coefficient, V/K (E2.2). */

@@ -421,9 +421,12 @@ export function ambient (part, param, fallback) {
  */
 export function lightLevel (part, fallback) {
   const host = PART_HOST.get(part);
+  // A receiver shielded by its light path (src/optics.js, params.shield)
+  // sees only part of the room light.
+  const shade = host?._optics ? host._optics.ambientFactor(part?.id) : 1;
   const c = host?.controls?.get?.(part?.id);
-  if (typeof c === 'number' && Number.isFinite(c)) return c;
-  return ambient(part, 'light', fallback);
+  if (typeof c === 'number' && Number.isFinite(c)) return c * shade;
+  return ambient(part, 'light', fallback) * shade;
 }
 
 /** Light-sensing kinds on the LDR control path, with their dark/legacy default. */
