@@ -217,6 +217,64 @@ describe('LM386 as an oscillator (the "amp IC horn")', () => {
   });
 });
 
+describe('LM386 small-signal AC sweep', () => {
+  // runAc linearises a Newton-solved macromodel stage at its operating
+  // point (its Jacobian is its small-signal conductance block); before
+  // round 3 the sweep's stamp context had no nonlinearCurrents and threw.
+  it('gain 20 (26 dB) in the audio band, falling past the 300 kHz bandwidth', () => {
+    const b = amp();
+    b.advanceTo(50_000_000n);
+    const pts = b.runAc({ sourceId: 'SIG', from: 1e3, to: 3e6, pointsPerDecade: 4 });
+    const at = (hz) => pts.reduce((best, p) => (Math.abs(Math.log(p.hz / hz)) < Math.abs(Math.log(best.hz / hz)) ? p : best));
+    close(at(1e3).results.get('out').mag, 20, 1, 'gain at 1 kHz');
+    assert.ok(at(3e6).results.get('out').mag < 5, `rolled off by 3 MHz: ${at(3e6).results.get('out').mag}`);
+  });
+});
+
+describe('LM386 horn into a real loudspeaker (sb3 lab-amp-horn)', () => {
+  // Round 3: the gallery bench stands a piezo with leakOhms 8 in for the
+  // speaker. The same bench with the `speaker` part (8 Ω + 0.2 mH voice
+  // coil): the notes, the bias and the swing are the piezo bench's
+  // (measured there, bw-board e339fcb: 173.2 / 439.5 Hz, 4.43 V average,
+  // -4.00..+4.00 V), and the speaker itself reports the note.
+  it('oscillates at ~175 Hz, ~440 Hz with the button, and the speaker sounds the note', () => {
+    const b = new BoardImpl(5);
+    b.setNetlist([V('VS', 9), G, U, R('RB', 22e3), Cap('CF', 47e-9), R('RP', 10e3),
+      { id: 'BTN', kind: 'button', params: {}, terminals: ['a', 'b'] },
+      { id: 'CO', kind: 'polarized_cap', params: { farads: 100e-6 }, terminals: ['pos', 'neg'] },
+      { id: 'SPK', kind: 'speaker', params: {}, terminals: ['a', 'b'] }], [
+      net('vs', ['VS', 'pos'], ['U1', 'vs']),
+      net('g', ['G', 'gnd'], ['VS', 'neg'], ['U1', 'gnd'], ['U1', 'inn'], ['RB', 'b'], ['RP', 'b'], ['SPK', 'b']),
+      net('out', ['U1', 'vout'], ['CF', 'a'], ['CO', 'pos']),
+      net('p', ['CF', 'b'], ['U1', 'inp'], ['RB', 'a'], ['BTN', 'a']),
+      net('btn', ['BTN', 'b'], ['RP', 'a']),
+      net('spk', ['CO', 'neg'], ['SPK', 'a']),
+    ]);
+    b.setPower(true);
+    b.advanceTo(100_000_000n);
+    const window = (fromNs) => {
+      let out = 0, n = 0, lo = Infinity, hi = -Infinity;
+      for (let t = fromNs; t <= fromNs + 100_000_000; t += 50_000) {
+        b.advanceTo(BigInt(t));
+        const v = b.nodeVoltage('spk');
+        out += b.nodeVoltage('out'); n++; lo = Math.min(lo, v); hi = Math.max(hi, v);
+      }
+      return { tone: b.buzzerTone('SPK'), out: out / n, lo, hi };
+    };
+    const idle = window(100_000_000);
+    close(idle.tone.hz, 175, 12, 'idle note (Hz)');
+    close(idle.out, 4.5, 0.15, 'output averages to half the supply');
+    assert.ok(idle.lo < -3.5 && idle.hi > 3.5, `speaker swings ${idle.lo.toFixed(2)}..${idle.hi.toFixed(2)} V`);
+    // ±4 V into 8 Ω is far past the 0.5 W rating: full loudness.
+    assert.equal(idle.tone.level, 1);
+    assert.ok(idle.tone.amps > 0.25, `coil current ${idle.tone.amps} A rms`);
+    b.setControl('BTN', 1);
+    b.advanceTo(230_000_000n);
+    close(window(230_000_000).tone.hz, 439, 20, 'button held (Hz)');
+    assert.equal(b._transientAccuracyUnmet, null);
+  });
+});
+
 describe('LM386 stage Jacobian', () => {
   it('matches finite differences', () => {
     const v = { inp: 0.01, inn: -0.002, e1: 0.009, x: -0.001, pole: 4.6, vout: 4.4, vs: 9, gnd: 0 };

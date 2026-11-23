@@ -107,6 +107,20 @@ const CARDS = {
             + 'measured — flagged so the first corpus disagreement lands here',
         params: {is: 1.0e-9, rs: 0.045, n: 1.9, vf: 1.0}
     },
+    // ---- germanium signal diode ----------------------------------------------
+    '1N34A': {
+        id: '1N34A', kind: 'diode',
+        provenance: 'germanium point-contact detector diode, the crystal-set '
+            + 'classic: typical published figures (forward drop ~0.3 V at 1 mA, '
+            + 'a few hundred nA of saturation current); is/n/rs are rounded '
+            + 'typical values, NOT measured — flagged so the first corpus '
+            + 'disagreement lands here',
+        params: {is: 2e-7, rs: 5, n: 1.3, vf: 0.5},
+        note: 'vf 0.5 is the total drop at the 20 mA calibration current '
+            + '(junction 0.39 V + 20 mA x 5 ohm); at a detector\'s microamps the '
+            + 'junction drops 0.1-0.2 V, which is why it detects weak stations '
+            + 'a silicon diode cannot.'
+    },
     // ---- LED --------------------------------------------------------------
     'LED_RED': {
         id: 'LED_RED', kind: 'led', generic: true,

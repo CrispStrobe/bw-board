@@ -28,6 +28,8 @@ import {
 } from './mna.js';
 import { resolveParams, classDefaults } from './parts-library.js';
 import { acSweep } from './ac.js';
+import { expandTransducers, transducerCard } from './transducers.js';
+import { expandRadio, normalizeStations, DEFAULT_STATIONS } from './radio.js';
 import { validateNetlist } from './validate.js';
 import { getDevice, initDeviceState, resetDeviceState } from './devices.js';
 import { servoCalibration } from './devices/servo.js';
@@ -1192,7 +1194,14 @@ export class BoardImpl {
     // user drew: topology consumers (DRC, corpus invariants, exporters)
     // must keep seeing the diode on the net the motor pin is wired to,
     // not one hop into the motor's insides.
-    const genView = BoardImpl._expandFunctionGenerators(parts, nets);
+    // Loudspeakers/earphones are voice coils, the radio front end a set of
+    // passives plus RF detectors (src/transducers.js, src/radio.js). A
+    // circuit with none of these parts passes through untouched.
+    const coilView = expandTransducers(parts, nets);
+    const radioView = expandRadio(coilView.parts, coilView.nets, { controls: () => this.controls });
+    this._radio = radioView.radio;
+    if (this._radio && this._broadcast) this._radio.setStations(this._broadcast);
+    const genView = BoardImpl._expandFunctionGenerators(radioView.parts, radioView.nets);
     const photoView = BoardImpl._expandLedPhotocurrents(genView.parts, genView.nets);
     const piezoView = BoardImpl._expandPiezoCapacitance(photoView.parts, photoView.nets);
     const windingView = BoardImpl._expandMotorWindings(piezoView.parts, piezoView.nets);
@@ -3371,6 +3380,8 @@ export class BoardImpl {
     if (this.partMap?.get(partId)?.kind === 'piezo') {
       return this._piezoTone(this._deviceStates.get(partId)?._edges);
     }
+    const kind = this.partMap?.get(partId)?.kind;
+    if (kind === 'speaker' || kind === 'earphone') return this._transducerTone(partId);
     const edges = this.buzzerEdges.get(partId);
     if (!edges || edges.length < 2) return this._buzzerDcTone(partId);
 
@@ -3406,6 +3417,89 @@ export class BoardImpl {
     const spanNs = Number(last - edges[edges.length - 1 - 2 * periods]);
     if (!(spanNs > 0)) return { hz: 0, on: false };
     return { hz: 1e9 * periods / spanNs, on: true };
+  }
+
+  /**
+   * A loudspeaker's or earphone's sound (src/transducers.js): the pitch of
+   * its coil current (same-direction crossings, as for the piezo) and its
+   * loudness, `level` = I_rms / I_rated (amplitude follows the current; 1 at
+   * rated power, capped at 1), `amps` the RMS of the current's AC part. A
+   * crystal earphone is read from its voltage: `level` = V_rms / 1 V.
+   */
+  _transducerTone(partId) {
+    const state = this._deviceStates.get(partId);
+    const part = this.partMap.get(partId);
+    if (!state || !part) return { hz: 0, on: false, level: 0, amps: 0 };
+    const card = state._card ?? transducerCard(part);
+    const rms = state.rms ?? 0;
+    const level = Math.min(1, card.crystal ? rms : rms / card.ratedAmps);
+    const tone = this._piezoTone(state._edges);
+    return { ...tone, level: tone.on ? level : 0, amps: card.crystal ? 0 : rms };
+  }
+
+  /**
+   * The bench's broadcast environment: the AM stations every antenna picks
+   * up (src/radio.js). Each station: `{id, hz, fieldVPerM, depth, audio}`
+   * with audio `{type:'tone', hz}`, `{type:'two-tone', hz:[f1, f2], period}`,
+   * `{type:'chord', hz:[f1, f2]}` or `{type:'none'}`. An antenna's own
+   * `params.stations` override this for that antenna.
+   * @param {object[]} stations
+   */
+  setBroadcast(stations) {
+    this._broadcast = normalizeStations(stations);
+    if (this._radio) this._radio.setStations(this._broadcast);
+    this._notifyChange('world', { key: 'broadcast', value: this._broadcast });
+  }
+
+  /** The broadcast environment in force (the default three stations when unset). */
+  getBroadcast() {
+    return (this._broadcast ?? normalizeStations(DEFAULT_STATIONS)).map(s => ({ ...s }));
+  }
+
+  /**
+   * The radio front end's state: stations, and per detecting junction the
+   * carrier voltage of each station across it and its envelope now. Null
+   * when the circuit has no antenna.
+   */
+  radioReport() {
+    return this._radio ? this._radio.report(Number(this.timeNs) / 1e9) : null;
+  }
+
+  /**
+   * Per-station RF voltage (V peak) at a net from the last RF solve, e.g.
+   * the top of the tuned circuit; null without an antenna or before the
+   * first solve.
+   * @param {string} netId
+   */
+  rfVoltage(netId) {
+    return this._radio?.netAmplitudes(netId) ?? null;
+  }
+
+  /** Re-solve the RF network now, at the last accepted operating point. */
+  refreshRadio() {
+    if (!this._radio) return null;
+    this._radio.refresh(this, Number(this.timeNs) / 1e9, this._radio._opView(this._mnaCache));
+    return this.radioReport();
+  }
+
+  /** The carrier-frequency AC solve the radio front end runs (src/radio.js). */
+  _radioSweep(sourceId, freqs, solution, rf, radio) {
+    const view = radio.rfView(this._solveParts, this._solveNets);
+    return acSweep({
+      parts: view.parts,
+      nets: view.nets,
+      pinSources: this._pinSources(),
+      controls: this.controls,
+      vcc: this.vcc,
+      opVoltages: solution.nodeVoltages,
+      opBranchCurrents: currentsIntoTerminals(solution.branchCurrents ?? new Map()),
+      opRegions: solution.opampRegions,
+      deviceStates: this._deviceStates,
+      partTemperatures: this._thermal?.temps ?? null,
+      sourceId,
+      freqs,
+      rf,
+    });
   }
 
   /**
@@ -5416,7 +5510,7 @@ export class BoardImpl {
     // The rail is edited through its own `volts` param instead (bw-circuit-ui's
     // inline editor offers it), which `_railVolts` honours either way, so a
     // control set by some other route still works and nothing is lost.
-    const controllable = ['potentiometer', 'button', 'switch', 'slide_switch', 'ldr', 'ntc', 'light_sensor', 'vsource'];
+    const controllable = ['potentiometer', 'button', 'switch', 'slide_switch', 'ldr', 'ntc', 'light_sensor', 'vsource', 'tuning_cap'];
     return this.parts
       .filter(p => controllable.includes(p.kind) || lightControlDefault(p) !== null)
       .map(p => lightControlDefault(p) !== null ? {
@@ -5433,7 +5527,8 @@ export class BoardImpl {
         // is its own authored rail, falling back to the board's.
         value: this.controls.get(p.id)
           ?? (p.kind === 'vsource' ? (p.params?.volts ?? 5)
-            : p.kind === 'slide_switch' ? (p.params?.position ?? 0) : 0),
+            : p.kind === 'slide_switch' ? (p.params?.position ?? 0)
+              : p.kind === 'tuning_cap' ? (p.params?.position ?? 0.5) : 0),
       }));
   }
 
@@ -5955,7 +6050,7 @@ export class BoardImpl {
           color: /** @type {string | undefined} */ (p.params.color),
         })),
       buzzers: this.parts
-        .filter(p => p.kind === 'buzzer')
+        .filter(p => p.kind === 'buzzer' || p.kind === 'speaker' || p.kind === 'earphone')
         .map(p => ({ id: p.id, ...this.buzzerTone(p.id) })),
       controls: this.getControls(),
       pins: this.getPinStates(),
@@ -6003,6 +6098,7 @@ export class BoardImpl {
     this._transH = 1e-4;
     this._transientAttemptOverflow = false;
     this._transientAccuracyUnmet = null;
+    this._radio?.reset();
     // Device models that integrate over time (a motor's speed and winding
     // current) start from rest too; a spinning motor at t = 0 meets a
     // stopped drive and a fresh integrator, a stiff edge the controller
@@ -6769,6 +6865,9 @@ export class BoardImpl {
 
   /** Any source whose value moves with time? */
   _hasTimeVaryingSource() {
+    // An antenna's stations are modulated: the detected programme is a
+    // waveform even though no drawn source has one.
+    if (this._radio) return true;
     for (const p of (this._solveParts ?? this.parts)) {
       if ((p.kind === 'vsource' || p.kind === 'isource')
           && p.params && p.params.wave && p.params.wave !== 'dc') {
@@ -6873,6 +6972,11 @@ export class BoardImpl {
     if (Number.isFinite(profile.authoredMaxStepSec)) {
       maxStepSec = Math.min(maxStepSec, profile.authoredMaxStepSec);
       basis.push('authored-analysis-maximum');
+    }
+    const rfStep = this._radio?.maxStepSec();
+    if (rfStep > 0) {
+      maxStepSec = Math.min(maxStepSec, rfStep);
+      basis.push('rf-envelope-fidelity');
     }
     for (const [, ch] of this._scopeChannels) {
       if (ch.capture === 'sample' && (ch.type === 'voltage' || ch.currentClock === 'simulation')) {
@@ -7381,6 +7485,9 @@ export class BoardImpl {
           h = Math.max(H_MIN, h / 4);
         }
       }
+      // The radio's carrier phasors follow the accepted operating point
+      // (src/radio.js: refreshed every few ms, or when a control moved).
+      if (this._radio && r?.converged !== false) this._radio.onAccepted(this, atSec, r);
     };
 
     // No capacitor/inductor/device history and no scope grid means this is a
