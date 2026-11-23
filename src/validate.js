@@ -58,6 +58,9 @@ const KNOWN_TERMINALS = {
   seven_seg_4: null, // composite — 4-digit multiplexed (a..dp + com0..com3), the A2 tube
   rgb_led: null, // composite
   mcu: null, // terminals are PinIds, validated separately
+  // No leads: an optical path between an emitter and a receiver it names
+  // (params.from / params.to; src/optics.js).
+  light_path: [],
 };
 
 /**

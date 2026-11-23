@@ -145,6 +145,8 @@ const LOCAL_ONLY = {
   antenna:           { chip_mA: 0, supply_mA: 0 },
   earth:             { chip_mA: 0, supply_mA: 0 },
   tuning_cap:        { chip_mA: 0, supply_mA: 0 },
+  light_path:        { chip_mA: 0, supply_mA: 0 },
+  laser_diode:       { chip_mA: "circuit", supply_mA: 40 },
   ferrite_coil:      { chip_mA: 0, supply_mA: 0 },
   bargraph:          { chip_mA: "circuit", supply_mA: "circuit" },
   ir_transmitter:    { chip_mA: "circuit", supply_mA: 20 },
