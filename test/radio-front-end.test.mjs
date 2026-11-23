@@ -204,7 +204,7 @@ describe('radio: tuning, selectivity, detection, interference', () => {
  * Tank with the antenna on the tap; the coupling winding feeds a transistor
  * base biased from 9 V through `rb` (RF/audio-held by 100 nF at the cold end).
  */
-function transistorFrontEnd({ rb = 1e6, emitter = null, collector, stations }) {
+function transistorFrontEnd({ rb = 1e6, emitter = null, collector, stations, gndPart = true }) {
     const b = new BoardImpl(5);
     const parts = [P('G', 'gnd', {}, ['gnd']), P('VS', 'vsource', { volts: 9 }, ['pos', 'neg']), P('E', 'earth', {}, ['earth']),
         P('ANT', 'antenna', {}, ['a']), P('L1', 'ferrite_coil', {}, ['a', 'tap', 'b', 'c1', 'c2']),
@@ -220,6 +220,10 @@ function transistorFrontEnd({ rb = 1e6, emitter = null, collector, stations }) {
         g.terminals.push({ part: 'RE', terminal: 'b' }, { part: 'CE', terminal: 'b' });
     } else g.terminals.push({ part: 'Q1', terminal: 'emitter' });
     collector(parts, nets, { g, v });
+    if (!gndPart) {
+        parts.splice(parts.findIndex(p => p.id === 'G'), 1);
+        g.terminals = g.terminals.filter(t => t.part !== 'G');
+    }
     b.setNetlist(parts, nets);
     b.setBroadcast(stations);
     b.setPower(true);
@@ -249,6 +253,31 @@ describe('radio: transistor receivers', () => {
         } });
         ms(quiet, 60);
         assert.equal(quiet.buzzerTone('EP').on, false);
+    });
+
+    it('without a gnd part RF is still measured from the circuit\'s own reference (the battery negative)', () => {
+        // Gap found building the gallery radios: with no gnd symbol the AC
+        // solve had no reference, so rfVoltage() read every net against a
+        // floating point: the 0 V net showed RF, and RF-grounded nets showed
+        // the same offset. The audio was right; the RF readout was not.
+        const build = (gndPart) => transistorFrontEnd({
+            gndPart, stations: [tone('a', 400, 612)],
+            collector: (parts, nets, { g, v }) => {
+                parts.push(P('EP', 'earphone', {}, ['a', 'b']), P('CC', 'capacitor', { farads: 10e-9 }, ['a', 'b']));
+                nets.push(net('col', ['Q1', 'collector'], ['EP', 'a'], ['CC', 'a']));
+                v.terminals.push({ part: 'EP', terminal: 'b' });
+                g.terminals.push({ part: 'CC', terminal: 'b' });
+            },
+        });
+        const withGnd = build(true), without = build(false);
+        ms(withGnd, 60); ms(without, 60);
+        const ampOf = (b, n) => b.rfVoltage(n)?.[0]?.volts ?? 0;
+        assert.ok(ampOf(without, 'g') < 1e-6, `the 0 V net reads ${ampOf(without, 'g')} V of RF`);
+        for (const n of ['tank', 'base', 'bb']) {
+            const a = ampOf(withGnd, n), b = ampOf(without, n);
+            assert.ok(Math.abs(a - b) <= 1e-3 * Math.max(a, 1e-6) + 1e-9, `${n}: ${a} V with gnd, ${b} V without`);
+        }
+        close(without.buzzerTone('EP').hz, 400, 8, 'tone without a gnd part');
     });
 
     it('an RF amplifier stage multiplies the carrier by gm·RC before the diode detector', () => {

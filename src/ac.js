@@ -26,7 +26,8 @@ import { junctionVf } from './led-color.js';
 import {
   findNet, junctionOpts, pwlKneeCurrent, smoothVov, MOS_GDS_FLOOR, MOS_SMOOTH_DELTA,
   ebersMollChargeCompanion, ebersMollCompanion, ebersMollParams, mosGds, mosK, mosTriode, mosVth,
-  shockleyParams, shockleyEval, shockleyJunctionFromTotal, kneeFromVf, JUNCTION_RD, junctionRd } from './mna.js';
+  shockleyParams, shockleyEval, shockleyJunctionFromTotal, kneeFromVf, JUNCTION_RD, junctionRd,
+  chooseGroundReference } from './mna.js';
 import { CooMatrix, SparseLU, toCSC } from './sparse.js';
 import { getDevice } from './devices.js';
 import { ntcResistanceAt } from './thermal.js';
@@ -154,6 +155,15 @@ export function acSweep(args) {
       if (p.kind === 'gnd') grounded.add(net.id);
       if (p.kind === 'vcc' && t.terminal === 'vcc') grounded.add(net.id);
     }
+  }
+  // No gnd/vcc part at all: reference the analysis where the DC solve does
+  // (chooseGroundReference: the bottom supply's negative terminal). Without
+  // this every node floats together, and a bench drawn without a gnd symbol
+  // (a battery on a breadboard) showed no AC/RF difference anywhere: a radio
+  // with no gnd part had zero RF across its detector junction.
+  if (!grounded.size) {
+    const ref = chooseGroundReference(parts, nets);
+    if (ref?.netId !== undefined) grounded.add(ref.netId);
   }
 
   /** @type {Map<string, number>} */
