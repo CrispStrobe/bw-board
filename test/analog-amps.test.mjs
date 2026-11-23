@@ -118,6 +118,23 @@ describe('LM3915', () => {
 // inverting input is the ideal high-Z node the textbook formula assumes.
 const NONINV_GAIN = 1 + 100000 / 2200;   // 46.454545454545454…
 
+// 2026-11-23: the LM358 is now a finite-gain macromodel with the datasheet's
+// 100 dB open-loop gain (TI SLOS068) and a 50 Ω small-signal output
+// resistance, so the realised closed-loop gain is the textbook FINITE-gain
+// formula, not the ideal 1 + Rf/Rg. With the pole voltage u = A0·(v+ − v−),
+// the output u − Rout·Iload, Iload = Vout·GL and v− = β·Vout:
+//   Vout = A0·Vin / (1 + Rout·GL + A0·β)
+// Still hand arithmetic from the resistors and two datasheet numbers, still
+// to 1e-6 relative, and still input-independent — the D18 point.
+const A0 = 1e5;
+const ROUT = 50;
+const finiteGain = ({ rf = 100000, rg = 2200, rl = 100000 } = {}) => {
+    const beta = rg / (rf + rg);
+    const gl = 1 / rl + 1 / (rf + rg);
+    return A0 / (1 + ROUT * gl + A0 * beta);
+};
+const NONINV_REALISED = finiteGain();     // 46.4330… (−0.046 % at 100 dB)
+
 /** Non-inverting stage: VS → 1_pos, RF from 1_out to 1_neg, RG to gnd. */
 function nonInverting(vin, { rf = 100000, rg = 2200, rl = 100000 } = {}) {
     const board = new BoardImpl(5.0);
@@ -140,14 +157,15 @@ describe('LM358 closed-loop gain (D18)', () => {
         // node's KCL is (Vin − Vout)/Rf + Vin/Rg = 0, so
         //   Vout = Vin · (1 + Rf/Rg) = Vin · 46.454545454545…
         // The measured gain used to be 31.04 / 38.79 / 43.39 at 2 / 4 /
-        // 10 mV; it is now the same number at all six.
+        // 10 mV; it is now the same number at all six — the finite-gain
+        // value 46.433, 100 dB of loop gain short of the ideal 46.4545.
         const gains = [];
         for (const vin of [0.0005, 0.001, 0.002, 0.004, 0.010, 0.050]) {
             const board = nonInverting(vin);
             const vout = board.nodeVoltage('no');
             gains.push(vout / vin);
-            assert.ok(Math.abs(vout - vin * NONINV_GAIN) < vin * 1e-6,
-                `Vin ${(vin * 1000).toFixed(3)} mV → ${(vin * NONINV_GAIN * 1000).toFixed(4)} mV, ` +
+            assert.ok(Math.abs(vout - vin * NONINV_REALISED) < vin * 1e-6,
+                `Vin ${(vin * 1000).toFixed(3)} mV → ${(vin * NONINV_REALISED * 1000).toFixed(4)} mV, ` +
                 `got ${(vout * 1000).toFixed(4)} mV (gain ${(vout / vin).toFixed(4)})`);
         }
         // And it is INPUT-INDEPENDENT, which the damped integrator never was.
@@ -157,16 +175,20 @@ describe('LM358 closed-loop gain (D18)', () => {
 
     it('the 2 mV shunt signal the ammeter bench measures lands on 92.909 mV', () => {
         // 2.000 mV across a 20 mΩ shunt at 100 mA, the case the review
-        // measured at 62.088 mV (gain 31.04). 0.002 × 46.454545… =
-        // 0.09290909090909… V.
+        // measured at 62.088 mV (gain 31.04). Ideal: 0.002 × 46.454545… =
+        // 92.909 mV; at the LM358's 100 dB the realised value is
+        // 0.002 × 46.4330… = 92.866 mV.
         const board = nonInverting(0.002);
-        assert.ok(Math.abs(board.nodeVoltage('no') - 0.0929090909090909) < 1e-7,
+        assert.ok(Math.abs(board.nodeVoltage('no') - 0.002 * NONINV_REALISED) < 1e-7,
             `got ${board.nodeVoltage('no')}`);
     });
 
     it('an inverting ×10 around a 2.5 V reference lands on its own arithmetic', () => {
-        // v+ = Vref, so v− = Vref and Vout = Vref − (Rf/Rin)·(Vin − Vref).
-        // Rf/Rin = 100 k/10 k = 10 exactly.
+        // Ideal: v− = v+ = Vref and Vout = Vref − (Rf/Rin)·(Vin − Vref),
+        // Rf/Rin = 10. Finite gain: superpose at v− = (Rf·Vin + Rin·Vout)/
+        // (Rin + Rf); u = A0·(Vref − v−); Vout = u − Rout·Vout·GL with GL =
+        // 1/RL + 1/(Rin + Rf) (Vin's return through Rin+Rf adds Vin/(Rin+Rf)
+        // of load current, accounted below). Solved for Vout exactly.
         const bench = (vin) => {
             const board = new BoardImpl(5.0);
             board.setNetlist([V, G,
@@ -183,20 +205,32 @@ describe('LM358 closed-loop gain (D18)', () => {
             board.advanceTo(1n);
             return board.nodeVoltage('no');
         };
-        for (const [vin, expected] of [[2.45, 3.0], [2.5, 2.5], [2.55, 2.0]]) {
-            assert.ok(Math.abs(bench(vin) - expected) < 1e-5,
+        const realised = (vin) => {
+            const rin = 10000, rf = 100000, rl = 100000;
+            // Iout = Vout/RL + (Vout − Vin)/(Rin + Rf); Vout = u − Rout·Iout
+            // u = A0·(2.5 − (Rf·Vin + Rin·Vout)/(Rin + Rf))
+            const k = A0 / (rin + rf);
+            const lhs = 1 + ROUT * (1 / rl + 1 / (rin + rf)) + k * rin;
+            return (A0 * 2.5 - k * rf * vin + ROUT * vin / (rin + rf)) / lhs;
+        };
+        for (const vin of [2.45, 2.5, 2.55]) {
+            const expected = realised(vin);
+            // Within 0.5 mV of the ideal 3.0 / 2.5 / 2.0 V (loop gain A0/11)
+            // — and exactly on the finite-gain arithmetic.
+            assert.ok(Math.abs(expected - (2.5 - 10 * (vin - 2.5))) < 5e-4);
+            assert.ok(Math.abs(bench(vin) - expected) < 1e-6,
                 `Vin ${vin} V → ${expected} V, got ${bench(vin)}`);
         }
     });
 
     it('a demand above the swing still clamps at VCC − 1.5, not at the gain', () => {
         // 100 mV × 46.4545 = 4.645 V, past the LM358's 3.5 V top swing.
-        // The drive clamps at 3.5 V behind R_OUT = 100 Ω, and the load is
+        // The drive clamps at 3.5 V behind ROUT = 50 Ω, and the load is
         // RL ∥ (RF + RG) = 100 k ∥ 102.2 k = 50 544.0158 Ω, so the OUTPUT
-        // NODE reads 3.5 × 50544.0158 / 50644.0158 = 3.4930890 V.
+        // NODE reads 3.5 × 50544.0158 / 50594.0158 = 3.4965412 V.
         const board = nonInverting(0.100);
         const rload = (100000 * 102200) / (100000 + 102200);
-        const expected = 3.5 * rload / (rload + 100);
+        const expected = 3.5 * rload / (rload + ROUT);
         assert.ok(Math.abs(board.nodeVoltage('no') - expected) < 1e-4,
             `clamped output ${expected.toFixed(6)} V, got ${board.nodeVoltage('no')}`);
         assert.ok(board.nodeVoltage('no') < 3.5, 'and it never reaches the ideal 4.645 V');
@@ -229,10 +263,11 @@ describe('LM358 power-up symmetry (the pc85 oscillator case)', () => {
             net('no', ['U1', '1_out'], ['RL', 'a']),
         ]);
         board.advanceTo(1n);
-        assert.equal(board.getDeviceState('U1').drives['1_out'].vTh, 0.005,
-            'the drive is pulled to the bottom swing, gnd + 5 mV');
-        // 0.005 V behind R_OUT = 100 Ω into 10 kΩ: 0.005 × 10000/10100.
-        assert.ok(Math.abs(board.nodeVoltage('no') - 0.005 * 10000 / 10100) < 1e-12,
-            `4.95050 mV at the output node, got ${board.nodeVoltage('no')}`);
+        // The pole is held at the bottom of the swing window, gnd + 5 mV
+        // (to the swing clamp's 0.1 mV knee), and drives 10 kΩ through
+        // ROUT = 50 Ω: 0.005 × 10000/10050 = 4.975 mV.
+        assert.ok(Math.abs(board.nodeVoltage('no') - 0.005 * 10000 / 10050) < 1e-4,
+            `4.975 mV at the output node, got ${board.nodeVoltage('no')}`);
+        assert.ok(board.nodeVoltage('no') > 0.0045, 'never below its own swing');
     });
 });

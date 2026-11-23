@@ -44,8 +44,15 @@ describe('LM324 powered quad op amp', () => {
       assert.ok(Math.abs(board.nodeVoltage(`out${ch}`) - expected) < 0.02,
         `channel ${ch}: expected ${expected} V, got ${board.nodeVoltage(`out${ch}`)}`);
     }
-    assert.deepEqual(Object.keys(board.getDeviceState('U1').drives).sort(),
-      ['1_out', '2_out', '3_out', '4_out']);
+    // 2026-11-23: the outputs are no longer Thévenin `drives` (the LM324 is
+    // the Newton-solved macromodel in src/ground-sensing-opamp.js). The
+    // physical channel contract is that each output lead carries its own
+    // load current: Vout / 100 kΩ out of `${ch}_out`.
+    for (let ch = 1; ch <= 4; ch++) {
+      const iLoad = board.nodeVoltage(`out${ch}`) / 100000;
+      assert.ok(Math.abs(board.branchCurrent('U1', `${ch}_out`) - iLoad) < 1e-8,
+        `channel ${ch} output lead current`);
+    }
   });
 
   it('requires at least a 3 V shared supply and goes high impedance below it', () => {
@@ -54,7 +61,10 @@ describe('LM324 powered quad op amp', () => {
     assert.equal(state.powered, false);
     for (let ch = 1; ch <= 4; ch++) {
       assert.equal(state.inputCommonMode[ch], 'unpowered');
-      assert.equal(state.drives[`${ch}_out`].rTh, 1e9);
+      // High impedance: the follower's output node falls to its 100 kΩ
+      // load's ground and the lead carries no current.
+      assert.ok(Math.abs(board.nodeVoltage(`out${ch}`)) < 1e-3, `channel ${ch} undriven`);
+      assert.ok(Math.abs(board.branchCurrent('U1', `${ch}_out`)) < 1e-9);
     }
   });
 
@@ -64,6 +74,6 @@ describe('LM324 powered quad op amp', () => {
     assert.equal(state.inputCommonMode[1], 'valid');
     assert.equal(state.inputCommonMode[3], 'valid');
     assert.equal(state.inputCommonMode[4], 'above', '4 V exceeds VCC - 1.5 V common-mode ceiling');
-    assert.ok(state.drives['4_out'].vTh <= 3.5, 'out-of-range channel remains bounded by output swing');
+    assert.ok(board.nodeVoltage('out4') <= 3.5, 'out-of-range channel remains bounded by output swing');
   });
 });

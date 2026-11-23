@@ -32,6 +32,8 @@ import { validateNetlist } from './validate.js';
 import { getDevice, initDeviceState, resetDeviceState } from './devices.js';
 import { servoCalibration } from './devices/servo.js';
 import { expandLm741LinearPoles } from './lm741-linear-pole.js';
+import { junctionVf, ledVf } from './led-color.js';
+import { expandGroundSensingOpAmps, isHiddenPoleCapacitor, STAGE_KIND as GROUND_SENSING_STAGE } from './ground-sensing-opamp.js';
 import { meterQuadraticSegment, meterQuadraticIntegral } from './meter-quadrature.js';
 import { feedI2CSlave } from './devices/i2c-slave.js';
 import { checkCurrentBudget } from './current-ratings.js';
@@ -739,18 +741,21 @@ export class BoardImpl {
     const netCopies = nets.map((n) => ({ ...n, terminals: [...n.terminals] }));
     const netsOf = (partId, terminal) => netCopies.filter(
       (n) => n.terminals.some((t) => t.part === partId && t.terminal === terminal));
-    const addLed = (id, anodeNets, cathodeNets) => {
+    const addLed = (id, anodeNets, cathodeNets, params = {}) => {
       if (present.has(id)) return;   // already expanded — see the note above
-      extraParts.push({ id, kind: 'led', params: {}, terminals: ['anode', 'cathode'] });
+      extraParts.push({ id, kind: 'led', params, terminals: ['anode', 'cathode'] });
       for (const n of anodeNets) n.terminals.push({ part: id, terminal: 'anode' });
       for (const n of cathodeNets) n.terminals.push({ part: id, terminal: 'cathode' });
     };
     for (const p of parts) {
       if (p.kind === 'rgb_led') {
         const cath = netsOf(p.id, 'cathode');
-        addLed(`${p.id}_r`, netsOf(p.id, 'r_anode'), cath);
-        addLed(`${p.id}_g`, netsOf(p.id, 'g_anode'), cath);
-        addLed(`${p.id}_b`, netsOf(p.id, 'b_anode'), cath);
+        // Each die keeps its own colour, so its forward voltage follows it
+        // (led-color.js: red 1.9 V, green and blue InGaN ~3.1 V in an RGB
+        // package — the green die of an RGB LED is InGaN, not GaP).
+        addLed(`${p.id}_r`, netsOf(p.id, 'r_anode'), cath, { color: 'red' });
+        addLed(`${p.id}_g`, netsOf(p.id, 'g_anode'), cath, { color: 'true-green' });
+        addLed(`${p.id}_b`, netsOf(p.id, 'b_anode'), cath, { color: 'blue' });
       } else if (p.kind === 'seven_segment') {
         const common = netsOf(p.id, 'common');
         for (const seg of ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'dp']) {
@@ -878,9 +883,19 @@ export class BoardImpl {
     // not one hop into the motor's insides.
     const windingView = BoardImpl._expandMotorWindings(parts, nets);
     const solveView = BoardImpl._expandBridgeClampDiodes(windingView.parts, windingView.nets);
-    const linearView = expandLm741LinearPoles(solveView.parts, solveView.nets);
+    const lm741View = expandLm741LinearPoles(solveView.parts, solveView.nets);
+    // LM358/LM324 macromodel (src/ground-sensing-opamp.js); only when its
+    // solver stage is registered, i.e. registerAnalogAmps() has run.
+    const linearView = getDevice(GROUND_SENSING_STAGE)
+      ? expandGroundSensingOpAmps(lm741View.parts, lm741View.nets) : lm741View;
     const macroView = BoardImpl._expandOpampMacros(linearView.parts, linearView.nets, this.vcc);
-    this._solveParts = macroView.parts;
+    // An IR transmitter IS an IR LED electrically. The solver sees it as an
+    // `led` of the same id (so its branch current and the LED junction model,
+    // knee and limiting are the LED's) with the IR forward voltage unless the
+    // part declares its own vf. The public part stays an `ir_transmitter`:
+    // it is not a visible LED, and its device model still reports emission.
+    this._solveParts = macroView.parts.map(p => p.kind === 'ir_transmitter'
+      ? { ...p, kind: 'led', params: { color: 'ir', ...p.params } } : p);
     this._solveNets = macroView.nets;
     this._macroFallbacks = macroView.notes;
 
@@ -1009,6 +1024,8 @@ export class BoardImpl {
     this._scopeBaseNets = this._solveNets;
     this._rebuildScopeLoadView();
 
+    this._transientBlanketShunt = false;
+    this._seedOpampPoles();
     this._solve();
     this._recordLedSamples();
     this._notifyChange('netlist');
@@ -1256,6 +1273,9 @@ export class BoardImpl {
             const ov = this._digitalOverlay.get(n);
             return ov !== undefined ? ov : (this.nodeVoltages.get(n) ?? 0);
           };
+          // An unconnected pin reads 0 V, indistinguishable from a grounded
+          // one; models whose open pin has its own internal bias ask here.
+          read.connected = (terminal) => Boolean(f.terminalNets.get(terminal));
           model.update(f.part, state, read, this.timeNs);
         }
       }
@@ -5325,6 +5345,7 @@ export class BoardImpl {
       if (p.kind === 'buzzer') this.buzzerEdges.set(p.id, []);
       if (p.kind === 'capacitor') this.capVoltages.set(p.id, 0);
     }
+    this._seedOpampPoles();
 
     this._solve();
     this._recordLedSamples();
@@ -5477,6 +5498,49 @@ export class BoardImpl {
     };
   }
 
+  /**
+   * Start every LM358/LM324 macromodel pole at the bench's bias point, as a
+   * SPICE transient starts from its operating point: solve the instant with
+   * the hidden pole capacitors left out (open) and every drawn capacitor at
+   * its stored voltage, then store each pole's voltage across its capacitor.
+   * Without this a static stage would slew up from 0 V after every netlist
+   * load and reset; drawn capacitors keep the power-on-at-rest rule. A solve
+   * that fails leaves the poles at 0 V (the plain power-on start).
+   */
+  _seedOpampPoles() {
+    const hidden = (this._solveParts ?? []).filter(p => p.kind === 'capacitor' && isHiddenPoleCapacitor(p.id));
+    if (!hidden.length) return;
+    for (const cap of hidden) this.capVoltages.set(cap.id, 0);
+    if (!this.powered) return;
+    const drop = new Set(hidden.map(p => p.id));
+    const parts = this._solveParts.filter(p => !drop.has(p.id));
+    const nets = this._solveNets.map(n => ({ ...n, terminals: n.terminals.filter(t => !drop.has(t.part)) }));
+    let res;
+    try {
+      this._syncDeviceGpioDrives();
+      this._chargeBoundedAdvanceWork('solves');
+      res = solveMNA(parts, nets, this._pinSources(), this.controls, this.vcc, {
+        powerOff: false,
+        temperatureC: this.temperatureC,
+        capVoltages: this.capVoltages,
+        tSeconds: Number(this.timeNs) / 1e9,
+        deviceStates: this._deviceStates,
+        qualifiedSources: this._qualifiedSources(),
+      });
+    } catch { return; }
+    if (res?.converged === false) return;
+    for (const cap of hidden) {
+      const a = this._solveNetOf(cap.id, 'a', this._solveNets);
+      const b = this._solveNetOf(cap.id, 'b', this._solveNets);
+      const v = (res.nodeVoltages.get(a) ?? 0) - (res.nodeVoltages.get(b) ?? 0);
+      if (Number.isFinite(v)) this.capVoltages.set(cap.id, v);
+    }
+  }
+
+  _solveNetOf(partId, terminal, nets) {
+    return nets.find(n => n.terminals.some(t => t.part === partId && t.terminal === terminal))?.id;
+  }
+
   _solveMNA(powerOff, testNodeA, testNodeB, testCurrent) {
     this._syncDeviceGpioDrives();
     const options = {
@@ -5492,6 +5556,8 @@ export class BoardImpl {
       tSeconds: Number(this.timeNs) / 1e9,
       deviceStates: this._deviceStates,
       qualifiedSources: this._qualifiedSources(),
+      nonlinearGuess: powerOff ? undefined : this.nodeVoltages,
+      opampRegionsGuess: powerOff ? undefined : this._mnaCache?.opampRegions,
     };
     if (powerOff || testNodeA || testNodeB) {
       this._chargeBoundedAdvanceWork('solves');
@@ -5744,7 +5810,7 @@ export class BoardImpl {
    * branch irrelevant, which it physically is.
    */
   _junctionHeadroomFor(part) {
-    const vfOf = p => Number(p.params?.vf ?? (p.kind === 'diode' ? 0.7 : 2.0)) || 0;
+    const vfOf = p => Number(junctionVf(p)) || 0;
     const isJunction = p => p.kind === 'led' || p.kind === 'diode';
     const byId = new Map(this.parts.map(p => [p.id, p]));
     const allNets = this.nets || [];
@@ -6272,6 +6338,9 @@ export class BoardImpl {
         const ov = this._digitalOverlay.get(n);
         return ov !== undefined ? ov : (this.nodeVoltages.get(n) ?? 0);
       };
+      // An unconnected pin reads 0 V, indistinguishable from a grounded one;
+      // a model whose open pin has an internal bias (555 CV) asks here.
+      read.connected = (terminal) => Boolean(this._netForTerminal(part.id, terminal));
       this._attachMeasurementValidity(model, read, solution);
       if (model.transientUpdateContext === true) read.transient = acceptedTransient;
       try {
@@ -6428,12 +6497,20 @@ export class BoardImpl {
           capCurrents: ccS, inductorVoltages: lvS, newtonSeed: seedS ?? undefined },
         deviceStates: this._deviceStates,
         qualifiedSources: qual,
+        // Warm start for nonlinear-current laws: the last published point.
+        nonlinearGuess: this.nodeVoltages,
+        // Op-amp rail regions remember the last accepted step (hysteresis).
+        opampRegionsGuess: (res ?? this._mnaCache)?.opampRegions,
+        // A topology whose selective shunt proved singular (an island with
+        // no reference) goes straight to the blanket shunt next time.
+        blanketShunt: this._transientBlanketShunt === true,
         // Power off strips the sources but NOT the storage: capacitor
         // and inductor companions keep stamping, so stored energy
         // discharges through whatever network remains (the audit found
         // every discharge-on-power-loss demo frozen instead).
         powerOff: !this.powered,
       });
+      if (r?.blanketShunt) this._transientBlanketShunt = true;
       return r;
     };
 
@@ -7332,7 +7409,7 @@ export class BoardImpl {
     // the same LED. That disagreement is why nodeVoltage and branchCurrent
     // had to be corrected in one commit.
     const vf = kneeFromVf(
-      /** @type {number} */ (led.params.vf ?? LED_VF), rd);
+      /** @type {number} */ (ledVf(led)), rd);
 
     // LED terminals: "anode" and "cathode"
     const anodeNet = this._netForTerminal(led.id, 'anode');

@@ -19,6 +19,21 @@ const R_DISCHARGE = 10;     // discharge switch on-resistance
 const R_DIVIDER = 5000;     // internal divider resistors (3 × 5kΩ)
 
 /**
+ * Voltage at a 555 control (CV) pin. Wired, it is the solved node — the
+ * internal divider is stamped on it, so an external capacitor or voltage
+ * modulates it. OPEN, there is no node to solve and the pin reads 0 V, which
+ * used to make the upper threshold 0 and freeze every astable with a bare CV
+ * pin at output LOW. The unloaded 5k/5k/5k divider holds it at 2/3·Vcc.
+ * @param {(terminal: string) => number} read
+ */
+function controlVolts(read, terminal, vcc, vGnd) {
+  if (typeof read.connected === 'function' && !read.connected(terminal)) {
+    return vGnd + (2 / 3) * (vcc - vGnd);
+  }
+  return read(terminal);
+}
+
+/**
  * Register the 555 timer device model.
  */
 export function registerTimer555() {
@@ -49,8 +64,16 @@ export function registerTimer555() {
       // Internal voltage divider: VCC → 5kΩ → control → 5kΩ → (1/3 tap) → 5kΩ → GND
       // This provides 2/3 VCC at the control pin and 1/3 VCC at the internal tap.
       // Stamp as conductance from vcc to control, and control to gnd.
-      ctx.conductance('vcc', 'control', 1 / R_DIVIDER);       // top 5kΩ
-      ctx.conductance('control', 'gnd', 1 / (R_DIVIDER * 2)); // bottom 10kΩ (two 5kΩ in series)
+      // An OPEN control pin still has the divider inside the die: the
+      // 15 kΩ string loads the supply, and CV sits at 2/3·Vcc (see
+      // internalControl below). Stamping the two halves against a missing
+      // net would silently drop both — and the supply load with them.
+      if (ctx.netFor('control')) {
+        ctx.conductance('vcc', 'control', 1 / R_DIVIDER);       // top 5kΩ
+        ctx.conductance('control', 'gnd', 1 / (R_DIVIDER * 2)); // bottom 10kΩ (two 5kΩ in series)
+      } else {
+        ctx.conductance('vcc', 'gnd', 1 / (R_DIVIDER * 3));
+      }
 
       // Discharge switch: when active, low resistance from discharge to gnd
       if (state._dischargeActive) {
@@ -65,7 +88,7 @@ export function registerTimer555() {
       const vGnd = read('gnd');
       const vThreshold = read('threshold');
       const vTrigger = read('trigger');
-      const vControl = read('control');
+      const vControl = controlVolts(read, 'control', vcc, vGnd);
       const vReset = read('reset');
       const rOut = part.params?.rOut ?? R_OUT_DEFAULT;
 
@@ -199,8 +222,13 @@ export function registerTimer555() {
       // Comparator inputs draw nothing; the per-section divider does stamp.
       for (const pfx of ['1', '2']) {
         // Internal divider: vcc → 5kΩ → control → 10kΩ → gnd
-        ctx.conductance('vcc', `${pfx}ctl`, 1 / R_DIVIDER);
-        ctx.conductance(`${pfx}ctl`, 'gnd', 1 / (R_DIVIDER * 2));
+        // Open CV: the divider is still inside the die (see timer_555).
+        if (ctx.netFor(`${pfx}ctl`)) {
+          ctx.conductance('vcc', `${pfx}ctl`, 1 / R_DIVIDER);
+          ctx.conductance(`${pfx}ctl`, 'gnd', 1 / (R_DIVIDER * 2));
+        } else {
+          ctx.conductance('vcc', 'gnd', 1 / (R_DIVIDER * 3));
+        }
       }
       // Discharge switches
       if (state._discharge[0]) ctx.conductance('1dis', 'gnd', 1 / R_DISCHARGE);
@@ -229,7 +257,7 @@ export function registerTimer555() {
       let changed = false;
       for (let s = 0; s < 2; s++) {
         const pfx = `${s + 1}`;
-        const vCtl = read(`${pfx}ctl`) - vGnd;
+        const vCtl = controlVolts(read, `${pfx}ctl`, vcc, vGnd) - vGnd;
         const upper = vCtl;
         const lower = vCtl / 2;
         const resetActive = (read(`${pfx}rst`) - vGnd) < (effectiveVcc * 0.3);

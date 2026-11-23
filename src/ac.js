@@ -22,6 +22,7 @@
  * @module
  */
 
+import { junctionVf } from './led-color.js';
 import {
   findNet, junctionOpts, pwlKneeCurrent, smoothVov, MOS_GDS_FLOOR, MOS_SMOOTH_DELTA,
   ebersMollChargeCompanion, ebersMollCompanion, ebersMollParams, mosGds, mosK, mosTriode, mosVth,
@@ -304,7 +305,7 @@ export function acSweep(args) {
         case 'diode': {
           const na = netOf(part.id, 'anode');
           const nc = netOf(part.id, 'cathode');
-          const vf = P.vf ?? (part.kind === 'diode' ? 0.7 : 2.0);
+          const vf = junctionVf(part);
           // Datasheet drop -> knee, matching the DC stamp. The small-signal
           // answer must be the derivative of the model that was stamped, so
           // this conversion is not optional: skipping it would linearise a

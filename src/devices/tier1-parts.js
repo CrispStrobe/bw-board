@@ -8,6 +8,7 @@ import {shaftElectricalStep} from '../mechanical-shaft.js';
 import { registerDevice } from '../devices.js';
 import { stepMotorVelocity, motorDirectionOf } from './dc-motor.js';
 import { ambient } from '../world.js';
+import { photodiodeCurrent, solarCellParams, solarCellCurrent } from '../photo-junctions.js';
 
 const R_OUT = 50;
 // Input pins draw nothing here, on purpose. These models used to declare
@@ -22,15 +23,28 @@ export function registerTier1Parts() {
   // ─── Photodiode ───────────────────────────────────────────────────
   // Reverse-biased diode that generates current proportional to light.
   // In photoconductive mode: acts as a light-controlled current source.
+  // Photocurrent in parallel with the photodiode's own junction
+  // (photo-junctions.js): reverse-biased it is the light-proportional source
+  // it always was; driven forward by its load it clamps at the junction's
+  // open-circuit voltage instead of pushing a node past the supply.
   registerDevice('photodiode', {
     terminals: ['anode', 'cathode'],
     init() { return { drives: {}, _current: 0 }; },
     stamp(ctx, part, state) {
-      if (state._current > 0) {
-        // Photo-current flows cathode → anode (reverse direction)
-        ctx.current('cathode', -state._current);
-        ctx.current('anode', state._current);
-      }
+      if (!ctx.netFor('anode') || !ctx.netFor('cathode')) return;
+      const iL = state._current;
+      ctx.nonlinearCurrents('photo-junction', (read, scale) => {
+        const [i, g] = photodiodeCurrent(iL * scale, read('anode') - read('cathode'));
+        return {
+          region: 'smooth',
+          currents: new Map([['anode', i], ['cathode', -i]]),
+          jacobian: new Map([
+            ['anode', new Map([['anode', g], ['cathode', -g]])],
+            ['cathode', new Map([['anode', -g], ['cathode', g]])],
+          ]),
+          residualOhms: 1e6,
+        };
+      });
     },
     update(part, state) {
       const light = ambient(part, 'light', 0);
@@ -113,24 +127,38 @@ export function registerTier1Parts() {
   });
 
   // ─── Solar cell ───────────────────────────────────────────────────
-  // Photovoltaic: voltage source proportional to light, with internal R.
+  // Single-diode photovoltaic model (photo-junctions.js solarCellCurrent):
+  // photocurrent ∝ light in parallel with the cell junction(s) and a shunt
+  // resistance, behind a series resistance. It used to be a straight line —
+  // voc·light behind a fixed rInternal, referenced to ground rather than to
+  // its own neg lead — so there was no knee, no fill factor and no
+  // maximum-power point, and Voc fell linearly with light.
   registerDevice('solar_cell', {
     terminals: ['pos', 'neg'],
     init(part) {
-      const light = ambient(part, 'light', 1.0);
-      const voc = (part.params?.voc ?? 0.6) * light;
-      return { drives: { pos: { vTh: voc, rTh: part.params?.rInternal ?? 5 } }, _light: light };
+      return { drives: {}, _light: ambient(part, 'light', 1.0) };
     },
-    // No stamp: `init`/`update` own `drives.pos`, which stampDevice already
-    // stamps. Re-stamping it here put a second Norton in parallel and halved
-    // rInternal — and read `light` past `update`'s 0.01 deadband, so the two
-    // sources could disagree about the same cell.
+    stamp(ctx, part, state) {
+      if (!ctx.netFor('pos') || !ctx.netFor('neg')) return;
+      const p = solarCellParams(part.params ?? {});
+      const iph = p.iph * state._light;
+      ctx.nonlinearCurrents('solar-cell', (read, scale) => {
+        const [i, g] = solarCellCurrent(read('pos') - read('neg'), iph * scale, p);
+        return {
+          region: 'smooth',
+          currents: new Map([['pos', i], ['neg', -i]]),
+          jacobian: new Map([
+            ['pos', new Map([['pos', g], ['neg', -g]])],
+            ['neg', new Map([['pos', -g], ['neg', g]])],
+          ]),
+          residualOhms: 1e3,
+        };
+      });
+    },
     update(part, state) {
       const light = ambient(part, 'light', 1.0);
       if (Math.abs(light - state._light) < 0.01) return false;
-      const voc = (part.params?.voc ?? 0.6) * light;
       state._light = light;
-      state.drives.pos = { vTh: voc, rTh: part.params?.rInternal ?? 5 };
       return true;
     },
   });
