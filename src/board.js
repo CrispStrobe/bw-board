@@ -5850,7 +5850,11 @@ export class BoardImpl {
     // No gnd symbol: say which node the readings are relative to.
     if (this._solveParts?.length && !this._solveParts.some((p) => p.kind === 'gnd')) {
       const ref = chooseGroundReference(this._solveParts, this._solveNets ?? this.nets);
-      if (ref) {
+      // Only worth a warning when the choice was a judgement call: a single
+      // supply's negative terminal is the reference anyone would pick, and
+      // warning on every one-battery circuit taught learners to ignore the
+      // panel (seen on every gallery bench, 2026-11-23).
+      if (ref && (ref.choices > 1 || ref.stacked > 1)) {
         warnings.push({
           severity: 'warning',
           code: 'implicit-ground-reference',

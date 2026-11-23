@@ -1494,7 +1494,12 @@ export function chooseGroundReference(parts, nets) {
       best = s; bestH = h;
     }
   }
-  return { netId: best.neg, partId: best.part.id, stacked: bestH.count };
+  // How many different nets could plausibly be "ground": the negative
+  // terminals of every supply that does not sit on top of another. One
+  // battery (or one stack's bottom) is unambiguous; two independent supplies
+  // are not.
+  const choices = new Set(candidates.map((s) => s.neg)).size;
+  return { netId: best.neg, partId: best.part.id, stacked: bestH.count, choices };
 }
 
 export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
