@@ -95,7 +95,13 @@ test('actual RLC sampled scope and watched DC mean match an independent closed f
     agrees(capture());
     // Preserve the measured difference between public policies; no default
     // tuning, silent precision substitution, or global accuracy claim.
-    agrees(capture({profile:'interactive-v2'}),5e-3,5e-7,100e-6);
+    // ROUND 3 (bw-board #740): interactive-v2's step-doubling estimate is
+    // Richardson-scaled by 1/(2^p - 1), so its steps spend the stated
+    // tolerance instead of a third of it. The ringing RLC's worst scope sample
+    // moved from under 5e-3 to 5.56e-3 V (5 V pulse; the profile's local scale is
+    // 1e-6 + 1e-4*5 = 5e-4 per step); the voltage bound is 7e-3. Current and
+    // mean bounds, and the precision profile above, are unchanged.
+    agrees(capture({profile:'interactive-v2'}),7e-3,5e-7,100e-6);
 });
 test('fixed instrument reference rejects wrong inductance and excitation phase',()=>{
     assert.throws(()=>agrees(capture({inductance:2*L})),/scope voltage error/);
