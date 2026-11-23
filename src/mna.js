@@ -1385,9 +1385,20 @@ function shockleyCompanion(vAcross, vf, rd, is, n) {
  *
  * @returns {{netId: string, partId: string, stacked: number}|null}
  */
+// caller nets array -> terminal key -> net id. solveMNA asks for the
+// reference on EVERY solve of a bench without a gnd symbol, and rebuilding
+// this map (a string key per terminal) was 10 % of lab-nand-pips' transient
+// profile. Keyed on the array's identity, like TERM_MAP_MEMO below: the board
+// hands the same nets array to every solve until setNetlist builds a new one.
+const GROUND_REFERENCE_NET_MEMO = new WeakMap();
+
 export function chooseGroundReference(parts, nets) {
-  const netOf = new Map();
-  for (const net of nets) for (const t of net.terminals) netOf.set(`${t.part}\0${t.terminal}`, net.id);
+  let netOf = GROUND_REFERENCE_NET_MEMO.get(nets);
+  if (!netOf) {
+    netOf = new Map();
+    for (const net of nets) for (const t of net.terminals) netOf.set(`${t.part}\0${t.terminal}`, net.id);
+    GROUND_REFERENCE_NET_MEMO.set(nets, netOf);
+  }
   const supplies = [];
   for (const part of parts) {
     if (part.kind !== 'vsource' && !/battery/.test(part.kind)) continue;
