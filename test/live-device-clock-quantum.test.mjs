@@ -259,11 +259,11 @@ test('an option getter cannot move finite-analysis authority past the admission 
 });
 
 test('already skipped device history stays refused without clearing failure state',()=>{
-  // Device sub-steps follow the devices' wakes under a wall-clock work
-  // backstop, so an ordinary 50 ms follower advance completes; skipped history
-  // needs a genuine runaway (a device waking every nanosecond, backstop
-  // shortened), and the overflowing advance throws with the clock at the time
-  // actually simulated.
+  // Device sub-steps follow the devices' wakes under a deterministic
+  // per-device wake budget, so an ordinary 50 ms follower advance completes;
+  // skipped history needs a genuine runaway (a device waking every
+  // nanosecond), and the overflowing advance throws with the clock at the
+  // time actually simulated.
   registerDevice('test_live_runaway_1ns',{terminals:['out'],
     init:()=>({drives:{},_wakeNs:1n}),
     update(part,state,read,tNs){
@@ -273,7 +273,7 @@ test('already skipped device history stays refused without clearing failure stat
   try {
     const {b}=follower();
     b.setNetlist([...b.parts,{id:'RUN',kind:'test_live_runaway_1ns',params:{},terminals:['out']}],b.nets);
-    b.setPower(true);b.deviceWorkLimitMs=50;
+    b.setPower(true);
     assert.throws(()=>b.advanceTo(10000000n),error=>error.code==='DEVICE_SUBSTEP_BUDGET_EXHAUSTED');
     const stopped=b.getTime();
     assert.ok(stopped<10000000n);

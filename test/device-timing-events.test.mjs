@@ -107,7 +107,7 @@ test('a 2 s single advance of a 4.8 Hz astable completes: no sub-step overflow, 
   assert.ok(v > 1.5 && v < 3.5, `cap mean ${v}`);
 });
 
-test('the work backstop catches a runaway: a 1 ns self-waking device makes the advance throw, never over-report time', () => {
+test('the per-device wake budget catches a runaway quickly and deterministically, never over-reporting time', () => {
   registerDevice('test_ring_1ns', {
     terminals: ['out'],
     init: () => ({ drives: { out: { vTh: 0, rTh: 100 } }, _wakeNs: 1n, level: 0 }),
@@ -126,12 +126,13 @@ test('the work backstop catches a runaway: a 1 ns self-waking device makes the a
       { id: 'R', kind: 'resistor', params: { ohms: 1000 }, terminals: ['a', 'b'] }],
     [net('o', ['X', 'out'], ['R', 'a']), net('g', ['G', 'gnd'], ['R', 'b'])]);
     b.setPower(true);
-    // 10 ms = 10 million one-nanosecond events against a 50 ms work backstop.
-    // The ADVANCE throws, and the clock reports only the time actually simulated.
-    b.deviceWorkLimitMs = 50;
+    // Its budget is 200 wakes plus one per 5 ns simulated: a 1 ns waker is
+    // over it after ~250 wakes. Deterministic -- no wall clock. The ADVANCE
+    // throws, and the clock reports only the time actually simulated.
     let error;
     assert.throws(() => b.advanceTo(10_000_000n), e => (error = e).code === 'DEVICE_SUBSTEP_BUDGET_EXHAUSTED');
-    assert.ok(b.getTime() > 0n && b.getTime() < 10_000_000n, `${b.getTime()} ns, not the requested 10 ms`);
+    assert.equal(error.partId, 'X');
+    assert.ok(b.getTime() >= 240n && b.getTime() <= 260n, `${b.getTime()} ns, caught ~250 ns in`);
     assert.equal(error.simulatedTimeNs, b.getTime());
     assert.equal(b._deviceSubstepOverflow, true);
     assert.ok(b.getWarnings().some(w => /sub-step limit/.test(w.message)));
@@ -165,5 +166,39 @@ test('a device ticking every 25 ns for a long advance is legitimate work, not a 
     assert.equal(b.getDeviceState('X').ticks, 8000);
   } finally {
     unregisterDevice('test_tick_25ns');
+  }
+});
+
+// MEASURED HEADROOM of the per-device wake budget (200 + one wake per 5 ns
+// simulated), 2026-11-23, via deviceEventBudgetPeak():
+//   - sb3-creator gates + lab-circuits-{1,4,5,6} (728 tests, 43 skipped): worst
+//     share 0.00004 (enc1, 74c922, expected-quantities-hold);
+//   - bw-board op-amp / regulator / timing suites: worst 0.333 (U1, lt1678,
+//     a 10 ns ticker over 2 us);
+//   - the fastest shipped model ticks every 10 ns, so ANY steady ticking
+//     model approaches 0.5 of the budget at most: a 2x margin by construction.
+test('the fastest shipped tick rate (10 ns) uses at most half the wake budget, however long', () => {
+  registerDevice('test_tick_10ns', {
+    terminals: ['out'],
+    init: () => ({ drives: {}, _wakeNs: 10n }),
+    update(part, state, read, tNs) {
+      if (state._wakeNs && BigInt(tNs) < state._wakeNs) return false;
+      state._wakeNs = BigInt(tNs) + 10n;
+      return false;
+    },
+  });
+  try {
+    const b = new BoardImpl(5);
+    b.setNetlist([{ id: 'G', kind: 'gnd', params: {}, terminals: ['gnd'] },
+      { id: 'X', kind: 'test_tick_10ns', params: {}, terminals: ['out'] },
+      { id: 'R', kind: 'resistor', params: { ohms: 1000 }, terminals: ['a', 'b'] }],
+    [net('o', ['X', 'out'], ['R', 'a']), net('g', ['G', 'gnd'], ['R', 'b'])]);
+    b.setPower(true);
+    b.advanceTo(1_000_000n); // 100,000 wakes in one advance
+    assert.equal(b.getTime(), 1_000_000n);
+    const peak = b.deviceEventBudgetPeak();
+    assert.ok(peak > 0.4 && peak <= 0.5, `peak share ${peak}`);
+  } finally {
+    unregisterDevice('test_tick_10ns');
   }
 });

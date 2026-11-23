@@ -63,8 +63,14 @@ import {
  */
 const LED_VF = 2.0;       // forward voltage threshold
 const LED_RD = 10;         // dynamic resistance above threshold
-/** Wall-clock work backstop for one ordinary advanceTo's device sub-steps. */
-const DEVICE_WORK_LIMIT_MS = 30_000;
+/**
+ * Per-device wake budget for one ordinary advanceTo (see _advanceTime): a
+ * burst allowance plus one wake per DEVICE_EVENT_SPACING_NS simulated. The
+ * fastest shipped model ticks every 10 ns (a 2x margin); the gallery's worst
+ * measured share of this budget is recorded in test/device-timing-events.
+ */
+const DEVICE_EVENT_BURST = 200;
+const DEVICE_EVENT_SPACING_NS = 5;
 const LED_I_RATED = 0.020; // 20 mA rated current (for brightness normalization)
 
 /**
@@ -536,6 +542,8 @@ export class BoardImpl {
 
     /** Whether advanceTo hit the device sub-step cap. */
     this._deviceSubstepOverflow = false;
+    /** Peak share of the per-device wake budget (deviceEventBudgetPeak). */
+    this._deviceEventPeak = 0;
 
     /**
      * 74HC595 shift register states: part id → FSM state.
@@ -2019,34 +2027,45 @@ export class BoardImpl {
     // a 5ms deadline jumped 0→100ms would only see 100ms, and an encoder
     // would undercount edges by the entire interval.
     if (hasDevices && (this.powered || this._hasReactive())) {
-      // NO EVENT-RATE BUDGET. Device sub-steps are taken exactly where the
-      // devices ask for them (_wakeNs and friends). A flat 200 per advanceTo
-      // used to be exhausted by any long advance, and a "one event per
-      // simulated microsecond" rate was wrong too: the precision op-amp models
-      // legitimately tick every 10-300 ns while they slew or settle. Wakes are
-      // integer nanoseconds strictly after the cursor, so the event count is
-      // already bounded by the interval; what needs bounding is WORK, so the
-      // backstop is wall-clock: an ordinary advance that is still sub-stepping
-      // after DEVICE_WORK_LIMIT_MS (default 30 s; `deviceWorkLimitMs` on the
-      // board overrides) stops and throws, with the clock at the time actually
-      // simulated. The opt-in bounded capture keeps its deterministic flat 200:
+      // A DETERMINISTIC, PER-DEVICE EVENT BUDGET. Device sub-steps are taken
+      // exactly where the devices ask for them (_wakeNs and friends); what is
+      // bounded is how often ONE device may ask, relative to the simulated
+      // time it covers: at most DEVICE_EVENT_BURST wakes plus one per
+      // DEVICE_EVENT_SPACING_NS of the advance so far. History of this rule:
+      //  - a flat 200 per advanceTo was exhausted by any long advance;
+      //  - "one event per simulated us" was wrong: the precision op-amp models
+      //    legitimately tick every 10-300 ns while they slew or settle;
+      //  - a 30 s wall-clock limit made results depend on machine load
+      //    (lab-motor-speed failed on a busy box, passed on an idle one).
+      // Counting PER DEVICE scales with circuit size by construction (twenty
+      // op-amps each tick at their own rate) and still catches one runaway in
+      // a crowd: a device waking every nanosecond forever exceeds its budget
+      // after ~DEVICE_EVENT_BURST / (1 - 1/spacing) wakes, i.e. ~250 ns in.
+      // The advance then throws with the clock at the time actually simulated.
+      // The opt-in bounded capture keeps its deterministic flat 200 sub-steps:
       // its receipt vocabulary (maxAdvances <= 200) was specified against it.
       const bounded = !!this._boundedAdvanceContext;
       const MAX_DEVICE_SUBSTEPS = bounded ? 200 : Infinity;
-      const workLimitMs = bounded ? Infinity : (this.deviceWorkLimitMs ?? DEVICE_WORK_LIMIT_MS);
-      const wallStart = bounded ? 0 : performance.now();
-      let outOfWork = false;
+      const deviceEvents = new Map();
+      let runaway = null;
       let steps = 0;
       let cursor = prevNs;
 
       while (cursor < tNs && steps < MAX_DEVICE_SUBSTEPS) {
-        if (!bounded && (steps & 31) === 31 && performance.now() - wallStart > workLimitMs) {
-          outOfWork = true;
-          break;
-        }
         // Find the earliest device deadline in (cursor, tNs]
         const deadline = this._earliestDeviceDeadline(cursor, tNs);
         const nextT = deadline ?? tNs;
+        if (!bounded && deadline !== null) {
+          const allowance = DEVICE_EVENT_BURST + Number(nextT - prevNs) / DEVICE_EVENT_SPACING_NS;
+          for (const id of this._devicesWakingAt(nextT)) {
+            const n = (deviceEvents.get(id) ?? 0) + 1;
+            deviceEvents.set(id, n);
+            const share = n / allowance;
+            if (share > this._deviceEventPeak) this._deviceEventPeak = share;
+            if (n > allowance) runaway ??= { partId: id, events: n, allowance };
+          }
+          if (runaway) break;
+        }
 
         // Advance time to this point
         this.timeNs = nextT;
@@ -2090,7 +2109,7 @@ export class BoardImpl {
       }
 
       // If we hit the sub-step cap, report it
-      if ((outOfWork || steps >= MAX_DEVICE_SUBSTEPS) && cursor < tNs) {
+      if ((runaway || steps >= MAX_DEVICE_SUBSTEPS) && cursor < tNs) {
         this._deviceSubstepOverflow = true;
         // The bounded wrapper owns its separate refusal/receipt vocabulary
         // (and its historical clock contract) and refuses on its own.
@@ -2106,12 +2125,16 @@ export class BoardImpl {
           this.timeNs = cursor;
           this._transientAccuracyUnmet ||= {
             code: 'device-substep-budget-exceeded', timeSec: Number(cursor) / 1e9,
-            requestedTimeSec: Number(tNs) / 1e9, deviceSubsteps: steps, workLimitMs,
+            requestedTimeSec: Number(tNs) / 1e9, deviceSubsteps: steps,
+            partId: runaway?.partId, deviceEvents: runaway?.events,
+            deviceEventAllowance: runaway ? Math.floor(runaway.allowance) : undefined,
           };
           this._notifyChange('time', { tNs: cursor });
           const error = new Error(`advanceTo: device sub-step budget exhausted at ${cursor} ns of `
-            + `the requested ${tNs} ns (${steps} device events took longer than ${workLimitMs} ms `
-            + 'of work; split the advance or check for a device that never settles)');
+            + `the requested ${tNs} ns: device "${runaway?.partId}" asked for ${runaway?.events} wakes, `
+            + `more than ${DEVICE_EVENT_BURST} plus one per ${DEVICE_EVENT_SPACING_NS} ns simulated `
+            + '(a device that never settles)');
+          error.partId = runaway?.partId;
           error.code = 'DEVICE_SUBSTEP_BUDGET_EXHAUSTED';
           error.simulatedTimeNs = cursor;
           throw error;
@@ -6901,6 +6924,26 @@ export class BoardImpl {
    * Devices with deadlines: relay (_pendingState.deadlineNs), ultrasonic (_echoEndNs).
    * Continuous devices (motor, servo, encoder) use a max sub-step interval instead.
    */
+  /** Ids of the devices whose own deadline is exactly `tNs` (event accounting). */
+  _devicesWakingAt(tNs) {
+    const ids = [];
+    for (const [id, state] of this._deviceStates) {
+      // Loose equality on purpose: a model may hold its deadline as a number.
+      if ((state._pendingState && state._pendingState.deadlineNs == tNs)
+        || (state._measuring && state._echoEndNs == tNs)
+        || (state._nextEdgeNs && state._nextEdgeNs == tNs)
+        || (state._wakeNs && state._wakeNs == tNs)) ids.push(id);
+    }
+    return ids;
+  }
+
+  /**
+   * The largest share of its per-device wake budget any device has used in
+   * any advance on this board (0 = none, 1 = at the limit). For headroom
+   * measurements; it never affects a result.
+   */
+  deviceEventBudgetPeak() { return this._deviceEventPeak; }
+
   _earliestDeviceDeadline(afterNs, beforeNs) {
     let earliest = null;
 
