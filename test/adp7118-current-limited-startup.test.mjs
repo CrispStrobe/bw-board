@@ -12,6 +12,14 @@ const net=(id,...pins)=>({id,terminals:pins.map(([part,terminal])=>({part,termin
 const near=(actual,expected,tolerance,label)=>assert.ok(Math.abs(actual-expected)<=tolerance,
   `${label}: ${actual} versus ${expected} (tolerance ${tolerance})`);
 
+// ROUND 3: the default profile (interactive-v2) scales its step-doubling
+// estimate by the Richardson factor 1/(2^p - 1), so its steps spend the
+// stated tolerance instead of a third of it. The overload-case (10 ohm)
+// sample tolerances pinned just above the old accuracy, 1e-4 and 1.2e-4,
+// are 2e-4 (measured 1.45e-4 and 1.40e-4 near 3.4 V, where the profile's
+// own local scale is 1e-6 + 1e-4*3.4 = 3.4e-4); the inrush case (500 ohm,
+// 22 uF) 5e-6 -> 2e-5 (measured 1.4e-5 at 4.27 V). interactive-v1 and
+// precision-v1 keep their recorded behaviour and tolerances.
 function rig({R=500,C=2.2e-6,inputR=4,internalR=0,shift=0,parameters={},edit=null}={}){
   const b=new BoardImpl(5);
   const parts=[
@@ -83,7 +91,7 @@ function currents(b,{R,inputR=4,internalR=0,shift=0,I=.36}={}){
 }
 
 test('explicit current-limited ADP startup matches independently transitioned RC samples and capture mean',t=>{
-  for(const [R,C,tolerance,meanTolerance] of [[10,2.2e-6,1e-4,3e-5],[500,22e-6,5e-6,1e-5],[500,2.2e-6,1e-5,1e-4]]){
+  for(const [R,C,tolerance,meanTolerance] of [[10,2.2e-6,2e-4,3e-5],[500,22e-6,2e-5,1e-5],[500,2.2e-6,1e-5,1e-4]]){
     const expected=oracle(R,C),b=rig({R,C});
     if(R===10){near(expected.entry,217.30757602325912e-6,1e-12,'analytic overload entry');assert.equal(expected.release,null);}
     else if(C===22e-6){near(expected.entry,66.26866414968961e-6,1e-12,'analytic inrush entry');
@@ -172,7 +180,7 @@ test('caller-sampled ceiling and coherent supply survive shifted reference and p
     for(let i=1;i<=120;i++){
       partitioned.advanceTo(BigInt(i)*10000n);
       currents(partitioned,{R,shift:2.5,internalR:1});
-      near(partitioned.nodeVoltage('out')-2.5,expected.voltage(i*1e-5),R===10?1.2e-4:5e-6,'partitioned analytic output');
+      near(partitioned.nodeVoltage('out')-2.5,expected.voltage(i*1e-5),R===10?2e-4:5e-6,'partitioned analytic output');
     }
     near(big.nodeVoltage('out'),partitioned.nodeVoltage('out')-2.5,1e-7,'one large versus partitioned advance');
     assert.equal(partitioned.transientAnalysisStatus().accuracyMet,true);

@@ -56,6 +56,26 @@ function junctionG(part, vAcross, vf, rd) {
   return gj / (1 + gj * p.rs);
 }
 
+/** Inverse of a small dense matrix (Gauss-Jordan, partial pivoting). */
+function invertSmall(M) {
+  const n = M.length;
+  const a = M.map((row, i) => [...row, ...Array.from({ length: n }, (_, j) => (i === j ? 1 : 0))]);
+  for (let c = 0; c < n; c++) {
+    let p = c;
+    for (let r = c + 1; r < n; r++) if (Math.abs(a[r][c]) > Math.abs(a[p][c])) p = r;
+    if (!(Math.abs(a[p][c]) > 0)) throw new Error('acSweep: coupled inductance matrix is singular');
+    [a[c], a[p]] = [a[p], a[c]];
+    const d = a[c][c];
+    for (let j = 0; j < 2 * n; j++) a[c][j] /= d;
+    for (let r = 0; r < n; r++) {
+      if (r === c) continue;
+      const f = a[r][c];
+      if (f !== 0) for (let j = 0; j < 2 * n; j++) a[r][j] -= f * a[c][j];
+    }
+  }
+  return a.map(row => row.slice(n));
+}
+
 /**
  * Run a small-signal sweep.
  *
@@ -80,6 +100,14 @@ function junctionG(part, vAcross, vf, rd) {
  * @param {string} [args.analysisProfile='interactive-v1']
  * @param {string} [args.sourceBiasPolicy='waveform-at-current-board-time']
  * @param {string[]} [args.probes] - net ids to report (default: all)
+ * @param {{junctionG?: Map<string, number>, bjtCompression?: Map<string, number>}} [args.rf]
+ *   RF (carrier-frequency) linearisation for the radio front end
+ *   (src/radio.js): `junctionG` replaces a diode's small-signal conductance
+ *   by its large-signal describing-function value, and every generic
+ *   (non-Ebers-Moll) transistor is linearised at its operating collector
+ *   current (gm = Ic/Vt, gπ = gm/β, Cπ = gm/(2π·fT) with params.ft, default
+ *   300 MHz, Cμ = params.cjc, default 4 pF) instead of the piecewise knee,
+ *   scaled by `bjtCompression` under a large base swing. Absent: unchanged.
  * @returns {Array<{hz: number, results: Map<string, {mag: number, phaseDeg: number}>,
  *   outOfLinear?: Array<{part: string, kind: string, region: string}>}>}
  */
@@ -90,6 +118,7 @@ export function acSweep(args) {
     nodeRegularizationSiemens = 1e-12, analysisProfile = 'interactive-v1',
     sourceBiasPolicy = 'waveform-at-current-board-time',
     partTemperatures = null,
+    rf = null,
   } = args;
   if (!Number.isFinite(nodeRegularizationSiemens) || nodeRegularizationSiemens < 0) {
     throw new Error('acSweep: nodeRegularizationSiemens must be finite and >= 0');
@@ -314,6 +343,8 @@ export function acSweep(args) {
         case 'diode': {
           const na = netOf(part.id, 'anode');
           const nc = netOf(part.id, 'cathode');
+          const rfG = rf?.junctionG?.get(part.id);
+          if (Number.isFinite(rfG)) { addG2(na, nc, Math.max(rfG, 1e-12)); break; }
           const vf = junctionVf(part);
           // Datasheet drop -> knee, matching the DC stamp. The small-signal
           // answer must be the derivative of the model that was stamped, so
@@ -404,6 +435,33 @@ export function acSweep(args) {
             addSusc(iB, iC, -q.cbc);
             addSusc(iC, iB, -q.cbc);
             addSusc(iC, iC, q.cbc);
+            break;
+          }
+          if (rf) {
+            // Carrier-frequency linearisation at the operating collector
+            // current (see args.rf): the piecewise knee's 1/rd would give a
+            // transconductance of β/10 Ω whatever the bias.
+            const vOutRf = part.kind === 'npn' ? vOp(nC) - vOp(nE) : vOp(nE) - vOp(nC);
+            const ic = Math.abs(opBranchCurrents?.get(part.id)?.get('collector') ?? 0);
+            const vJrf = part.kind === 'npn' ? vOp(nB) - vOp(nE) : vOp(nE) - vOp(nB);
+            if (ic > 1e-9 && vJrf > 0 && vOutRf < (P.vceSat ?? 0.2) * 1.5) {
+              addG2(nC, nE, 10);
+              addG2(nB, nE, ic / ((P.beta ?? 100) * VT));
+              break;
+            }
+            const comp = rf.bjtCompression?.get(part.id) ?? 1;
+            const gmRf = comp * ic / VT;
+            const beta = P.beta ?? 100;
+            addG2(nB, nE, Math.max(gmRf / beta, 1e-12),
+              omega * (gmRf / (2 * Math.PI * (P.ft ?? 300e6)) + (P.cje ?? 0)));
+            addG2(nB, nC, 0, omega * (P.cjc ?? 4e-12));
+            const iCr = idxOf(nC);
+            const iBr = idxOf(nB);
+            const iEr = idxOf(nE);
+            if (iCr !== undefined && iBr !== undefined) addC(iCr, iBr, gmRf, 0);
+            if (iCr !== undefined && iEr !== undefined) addC(iCr, iEr, -gmRf, 0);
+            if (iEr !== undefined && iBr !== undefined) addC(iEr, iBr, -gmRf, 0);
+            if (iEr !== undefined) addC(iEr, iEr, gmRf, 0);
             break;
           }
           const vJ = part.kind === 'npn'
@@ -629,6 +687,30 @@ export function acSweep(args) {
         case 'vcc':
         case 'gnd':
           break;
+        case 'coupled_inductors': {
+          // K coupled windings (the radio's ferrite coil, src/radio.js):
+          // terminals w<i>a/w<i>b, params.L the K×K inductance matrix,
+          // params.q the winding quality factor. Z = jω·L·(1 − j/Q), so
+          // Y = Γ·(1/Q − j) / (ω·(1 + 1/Q²)) with Γ = L⁻¹.
+          const L = P.L;
+          const K = L.length;
+          const G = invertSmall(L);
+          const q = P.q > 0 ? P.q : Infinity;
+          const den = omega * (1 + 1 / (q * q));
+          for (let i = 0; i < K; i++) {
+            for (let j = 0; j < K; j++) {
+              const ra = idxOf(netOf(part.id, `w${i}a`)); const rb = idxOf(netOf(part.id, `w${i}b`));
+              const ca = idxOf(netOf(part.id, `w${j}a`)); const cb = idxOf(netOf(part.id, `w${j}b`));
+              const g = Number.isFinite(q) ? G[i][j] / (q * den) : 0;
+              const susc = -G[i][j] / den;
+              if (ra !== undefined && ca !== undefined) addC(ra, ca, g, susc);
+              if (ra !== undefined && cb !== undefined) addC(ra, cb, -g, -susc);
+              if (rb !== undefined && ca !== undefined) addC(rb, ca, -g, -susc);
+              if (rb !== undefined && cb !== undefined) addC(rb, cb, g, susc);
+            }
+          }
+          break;
+        }
         case 'isource': {
           if (part.id !== sourceId) break; // every non-selected current source is AC-open
           const iP = idxOf(netOf(part.id, 'pos'));
@@ -668,6 +750,23 @@ export function acSweep(args) {
               theveninBetween: (tP, tN, _v, rTh) =>
                 addG2(netOf(part.id, tP), netOf(part.id, tN), 1 / Math.max(rTh, 1e-3)),
               current: () => {},
+              // A Newton-solved law is linearised at the operating point:
+              // its Jacobian IS the small-signal conductance block. (Without
+              // this, a macromodel such as the LM386 or LM358 stage threw.)
+              nonlinearCurrents: (_key, evaluate) => {
+                const read = (t) => vOp(netOf(part.id, t));
+                const res = evaluate(read, 1);
+                for (const [rowT, row] of res.jacobian ?? []) {
+                  const ri = idxOf(netOf(part.id, rowT));
+                  if (ri === undefined) continue;
+                  for (const [colT, dI] of row) {
+                    const ci = idxOf(netOf(part.id, colT));
+                    // Current OUT of the device into the net is an injection;
+                    // moved to the left-hand side it is −dI/dV.
+                    if (ci !== undefined && dI !== 0) addC(ri, ci, -dI, 0);
+                  }
+                }
+              },
               vcc,
               tSeconds: 0,
               control: controls.get(part.id),

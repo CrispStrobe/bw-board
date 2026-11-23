@@ -182,3 +182,29 @@ for (const [duty, through] of [[0.25, 0], [0.3, 10000], [0.7, 10000]]) {
     assert.ok(Math.abs(tone.hz - hz) < 0.5, `${tone.hz} Hz for ${hz} Hz`);
   });
 }
+
+test('one battery and no gnd part: the reference is obvious, so no warning; two independent supplies still warn', () => {
+  // Every gallery bench is a single battery feeding a breadboard; warning on
+  // each of them taught learners to ignore the Circuit Check panel.
+  const single = new BoardImpl(5);
+  single.setNetlist([{ id: 'B', kind: 'vsource', params: { volts: 9 }, terminals: ['pos', 'neg'] },
+    { id: 'R', kind: 'resistor', params: { ohms: 1000 }, terminals: ['a', 'b'] }],
+  [net('p', ['B', 'pos'], ['R', 'a']), net('n', ['B', 'neg'], ['R', 'b'])]);
+  single.setPower(true);
+  assert.equal(single.nodeVoltage('n'), 0);
+  assert.ok(Math.abs(single.nodeVoltage('p') - 9) < 1e-6);
+  assert.equal(single.getWarnings().some(x => x.code === 'implicit-ground-reference'), false);
+
+  // Two batteries whose negatives are separate nets (joined only through a
+  // resistor): which one is "0 V" is a judgement call, so it is announced.
+  const two = new BoardImpl(5);
+  two.setNetlist([{ id: 'B1', kind: 'vsource', params: { volts: 9 }, terminals: ['pos', 'neg'] },
+    { id: 'B2', kind: 'vsource', params: { volts: 3 }, terminals: ['pos', 'neg'] },
+    { id: 'R1', kind: 'resistor', params: { ohms: 1000 }, terminals: ['a', 'b'] },
+    { id: 'R2', kind: 'resistor', params: { ohms: 1000 }, terminals: ['a', 'b'] },
+    { id: 'R3', kind: 'resistor', params: { ohms: 1000 }, terminals: ['a', 'b'] }],
+  [net('p1', ['B1', 'pos'], ['R1', 'a']), net('n1', ['B1', 'neg'], ['R1', 'b'], ['R3', 'a']),
+    net('p2', ['B2', 'pos'], ['R2', 'a']), net('n2', ['B2', 'neg'], ['R2', 'b'], ['R3', 'b'])]);
+  two.setPower(true);
+  assert.ok(two.getWarnings().some(x => x.code === 'implicit-ground-reference'));
+});

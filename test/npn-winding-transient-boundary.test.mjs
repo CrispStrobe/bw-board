@@ -20,7 +20,11 @@ function winding({baseOhms = 1000, mode = 'quasi', vceSat = .2,
     {id:'Q',kind:'npn',params:transistorParams,terminals:['base','collector','emitter']},
     {id:'L',kind:'inductor',params:{henrys:.005},terminals:['a','b']},
     {id:'RW',kind:'resistor',params:{ohms:10},terminals:['a','b']},
-    {id:'D',kind:'diode',params:{vf:.7},terminals:['anode','cathode']},
+    // The flyback diode keeps the piecewise knee: the independent references
+    // below carry its 1e-9 S off conductance (`1e-9*10`, `1e-9*volts`). Since
+    // round 3 a diode is exponential by default, which these BJT/winding
+    // checks are not about.
+    {id:'D',kind:'diode',params:{vf:.7,model:'pwl'},terminals:['anode','cathode']},
   ],[
     net('supply',['V','vcc'],['L','a'],['D','cathode']),
     net('zero',['G','gnd'],['Q','emitter']),
@@ -77,7 +81,7 @@ for (const vceSat of [.2,null]) {
     assert.equal(status.accuracyMet,true);
     assert.equal(status.failure,null);
     assert.deepEqual(status.profile,{...ordinary,id:'interactive-v2',minStepSec:1e-15,
-      floorHistoryRestart:true});
+      floorHistoryRestart:true,richardsonLte:true});
     assert.ok(status.work.attempts<ordinary.maxAttempts,'unchanged attempt ceiling');
     const u = (Math.sqrt(1+4*22700*4.325)-1)/(2*22700);
     const steady = 100*u*u/(1+1e-9*10);

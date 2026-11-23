@@ -137,6 +137,15 @@ const LOCAL_ONLY = {
   solenoid:          { chip_mA: 0, supply_mA: 300 },
   stepper:           { chip_mA: 0, supply_mA: 500 },
   piezo:             { chip_mA: 0, supply_mA: 1 },
+  // Loudspeaker / earphone: what they draw is what the driving circuit puts
+  // through the coil (bw-parts feat/speaker-radio-parts-20261123 rates them
+  // the same way). Radio front end: passive, no budget of their own.
+  speaker:           { chip_mA: "circuit", supply_mA: 0 },
+  earphone:          { chip_mA: "circuit", supply_mA: 0 },
+  antenna:           { chip_mA: 0, supply_mA: 0 },
+  earth:             { chip_mA: 0, supply_mA: 0 },
+  tuning_cap:        { chip_mA: 0, supply_mA: 0 },
+  ferrite_coil:      { chip_mA: 0, supply_mA: 0 },
   bargraph:          { chip_mA: "circuit", supply_mA: "circuit" },
   ir_transmitter:    { chip_mA: "circuit", supply_mA: 20 },
   darlington_driver: { chip_mA: "circuit", supply_mA: "circuit" },

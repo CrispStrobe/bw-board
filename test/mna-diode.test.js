@@ -202,9 +202,17 @@ describe('MNA: resistance with LEDs', () => {
     // This is physically correct: a real DMM in resistance mode would show
     // a similar value because the diode's forward voltage creates an
     // apparent resistance of Vf/I_test.
+    //
+    // ROUND 3: the LED is exponential by default. At the 1 mA test current it
+    // drops n*Vt*ln(1 mA/Is + 1) + 1 mA*rs = 1.65 V, not the knee's 1.81 V
+    // (Is calibrated to 2.0 V at 20 mA through rs = 10, n = 1.8), so the
+    // meter reads R1 + drop/I_test = 2,650 Ohm (measured 2,671: the test
+    // current divides slightly differently once the junction conducts).
+    const nVt = 1.8 * 0.02585, is = 0.02 / (Math.exp((2.0 - 0.02 * 10) / nVt) - 1);
+    const want = 1000 + (nVt * Math.log(0.001 / is + 1) + 0.001 * 10) / 0.001;
     const r = board.resistance('na', 'nb');
     assert.ok(typeof r === 'number');
-    assert.ok(Math.abs(/** @type {number} */(r) - 2810) < 50,
-      `R through LED = ${r} should be ≈ 2810 Ω (R1 + Rd + knee/I)`);
+    assert.ok(Math.abs(/** @type {number} */(r) - want) < 50,
+      `R through LED = ${r} should be ≈ ${want.toFixed(0)} Ω (R1 + exponential drop/I)`);
   });
 });

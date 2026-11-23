@@ -301,16 +301,26 @@ describe('pad drive: the inferred blink bench, solved by hand', () => {
             'the series resistor must be the binding cap, not the blink duty');
     });
 
-    it('the same bench on a 5 V rail reads 0.1546 — the rail is why it is dim', () => {
+    it('the same bench on a 5 V rail reads 0.1587 — the rail is why it is dim', () => {
         // The gallery's seated F030 bench carries vcc 5 in the fixture while
         // lite improvises at 3.3; the difference is entirely the rail, and
         // stating it here is what stops "0.06 vs 0.14" being read as a tier
         // disagreement later.
-        // Headroom on a 5 V rail is 3.0 V, ABOVE MNA_HEADROOM_V, so unlike the
-        // 3.3 V bench this one stays piecewise and a closed form is still
-        // right -- with the KNEE, LED_VF - I_RATED*LED_RD = 1.8, not LED_VF.
-        const i5 = (5 - (LED_VF - I_RATED * LED_RD)) / (R_STRONG + R_SERIES + LED_RD);
-        assert.equal((i5 / I_RATED).toPrecision(10), '0.1545893720');
+        // Since round 3 this LED is exponential on any rail (it read 0.1546
+        // with the knee the 5 V bench used to be routed to). The loop is
+        //   5 = I*(R_STRONG + R_SERIES) + n*Vt*ln(I/Is + 1) + I*rs,
+        // Is calibrated so the LED drops LED_VF at I_RATED through rs = LED_RD
+        // (mna.js shockleyParams), solved here by bisection.
+        const nVt = 1.8 * 0.02585;
+        const is = I_RATED / (Math.exp((LED_VF - I_RATED * LED_RD) / nVt) - 1);
+        let lo = 0, hi = 0.01;
+        for (let k = 0; k < 200; k++) {
+            const i = (lo + hi) / 2;
+            const v = nVt * Math.log(i / is + 1) + i * LED_RD + i * (R_STRONG + R_SERIES);
+            if (v < 5) lo = i; else hi = i;
+        }
+        const i5 = lo;
+        assert.equal((i5 / I_RATED).toPrecision(4), '0.1587');
         const b = bench(5);
         b.setPin('PA0', 'pushpull', true);
         b.advanceTo(b.timeNs + 25_000_000n);
