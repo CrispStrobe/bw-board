@@ -188,6 +188,35 @@ describe('LM386 bypass and speed', () => {
   });
 });
 
+describe('LM386 as an oscillator (the "amp IC horn")', () => {
+  it('output -> 47 nF -> +IN with 22 kΩ to GND oscillates and drives a speaker through 100 µF', () => {
+    // Positive feedback through a high-pass: each output swing kicks +IN
+    // through the capacitor and the kick decays through 22 kΩ ‖ 50 kΩ; the
+    // amplifier flips back when it crosses. A tone, AC-coupled to 8 Ω.
+    const b = new BoardImpl(5);
+    b.setNetlist([V('VS', 9), G, U, R('RB', 22e3), Cap('CF', 47e-9),
+      { id: 'CO', kind: 'polarized_cap', params: { farads: 100e-6 }, terminals: ['pos', 'neg'] }, R('SPK', 8)], [
+      net('vs', ['VS', 'pos'], ['U1', 'vs']),
+      net('g', ['G', 'gnd'], ['VS', 'neg'], ['U1', 'gnd'], ['U1', 'inn'], ['RB', 'b'], ['SPK', 'b']),
+      net('out', ['U1', 'vout'], ['CF', 'a'], ['CO', 'pos']),
+      net('p', ['CF', 'b'], ['U1', 'inp'], ['RB', 'a']),
+      net('spk', ['CO', 'neg'], ['SPK', 'a']),
+    ]);
+    b.setPower(true);
+    b.advanceTo(5_000_000n);
+    let crossings = 0, prev = null, lo = Infinity, hi = -Infinity;
+    for (let t = 5_000_000; t <= 17_000_000; t += 20_000) {
+      b.advanceTo(BigInt(t));
+      const v = b.nodeVoltage('spk');
+      if (prev !== null && prev < 0 && v >= 0) crossings++;
+      prev = v; lo = Math.min(lo, v); hi = Math.max(hi, v);
+    }
+    assert.ok(crossings >= 2, `tone: ${crossings} cycles in 12 ms`);
+    assert.ok(hi > 2 && lo < -2, `speaker swings ${lo.toFixed(2)} .. ${hi.toFixed(2)} V`);
+    assert.equal(b._transientAccuracyUnmet, null);
+  });
+});
+
 describe('LM386 stage Jacobian', () => {
   it('matches finite differences', () => {
     const v = { inp: 0.01, inn: -0.002, e1: 0.009, x: -0.001, pole: 4.6, vout: 4.4, vs: 9, gnd: 0 };
