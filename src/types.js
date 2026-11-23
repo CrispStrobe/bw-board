@@ -71,7 +71,8 @@
  *   | 'ultrasonic' | 'pir' | 'tilt_sensor' | 'flex_sensor' | 'force_sensor' | 'phototransistor' | 'light_sensor'
  *   | 'neopixel' | 'bargraph'
  *   | 'decade_counter' | 'dff' | 'jkff' | 'darlington_driver' | 'piezo' | 'lm386'
- *   | 'speaker' | 'earphone' | 'antenna' | 'earth' | 'tuning_cap' | 'ferrite_coil'} PartKind
+ *   | 'speaker' | 'earphone' | 'antenna' | 'earth' | 'tuning_cap' | 'ferrite_coil'
+ *   | 'thermocouple' | 'air_coil' | 'electrolysis_cell'} PartKind
  */
 
 /**

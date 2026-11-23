@@ -10,6 +10,7 @@
 import { registerDevice } from '../devices.js';
 import { transducerCard, coneSignal, initToneTracker, trackTone } from '../transducers.js';
 import { RF_DETECT_KIND, rectificationCurrent, junctionCard } from '../radio.js';
+import { acousticsOf } from '../acoustics.js';
 
 export function registerRadioParts() {
     // ─── Dynamic loudspeaker and earphone ───────────────────────────────
@@ -24,7 +25,18 @@ export function registerRadioParts() {
             init() { return initToneTracker(); },
             update(part, state, read, tNs) {
                 const card = state._card ?? (state._card = transducerCard(part));
-                const x = coneSignal(card, read);
+                // A transducer in an acoustic path (src/acoustics.js): its coil
+                // carries the sound EMF, which is not cone drive; and when it
+                // is heard, its drive is recorded for the listener.
+                const env = acousticsOf(part);
+                const tSec = Number(tNs) / 1e9;
+                const emf = env ? env.emf(part, tSec) : 0;
+                const x = coneSignal(card, read, emf);
+                if (env) {
+                    env.record(part, tSec, x);
+                    state.emf = emf;
+                    state.pressurePa = env.listeners.has(part.id) ? env.pressure(part, tSec) : 0;
+                }
                 const minSwing = card.crystal ? 1e-3 : card.ratedAmps * 1e-3;
                 trackTone(state, x, Number(tNs), minSwing);
                 return false;
