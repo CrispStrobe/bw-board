@@ -60,17 +60,19 @@ test('no-connect pins (nc1..nc4 of the 74HC93 DIP-14) are accepted and inert; th
   assert.notEqual(b.nodeVoltage('qa') > 2.5, qa0, 'QA toggled');
 });
 
-test('piezo is a capacitor (20 nF default) with a high leak: RC charging, not an instant 1 MOhm divider', () => {
+test('piezo is a capacitor (20 nF behind 100 ohm) with a high leak: RC charging, not an instant 1 MOhm divider', () => {
   const b = new BoardImpl(5);
   b.setNetlist([{ id: 'V', kind: 'vcc', params: {}, terminals: ['vcc'] }, { id: 'G', kind: 'gnd', params: {}, terminals: ['gnd'] },
     { id: 'R', kind: 'resistor', params: { ohms: 10000 }, terminals: ['a', 'b'] },
     { id: 'P', kind: 'piezo', params: {}, terminals: ['a', 'b'] }],
   [net('vcc', ['V', 'vcc'], ['R', 'a']), net('p', ['R', 'b'], ['P', 'a']), net('g', ['G', 'gnd'], ['P', 'b'])]);
   b.setPower(true);
-  b.advanceTo(200_000n); // one tau = 10k * 20 nF = 200 us
+  b.advanceTo(200_000n); // about one tau = (10k || 1M + 100 ohm ESR) * 20 nF
   const vInf = 5 * 1e6 / (1e6 + 1e4);
-  const tau = 1e4 * 1e6 / (1e6 + 1e4) * 20e-9;
-  const expect = vInf * (1 - Math.exp(-200e-6 / tau));
+  const rTh = 1e4 * 1e6 / (1e6 + 1e4), esr = 100;
+  const tau = (rTh + esr) * 20e-9;
+  const vC = vInf * (1 - Math.exp(-200e-6 / tau));
+  const expect = vC + (vInf - vC) / (rTh + esr) * esr; // the pin sits one ESR drop above the plate
   assert.ok(Math.abs(b.nodeVoltage('p') - expect) < 0.01, `${b.nodeVoltage('p')} vs ${expect}`);
   b.advanceTo(5_000_000n);
   assert.ok(Math.abs(b.nodeVoltage('p') - vInf) < 1e-3, 'settles on the leak divider');
@@ -131,4 +133,22 @@ test('potato_battery / lemon_battery are weak cells, not the board 5 V: EMF unde
     assert.equal(b.nodeVoltage('n'), 0, `${kind}: its neg terminal is the reference`);
     assert.ok(Math.abs(b.nodeVoltage('p') - emf * 10000 / (10000 + rInt)) < 1e-6, `${kind}: ${b.nodeVoltage('p')}`);
   }
+});
+
+test('a piezo straight on an op-amp output does not pin it (lab-attenuator-gain shape)', () => {
+  // A bare capacitor across an op-amp output is held at its stored voltage by
+  // an instantaneous solve and dragged the amplifier to a rail; the piezo's
+  // capacitance sits behind its series resistance.
+  const b = new BoardImpl(5);
+  b.setNetlist([{ id: 'VP', kind: 'vsource', params: { volts: 9 }, terminals: ['pos', 'neg'] },
+    { id: 'VN', kind: 'vsource', params: { volts: 9 }, terminals: ['pos', 'neg'] },
+    { id: 'G', kind: 'gnd', params: {}, terminals: ['gnd'] },
+    { id: 'IN', kind: 'vsource', params: { volts: 0.01 }, terminals: ['pos', 'neg'] },
+    { id: 'U', kind: 'opamp', params: {}, terminals: ['inp', 'inn', 'out'] },
+    { id: 'P', kind: 'piezo', params: {}, terminals: ['a', 'b'] }],
+  [net('g', ['G', 'gnd'], ['VP', 'neg'], ['VN', 'pos'], ['IN', 'neg'], ['P', 'b']),
+    net('i', ['IN', 'pos'], ['U', 'inp']), net('o', ['U', 'out'], ['U', 'inn'], ['P', 'a'])]);
+  b.setPower(true);
+  b.setControl('IN', 0.5);
+  assert.ok(Math.abs(b.nodeVoltage('o') - 0.5) < 0.01, `follower output ${b.nodeVoltage('o')}`);
 });

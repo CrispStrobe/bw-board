@@ -6,7 +6,9 @@
 // 8 % slow with 18 % period jitter because a comparator flip was noticed only
 // at the END of the transient step that crossed the threshold; and one 2 s
 // advance of a slow astable hit the flat 200-sub-step cap and poisoned every
-// later measurement ("device sub-step budget exhausted").
+// later measurement ("device sub-step budget exhausted"). Precision op-amp
+// models tick every 10-300 ns while slewing; that is legitimate and must not
+// trip any budget (test below).
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { BoardImpl } from '../src/board.js';
@@ -105,7 +107,7 @@ test('a 2 s single advance of a 4.8 Hz astable completes: no sub-step overflow, 
   assert.ok(v > 1.5 && v < 3.5, `cap mean ${v}`);
 });
 
-test('the sub-step budget is a runaway backstop: a 1 ns self-waking device makes the advance throw, never over-report time', () => {
+test('the work backstop catches a runaway: a 1 ns self-waking device makes the advance throw, never over-report time', () => {
   registerDevice('test_ring_1ns', {
     terminals: ['out'],
     init: () => ({ drives: { out: { vTh: 0, rTh: 100 } }, _wakeNs: 1n, level: 0 }),
@@ -124,14 +126,44 @@ test('the sub-step budget is a runaway backstop: a 1 ns self-waking device makes
       { id: 'R', kind: 'resistor', params: { ohms: 1000 }, terminals: ['a', 'b'] }],
     [net('o', ['X', 'out'], ['R', 'a']), net('g', ['G', 'gnd'], ['R', 'b'])]);
     b.setPower(true);
-    // 100 us = 100,000 events; budget 200 + 100. The ADVANCE throws, and the
-    // clock reports only the time that was actually simulated.
-    assert.throws(() => b.advanceTo(100_000n), e => e.code === 'DEVICE_SUBSTEP_BUDGET_EXHAUSTED');
-    assert.equal(b.getTime(), 300n, '300 one-nanosecond events, not the requested 100 us');
+    // 10 ms = 10 million one-nanosecond events against a 50 ms work backstop.
+    // The ADVANCE throws, and the clock reports only the time actually simulated.
+    b.deviceWorkLimitMs = 50;
+    let error;
+    assert.throws(() => b.advanceTo(10_000_000n), e => (error = e).code === 'DEVICE_SUBSTEP_BUDGET_EXHAUSTED');
+    assert.ok(b.getTime() > 0n && b.getTime() < 10_000_000n, `${b.getTime()} ns, not the requested 10 ms`);
+    assert.equal(error.simulatedTimeNs, b.getTime());
     assert.equal(b._deviceSubstepOverflow, true);
     assert.ok(b.getWarnings().some(w => /sub-step limit/.test(w.message)));
     assert.throws(() => b.meterVoltage('o'), /device sub-step budget exhausted/);
   } finally {
     unregisterDevice('test_ring_1ns');
+  }
+});
+
+test('a device ticking every 25 ns for a long advance is legitimate work, not a runaway', () => {
+  registerDevice('test_tick_25ns', {
+    terminals: ['out'],
+    init: () => ({ drives: {}, _wakeNs: 25n, ticks: 0 }),
+    update(part, state, read, tNs) {
+      if (state._wakeNs && BigInt(tNs) < state._wakeNs) return false;
+      state.ticks++;
+      state._wakeNs = BigInt(tNs) + 25n;
+      return false;
+    },
+  });
+  try {
+    const b = new BoardImpl(5);
+    b.setNetlist([{ id: 'G', kind: 'gnd', params: {}, terminals: ['gnd'] },
+      { id: 'X', kind: 'test_tick_25ns', params: {}, terminals: ['out'] },
+      { id: 'R', kind: 'resistor', params: { ohms: 1000 }, terminals: ['a', 'b'] }],
+    [net('o', ['X', 'out'], ['R', 'a']), net('g', ['G', 'gnd'], ['R', 'b'])]);
+    b.setPower(true);
+    b.advanceTo(200_000n); // 8000 ticks in one advance (was: budget exhausted at 400)
+    assert.equal(b.getTime(), 200_000n);
+    assert.equal(b._deviceSubstepOverflow, false);
+    assert.equal(b.getDeviceState('X').ticks, 8000);
+  } finally {
+    unregisterDevice('test_tick_25ns');
   }
 });

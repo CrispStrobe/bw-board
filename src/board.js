@@ -62,6 +62,8 @@ import {
  */
 const LED_VF = 2.0;       // forward voltage threshold
 const LED_RD = 10;         // dynamic resistance above threshold
+/** Wall-clock work backstop for one ordinary advanceTo's device sub-steps. */
+const DEVICE_WORK_LIMIT_MS = 30_000;
 const LED_I_RATED = 0.020; // 20 mA rated current (for brightness normalization)
 
 /**
@@ -315,6 +317,39 @@ function restorePlainState(state, copy) {
   for (const key of Object.keys(state)) if (!(key in copy)) delete state[key];
   const fresh = plainStateCopy(copy, { left: Infinity });
   for (const key of Object.keys(fresh)) state[key] = fresh[key];
+}
+
+/**
+ * Whether a device update changed DISCRETE state: a boolean, a string, a
+ * bigint, an integer-valued number (a flip-flop bit, a counter, a region
+ * index), or the presence of a value. A change confined to non-integer
+ * numbers is a continuous quantity tracking its inputs (an op-amp output
+ * following its slew, a motor speed) -- not an event, and localizing it
+ * would shrink every step of the integration to the event tolerance.
+ * Bounded like plainStateCopy; when the budget runs out it answers true.
+ */
+function discreteStateChange(before, after, budget) {
+  if (--budget.left < 0) return true;
+  if (before === after) return false;
+  const ta = typeof before, tb = typeof after;
+  if (ta === 'number' && tb === 'number') {
+    if (Number.isNaN(before) && Number.isNaN(after)) return false;
+    return Number.isInteger(before) && Number.isInteger(after);
+  }
+  if (ta !== tb || before === null || after === null || ta !== 'object') return true;
+  if (before instanceof Map || after instanceof Map || before instanceof Set || after instanceof Set) {
+    if (!(before instanceof Map && after instanceof Map)) return before.size !== after.size;
+    if (before.size !== after.size) return true;
+    for (const [k, v] of before) if (!after.has(k) || discreteStateChange(v, after.get(k), budget)) return true;
+    return false;
+  }
+  if (Array.isArray(before) !== Array.isArray(after)) return true;
+  const keys = new Set([...Object.keys(before), ...Object.keys(after)]);
+  for (const k of keys) {
+    if (!(k in before) || !(k in after)) return true;
+    if (discreteStateChange(before[k], after[k], budget)) return true;
+  }
+  return false;
 }
 
 /** Largest device state (in copied values) event localization will snapshot. */
@@ -608,7 +643,8 @@ export class BoardImpl {
    * made an RC network through it wrong by orders of magnitude. The
    * capacitance is a first-class solver capacitor on the piezo's own nets
    * (params.capacitance, default 20 nF), so the transient integrator owns its
-   * history exactly as for a drawn capacitor; the device model keeps the leak.
+   * history exactly as for a drawn capacitor, behind a series resistance
+   * (params.esr, 100 Ω); the device model keeps the leak across the pins.
    * Solver view only, like the motor windings.
    */
   static _expandPiezoCapacitance(parts, nets) {
@@ -622,8 +658,23 @@ export class BoardImpl {
       const a = outNets.find((n) => n.terminals.some((t) => t.part === z.id && t.terminal === 'a'));
       const b = outNets.find((n) => n.terminals.some((t) => t.part === z.id && t.terminal === 'b'));
       if (!a || !b || a === b) continue;
+      // The capacitance sits behind the element's series resistance
+      // (params.esr, default 100 Ω), never directly across the pins: an
+      // instantaneous solve holds a capacitor at its stored voltage, and a
+      // bare one straight across an op-amp output pinned that output and
+      // drove the amplifier to a rail (lab-attenuator-gain read 0.0105 V for
+      // 0.149 V). Behind 100 Ω it is the load it physically is.
       const cId = `${z.id}_cp`;
-      a.terminals.push({ part: cId, terminal: 'a' });
+      const esr = Number(z.params?.esr ?? 100);
+      if (esr > 0) {
+        const rId = `${z.id}_esr`;
+        const mid = { id: `n_${z.id}_cp`, terminals: [{ part: rId, terminal: 'b' }, { part: cId, terminal: 'a' }] };
+        a.terminals.push({ part: rId, terminal: 'a' });
+        outNets.push(mid);
+        outParts.push({ id: rId, kind: 'resistor', params: { ohms: esr }, terminals: ['a', 'b'] });
+      } else {
+        a.terminals.push({ part: cId, terminal: 'a' });
+      }
       b.terminals.push({ part: cId, terminal: 'b' });
       outParts.push({ id: cId, kind: 'capacitor', params: { farads }, terminals: ['a', 'b'] });
     }
@@ -1889,22 +1940,31 @@ export class BoardImpl {
     // a 5ms deadline jumped 0→100ms would only see 100ms, and an encoder
     // would undercount edges by the entire interval.
     if (hasDevices && (this.powered || this._hasReactive())) {
-      // The budget SCALES WITH THE INTERVAL. It used to be a flat 200
-      // sub-steps per call, which a single long advance (one second of a
-      // 1 ms-grid device, or 50 ms of an op-amp ticking every 250 us)
-      // exhausted, poisoning every later measurement on the board. Now it
-      // is a runaway backstop only: on average one device event per
-      // simulated microsecond, which no real device schedule approaches
-      // (a 100 kHz timer is 0.2 events/us), plus the historical 200 so short
-      // advances keep the allowance they always had.
-      // The opt-in bounded capture keeps its flat 200: its own receipt
-      // vocabulary (maxAdvances <= 200) was specified against that cap.
-      const MAX_DEVICE_SUBSTEPS = this._boundedAdvanceContext ? 200
-        : 200 + Math.ceil(Number(tNs - prevNs) / 1000);
+      // NO EVENT-RATE BUDGET. Device sub-steps are taken exactly where the
+      // devices ask for them (_wakeNs and friends). A flat 200 per advanceTo
+      // used to be exhausted by any long advance, and a "one event per
+      // simulated microsecond" rate was wrong too: the precision op-amp models
+      // legitimately tick every 10-300 ns while they slew or settle. Wakes are
+      // integer nanoseconds strictly after the cursor, so the event count is
+      // already bounded by the interval; what needs bounding is WORK, so the
+      // backstop is wall-clock: an ordinary advance that is still sub-stepping
+      // after DEVICE_WORK_LIMIT_MS (default 30 s; `deviceWorkLimitMs` on the
+      // board overrides) stops and throws, with the clock at the time actually
+      // simulated. The opt-in bounded capture keeps its deterministic flat 200:
+      // its receipt vocabulary (maxAdvances <= 200) was specified against it.
+      const bounded = !!this._boundedAdvanceContext;
+      const MAX_DEVICE_SUBSTEPS = bounded ? 200 : Infinity;
+      const workLimitMs = bounded ? Infinity : (this.deviceWorkLimitMs ?? DEVICE_WORK_LIMIT_MS);
+      const wallStart = bounded ? 0 : performance.now();
+      let outOfWork = false;
       let steps = 0;
       let cursor = prevNs;
 
       while (cursor < tNs && steps < MAX_DEVICE_SUBSTEPS) {
+        if (!bounded && (steps & 31) === 31 && performance.now() - wallStart > workLimitMs) {
+          outOfWork = true;
+          break;
+        }
         // Find the earliest device deadline in (cursor, tNs]
         const deadline = this._earliestDeviceDeadline(cursor, tNs);
         const nextT = deadline ?? tNs;
@@ -1949,7 +2009,7 @@ export class BoardImpl {
       }
 
       // If we hit the sub-step cap, report it
-      if (steps >= MAX_DEVICE_SUBSTEPS && cursor < tNs) {
+      if ((outOfWork || steps >= MAX_DEVICE_SUBSTEPS) && cursor < tNs) {
         this._deviceSubstepOverflow = true;
         // The bounded wrapper owns its separate refusal/receipt vocabulary
         // (and its historical clock contract) and refuses on its own.
@@ -1965,12 +2025,12 @@ export class BoardImpl {
           this.timeNs = cursor;
           this._transientAccuracyUnmet ||= {
             code: 'device-substep-budget-exceeded', timeSec: Number(cursor) / 1e9,
-            requestedTimeSec: Number(tNs) / 1e9, maxDeviceSubsteps: MAX_DEVICE_SUBSTEPS,
+            requestedTimeSec: Number(tNs) / 1e9, deviceSubsteps: steps, workLimitMs,
           };
           this._notifyChange('time', { tNs: cursor });
           const error = new Error(`advanceTo: device sub-step budget exhausted at ${cursor} ns of `
-            + `the requested ${tNs} ns (${MAX_DEVICE_SUBSTEPS} device events in one advance: a `
-            + 'device is waking faster than once per simulated microsecond)');
+            + `the requested ${tNs} ns (${steps} device events took longer than ${workLimitMs} ms `
+            + 'of work; split the advance or check for a device that never settles)');
           error.code = 'DEVICE_SUBSTEP_BUDGET_EXHAUSTED';
           error.simulatedTimeNs = cursor;
           throw error;
@@ -7311,7 +7371,8 @@ export class BoardImpl {
       let changed = false;
       for (const e of entries) {
         try {
-          if (e.model.update(e.part, e.state, e.read(at), atNs)) changed = true;
+          if (e.model.update(e.part, e.state, e.read(at), atNs)
+            && discreteStateChange(e.copy, e.state, { left: EVENT_STATE_BUDGET })) changed = true;
         } catch {
           // A probe is a question, not a step: the accepted update owns
           // every refusal. Undo and leave this device to it.
