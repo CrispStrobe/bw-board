@@ -306,6 +306,47 @@ describe('LM358 slow integrators and charge packets (builder 3)', () => {
     });
 });
 
+describe('LM358 driving a bare capacitive load', () => {
+    // Coordinator report (2026-11-23): a plain 20 nF capacitor on the output
+    // of a ×101 stage (lab-attenuator-gain's piezo with no ESR) read −0.19 V
+    // for 0.149 V and ran into the 20,000-attempt transient backstop. Kept as
+    // a regression: the 50 Ω output stage drives the capacitor like any real
+    // op-amp, for split and single supplies and capacitances from 2 nF to 1 µF.
+    const stage = (cap, split) => {
+        const board = new BoardImpl(5.0);
+        board.setNetlist([V('VP', 9), V('VN', split ? 9 : 1e-6), G,
+            V('T', 0, { wave: 'sine', freq: 440, amplitude: 4, offset: 0 }),
+            R('RS', 220000), R('RSH', 220), R('RF', 100000), R('RG', 1000), LM358,
+            { id: 'C', kind: 'capacitor', params: { farads: cap }, terminals: ['a', 'b'] }], [
+            net('nv', ['VP', 'pos'], ['U1', 'vcc']),
+            net('nneg', ['VN', 'neg'], ['U1', 'gnd']),
+            net('ng', ['G', 'gnd'], ['VP', 'neg'], ['VN', 'pos'], ['T', 'neg'], ['RSH', 'b'], ['RG', 'b'], ['C', 'b']),
+            net('nt', ['T', 'pos'], ['RS', 'a']),
+            net('np', ['RS', 'b'], ['RSH', 'a'], ['U1', '1_pos']),
+            net('nn', ['U1', '1_neg'], ['RF', 'a'], ['RG', 'a']),
+            net('no', ['U1', '1_out'], ['RF', 'b'], ['C', 'a']),
+        ]);
+        board.advanceTo(1_000_000n);
+        return board;
+    };
+    it('a 20 nF … 1 µF output capacitor reads the amplified signal at 1 ms', () => {
+        // 4 V·sin(2π·440·1 ms) through 220 k/220 Ω = 1.467 mV, ×101 with ~2.5°
+        // of closed-loop lag at 440 Hz: ≈ 0.156 V (the gallery's 0.156 ± 0.005).
+        for (const split of [true, false]) {
+            const bare = stage(1e-15, split).nodeVoltage('no');
+            for (const cap of [2e-9, 20e-9, 1e-6]) {
+                const board = stage(cap, split);
+                assert.equal(board._transientAccuracyUnmet, null);
+                assert.ok(board._transientAnalysisWork.attempts < 2000,
+                    `${cap} F: ${board._transientAnalysisWork.attempts} attempts`);
+                const v = board.nodeVoltage('no');
+                assert.ok(v > 0.14 && v < 0.175 && Math.abs(v - bare) < 0.003,
+                    `${split ? 'split' : 'single'} supply, ${cap} F on the output: ${v} V (unloaded ${bare})`);
+            }
+        }
+    });
+});
+
 describe('ideal opamp under positive feedback (gap 5)', () => {
     it('a relaxation oscillator converges through every switching instant', () => {
         // Rails 0/5 V; v+ = 5/3 or 10/3 V from three 10 k; RC = 1 ms.
