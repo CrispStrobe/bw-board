@@ -188,30 +188,50 @@ export function registerDigitalICs() {
   });
 
   // ─── Piezo element ─────────────────────────────────────────────────
-  // Unlike a buzzer (which has a built-in oscillator), a piezo needs
-  // an external signal. It's essentially a high-impedance capacitor
-  // that produces sound proportional to voltage change rate.
+  // Unlike a buzzer (which has a built-in oscillator), a piezo needs an
+  // external signal. Electrically it is a capacitor (params.capacitance,
+  // default 20 nF) with a high leakage resistance across it
+  // (params.leakOhms, default 1 MΩ). The capacitance is a real solver
+  // capacitor the board adds in its solver view
+  // (BoardImpl._expandPiezoCapacitance); this model stamps the leak.
+  //
+  // SOUND: the element sounds at the frequency of the voltage across it.
+  // update() counts crossings of the mid-level of the recent swing (with
+  // hysteresis, so ripple and the RC charging tail are not counted) and
+  // keeps the crossing times; BoardImpl.buzzerTone() reads them the way it
+  // reads a buzzer's pin edges.
   registerDevice('piezo', {
     terminals: ['a', 'b'],
 
     init() {
-      return { drives: {}, _lastV: 0, frequency: 0 };
+      return { drives: {}, _lastV: 0, frequency: 0, _lo: 0, _hi: 0, _level: 0, _edges: [] };
     },
 
     stamp(ctx, part) {
-      // Piezo is a capacitor (~20nF typically) with very high parallel R
-      const capF = part.params?.capacitance ?? 20e-9;
-      // At audio frequencies, impedance is significant but we model as
-      // a simple high-R load for DC purposes
-      ctx.conductance('a', 'b', 1 / 1e6);
+      const leak = Number(part.params?.leakOhms ?? 1e6);
+      ctx.conductance('a', 'b', 1 / (leak > 0 ? leak : 1e6));
     },
 
     update(part, state, read, tNs) {
-      // Track voltage for frequency detection (like buzzer tone detection)
       const v = read('a') - read('b');
-      // Frequency detection would happen in advanceTo similar to buzzer
-      // For now, just track the voltage state
       state._lastV = v;
+      // Envelope of the swing, decaying slowly toward the present value so a
+      // level change is followed without remembering forever.
+      if (!state._edges) state._edges = [];
+      state._lo = Math.min(v, state._lo + (v - state._lo) * 0.001);
+      state._hi = Math.max(v, state._hi + (v - state._hi) * 0.001);
+      const swing = state._hi - state._lo;
+      if (swing < 0.2) return false; // below audibility for this model
+      const mid = (state._hi + state._lo) / 2;
+      const hyst = swing * 0.2;
+      const level = v > mid + hyst ? 1 : v < mid - hyst ? -1 : 0;
+      if (level !== 0 && level !== state._level) {
+        if (state._level !== 0) {
+          state._edges.push(BigInt(tNs));
+          if (state._edges.length > 16) state._edges.shift();
+        }
+        state._level = level;
+      }
       return false;
     },
   });

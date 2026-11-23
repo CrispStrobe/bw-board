@@ -181,7 +181,7 @@ describe('StimulusExtension: getInfo', () => {
       assert.equal(info.id, 'environment');
       const opcodes = info.blocks.filter(b => typeof b === 'object').map(b => b.opcode);
       assert.deepEqual(opcodes, ['setStimulus', 'getStimulus', 'setWorld', 'getWorld']);
-      assert.deepEqual(info.menus.WORLD_KEYS.items.map(i => i.value), ['temperatureC', 'humidityPct', 'pressureHpa', 'lightLux', 'soundDb']);
+      assert.deepEqual(info.menus.WORLD_KEYS.items.map(i => i.value), ['temperatureC', 'humidityPct', 'pressureHpa', 'lightLux', 'soundDb', 'airflowMs']);
     } finally {
       globalThis.Scratch = origScratch;
     }

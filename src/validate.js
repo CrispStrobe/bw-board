@@ -14,6 +14,9 @@
 
 import { getDevice, registeredKinds } from './devices.js';
 
+/** A package's no-connect leg: `nc`, `nc1`, `NC_4` … (accepted, never stamped). */
+const NO_CONNECT = /^nc[_-]?\d*$/i;
+
 /**
  * Known terminal names for each part kind.
  * @type {Record<string, string[] | null>}
@@ -128,7 +131,12 @@ export function validateNetlist(parts, nets) {
       : KNOWN_TERMINALS[part.kind];
     if (expectedTerminals !== null) {
       for (const t of part.terminals) {
-        if (!expectedTerminals.includes(t)) {
+        // A NO-CONNECT pin (nc, nc1, NC4…) is a real leg of the package that
+        // is bonded to nothing. Catalogue sidecars draw it (the 74HC93's
+        // DIP-14 has four), and rejecting it rejected the whole netlist. It
+        // is accepted and stays electrically inert: nothing stamps it, so a
+        // net touching only it is an ordinary floating node.
+        if (!expectedTerminals.includes(t) && !NO_CONNECT.test(String(t))) {
           errors.push({
             severity: 'error',
             message: `Part "${part.id}" (${part.kind}) has unknown terminal "${t}". Expected: ${expectedTerminals.join(', ')}`,
@@ -170,6 +178,15 @@ export function validateNetlist(parts, nets) {
     }
 
     // Param value validation
+    if (part.kind === 'switch' || part.kind === 'button') {
+      for (const key of ['closed', 'pressed']) {
+        const v = params[key];
+        if (v === undefined || v === true || v === false || v === 0 || v === 1) continue;
+        errors.push({ severity: 'error',
+          message: `Part "${part.id}" (${part.kind}): initial state ${key}=${JSON.stringify(v)} must be true/false or 1/0`,
+          partId: part.id });
+      }
+    }
     if (part.kind === 'transformer' && params.k !== undefined) {
       const k = /** @type {number} */ (params.k);
       if (!(k > 0 && k < 1)) {

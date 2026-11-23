@@ -23,7 +23,7 @@ import {createScopeAperture, advanceScopeAperture, edgeScopeAperture} from './sc
 import { pinThevenin } from './pin-model.js';
 import { buildPinAliasTable } from './pin-aliases.js';
 import {
-  solveMNA, ebersMollParams, OPAMP_ISHORT_DEFAULT, JUNCTION_THERMAL_VOLTAGE, MOS_BULK_THERMAL_VOLTAGE, kneeFromVf,
+  solveMNA, ebersMollParams, parasiticCaps, OPAMP_ISHORT_DEFAULT, JUNCTION_THERMAL_VOLTAGE, MOS_BULK_THERMAL_VOLTAGE, kneeFromVf,
   sourceDcValue, sourceVoltage, sourceCurrent,
 } from './mna.js';
 import { resolveParams, classDefaults } from './parts-library.js';
@@ -32,11 +32,19 @@ import { validateNetlist } from './validate.js';
 import { getDevice, initDeviceState, resetDeviceState } from './devices.js';
 import { servoCalibration } from './devices/servo.js';
 import { expandLm741LinearPoles } from './lm741-linear-pole.js';
+import { junctionVf, ledVf } from './led-color.js';
+import { expandGroundSensingOpAmps, isHiddenPoleCapacitor, STAGE_KIND as GROUND_SENSING_STAGE } from './ground-sensing-opamp.js';
 import { meterQuadraticSegment, meterQuadraticIntegral } from './meter-quadrature.js';
 import { feedI2CSlave } from './devices/i2c-slave.js';
 import { checkCurrentBudget } from './current-ratings.js';
 import { createWorld, bindPartsToHost } from './world.js';
-import { junctionModelOf } from './mna.js';
+import { junctionModelOf, chooseGroundReference } from './mna.js';
+import { buildThermalEntries, stepThermal, shortestTau } from './thermal.js';
+
+/** Re-solve when a thermal-model part has moved this far (K) since it last stamped. */
+const THERMAL_RESOLVE_K = 0.02;
+/** Thermal sub-steps per advance before the remainder is taken in one exact step. */
+const THERMAL_MAX_SUBSTEPS = 400;
 import {
   nextSpiceExpCorner, nextSpicePulseCorner, nextSpicePwlCorner, nextSpiceSineCorner,
   spiceSineDerivative, spiceSineIntegral,
@@ -54,6 +62,8 @@ import {
  */
 const LED_VF = 2.0;       // forward voltage threshold
 const LED_RD = 10;         // dynamic resistance above threshold
+/** Wall-clock work backstop for one ordinary advanceTo's device sub-steps. */
+const DEVICE_WORK_LIMIT_MS = 30_000;
 const LED_I_RATED = 0.020; // 20 mA rated current (for brightness normalization)
 
 /**
@@ -249,6 +259,103 @@ const TRANSIENT_ANALYSIS_PROFILES = Object.freeze({
 });
 
 /**
+ * Deep copy of a device state for event localization, or null when the state
+ * is not small plain data. A class instance, a function, a typed array or a
+ * state larger than `budget` values is refused: restoring such a state from a
+ * structural copy could break identity the model relies on, and copying a
+ * memory array on every accepted step would cost more than the event is worth.
+ * @param {*} value
+ * @param {{left: number}} budget
+ * @returns {*} the copy, or NOT_PLAIN
+ */
+const NOT_PLAIN = Symbol('not-plain');
+function plainStateCopy(value, budget) {
+  if (--budget.left < 0) return NOT_PLAIN;
+  if (value === null || typeof value !== 'object') {
+    return typeof value === 'function' || typeof value === 'symbol' ? NOT_PLAIN : value;
+  }
+  if (Array.isArray(value)) {
+    const out = new Array(value.length);
+    for (let i = 0; i < value.length; i++) {
+      const v = plainStateCopy(value[i], budget);
+      if (v === NOT_PLAIN) return NOT_PLAIN;
+      out[i] = v;
+    }
+    return out;
+  }
+  if (value instanceof Set) {
+    const out = new Set();
+    for (const item of value) {
+      const v = plainStateCopy(item, budget);
+      if (v === NOT_PLAIN) return NOT_PLAIN;
+      out.add(v);
+    }
+    return out;
+  }
+  if (value instanceof Map) {
+    const out = new Map();
+    for (const [key, item] of value) {
+      const v = plainStateCopy(item, budget);
+      if (v === NOT_PLAIN || typeof key === 'object') return NOT_PLAIN;
+      out.set(key, v);
+    }
+    return out;
+  }
+  const proto = Object.getPrototypeOf(value);
+  if (proto !== Object.prototype && proto !== null) return NOT_PLAIN;
+  const out = proto === null ? Object.create(null) : {};
+  for (const key of Object.keys(value)) {
+    const v = plainStateCopy(value[key], budget);
+    if (v === NOT_PLAIN) return NOT_PLAIN;
+    out[key] = v;
+  }
+  return out;
+}
+
+/** Put a plainStateCopy back INTO the live state object (identity kept). */
+function restorePlainState(state, copy) {
+  for (const key of Object.keys(state)) if (!(key in copy)) delete state[key];
+  const fresh = plainStateCopy(copy, { left: Infinity });
+  for (const key of Object.keys(fresh)) state[key] = fresh[key];
+}
+
+/**
+ * Whether a device update changed DISCRETE state: a boolean, a string, a
+ * bigint, an integer-valued number (a flip-flop bit, a counter, a region
+ * index), or the presence of a value. A change confined to non-integer
+ * numbers is a continuous quantity tracking its inputs (an op-amp output
+ * following its slew, a motor speed) -- not an event, and localizing it
+ * would shrink every step of the integration to the event tolerance.
+ * Bounded like plainStateCopy; when the budget runs out it answers true.
+ */
+function discreteStateChange(before, after, budget) {
+  if (--budget.left < 0) return true;
+  if (before === after) return false;
+  const ta = typeof before, tb = typeof after;
+  if (ta === 'number' && tb === 'number') {
+    if (Number.isNaN(before) && Number.isNaN(after)) return false;
+    return Number.isInteger(before) && Number.isInteger(after);
+  }
+  if (ta !== tb || before === null || after === null || ta !== 'object') return true;
+  if (before instanceof Map || after instanceof Map || before instanceof Set || after instanceof Set) {
+    if (!(before instanceof Map && after instanceof Map)) return before.size !== after.size;
+    if (before.size !== after.size) return true;
+    for (const [k, v] of before) if (!after.has(k) || discreteStateChange(v, after.get(k), budget)) return true;
+    return false;
+  }
+  if (Array.isArray(before) !== Array.isArray(after)) return true;
+  const keys = new Set([...Object.keys(before), ...Object.keys(after)]);
+  for (const k of keys) {
+    if (!(k in before) || !(k in after)) return true;
+    if (discreteStateChange(before[k], after[k], budget)) return true;
+  }
+  return false;
+}
+
+/** Largest device state (in copied values) event localization will snapshot. */
+const EVENT_STATE_BUDGET = 512;
+
+/**
  * The next edge time of a driven PWM (BoardImpl.drivenPwm entry), or null for
  * a steady 0 % / 100 % level, which has none.
  * @param {{periodNs: bigint, highNs: bigint, riseNs: bigint, high: boolean}} e
@@ -371,6 +478,8 @@ export class BoardImpl {
     /** @type {Map<string, number>} */
     this.inductorVoltages = new Map();
     this._trapValid = false;
+    /** Newton state of the last accepted transient point (solveMNA newtonSeed). */
+    this._newtonSeed = null;
     /** Last accepted adaptive step size (seconds); seeds the next call. */
     this._transH = 1e-4;
     /**
@@ -486,6 +595,92 @@ export class BoardImpl {
    * true series winding current as (v_a − v_b − e)/R.
    * DC is unchanged: the hidden inductor is a 1 mΩ wire there.
    */
+  static _expandFunctionGenerators(parts, nets) {
+    const gens = parts.filter((p) => p.kind === 'function_gen');
+    if (!gens.length) return { parts, nets };
+    const outParts = [...parts];
+    const outNets = nets.map((n) => ({ ...n, terminals: [...n.terminals] }));
+    const netOf = (id, terminal) => outNets.find((n) =>
+      n.terminals.some((t) => t.part === id && t.terminal === terminal));
+    for (const g of gens) {
+      const p = g.params ?? {};
+      const srcId = `${g.id}_src`;
+      const innerNet = { id: `n_${g.id}_src`, terminals: [{ part: srcId, terminal: 'pos' }] };
+      const rOut = Number(p.rOut ?? 50);
+      let outNet = netOf(g.id, 'out');
+      if (!outNet) { outNet = { id: `n_${g.id}_out`, terminals: [] }; outNets.push(outNet); }
+      let gndNet = netOf(g.id, 'gnd');
+      if (!gndNet) { gndNet = { id: `n_${g.id}_gnd`, terminals: [] }; outNets.push(gndNet); }
+      gndNet.terminals.push({ part: srcId, terminal: 'neg' });
+      outNets.push(innerNet);
+      if (rOut > 0) {
+        const rId = `${g.id}_rout`;
+        innerNet.terminals.push({ part: rId, terminal: 'a' });
+        outNet.terminals.push({ part: rId, terminal: 'b' });
+        outParts.push({ id: rId, kind: 'resistor', params: { ohms: rOut }, terminals: ['a', 'b'] });
+      } else {
+        outNet.terminals.push(...innerNet.terminals);
+        innerNet.terminals = [];
+      }
+      const wave = p.wave ?? 'sine';
+      outParts.push({ id: srcId, kind: 'vsource', terminals: ['pos', 'neg'], params: {
+        wave,
+        volts: Number(p.volts ?? p.amplitude ?? 1),
+        freq: Number(p.freq ?? p.frequency ?? 1000),
+        amplitude: Number(p.amplitude ?? 1),
+        offset: Number(p.offset ?? 0),
+        ...(p.duty !== undefined ? { duty: Number(p.duty) } : {}),
+        ...(p.phase !== undefined ? { phase: Number(p.phase) } : {}),
+      } });
+    }
+    return { parts: outParts, nets: outNets.filter((n) => n.terminals.length > 0) };
+  }
+
+  /**
+   * A piezo element is a CAPACITOR to the circuit (tens of nF), with a high
+   * leakage resistance across it -- not the plain 1 MΩ it was stamped as,
+   * which let a square wave across it draw no charging current at all and
+   * made an RC network through it wrong by orders of magnitude. The
+   * capacitance is a first-class solver capacitor on the piezo's own nets
+   * (params.capacitance, default 20 nF), so the transient integrator owns its
+   * history exactly as for a drawn capacitor, behind a series resistance
+   * (params.esr, 100 Ω); the device model keeps the leak across the pins.
+   * Solver view only, like the motor windings.
+   */
+  static _expandPiezoCapacitance(parts, nets) {
+    const piezos = parts.filter((p) => p.kind === 'piezo');
+    if (!piezos.length) return { parts, nets };
+    const outParts = [...parts];
+    const outNets = nets.map((n) => ({ ...n, terminals: [...n.terminals] }));
+    for (const z of piezos) {
+      const farads = Number(z.params?.capacitance ?? 20e-9);
+      if (!(farads > 0)) continue;
+      const a = outNets.find((n) => n.terminals.some((t) => t.part === z.id && t.terminal === 'a'));
+      const b = outNets.find((n) => n.terminals.some((t) => t.part === z.id && t.terminal === 'b'));
+      if (!a || !b || a === b) continue;
+      // The capacitance sits behind the element's series resistance
+      // (params.esr, default 100 Ω), never directly across the pins: an
+      // instantaneous solve holds a capacitor at its stored voltage, and a
+      // bare one straight across an op-amp output pinned that output and
+      // drove the amplifier to a rail (lab-attenuator-gain read 0.0105 V for
+      // 0.149 V). Behind 100 Ω it is the load it physically is.
+      const cId = `${z.id}_cp`;
+      const esr = Number(z.params?.esr ?? 100);
+      if (esr > 0) {
+        const rId = `${z.id}_esr`;
+        const mid = { id: `n_${z.id}_cp`, terminals: [{ part: rId, terminal: 'b' }, { part: cId, terminal: 'a' }] };
+        a.terminals.push({ part: rId, terminal: 'a' });
+        outNets.push(mid);
+        outParts.push({ id: rId, kind: 'resistor', params: { ohms: esr }, terminals: ['a', 'b'] });
+      } else {
+        a.terminals.push({ part: cId, terminal: 'a' });
+      }
+      b.terminals.push({ part: cId, terminal: 'b' });
+      outParts.push({ id: cId, kind: 'capacitor', params: { farads }, terminals: ['a', 'b'] });
+    }
+    return { parts: outParts, nets: outNets };
+  }
+
   static _expandMotorWindings(parts, nets) {
     const outParts = [...parts];
     const outNets = nets.map((n) => ({ ...n, terminals: [...n.terminals] }));
@@ -510,6 +705,41 @@ export class BoardImpl {
       });
     }
     return { parts: outParts, nets: outNets };
+  }
+
+  /**
+   * Give each polarized_cap (electrolytic) to the SOLVER as a real capacitor:
+   * a hidden `<id>_cap` capacitor part on the nets its pos/neg terminals sit
+   * on (a = pos, b = neg). Like the motor windings above it lives only in the
+   * solver view, so DRC, exporters and the drawn netlist keep seeing one
+   * electrolytic; the registered polarized_cap device keeps only the polarity
+   * check. getCapVoltage / branchCurrent / the render state answer for the
+   * drawn id (see _polarizedCapId).
+   */
+  static _expandPolarizedCaps(parts, nets) {
+    const caps = parts.filter((p) => p.kind === 'polarized_cap');
+    if (!caps.length) return { parts, nets };
+    const outParts = [...parts];
+    const outNets = nets.map((n) => ({ ...n, terminals: [...n.terminals] }));
+    for (const p of caps) {
+      const pos = outNets.find((n) => n.terminals.some((t) => t.part === p.id && t.terminal === 'pos'));
+      const neg = outNets.find((n) => n.terminals.some((t) => t.part === p.id && t.terminal === 'neg'));
+      if (!pos || !neg || pos === neg) continue;
+      const hidId = `${p.id}_cap`;
+      const params = { farads: p.params?.farads ?? 0.0001 };
+      for (const k of ['ic', 'initial', 'initialVoltage']) {
+        if (p.params && Object.prototype.hasOwnProperty.call(p.params, k)) params[k] = p.params[k];
+      }
+      outParts.push({ id: hidId, kind: 'capacitor', params, terminals: ['a', 'b'] });
+      pos.terminals.push({ part: hidId, terminal: 'a' });
+      neg.terminals.push({ part: hidId, terminal: 'b' });
+    }
+    return { parts: outParts, nets: outNets };
+  }
+
+  /** The solver capacitor standing for a drawn polarized_cap (or the id itself). */
+  _polarizedCapId(partId) {
+    return this.partMap?.get(partId)?.kind === 'polarized_cap' ? `${partId}_cap` : partId;
   }
 
   /**
@@ -737,18 +967,21 @@ export class BoardImpl {
     const netCopies = nets.map((n) => ({ ...n, terminals: [...n.terminals] }));
     const netsOf = (partId, terminal) => netCopies.filter(
       (n) => n.terminals.some((t) => t.part === partId && t.terminal === terminal));
-    const addLed = (id, anodeNets, cathodeNets) => {
+    const addLed = (id, anodeNets, cathodeNets, params = {}) => {
       if (present.has(id)) return;   // already expanded — see the note above
-      extraParts.push({ id, kind: 'led', params: {}, terminals: ['anode', 'cathode'] });
+      extraParts.push({ id, kind: 'led', params, terminals: ['anode', 'cathode'] });
       for (const n of anodeNets) n.terminals.push({ part: id, terminal: 'anode' });
       for (const n of cathodeNets) n.terminals.push({ part: id, terminal: 'cathode' });
     };
     for (const p of parts) {
       if (p.kind === 'rgb_led') {
         const cath = netsOf(p.id, 'cathode');
-        addLed(`${p.id}_r`, netsOf(p.id, 'r_anode'), cath);
-        addLed(`${p.id}_g`, netsOf(p.id, 'g_anode'), cath);
-        addLed(`${p.id}_b`, netsOf(p.id, 'b_anode'), cath);
+        // Each die keeps its own colour, so its forward voltage follows it
+        // (led-color.js: red 1.9 V, green and blue InGaN ~3.1 V in an RGB
+        // package — the green die of an RGB LED is InGaN, not GaP).
+        addLed(`${p.id}_r`, netsOf(p.id, 'r_anode'), cath, { color: 'red' });
+        addLed(`${p.id}_g`, netsOf(p.id, 'g_anode'), cath, { color: 'true-green' });
+        addLed(`${p.id}_b`, netsOf(p.id, 'b_anode'), cath, { color: 'blue' });
       } else if (p.kind === 'seven_segment') {
         const common = netsOf(p.id, 'common');
         for (const seg of ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'dp']) {
@@ -830,6 +1063,7 @@ export class BoardImpl {
   }
 
   setNetlist(parts, nets) {
+    this._newtonSeed = null; // junction/region state belongs to the old netlist
     this._ledFanout = undefined; // netlist changed: recompute the fan-out memo
     this._wiperLoaded = undefined; // ditto for the loaded-wiper routing memo
     this._wiperMcuPins = undefined; // and the MCU pins sitting on a wiper net
@@ -873,11 +1107,24 @@ export class BoardImpl {
     // user drew: topology consumers (DRC, corpus invariants, exporters)
     // must keep seeing the diode on the net the motor pin is wired to,
     // not one hop into the motor's insides.
-    const windingView = BoardImpl._expandMotorWindings(parts, nets);
-    const solveView = BoardImpl._expandBridgeClampDiodes(windingView.parts, windingView.nets);
-    const linearView = expandLm741LinearPoles(solveView.parts, solveView.nets);
+    const genView = BoardImpl._expandFunctionGenerators(parts, nets);
+    const piezoView = BoardImpl._expandPiezoCapacitance(genView.parts, genView.nets);
+    const windingView = BoardImpl._expandMotorWindings(piezoView.parts, piezoView.nets);
+    const capView = BoardImpl._expandPolarizedCaps(windingView.parts, windingView.nets);
+    const solveView = BoardImpl._expandBridgeClampDiodes(capView.parts, capView.nets);
+    const lm741View = expandLm741LinearPoles(solveView.parts, solveView.nets);
+    // LM358/LM324 macromodel (src/ground-sensing-opamp.js); only when its
+    // solver stage is registered, i.e. registerAnalogAmps() has run.
+    const linearView = getDevice(GROUND_SENSING_STAGE)
+      ? expandGroundSensingOpAmps(lm741View.parts, lm741View.nets) : lm741View;
     const macroView = BoardImpl._expandOpampMacros(linearView.parts, linearView.nets, this.vcc);
-    this._solveParts = macroView.parts;
+    // An IR transmitter IS an IR LED electrically. The solver sees it as an
+    // `led` of the same id (so its branch current and the LED junction model,
+    // knee and limiting are the LED's) with the IR forward voltage unless the
+    // part declares its own vf. The public part stays an `ir_transmitter`:
+    // it is not a visible LED, and its device model still reports emission.
+    this._solveParts = macroView.parts.map(p => p.kind === 'ir_transmitter'
+      ? { ...p, kind: 'led', params: { color: 'ir', ...p.params } } : p);
     this._solveNets = macroView.nets;
     this._macroFallbacks = macroView.notes;
 
@@ -908,6 +1155,13 @@ export class BoardImpl {
         }
       }
     }
+    // THE OPT-IN THERMAL MODEL (src/thermal.js): parts with rth / heatedBy
+    // get a temperature; every other circuit builds nothing here.
+    {
+      const entries = buildThermalEntries(this._solveParts);
+      this._thermal = entries ? { entries, temps: new Map() } : null;
+      this._resetThermal();
+    }
     // A new netlist is a new bench: every reactive part starts at rest.
     // The clear has to come BEFORE the seeding below, not after it — it
     // used to run after, which silently undid the whole seeding pass and
@@ -927,6 +1181,7 @@ export class BoardImpl {
       }
     }
     this.ledHistory.clear();
+    this._ledWindowFloor = null;
     this._meterWatches.clear();
     this.buzzerEdges.clear();
     this.drivenTones.clear();
@@ -984,7 +1239,10 @@ export class BoardImpl {
     // almost all of them, so _pinSources() pays nothing for this.
     this._pinAliases = buildPinAliasTable(parts);
 
+    this._seedInitialControls();
     this._deviceStates = new Map();
+    this._eventProbeRefused = null; // per-netlist: ids are reused across netlists
+    this._eventProbeCandidates = null;
     // Displays a controller MODULE carries on itself (setPartMatrix), for parts
     // with no registered device model — a micro:bit is an `mcu` part here.
     this._partOverlays = null;
@@ -1006,6 +1264,8 @@ export class BoardImpl {
     this._scopeBaseNets = this._solveNets;
     this._rebuildScopeLoadView();
 
+    this._transientBlanketShunt = false;
+    this._seedOpampPoles();
     this._solve();
     this._recordLedSamples();
     this._notifyChange('netlist');
@@ -1253,6 +1513,9 @@ export class BoardImpl {
             const ov = this._digitalOverlay.get(n);
             return ov !== undefined ? ov : (this.nodeVoltages.get(n) ?? 0);
           };
+          // An unconnected pin reads 0 V, indistinguishable from a grounded
+          // one; models whose open pin has its own internal bias ask here.
+          read.connected = (terminal) => Boolean(f.terminalNets.get(terminal));
           model.update(f.part, state, read, this.timeNs);
         }
       }
@@ -1677,11 +1940,31 @@ export class BoardImpl {
     // a 5ms deadline jumped 0→100ms would only see 100ms, and an encoder
     // would undercount edges by the entire interval.
     if (hasDevices && (this.powered || this._hasReactive())) {
-      const MAX_DEVICE_SUBSTEPS = 200;
+      // NO EVENT-RATE BUDGET. Device sub-steps are taken exactly where the
+      // devices ask for them (_wakeNs and friends). A flat 200 per advanceTo
+      // used to be exhausted by any long advance, and a "one event per
+      // simulated microsecond" rate was wrong too: the precision op-amp models
+      // legitimately tick every 10-300 ns while they slew or settle. Wakes are
+      // integer nanoseconds strictly after the cursor, so the event count is
+      // already bounded by the interval; what needs bounding is WORK, so the
+      // backstop is wall-clock: an ordinary advance that is still sub-stepping
+      // after DEVICE_WORK_LIMIT_MS (default 30 s; `deviceWorkLimitMs` on the
+      // board overrides) stops and throws, with the clock at the time actually
+      // simulated. The opt-in bounded capture keeps its deterministic flat 200:
+      // its receipt vocabulary (maxAdvances <= 200) was specified against it.
+      const bounded = !!this._boundedAdvanceContext;
+      const MAX_DEVICE_SUBSTEPS = bounded ? 200 : Infinity;
+      const workLimitMs = bounded ? Infinity : (this.deviceWorkLimitMs ?? DEVICE_WORK_LIMIT_MS);
+      const wallStart = bounded ? 0 : performance.now();
+      let outOfWork = false;
       let steps = 0;
       let cursor = prevNs;
 
       while (cursor < tNs && steps < MAX_DEVICE_SUBSTEPS) {
+        if (!bounded && (steps & 31) === 31 && performance.now() - wallStart > workLimitMs) {
+          outOfWork = true;
+          break;
+        }
         // Find the earliest device deadline in (cursor, tNs]
         const deadline = this._earliestDeviceDeadline(cursor, tNs);
         const nextT = deadline ?? tNs;
@@ -1726,16 +2009,32 @@ export class BoardImpl {
       }
 
       // If we hit the sub-step cap, report it
-      if (steps >= MAX_DEVICE_SUBSTEPS && cursor < tNs) {
-        this.timeNs = tNs;
+      if ((outOfWork || steps >= MAX_DEVICE_SUBSTEPS) && cursor < tNs) {
         this._deviceSubstepOverflow = true;
-        // The ordinary clock historically reaches the requested destination,
-        // but the device state did not. Do not certify that gap as integrated.
-        // The bounded wrapper owns its separate refusal/receipt vocabulary.
-        if (!this._boundedAdvanceContext) this._transientAccuracyUnmet ||= {
-          code: 'device-substep-budget-exceeded', timeSec: Number(cursor) / 1e9,
-          requestedTimeSec: Number(tNs) / 1e9, maxDeviceSubsteps: MAX_DEVICE_SUBSTEPS,
-        };
+        // The bounded wrapper owns its separate refusal/receipt vocabulary
+        // (and its historical clock contract) and refuses on its own.
+        if (this._boundedAdvanceContext) {
+          this.timeNs = tNs;
+        } else {
+          // NEVER REPORT TIME THAT WAS NOT SIMULATED. The ordinary clock used
+          // to jump to the requested destination while the devices stopped
+          // at the budget: an integrator then read 0.36 V/s instead of
+          // 0.9 V/s with getTime() claiming the full interval, and only a
+          // later instrument read threw. The clock now stays where the
+          // simulation actually got to, and the advance itself throws.
+          this.timeNs = cursor;
+          this._transientAccuracyUnmet ||= {
+            code: 'device-substep-budget-exceeded', timeSec: Number(cursor) / 1e9,
+            requestedTimeSec: Number(tNs) / 1e9, deviceSubsteps: steps, workLimitMs,
+          };
+          this._notifyChange('time', { tNs: cursor });
+          const error = new Error(`advanceTo: device sub-step budget exhausted at ${cursor} ns of `
+            + `the requested ${tNs} ns (${steps} device events took longer than ${workLimitMs} ms `
+            + 'of work; split the advance or check for a device that never settles)');
+          error.code = 'DEVICE_SUBSTEP_BUDGET_EXHAUSTED';
+          error.simulatedTimeNs = cursor;
+          throw error;
+        }
       }
     } else {
       // No devices: original fast path
@@ -1755,6 +2054,10 @@ export class BoardImpl {
         }
       }
     }
+
+    // The thermal model follows the interval's dissipation (opt-in; null on
+    // every circuit without thermal params).
+    if (this._thermal) this._stepThermal(Number(tNs - prevNs) / 1e9);
 
     // Record LED current samples at this timestamp
     this._recordLedSamples();
@@ -2739,6 +3042,11 @@ export class BoardImpl {
       this._mnaCache = this._solveMNA(false);
     }
     this._assertMeasurementSolution(this._mnaCache);
+    // An electrolytic's current is its solver capacitor's (_expandPolarizedCaps).
+    if (this.partMap?.get(partId)?.kind === 'polarized_cap' && (terminal === 'pos' || terminal === 'neg')) {
+      partId = `${partId}_cap`;
+      terminal = terminal === 'pos' ? 'a' : 'b';
+    }
     this._assertDeterminateCurrent(this._mnaCache, partId, terminal);
     const partCurrents = this._mnaCache.branchCurrents.get(partId);
     if (!partCurrents) return 0;
@@ -2852,15 +3160,46 @@ export class BoardImpl {
   // ─── Boundary B: transducers ─────────────────────────────────────────────
 
   /**
+   * Instantaneous LED brightness 0…1: the present solved current relative to
+   * 20 mA, with no time window (see ledBrightness for the perceived mean).
    * @param {string} partId
    * @returns {number} 0…1
+   */
+  ledBrightnessNow(partId) {
+    if (this._solveDirty) this._flushSolve();
+    const i = this.ledCurrents.get(partId);
+    if (i === undefined) {
+      const history = this.ledHistory.get(partId);
+      const last = history?.[history.length - 1];
+      return last ? Math.min(1, Math.max(0, last.current / LED_I_RATED)) : 0;
+    }
+    return Math.min(1, Math.max(0, i / LED_I_RATED));
+  }
+
+  /**
+   * Perceived LED brightness 0…1: the MEAN current over the last 20 ms
+   * (relative to 20 mA), so a PWM'd LED reads its duty, as the eye sees it.
+   * Being a mean, it follows a change over 20 ms — except a change made by a
+   * user action (setControl / setPartParam / setDeviceControl), which starts
+   * a fresh window for the LEDs it stepped. For the present current alone,
+   * use ledBrightnessNow().
+   * @param {string} partId
+   * @returns {number}
    */
   ledBrightness(partId) {
     const history = this.ledHistory.get(partId);
     if (!history || history.length === 0) return 0;
 
     const now = this.timeNs;
-    const windowStart = now > BRIGHTNESS_WINDOW_NS ? now - BRIGHTNESS_WINDOW_NS : 0n;
+    let windowStart = now > BRIGHTNESS_WINDOW_NS ? now - BRIGHTNESS_WINDOW_NS : 0n;
+    // A user action that stepped this LED starts its window (see
+    // _solveForUserAction); at the action's own instant the reading is the
+    // present current.
+    const floor = this._ledWindowFloor?.get(partId);
+    if (floor !== undefined && floor > windowStart) {
+      if (floor >= now) return this.ledBrightnessNow(partId);
+      windowStart = floor;
+    }
 
     // Find the most recent sample at or before windowStart (the "initial" value
     // for the window), plus all samples within the window.
@@ -2921,7 +3260,10 @@ export class BoardImpl {
     if (driven && driven.hz > 0) {
       return {hz: driven.hz, on: this.powered !== false, driven: true, sinceNs: driven.sinceNs};
     }
-    const edges = this.buzzerEdges.get(partId);
+    // A piezo element keeps its own crossing times (devices/digital-ics.js):
+    // it is driven by whatever is across it, not by one MCU pin.
+    const edges = this.partMap?.get(partId)?.kind === 'piezo'
+      ? this._deviceStates.get(partId)?._edges : this.buzzerEdges.get(partId);
     if (!edges || edges.length < 2) return this._buzzerDcTone(partId);
 
     // Measure period from the last two edges
@@ -3139,8 +3481,55 @@ export class BoardImpl {
    */
   setControl(partId, value) {
     this.controls.set(partId, value);
-    this._solve();
+    this._solveForUserAction();
     this._notifyChange('control', { partId, value });
+  }
+
+  /**
+   * Re-solve after a USER action (a control, a part parameter, a device
+   * verb) and make the LED read surface see it at once.
+   *
+   * ledBrightness() is a 20 ms windowed mean — right for PWM, where it is what
+   * the eye sees — but a button press is not PWM. Two things made it lag: this
+   * path never recorded the new LED current (setPin always did), so the whole
+   * interval up to the next advance was integrated at the OLD current; and an
+   * LED stepped by the press kept 20 ms of pre-press history in its mean. An
+   * LED whose current the action changed now starts a fresh window at the
+   * action's instant; LEDs it did not touch (a PWM'd one elsewhere on the
+   * bench) keep theirs.
+   */
+  _solveForUserAction() {
+    const before = new Map(this.ledCurrents);
+    this._solve();
+    for (const [id, i] of this.ledCurrents) {
+      const was = before.get(id) ?? 0;
+      if (Math.abs(i - was) > 1e-3 * LED_I_RATED + 1e-3 * Math.abs(was)) {
+        (this._ledWindowFloor ??= new Map()).set(id, this.timeNs);
+      }
+    }
+    this._recordLedSamples();
+  }
+
+  /**
+   * Give every contact control its AUTHORED starting position. A `switch`
+   * or `button` had no way to start closed: its control channel defaulted to
+   * open and nothing read its params, so a circuit that needs a closed
+   * contact at t = 0 had to be followed by a setControl call. The params
+   * `closed` (switch) / `pressed` (button) — either name on either kind,
+   * true/false or 1/0 — now seed the control when no value is set yet; a
+   * later setControl (or a restored snapshot's value) always wins. A
+   * slide_switch seeds from its `position` param the same way.
+   */
+  _seedInitialControls() {
+    for (const p of this.parts ?? []) {
+      if (this.controls.has(p.id)) continue;
+      if (p.kind === 'switch' || p.kind === 'button') {
+        const authored = p.params?.closed ?? p.params?.pressed;
+        if (authored === undefined || authored === null) continue;
+        // validateNetlist has already refused anything but true/false/1/0.
+        if (authored === true || authored === 1) this.controls.set(p.id, 1);
+      }
+    }
   }
 
   /**
@@ -3182,7 +3571,7 @@ export class BoardImpl {
         return false;
       }
       if (handled) {
-        this._solve();
+        this._solveForUserAction();
         this._notifyChange('deviceControl', { partId, verb });
         return true;
       }
@@ -3521,7 +3910,7 @@ export class BoardImpl {
     }
     if (!part.params) part.params = {};
     part.params[param] = value;
-    this._solve();
+    this._solveForUserAction();
     this._notifyChange('param', { partId, param, value });
   }
 
@@ -3727,6 +4116,7 @@ export class BoardImpl {
       // and reports its ideal gain (spec-updates/ac-operating-region.md).
       opRegions: op.opampRegions,
       deviceStates: this._deviceStates,
+      partTemperatures: this._thermal?.temps ?? null,
       sourceId,
       freqs,
       probes,
@@ -3808,6 +4198,12 @@ export class BoardImpl {
             capacitorVoltages.set(`@bjt:${part.id}:${junction}`, value);
           }
         }
+      }
+      // Device parasitics start at the operating point too, not uncharged.
+      for (const cap of parasiticCaps(part)) {
+        const value = (point.nodeVoltages.get(this._netForTerminal(part.id, cap.a)) ?? 0)
+          - (point.nodeVoltages.get(this._netForTerminal(part.id, cap.b)) ?? 0);
+        if (Number.isFinite(value)) capacitorVoltages.set(cap.key, value);
       }
       if (part.kind === 'capacitor') {
         const a = this._netForTerminal(part.id, 'a');
@@ -3899,6 +4295,7 @@ export class BoardImpl {
     this._liveSolveError = null;
     this._trapValid = false;
     this._transH = 1e-4;
+    this._newtonSeed = null;
     this._lastTransientSolves = 0;
     this._transientAttemptOverflow = false;
     this._transientAccuracyUnmet = null;
@@ -4009,6 +4406,7 @@ export class BoardImpl {
     this._liveSolveError = null;
     this._trapValid = false;
     this._transH = 1e-4;
+    this._newtonSeed = null;
     this._lastTransientSolves = 0;
     this._transientAttemptOverflow = false;
     this._transientAccuracyUnmet = null;
@@ -4611,7 +5009,96 @@ export class BoardImpl {
    * @returns {number}
    */
   getCapVoltage(partId) {
-    return this.capVoltages.get(partId) ?? 0;
+    return this.capVoltages.get(this._polarizedCapId(partId)) ?? 0;
+  }
+
+  // ─── Thermal model (opt-in, src/thermal.js) ─────────────────────────────
+
+  /**
+   * A part's temperature in the thermal model, degrees C, or null when the
+   * part does not take part (no rth / heatedBy; it is at the bench).
+   * @param {string} partId
+   * @returns {number|null}
+   */
+  partTemperature(partId) {
+    return this._thermal?.temps.get(partId) ?? null;
+  }
+
+  /** Every thermal-model part's temperature: [{id, celsius}] ([] without). */
+  partTemperatures() {
+    return this._thermal ? [...this._thermal.temps].map(([id, celsius]) => ({ id, celsius })) : [];
+  }
+
+  /** Back to the bench: every thermal part at the bench temperature. */
+  _resetThermal() {
+    const th = this._thermal;
+    if (!th) return;
+    const bench = this.temperatureC;
+    for (const e of th.entries) th.temps.set(e.id, bench);
+    th.solvedAt = new Map(th.temps);
+  }
+
+  /** The air speed over the bench (world airflowMs), m/s. */
+  _airflowMs() {
+    const v = Number(this._world.get('airflowMs', Number(this.timeNs) / 1e9));
+    return Number.isFinite(v) ? v : 0;
+  }
+
+  /**
+   * Watts each thermal part dissipates in the live solve: the sum over its
+   * terminals of V(net) x current INTO the part (branchCurrents are out of
+   * the part, hence the sign).
+   * @returns {Map<string, number>}
+   */
+  _thermalPowers() {
+    const out = new Map();
+    if (!this.powered) return out;
+    let sol = this._mnaCache;
+    if (!sol) {
+      try { sol = this._mnaCache = this._solveMNA(false); } catch { return out; }
+    }
+    if (!sol || sol.converged === false) return out;
+    for (const e of this._thermal.entries) {
+      const currents = sol.branchCurrents.get(e.id);
+      if (!currents) continue;
+      let p = 0;
+      for (const [terminal, i] of currents) {
+        const net = this._netForTerminal(e.id, terminal);
+        const v = net ? (sol.nodeVoltages.get(net) ?? 0) : 0;
+        if (Number.isFinite(v) && Number.isFinite(i)) p -= v * i;
+      }
+      out.set(e.id, p);
+    }
+    return out;
+  }
+
+  /**
+   * Step the thermal model over `dtSec` of simulated time. Sub-steps at a
+   * quarter of the shortest effective time constant (each step is exact for
+   * its held power), and re-solves the circuit only when some part has moved
+   * by more than THERMAL_RESOLVE_K since the temperatures last stamped -- so a
+   * circuit at thermal equilibrium costs no solves at all.
+   */
+  _stepThermal(dtSec) {
+    const th = this._thermal;
+    if (!th || !(dtSec > 0)) return;
+    const air = this._airflowMs();
+    const bench = this.temperatureC;
+    const hMax = shortestTau(th.entries, air) / 4;
+    let remaining = dtSec;
+    for (let i = 0; remaining > 0; i++) {
+      // Bounded work per advance: the last step takes the rest (still exact
+      // for its held power, merely coarser in the coupling).
+      const h = i >= THERMAL_MAX_SUBSTEPS ? remaining : Math.min(remaining, hMax);
+      stepThermal(th.entries, th.temps, this._thermalPowers(), bench, air, h);
+      remaining -= h;
+      let moved = 0;
+      for (const [id, c] of th.temps) moved = Math.max(moved, Math.abs(c - (th.solvedAt.get(id) ?? c)));
+      if (moved > THERMAL_RESOLVE_K) {
+        th.solvedAt = new Map(th.temps);
+        if (this.powered) this._solve();
+      }
+    }
   }
 
   /**
@@ -4754,7 +5241,7 @@ export class BoardImpl {
     // The rail is edited through its own `volts` param instead (bw-circuit-ui's
     // inline editor offers it), which `_railVolts` honours either way, so a
     // control set by some other route still works and nothing is lost.
-    const controllable = ['potentiometer', 'button', 'switch', 'ldr', 'ntc', 'light_sensor', 'vsource'];
+    const controllable = ['potentiometer', 'button', 'switch', 'slide_switch', 'ldr', 'ntc', 'light_sensor', 'vsource'];
     return this.parts
       .filter(p => controllable.includes(p.kind))
       .map(p => ({
@@ -4765,7 +5252,8 @@ export class BoardImpl {
         // to run a circuit at 9 V was to edit its JSON by hand. Its rest value
         // is its own authored rail, falling back to the board's.
         value: this.controls.get(p.id)
-          ?? (p.kind === 'vsource' ? (p.params?.volts ?? 5) : 0),
+          ?? (p.kind === 'vsource' ? (p.params?.volts ?? 5)
+            : p.kind === 'slide_switch' ? (p.params?.position ?? 0) : 0),
       }));
   }
 
@@ -5070,6 +5558,23 @@ export class BoardImpl {
       });
     }
 
+    // No gnd symbol: say which node the readings are relative to.
+    if (this._solveParts?.length && !this._solveParts.some((p) => p.kind === 'gnd')) {
+      const ref = chooseGroundReference(this._solveParts, this._solveNets ?? this.nets);
+      if (ref) {
+        warnings.push({
+          severity: 'warning',
+          code: 'implicit-ground-reference',
+          netId: ref.netId,
+          partId: ref.partId,
+          message: `No ground (gnd) part: voltages are measured from net "${ref.netId}", ` +
+            `the negative terminal of supply "${ref.partId}"` +
+            (ref.stacked > 1 ? ` (bottom of a stack of ${ref.stacked} supplies)` : '') +
+            '. Add a gnd part to choose the reference yourself.',
+        });
+      }
+    }
+
     // Device sub-step overflow: advanceTo hit the cap on device sub-steps.
     if (this._deviceSubstepOverflow) {
       warnings.push({
@@ -5159,6 +5664,18 @@ export class BoardImpl {
       }
     }
 
+    // An electrolytic held in reverse (the polarized_cap device latches it).
+    for (const [id, st] of this._deviceStates) {
+      if (!st?.reversed || this.partMap.get(id)?.kind !== 'polarized_cap') continue;
+      warnings.push({
+        severity: 'warning',
+        type: 'polarized-cap-reversed',
+        partId: id,
+        message: `${id}: electrolytic capacitor is reverse-biased (${(-st.voltage).toFixed(1)} V on its negative lead). ` +
+          'Turn it round: + to the more positive side.',
+      });
+    }
+
     // Check for output pins with nothing connected
     for (const part of this.parts) {
       if (part.kind !== 'mcu') continue;
@@ -5245,8 +5762,9 @@ export class BoardImpl {
         voltage: this.nodeVoltage(n.id),
       })),
       capacitors: this.parts
-        .filter(p => p.kind === 'capacitor')
+        .filter(p => p.kind === 'capacitor' || p.kind === 'polarized_cap')
         .map(p => ({ id: p.id, voltage: this.getCapVoltage(p.id) })),
+      ...(this._thermal ? { temperatures: this.partTemperatures() } : {}),
     };
   }
 
@@ -5264,6 +5782,7 @@ export class BoardImpl {
     this.timeNs = 0n;
     this.capVoltages.clear();
     this.ledHistory.clear();
+    this._ledWindowFloor = null;
     this._meterWatches.clear();
     this.buzzerEdges.clear();
     this.drivenTones.clear();
@@ -5277,6 +5796,7 @@ export class BoardImpl {
     this.capCurrents = new Map();
     this.inductorVoltages = new Map();
     this._trapValid = false;
+    this._newtonSeed = null;
     this._transH = 1e-4;
     this._transientAttemptOverflow = false;
     this._transientAccuracyUnmet = null;
@@ -5313,6 +5833,14 @@ export class BoardImpl {
       if (p.kind === 'buzzer') this.buzzerEdges.set(p.id, []);
       if (p.kind === 'capacitor') this.capVoltages.set(p.id, 0);
     }
+    for (const p of (this._solveParts ?? [])) {
+      if (p.kind === 'capacitor' && !this.capVoltages.has(p.id) && this.partMap.get(p.id.replace(/_cap$/, ''))?.kind === 'polarized_cap') {
+        this.capVoltages.set(p.id, 0);
+      }
+    }
+    // A reset is a new run: every part in the thermal model is back at the bench.
+    this._resetThermal();
+    this._seedOpampPoles();
 
     this._solve();
     this._recordLedSamples();
@@ -5341,6 +5869,7 @@ export class BoardImpl {
       controls: new Map(this.controls),
       capVoltages: new Map(this.capVoltages),
       inductorCurrents: new Map(this.inductorCurrents),
+      ...(this._thermal ? { partTemperatures: new Map(this._thermal.temps) } : {}),
     };
   }
 
@@ -5349,6 +5878,7 @@ export class BoardImpl {
    * @param {object} snap
    */
   restore(snap) {
+    this._newtonSeed = null; // the snapshot carries no Newton state; start cold
     this.timeNs = snap.timeNs;
     this.powered = snap.powered;
     this.pinStates = new Map(snap.pinStates);
@@ -5357,7 +5887,12 @@ export class BoardImpl {
     // analogWrite must not stop because a wire was moved.
     this.drivenPwm = new Map([...(snap.drivenPwm ?? [])].map(([k, e]) => [k, { ...e }]));
     this.controls = new Map(snap.controls);
+    // A switch the snapshot never saw starts in its authored position.
+    this._seedInitialControls();
     this.capVoltages = new Map(snap.capVoltages);
+    if (this._thermal && snap.partTemperatures) {
+      for (const [id, c] of snap.partTemperatures) if (this._thermal.temps.has(id)) this._thermal.temps.set(id, c);
+    }
     this.inductorCurrents = new Map(snap.inductorCurrents ?? []);
     // A snapshot older than a part carries no state for it, and the designer
     // restores exactly such a snapshot after every edit: `Circuit._syncNetlist`
@@ -5382,6 +5917,7 @@ export class BoardImpl {
 
     // Re-initialize LED/buzzer tracking
     this.ledHistory.clear();
+    this._ledWindowFloor = null;
     this._meterWatches.clear();
     this.buzzerEdges.clear();
     this.drivenTones.clear();
@@ -5405,6 +5941,7 @@ export class BoardImpl {
       tSeconds,
       dcSources,
       temperatureC: this.temperatureC,
+      partTemperatures: this._thermal?.temps,
       deviceStates,
       qualifiedSources: this._qualifiedSources(),
       powerOff: !this.powered,
@@ -5453,6 +5990,7 @@ export class BoardImpl {
       this.controls, this.vcc, {
         powerOff: false,
         temperatureC: this.temperatureC,
+        partTemperatures: this._thermal?.temps,
         capacitorsOpen: true,
         tSeconds: Number(this.timeNs) / 1e9,
         deviceStates: this._deviceStates,
@@ -5464,11 +6002,60 @@ export class BoardImpl {
     };
   }
 
-  _solveMNA(powerOff, testNodeA, testNodeB, testCurrent) {
+  /**
+   * Start every LM358/LM324 macromodel pole at the bench's bias point, as a
+   * SPICE transient starts from its operating point: solve the instant with
+   * the hidden pole capacitors left out (open) and every drawn capacitor at
+   * its stored voltage, then store each pole's voltage across its capacitor.
+   * Without this a static stage would slew up from 0 V after every netlist
+   * load and reset; drawn capacitors keep the power-on-at-rest rule. A solve
+   * that fails leaves the poles at 0 V (the plain power-on start).
+   */
+  _seedOpampPoles() {
+    const hidden = (this._solveParts ?? []).filter(p => p.kind === 'capacitor' && isHiddenPoleCapacitor(p.id));
+    if (!hidden.length) return;
+    for (const cap of hidden) this.capVoltages.set(cap.id, 0);
+    if (!this.powered) return;
+    const drop = new Set(hidden.map(p => p.id));
+    const parts = this._solveParts.filter(p => !drop.has(p.id));
+    const nets = this._solveNets.map(n => ({ ...n, terminals: n.terminals.filter(t => !drop.has(t.part)) }));
+    let res;
+    try {
+      this._syncDeviceGpioDrives();
+      this._chargeBoundedAdvanceWork('solves');
+      res = solveMNA(parts, nets, this._pinSources(), this.controls, this.vcc, {
+        powerOff: false,
+        temperatureC: this.temperatureC,
+        capVoltages: this.capVoltages,
+        tSeconds: Number(this.timeNs) / 1e9,
+        deviceStates: this._deviceStates,
+        qualifiedSources: this._qualifiedSources(),
+      });
+    } catch { return; }
+    if (res?.converged === false) return;
+    for (const cap of hidden) {
+      const a = this._solveNetOf(cap.id, 'a', this._solveNets);
+      const b = this._solveNetOf(cap.id, 'b', this._solveNets);
+      const v = (res.nodeVoltages.get(a) ?? 0) - (res.nodeVoltages.get(b) ?? 0);
+      if (Number.isFinite(v)) this.capVoltages.set(cap.id, v);
+    }
+  }
+
+  _solveNetOf(partId, terminal, nets) {
+    return nets.find(n => n.terminals.some(t => t.part === partId && t.terminal === terminal))?.id;
+  }
+
+  _solveMNA(powerOff, testNodeA, testNodeB, testCurrent, warmFrom = null) {
     this._syncDeviceGpioDrives();
     const options = {
+      // Newton starts from the previous accepted solution (see warmStart in
+      // mna.js) -- only for the live solve that follows a discrete event.
+      ...(warmFrom && !powerOff && !testNodeA && !testNodeB ? { warmStart: {
+        nodeVoltages: warmFrom.nodeVoltages, opampRegions: warmFrom.opampRegions,
+        ...(warmFrom.warmState ?? {}) } } : {}),
       powerOff,
       temperatureC: this.temperatureC,
+      partTemperatures: this._thermal?.temps,
       testNodeA,
       testNodeB,
       testCurrent,
@@ -5479,12 +6066,18 @@ export class BoardImpl {
       tSeconds: Number(this.timeNs) / 1e9,
       deviceStates: this._deviceStates,
       qualifiedSources: this._qualifiedSources(),
+      nonlinearGuess: powerOff ? undefined : this.nodeVoltages,
+      opampRegionsGuess: powerOff ? undefined : this._mnaCache?.opampRegions,
     };
     if (powerOff || testNodeA || testNodeB) {
       this._chargeBoundedAdvanceWork('solves');
       return solveMNA(this._solveParts, this._solveNets, this._pinSources(), this.controls, this.vcc, options);
     }
-    return this._solveLiveMNA(this._pinSources(), options);
+    // The live circuit continues from where it was (see `newtonSeed`).
+    const result = this._solveLiveMNA(this._pinSources(),
+      { ...options, newtonSeed: this._newtonSeed ?? undefined });
+    if (result?.newtonState) this._newtonSeed = result.newtonState;
+    return result;
   }
 
   _solveLiveMNA(pinSources, options) {
@@ -5727,7 +6320,7 @@ export class BoardImpl {
    * branch irrelevant, which it physically is.
    */
   _junctionHeadroomFor(part) {
-    const vfOf = p => Number(p.params?.vf ?? (p.kind === 'diode' ? 0.7 : 2.0)) || 0;
+    const vfOf = p => Number(junctionVf(p)) || 0;
     const isJunction = p => p.kind === 'led' || p.kind === 'diode';
     const byId = new Map(this.parts.map(p => [p.id, p]));
     const allNets = this.nets || [];
@@ -5761,6 +6354,8 @@ export class BoardImpl {
       if (ch.type === 'voltage' && ch.referenceNetId !== null
           && (ch.inputOhms !== null || ch.inputFarads !== null)) return true;
     }
+    // A part at its own temperature (thermal model) is beyond the walker.
+    if (this._thermal) return true;
     for (const p of this.parts) {
       if (MNA_ONLY_KINDS.has(p.kind) || getDevice(p.kind)) return true;
       // An opted-in Shockley junction is beyond the walker's knee
@@ -5866,6 +6461,19 @@ export class BoardImpl {
   }
 
   /** Any capacitor or inductor present? */
+  /**
+   * Does any default transistor carry input capacitance (`parasiticCaps`)?
+   * Such a network is not memoryless: a latch or a thyristor holds its state
+   * between source events, so a time-varying source's pulse must be
+   * integrated through rather than skipped by one endpoint solve.
+   */
+  _hasDeviceCapacitance() {
+    for (const p of (this._solveParts ?? this.parts)) {
+      if (parasiticCaps(p).length) return true;
+    }
+    return false;
+  }
+
   _hasReactive() {
     // SOLVER view, not the drawing: hidden reactive parts (motor
     // windings, macromodel poles) must pull advanceTo into transient
@@ -5896,7 +6504,7 @@ export class BoardImpl {
    */
   _transientIntegrationMode() {
     if (this._sourceConstrainedInductorDirect()) return 'source-constrained-inductor-direct';
-    return !this._hasReactive()
+    return !this._hasReactive() && !this._hasDeviceCapacitance()
       && this._deviceStates.size === 0
       && this._shiftRegisters.size === 0
       && this._scopeChannels.size === 0
@@ -5936,7 +6544,7 @@ export class BoardImpl {
 
   /** Any source whose value moves with time? */
   _hasTimeVaryingSource() {
-    for (const p of this.parts) {
+    for (const p of (this._solveParts ?? this.parts)) {
       if ((p.kind === 'vsource' || p.kind === 'isource')
           && p.params && p.params.wave && p.params.wave !== 'dc') {
         return true;
@@ -5964,7 +6572,7 @@ export class BoardImpl {
       found = true;
       return true;
     };
-    for (const part of this.parts) {
+    for (const part of (this._solveParts ?? this.parts)) {
       if (part.kind !== 'vsource' && part.kind !== 'isource') continue;
       const p = part.params ?? {};
       const wave = p.wave ?? 'dc';
@@ -6054,15 +6662,15 @@ export class BoardImpl {
    * Full-MNA instantaneous solve: node voltages, LED currents and the
    * instrument cache all come from one solution.
    */
-  _solveViaMNA() {
-    let res = this._solveMNA(false);
+  _solveViaMNA(warmFrom = null) {
+    let res = this._solveMNA(false, undefined, undefined, undefined, warmFrom);
     this._adoptSolution(res);
     // Devices react to the solved voltages (a gate sees its input change),
     // may change what they drive, and the network is re-solved — to a
     // bounded fixpoint, so a chain of gates settles within one event.
     for (let round = 0; round < 10; round++) {
       if (!this._updateDevices()) break;
-      res = this._solveMNA(false);
+      res = this._solveMNA(false, undefined, undefined, undefined, res.converged !== false ? res : warmFrom);
       this._adoptSolution(res);
     }
   }
@@ -6242,6 +6850,9 @@ export class BoardImpl {
         const ov = this._digitalOverlay.get(n);
         return ov !== undefined ? ov : (this.nodeVoltages.get(n) ?? 0);
       };
+      // An unconnected pin reads 0 V, indistinguishable from a grounded one;
+      // a model whose open pin has an internal bias (555 CV) asks here.
+      read.connected = (terminal) => Boolean(this._netForTerminal(part.id, terminal));
       this._attachMeasurementValidity(model, read, solution);
       if (model.transientUpdateContext === true) read.transient = acceptedTransient;
       try {
@@ -6374,22 +6985,53 @@ export class BoardImpl {
         code: r?.converged === true ? 'non-finite-solve-state' : 'transient-solve-not-converged',
         stage, timeSec: atSec,
       };
+      // An exponential transistor card carries only the charge it states. With
+      // none, a regenerative circuit (astable, latch) has no solution past its
+      // switching point, and this failure is the symptom -- say so, by part.
+      const chargeless = (this._solveParts ?? this.parts).filter(p => {
+        const em = (p.kind === 'npn' || p.kind === 'pnp') ? ebersMollParams(p) : null;
+        return em && !(em.cje || em.cjc || em.tf);
+      }).map(p => p.id);
+      if (chargeless.length && r?.converged !== true) {
+        this._transientAccuracyUnmet.hint = `exponential transistor card(s) ${chargeless.join(', ')} `
+          + 'declare no junction charge (cje/cjc/tf); a switching circuit needs it to resolve its edges';
+      }
     };
-    const solveStep = (tStart, hs, method, cvS, ilS, ccS, lvS) => {
+    // Newton state (junction voltages, region FSMs) at the last accepted
+    // point seeds the next step's solve -- see `newtonSeed` in solveMNA.
+    let seed = this._newtonSeed ?? null;
+    // Each step's Newton starts from the last accepted solution, as SPICE
+    // starts each timepoint from the previous one: a capacitor-free latch
+    // elsewhere on the board must not be re-decided from zero every step.
+    const entrySolution = this._mnaCache?.converged !== false
+      && !this._mnaCache?.deferredBjtChargeIds?.length ? this._mnaCache : null;
+    const warmOf = (r) => r ? { warmStart: { nodeVoltages: r.nodeVoltages,
+      opampRegions: r.opampRegions, ...(r.warmState ?? {}) } } : {};
+    const solveStep = (tStart, hs, method, cvS, ilS, ccS, lvS, seedS = seed) => {
       nSolves++;
       const r = this._solveLiveMNA(pinSources, {
+        ...warmOf(res ?? entrySolution),
         tSeconds: tStart + hs,
         temperatureC: this.temperatureC,
+        partTemperatures: this._thermal?.temps,
         transient: { dtSec: hs, method, capVoltages: cvS, inductorCurrents: ilS,
-          capCurrents: ccS, inductorVoltages: lvS },
+          capCurrents: ccS, inductorVoltages: lvS, newtonSeed: seedS ?? undefined },
         deviceStates: this._deviceStates,
         qualifiedSources: qual,
+        // Warm start for nonlinear-current laws: the last published point.
+        nonlinearGuess: this.nodeVoltages,
+        // Op-amp rail regions remember the last accepted step (hysteresis).
+        opampRegionsGuess: (res ?? this._mnaCache)?.opampRegions,
+        // A topology whose selective shunt proved singular (an island with
+        // no reference) goes straight to the blanket shunt next time.
+        blanketShunt: this._transientBlanketShunt === true,
         // Power off strips the sources but NOT the storage: capacitor
         // and inductor companions keep stamping, so stored energy
         // discharges through whatever network remains (the audit found
         // every discharge-on-power-loss demo frozen instead).
         powerOff: !this.powered,
       });
+      if (r?.blanketShunt) this._transientBlanketShunt = true;
       return r;
     };
 
@@ -6419,6 +7061,7 @@ export class BoardImpl {
       il = r.inductorCurrentsNext ?? il;
       cc = r.capCurrentsNext ?? cc;
       lv = r.inductorVoltagesNext ?? lv;
+      seed = r.newtonState ?? seed;
       res = r;
       publish(r, atSec,quadratic);
       // One device pass per accepted step, told the SUB-STEP time — the
@@ -6448,10 +7091,30 @@ export class BoardImpl {
       // Keep the established first-step diagnostic stage (`be`). With no
       // storage, BE and trapezoidal stamp the identical algebraic system.
       const direct = solveStep(t0, dtSec, 'be', cv, il, cc, lv);
-      t = tEnd;
-      accept(direct, t, null, 'be');
-      trapReady = true;
+      if (validTransientSolution(direct)) {
+        t = tEnd;
+        accept(direct, t, null, 'be');
+        trapReady = true;
+      } else {
+        // No operating point near the last one: a latch or flip-flop whose
+        // trigger crossed its switching threshold inside this interval has
+        // nowhere continuous to go in one algebraic jump. Integrate the
+        // interval instead, through the device input capacitances
+        // (`parasiticCaps` in mna.js), from the last accepted state. Only a
+        // failed direct solve takes this path; every converging endpoint is
+        // exactly what it was.
+        trapReady = false;
+        h = Math.min(H_SEED, dtSec);
+      }
     }
+
+    // Event localization (see the accepted-step branch below): resolve a
+    // device change inside a step to EVENT_TOL instead of the step length.
+    const localizeEvents = this._deviceStates.size > 0;
+    const EVENT_TOL = Math.max(H_MIN, Math.min(1e-8, profile.maxStepSec * 1e-4));
+    const MAX_LOCALIZATIONS = 256; // per chunk: a runaway backstop, not a rate
+    let localizations = 0;
+    let eventTarget = null;
 
     let fatalTrialFailure = false;
     while (t < tEnd - 1e-15 && attempts < MAX_ATTEMPTS) {
@@ -6513,7 +7176,7 @@ export class BoardImpl {
       if (rejectTrial(h1)) { if (fatalTrialFailure) break; continue; }
       const h2 = solveStep(t + hEff / 2, hEff / 2, 'trap',
         h1.capVoltagesNext ?? cv, h1.inductorCurrentsNext ?? il,
-        h1.capCurrentsNext ?? cc, h1.inductorVoltagesNext ?? lv);
+        h1.capCurrentsNext ?? cc, h1.inductorVoltagesNext ?? lv, h1.newtonState ?? seed);
       if (rejectTrial(h2)) { if (fatalTrialFailure) break; continue; }
 
       let err = 0;
@@ -6559,6 +7222,25 @@ export class BoardImpl {
       }
       const forcedAtFloor = atFloor;
       const nonFiniteError = !Number.isFinite(err);
+      // EVENT LOCALIZATION. A device that changes state inside this step
+      // (a 555 comparator crossing its threshold, a Schmitt input, a relay
+      // pulling in) used to be noticed only at the step's END, so every
+      // flip landed up to one whole step late -- a 6.9 kHz astable ran 8 %
+      // slow with 18 % period jitter. Probe the devices against the step's
+      // interpolated voltages; when one changes before the end, shorten the
+      // step to the earliest instant it changes and take that step instead.
+      if (err <= 1 && localizeEvents && localizations < MAX_LOCALIZATIONS
+        && hEff > 2 * EVENT_TOL
+        && !(eventTarget !== null && Math.abs(t + hEff - eventTarget) <= EVENT_TOL)) {
+        const tau = this._locateDeviceEvent(t, hEff, this.nodeVoltages,
+          h1.nodeVoltages, h2.nodeVoltages, tEnd, EVENT_TOL);
+        if (tau !== null && tau < t + hEff - EVENT_TOL) {
+          localizations++;
+          eventTarget = tau;
+          h = Math.max(H_MIN, tau - t);
+          continue;
+        }
+      }
       if (err <= 1 || nonFiniteError || forcedAtFloor) {
         // Non-finite means a solve bailed (singular mid-step) — accept the
         // half-step result and let the convergence warning say so. An
@@ -6603,6 +7285,7 @@ export class BoardImpl {
     this.capCurrents = new Map(cc);
     this.inductorVoltages = new Map(lv);
     this._trapValid = trapReady;
+    this._newtonSeed = seed;
     this._transH = h;
     // Observable for the idle-advance solve-count oracle; costs nothing.
     this._lastTransientSolves = nSolves;
@@ -6619,6 +7302,96 @@ export class BoardImpl {
         this.ledCurrents.set(part.id, Math.max(0, c ? -(c.get('anode') ?? 0) : 0));
       }
       this._mnaCache = res;
+    }
+  }
+
+  /**
+   * Find the earliest instant inside an accepted transient step at which a
+   * device would change state, or null when none changes by the step's end.
+   *
+   * Devices are PROBED, not stepped: each eligible device's state is copied,
+   * its update() is called against node voltages interpolated (piecewise
+   * linearly through the step's mid-point solve) at a trial instant, and the
+   * copy is put back. Bisection narrows the change to `tolSec`. Only devices
+   * whose state is small plain data take part -- a model holding class
+   * instances, functions or memory arrays (CPUs, bus peers, RAM) cannot be
+   * rolled back faithfully and keeps the end-of-step update it always had.
+   * Instruments (`measurement`), accepted-step models
+   * (`transientUpdateContext`), MCU surfaces and models declaring
+   * `eventLocalization: false` are never probed.
+   *
+   * @returns {number|null} seconds
+   */
+  _locateDeviceEvent(t0Sec, hSec, v0, vMid, v1, tEndSec, tolSec) {
+    // Eligible devices, per netlist (the probe runs on every accepted step).
+    if (!this._eventProbeCandidates) {
+      this._eventProbeCandidates = [];
+      for (const part of this.parts) {
+        const model = getDevice(part.kind);
+        if (!model || !model.update || model.eventLocalization === false || model.measurement
+          || model.transientUpdateContext === true || model.gpioFollowsPinStates) continue;
+        const read = (at) => (terminal) => {
+          const n = this._netForTerminal(part.id, terminal);
+          if (!n) return 0;
+          const ov = this._digitalOverlay.get(n);
+          return ov !== undefined ? ov : (at.get(n) ?? 0);
+        };
+        this._eventProbeCandidates.push({ part, model, read });
+      }
+    }
+    const entries = [];
+    for (const c of this._eventProbeCandidates) {
+      if (this._eventProbeRefused?.has(c.part.id)) continue;
+      const state = this._deviceStates.get(c.part.id);
+      if (!state) continue;
+      const copy = plainStateCopy(state, { left: EVENT_STATE_BUDGET });
+      if (copy === NOT_PLAIN) {
+        (this._eventProbeRefused ??= new Set()).add(c.part.id);
+        continue;
+      }
+      entries.push({ ...c, state, copy });
+    }
+    if (!entries.length) return null;
+    const saved = this.nodeVoltages;
+    const tMid = t0Sec + hSec / 2;
+    const tEnd = t0Sec + hSec;
+    const probe = (tau) => {
+      let at = v1;
+      if (tau < tEnd) {
+        at = new Map();
+        const [va, vb, ta, tb] = tau <= tMid ? [v0, vMid, t0Sec, tMid] : [vMid, v1, tMid, tEnd];
+        const f = tb > ta ? (tau - ta) / (tb - ta) : 1;
+        for (const [id, b] of vb) {
+          const a = va.get(id);
+          at.set(id, a === undefined || !Number.isFinite(a) ? b : a + (b - a) * f);
+        }
+      }
+      this.nodeVoltages = at;
+      const atNs = this.timeNs - BigInt(Math.max(0, Math.round((tEndSec - tau) * 1e9)));
+      let changed = false;
+      for (const e of entries) {
+        try {
+          if (e.model.update(e.part, e.state, e.read(at), atNs)
+            && discreteStateChange(e.copy, e.state, { left: EVENT_STATE_BUDGET })) changed = true;
+        } catch {
+          // A probe is a question, not a step: the accepted update owns
+          // every refusal. Undo and leave this device to it.
+        } finally {
+          restorePlainState(e.state, e.copy);
+        }
+      }
+      return changed;
+    };
+    try {
+      if (!probe(tEnd)) return null;
+      let lo = t0Sec, hi = tEnd;
+      while (hi - lo > tolSec) {
+        const mid = (lo + hi) / 2;
+        if (probe(mid)) hi = mid; else lo = mid;
+      }
+      return hi;
+    } finally {
+      this.nodeVoltages = saved;
     }
   }
 
@@ -6703,7 +7476,7 @@ export class BoardImpl {
 
   _nextSourceEdgeSec(tSec) {
     let next = null;
-    for (const part of this.parts) {
+    for (const part of (this._solveParts ?? this.parts)) {
       if (part.kind !== 'vsource' && part.kind !== 'isource') continue;
       const p = part.params ?? {};
       if (p.wave === 'spice-pulse') {
@@ -6876,6 +7649,11 @@ export class BoardImpl {
     this._digitalOverlay.clear();
     this.nodeVoltages.clear();
     this.ledCurrents.clear();
+    // The present state, kept as the next Newton starting point: an event
+    // continues from where the circuit IS (a latch stays latched), it does
+    // not re-find an operating point from zero.
+    const prevSolution = this._mnaCache?.converged !== false
+      && !this._mnaCache?.deferredBjtChargeIds?.length ? this._mnaCache : null;
     this._mnaCache = null; // invalidate MNA cache
     // Every discrete event routes through here — it is a discontinuity for
     // the transient integrator: trapezoidal history is stale, the next
@@ -6892,7 +7670,7 @@ export class BoardImpl {
     // Parts beyond the walker's vocabulary? One full MNA solve answers
     // everything coherently (and primes the instrument cache for free).
     if (this._needsMNA()) {
-      this._solveViaMNA();
+      this._solveViaMNA(prevSolution);
       return;
     }
 
@@ -7274,7 +8052,7 @@ export class BoardImpl {
     // the same LED. That disagreement is why nodeVoltage and branchCurrent
     // had to be corrected in one commit.
     const vf = kneeFromVf(
-      /** @type {number} */ (led.params.vf ?? LED_VF), rd);
+      /** @type {number} */ (ledVf(led)), rd);
 
     // LED terminals: "anode" and "cathode"
     const anodeNet = this._netForTerminal(led.id, 'anode');

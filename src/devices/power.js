@@ -150,6 +150,24 @@ export function registerPowerDevices() {
     update() { return false; }, // static — no behavioral changes
   });
 
+  // ─── Fruit / vegetable cells ────────────────────────────────────────
+  // A zinc + copper electrode pair in a potato or a lemon: a weak cell, under
+  // a volt with kilo-ohms of internal resistance -- it lights nothing but an
+  // LED-in-series demonstration with several in series, which is the lesson.
+  // These used to load as a plain `vsource` alias with NO volts, i.e. the
+  // board's 5 V through zero ohms. Typical open-circuit EMF and internal
+  // resistance of one classroom cell; both are params.
+  for (const [kind, volts, rInternal] of [['potato_battery', 0.85, 5000], ['lemon_battery', 0.9, 2000]]) {
+    registerDevice(kind, {
+      terminals: ['pos', 'neg'],
+      init() { return { drives: {} }; },
+      stamp(ctx, part) {
+        ctx.theveninBetween('pos', 'neg', part.params?.volts ?? volts, part.params?.rInternal ?? rInternal);
+      },
+      update() { return false; },
+    });
+  }
+
   // ─── Voltage Regulator (78xx / LM317) ──────────────────────────────
   // Input → output drops to a fixed voltage (e.g. 7805 = 5V out).
   // If Vin < Vout + dropout, output follows input minus dropout.

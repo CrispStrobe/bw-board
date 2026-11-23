@@ -2,11 +2,24 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {BoardImpl} from '../src/board.js';
 import {registerAnalogAmps} from '../src/devices/analog-amps.js';
+import {registerDevice} from '../src/devices.js';
 registerAnalogAmps();
+// Device sub-steps follow the devices' own wakes, bounded only by a wall-clock
+// work backstop, so an ordinary long advance of this LM741 completes
+// (test/device-timing-events.test.mjs). Overflow is driven here by a device
+// that wakes every nanosecond -- a genuine runaway -- against a shortened
+// backstop, and every refusal below is unchanged.
+registerDevice('test_runaway_1ns',{terminals:['out'],
+  init:()=>({drives:{out:{vTh:0,rTh:1e6}},_wakeNs:1n,level:0}),
+  update(part,state,read,tNs){
+    if(state._wakeNs&&BigInt(tNs)<state._wakeNs)return false;
+    state.level^=1;state._wakeNs=BigInt(tNs)+1n;return false;
+  }});
 const net=(id,...pins)=>({id,terminals:pins.map(([part,terminal])=>({part,terminal}))});
-function fixture() {
+function fixture(runaway=false) {
   const b=new BoardImpl(5);
   b.setNetlist([
+    ...(runaway?[{id:'RUN',kind:'test_runaway_1ns',params:{},terminals:['out']}]:[]),
     {id:'VP',kind:'vsource',params:{volts:15},terminals:['pos','neg']},
     {id:'VN',kind:'vsource',params:{volts:15},terminals:['pos','neg']},
     {id:'VIN',kind:'vsource',params:{volts:.25,wave:'spice-sine',offset:.25,
@@ -30,15 +43,19 @@ function fixture() {
 const refused=fn=>assert.throws(fn,error=>error.code==='SOLVE_FAILED_MEASUREMENT'
   && /device sub-step budget exhausted/.test(error.message));
 
-test('actual LM741 device overflow refuses prior and fresh analog captures and means',()=>{
-  const {b,scopes}=fixture();b.advanceTo(50000000n);
-  assert.equal(b.getTime(),50000000n,'ordinary caller clock contract is unchanged');
+test('LM741 bench device overflow refuses prior and fresh analog captures and means',()=>{
+  const {b,scopes}=fixture(true);
+  b.deviceWorkLimitMs=50; // the wall-clock work backstop, shortened for the test
+  // The advance itself refuses, and the clock reports only simulated time.
+  assert.throws(()=>b.advanceTo(10000000n),error=>error.code==='DEVICE_SUBSTEP_BUDGET_EXHAUSTED'
+    && error.simulatedTimeNs===b.getTime());
+  assert.ok(b.getTime()<10000000n,'clock stops where the devices stopped, never at the request');
   assert.ok(b.getWarnings().some(w=>/Device sub-step limit reached/.test(w.message)));
   const status=b.transientAnalysisStatus();
-  assert.equal(status.work.advances,200,'existing device cap, not an increased allowance');
+  assert.equal(status.failure.workLimitMs,50,'wall-clock work backstop, not an event-rate cap');
   assert.equal(status.accuracyMet,false);assert.equal(status.failure.code,'device-substep-budget-exceeded');
-  assert.ok(status.failure.timeSec<.05,'processed device horizon precedes requested destination');
-  assert.equal(status.failure.requestedTimeSec,.05);
+  assert.ok(status.failure.timeSec<1e-2,'processed device horizon precedes requested destination');
+  assert.equal(status.failure.requestedTimeSec,1e-2);
   for(const handle of scopes)refused(()=>b.getScopeData(handle));
   refused(()=>b.sampleCurrentChannels());
   refused(()=>b.meterVoltage('out','zero'));refused(()=>b.meterCurrent('R','a'));

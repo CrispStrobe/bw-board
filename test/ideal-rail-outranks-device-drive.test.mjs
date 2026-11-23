@@ -20,6 +20,7 @@
  * This fallback is a product abstraction for a bare dev board, not Schottky
  * physics. Physical forward feeding needs a physical model and is not removed.
  */
+import { solarCellParams, solarCellCurrent } from '../src/photo-junctions.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
@@ -104,8 +105,16 @@ test('physical solar, board ground, and dynamic GPIO never inherit fallback supp
         [{ part: 'S1', terminal: 'pos' }],
         [{ part: 'S1', terminal: 'neg' }],
     );
-    assert.ok(Math.abs(solar.branchCurrent('S1', 'pos') + 0.88) < 1e-9,
-        `0.6 V / 5 Ohm solar source held at 5 V must sink 0.88 A, got ${solar.branchCurrent('S1', 'pos')}`);
+    // 2026-11-23: solar_cell is now the single-diode model (photo-junctions.js),
+    // so a cell held at 5 V is a forward-biased junction behind its series
+    // resistance, not a 0.6 V source behind 5 Ohm (which sank 0.88 A). What
+    // this test guards is unchanged: the physical source is NOT suppressed by
+    // the ideal rail — it sinks exactly what its own law says at 5 V.
+    const p = solarCellParams({ voc: 0.6, rInternal: 5 });
+    const [law] = solarCellCurrent(5, p.iph, p);
+    assert.ok(law < -1, `a forward-driven cell sinks heavily, law gives ${law}`);
+    assert.ok(Math.abs(solar.branchCurrent('S1', 'pos') - law) < 1e-6 * Math.abs(law),
+        `solar cell held at 5 V must sink ${law} A, got ${solar.branchCurrent('S1', 'pos')}`);
 
     const groundShort = bench(
         [{ id: 'U1', kind: 'pi_pico', params: {}, terminals: ['gnd_1'] }],

@@ -206,13 +206,12 @@ export function registerNamedParts() {
   // ─── IR transmitter (just an IR LED electrically) ─────────────────
   // Same as a regular LED but with IR wavelength (not visible).
   // The device state tracks whether it's "emitting" for simulation purposes.
+  // Electrically the board solves it AS an `led` with colour 'ir' (1.3 V,
+  // led-color.js) — see BoardImpl.setNetlist. It used to stamp a bare
+  // 110 Ω resistor: 0.0055 V across it at 50 µA, and no knee at all.
   registerDevice('ir_transmitter', {
     terminals: ['anode', 'cathode'],
     init() { return { drives: {}, emitting: false }; },
-    stamp(ctx) {
-      // Forward voltage ~1.2V for IR, dynamic R ~10Ω
-      ctx.conductance('anode', 'cathode', 1 / 110); // simplified
-    },
     update(part, state, read) {
       const v = read('anode') - read('cathode');
       const newEmitting = v > 1.0;

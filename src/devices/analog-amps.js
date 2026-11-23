@@ -2,40 +2,15 @@
  * LM358/LM324/LM741 op-amps + LM3915 dot/bar display driver — the analog pair
  * behind every cheap VU meter, clean-room from the TI datasheets.
  *
- * The op-amp is the genuinely hard one: real feedback needs convergence
- * inside the board's bounded settle loop (ten device/solve rounds per
- * event). The output is a Thévenin drive the model re-aims each round;
- * what changed (2026-08-29, defect D18) is HOW it aims.
- *
- * It used to be a damped integrator: output += G_STEP × (v+ − v−), halt
- * once that step fell below 1 mV. The header claimed "a follower (β = 1)
- * lands within millivolts in ten rounds, resistor-gain stages faster".
- * That is backwards, and the corpus caught it. Under negative feedback
- * with attenuation β the error contracts by |1 − G_STEP·β| per round, so
- * a GAIN stage — which by construction has SMALL β — converges SLOWEST.
- * The shipped ×46.45 shunt amplifier (100 kΩ/2.2 kΩ, β = 0.0215)
- * contracts by 0.9677 per round: closing 99 % of the error needs 141
- * rounds against the ten the settle loop allows. The 1 mV halt then
- * froze it at a WRONG fixed point, leaving up to 1 mV/G_STEP = 0.667 mV
- * of input error unamplified — realised gain 31.04 at a 2 mV input,
- * 38.79 at 4 mV, 43.39 at 10 mV. Input-dependent, and stable in time, so
- * it read as physics rather than as arithmetic.
- *
- * It is now a SECANT iteration on the input error. For a linear feedback
- * network the error is affine in the output, e(u) = k − β·u, so two
- * (u, e) pairs give β exactly and one step lands on e = 0 — whatever β
- * is, and without the model ever being told what the feedback network
- * looks like. Round 0 has no history and takes the old damped step;
- * round 1 is the secant; round 2 confirms |e| ≤ E_TOL and halts. Three
- * rounds for any resistive feedback, against 141 for the shunt amp.
- *
- * The damped step survives as the fallback for every case where the
- * secant has no slope to work with: open loop (β = 0 — it marches
- * rail-ward like the comparator it then is) and POSITIVE feedback
- * (β < 0 — a Schmitt trigger must run to a rail, not be solved to the
- * unstable point the secant would find). A naked ×100k VCVS would
- * ping-pong between rails forever; that is why this is an aiming loop
- * and not a gain block, and it is stated here rather than hidden.
+ * LM358/LM324 (2026-11-23): the settle-loop "aiming" controller that lived
+ * here (a damped step, then a secant on the input error, re-aimed after every
+ * solve) is gone. It had no time constants at all — its speed was a count of
+ * solve events — and because it reported a change on every move, an
+ * audio-rate gain stage forced the adaptive integrator to restart at the
+ * step floor on every step. The electrical model is now a Newton-solved
+ * macromodel with a real pole, slew limit, swing window and current-limited
+ * output stage; see ../ground-sensing-opamp.js for the derivation and card.
+ * The precision single/multi op-amps below keep their own tick controllers.
  *
  * LM3915: ten comparators on a 3 dB/step log ladder (datasheet's
  * defining feature — the equal-loudness VU law), reference from
@@ -47,10 +22,11 @@
  */
 
 import { registerDevice } from '../devices.js';
+import { GROUND_SENSING_OPAMP_CARD, STAGE_KIND, STAGE_TERMINALS, STAGE_RESIDUAL_OHMS,
+    evaluateStage, polePin, GROUND_SENSING_OPAMPS } from '../ground-sensing-opamp.js';
 import {LM741_CARD, lm741LinearParameters, assertLm741LinearTopology, assertLm741LinearSolution,
     lm741BiasSupply, lm741BiasSupplyTerminalCurrents, assertLm741BiasSupplyConditions} from '../lm741-linear-pole.js';
 
-const R_OUT = 100;          // LM358 output stage, modest drive
 const R_SINK = 50;
 const R_OFF = 1e9;
 // Input pins draw nothing here, on purpose. These models used to declare
@@ -59,15 +35,11 @@ const R_OFF = 1e9;
 // so it never stamped. 1 MOhm is not a CMOS input either (a 74HC draws 1 uA
 // max). The ideal high-Z input IS the model, and GMIN keeps every pin a real
 // node. See spec-updates/ideal-high-z-inputs.md.
-const G_STEP = 1.5;         // fallback damped step per settle round
-// Secant guards. BETA_MIN is the smallest feedback attenuation the secant
-// is allowed to divide by: below it the loop is open (or positive) and the
-// damped march to a rail is the honest answer. E_TOL is the residual input
-// error the loop settles for — it is the ONLY thing that now limits
-// realised gain, at |e|/Vin relative error (5e-5 on the 2 mV shunt bench,
-// against the 33 % the 1 mV output-step halt used to leave).
+// Secant guards for the precision op-amp controllers below. BETA_MIN is
+// the smallest feedback attenuation the secant is allowed to divide by:
+// below it the loop is open (or positive) and the march to a rail is the
+// honest answer.
 const BETA_MIN = 1e-4;
-const E_TOL = 1e-7;         // volts of residual (v+ − v−)
 const U_TOL = 1e-9;         // volts of output movement below which nothing changed
 
 // A single dynamic controller serves the physical single op-amps below;
@@ -354,75 +326,74 @@ const ADA4522_1_SPEC = Object.freeze({
     terminals: ['nic_1', 'inn', 'inp', 'vneg', 'nic_5', 'out', 'vpos', 'nic_8'],
 });
 
-function registerGroundSensingOpAmp(kind, channels, {
-    minSupply = 3.0, highHeadroom = 1.5, lowHeadroom = 0.005,
-    inputHighHeadroom = 1.5, legacyUnwiredFiveVoltSupply = false,
-} = {}) {
+// LM358/LM324: the electrical model is the solver-side macromodel in
+// ../ground-sensing-opamp.js (hidden pole net + capacitor + Newton-solved
+// stage, added by BoardImpl through expandGroundSensingOpAmps). The package
+// device below is what the user drew: it carries no drive and never asks for
+// a re-solve — it reports supply/common-mode state and maps the stage
+// currents back onto its own leads for the instruments.
+
+function registerGroundSensingOpAmp({ kind, channels, legacyUnwiredFiveVoltSupply }) {
+    const C = GROUND_SENSING_OPAMP_CARD;
     const channelTerminals = channels.flatMap(ch => [`${ch}_pos`, `${ch}_neg`, `${ch}_out`]);
+    const supplyOf = (read) => {
+        const rawVcc = read('vcc');
+        const vcc = legacyUnwiredFiveVoltSupply && !rawVcc ? 5.0 : rawVcc;
+        return { vcc, gnd: read('gnd') || 0, fixed: legacyUnwiredFiveVoltSupply && !rawVcc };
+    };
     registerDevice(kind, {
         terminals: ['vcc', 'gnd', ...channelTerminals],
 
         init() {
             return {
-                drives: Object.fromEntries(channels.map(ch => [`${ch}_out`, { vTh: 0, rTh: R_OUT }])),
-                _prev: Object.fromEntries(channels.map(ch => [ch, null])),
+                drives: {},
                 powered: false,
                 inputCommonMode: Object.fromEntries(channels.map(ch => [ch, 'unknown'])),
             };
         },
 
         update(part, state, read) {
-            const rawVcc = read('vcc');
-            const vcc = legacyUnwiredFiveVoltSupply && !rawVcc ? 5.0 : rawVcc;
-            const gnd = read('gnd') || 0;
-            const powered = Number.isFinite(vcc) && Number.isFinite(gnd) && vcc - gnd >= minSupply;
+            const { vcc, gnd } = supplyOf(read);
+            const powered = Number.isFinite(vcc) && Number.isFinite(gnd) && vcc - gnd >= C.minSupply;
             state.powered = powered;
-            if (!state._prev) state._prev = Object.fromEntries(channels.map(ch => [ch, null]));
             if (!state.inputCommonMode) state.inputCommonMode = {};
-            let changed = false;
-            if (!powered) {
-                for (const ch of channels) {
-                    state.inputCommonMode[ch] = 'unpowered';
-                    const cur = state.drives[`${ch}_out`];
-                    if (cur.vTh !== gnd || cur.rTh !== R_OFF) {
-                        state.drives[`${ch}_out`] = { vTh: gnd, rTh: R_OFF };
-                        state._prev[ch] = null;
-                        changed = true;
-                    }
-                }
-                return changed;
-            }
-
-            const hi = vcc - highHeadroom;
-            const lo = gnd + lowHeadroom;
-            const inputHi = vcc - inputHighHeadroom;
+            const inputHi = vcc - C.inputHighHeadroom;
             for (const ch of channels) {
-                const pos = read(`${ch}_pos`);
-                const neg = read(`${ch}_neg`);
-                const common = (pos + neg) / 2;
+                if (!powered) { state.inputCommonMode[ch] = 'unpowered'; continue; }
+                // Outside the characterised common-mode range the real devices
+                // do not promise linear accuracy; we publish that, and do not
+                // invent phase reversal or precision.
+                const common = (read(`${ch}_pos`) + read(`${ch}_neg`)) / 2;
                 state.inputCommonMode[ch] = common < gnd ? 'below'
                     : common > inputHi ? 'above' : 'valid';
-                // Outside the characterised common-mode range the real devices
-                // do not promise linear accuracy. We retain a deterministic,
-                // rail-bounded solve and publish the limitation in state; we
-                // deliberately do not invent phase reversal or precision.
-                const e = pos - neg;
-                const cur = state.drives[`${ch}_out`].vTh;
-                const prev = state._prev[ch];
-                let next = null;
-                if (prev && Math.abs(cur - prev.u) > U_TOL) {
-                    const beta = (prev.e - e) / (cur - prev.u);
-                    if (Number.isFinite(beta) && beta > BETA_MIN) next = cur + e / beta;
-                }
-                if (next === null) next = cur + G_STEP * e;
-                next = Math.max(lo, Math.min(hi, next));
-                state._prev[ch] = { u: cur, e };
-                const inSwing = cur >= lo - U_TOL && cur <= hi + U_TOL;
-                if ((Math.abs(e) <= E_TOL && inSwing) || Math.abs(next - cur) <= U_TOL) continue;
-                state.drives[`${ch}_out`] = { vTh: next, rTh: R_OUT };
-                changed = true;
             }
-            return changed;
+            // The output is solved inside the network; nothing to re-solve.
+            return false;
+        },
+
+        branchCurrents(part, _state, read) {
+            const { vcc, gnd, fixed } = supplyOf(read);
+            const out = new Map([['vcc', 0], ['gnd', 0]]);
+            for (const ch of channels) {
+                const pole = read(polePin(ch));
+                // An expanded channel's pole is clamped at or above GND + 5 mV;
+                // an unexpanded one (output unwired) has no pole net and reads 0.
+                if (pole === 0) continue;
+                const { currents } = evaluateStage({
+                    inp: read(`${ch}_pos`), inn: read(`${ch}_neg`), pole,
+                    out: read(`${ch}_out`), vcc, gnd,
+                }, 1, fixed ? 5.0 : null);
+                // Package leads: the pole loop closes through GND inside the
+                // die, so only the output current reaches the rails — sourced
+                // from VCC (or the implicit legacy supply), sunk to GND.
+                const iOut = currents.get('out');
+                const src = fixed ? 0 : -currents.get('vcc');
+                const snk = fixed ? Math.min(iOut, 0) : iOut - src;
+                out.set(`${ch}_out`, iOut);
+                out.set('vcc', out.get('vcc') - src);
+                out.set('gnd', out.get('gnd') - snk);
+            }
+            return out;
         },
     });
 }
@@ -830,8 +801,22 @@ function registerPrecisionMultiOpAmp(kind, spec, channels, terminals) {
 export function registerAnalogAmps() {
     // Preserve LM358's historical implicit 5 V fallback for old benches that
     // omitted its supply wire; LM324 is new and requires its real shared rails.
-    registerGroundSensingOpAmp('lm358', ['1', '2'], { legacyUnwiredFiveVoltSupply: true });
-    registerGroundSensingOpAmp('lm324', ['1', '2', '3', '4']);
+    for (const card of GROUND_SENSING_OPAMPS) registerGroundSensingOpAmp(card);
+    // Solver-only per-channel stage added by expandGroundSensingOpAmps.
+    registerDevice(STAGE_KIND, {
+        terminals: [...STAGE_TERMINALS],
+        init() { return { drives: {} }; },
+        stamp(ctx, part) {
+            const fixedVcc = part.params?.fixedVcc ?? null;
+            const terms = fixedVcc === null ? STAGE_TERMINALS : STAGE_TERMINALS.filter(t => t !== 'vcc');
+            ctx.nonlinearCurrents('ground-sensing-opamp', (read, scale) => {
+                const v = Object.fromEntries(terms.map(t => [t, read(t)]));
+                const { currents, jacobian } = evaluateStage(v, scale,
+                    fixedVcc === null ? null : fixedVcc * scale);
+                return { region: 'smooth', currents, jacobian, residualOhms: STAGE_RESIDUAL_OHMS };
+            });
+        },
+    });
     registerPrecisionOpAmp('lm741', PRECISION_OP_AMPS.lm741);
     // Solver-only element added by expandLm741LinearPoles only when the opt-in
     // bias/supply domain is selected. It moves the hidden buffer's output

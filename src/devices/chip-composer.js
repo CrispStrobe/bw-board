@@ -32,12 +32,38 @@ const LOGIC = {
   nand: (ins) => ins.every(Boolean) ? 0 : 1,
   nor: (ins) => ins.some(Boolean) ? 0 : 1,
   xor: (ins) => (ins[0] ^ ins[1]) ? 1 : 0,
-  schmitt_inv: (ins, state, idx, vcc) => {
-    // Schmitt inverter: hysteresis at 30%/70% VCC (same as gates but explicit)
-    return ins[0] ? 0 : 1;
-  },
+  // Schmitt gates: the logic is the plain function; the hysteresis lives in
+  // how their INPUTS are read (schmittLevel below), per input, with memory.
+  schmitt_inv: (ins) => ins[0] ? 0 : 1,
   schmitt_nand: (ins) => ins.every(Boolean) ? 0 : 1,
 };
+
+// Positive- and negative-going input thresholds of the Schmitt parts, as
+// fractions of VCC or (TTL-input HCT) fixed volts. Typical datasheet values:
+// TI SN74HC14 / SN74HC132 at 4.5 V: VT+ 2.5 V, VT− 1.6 V; TI CD4093B at 5 V:
+// VT+ 2.9 V, VT− 1.9 V; SN74HCT14 at 4.5 V: VT+ 1.6 V, VT− 0.9 V.
+const SCHMITT_THRESHOLDS = {
+  hc: { up: 0.55, down: 0.355, fixed: false },
+  cd4000: { up: 0.58, down: 0.38, fixed: false },
+  hct: { up: 1.6, down: 0.9, fixed: true },
+};
+function schmittThresholds(part, vcc) {
+  const t = /^cd4/.test(part.kind) ? SCHMITT_THRESHOLDS.cd4000
+    : (part.params?.family === 'hct' || /^74(hct|ls)/.test(part.kind)) ? SCHMITT_THRESHOLDS.hct
+      : SCHMITT_THRESHOLDS.hc;
+  return t.fixed ? { up: t.up, down: t.down } : { up: t.up * vcc, down: t.down * vcc };
+}
+/**
+ * A Schmitt input HOLDS its last level between VT− and VT+. These gates used
+ * to read through the plain 30 %/70 % window and call everything in between
+ * 0, so an RC Schmitt oscillator flipped the moment its capacitor left the
+ * low band: a 1 kHz design ran at ~60 kHz with a 0.1 V swing.
+ */
+function schmittLevel(v, previous, th) {
+  if (v >= th.up) return 1;
+  if (v <= th.down) return 0;
+  return previous ?? (v >= (th.up + th.down) / 2 ? 1 : 0);
+}
 
 // ─── Chip definitions ───────────────────────────────────────────────────
 
@@ -248,8 +274,17 @@ function buildChipModel(def) {
 
       // Evaluate combinational gates
       if (def.gates) {
+        const schmitt = def.gates.some(g => g.type.startsWith('schmitt'))
+          ? schmittThresholds(part, vcc) : null;
+        if (schmitt && !state._schmitt) state._schmitt = {};
         for (const g of def.gates) {
-          const inputs = g.inputs.map(p => readLogic(p) === 1 ? true : false);
+          const inputs = g.type.startsWith('schmitt')
+            ? g.inputs.map(p => {
+              const level = schmittLevel(read(p), state._schmitt[p], schmitt);
+              state._schmitt[p] = level;
+              return level === 1;
+            })
+            : g.inputs.map(p => readLogic(p) === 1 ? true : false);
           const fn = LOGIC[g.type];
           const result = fn ? fn(inputs) : 0;
           const newDrive = { vTh: result ? vcc : 0, rTh: R_OUT };

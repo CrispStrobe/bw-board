@@ -38,18 +38,25 @@ const STOPPED_RAD_S = 0.01;
  * exactly what it was under the clamp (`Math.max(0, v + drive/J·dt)`), and
  * reverse is new.
  *
+ * `friction` is VISCOUS friction b (N·m·s/rad): a torque −b·v. It is taken
+ * semi-implicitly, v1 = (v0 + (drive ∓ load)/J·dt) / (1 + b·dt/J), so a
+ * large b on a light rotor damps to the torque balance instead of
+ * overshooting. Absent (0), the step is exactly the explicit one above.
+ *
  * @param {number} v0 signed velocity before the step
  * @param {number} drive signed electrical torque
  * @param {number} loadTorque magnitude of the opposing load torque
  * @param {number} J rotor inertia
  * @param {number} dtSec step length
+ * @param {number} [friction] viscous friction coefficient b (≥ 0)
  * @returns {number} signed velocity after the step
  */
-export function stepMotorVelocity(v0, drive, loadTorque, J, dtSec) {
+export function stepMotorVelocity(v0, drive, loadTorque, J, dtSec, friction = 0) {
   const sense = v0 !== 0 ? Math.sign(v0) : Math.sign(drive);
   const torque = drive - sense * loadTorque;
   const alpha = torque / J;
   let v1 = v0 + alpha * dtSec;
+  if (friction > 0) v1 /= 1 + friction * dtSec / J;
   if ((v0 > 0 && v1 < 0) || (v0 < 0 && v1 > 0)) v1 = 0;
   // Load torque cannot start a motor turning the other way.
   if (v0 === 0 && Math.abs(drive) <= loadTorque) v1 = 0;
@@ -154,6 +161,7 @@ export function registerDCMotor() {
       const kT = part.params?.kT ?? kV; // ideal motor: kT = kV
       const J = part.params?.J ?? 0.001;
       const loadTorque = part.params?.loadTorque ?? 0;
+      const friction = part.params?.friction ?? 0;
 
       // Time step
       if (state._lastTNs === 0n) {
@@ -174,7 +182,7 @@ export function registerDCMotor() {
       state.current = current;
 
       // Mechanical dynamics (signed; see stepMotorVelocity).
-      const v1 = stepMotorVelocity(v0, kT * current, loadTorque, J, dtSec);
+      const v1 = stepMotorVelocity(v0, kT * current, loadTorque, J, dtSec, friction);
       state.velocity = v1;
       state.omega = Math.abs(v1);
       state.direction = motorDirectionOf(v1);
