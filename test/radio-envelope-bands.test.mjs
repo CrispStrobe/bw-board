@@ -100,11 +100,11 @@ describe('radio bands: the ferrite rod is a directional antenna', () => {
  * `sense` 1 connects the coupling winding for positive feedback, -1 the
  * other way round.
  */
-function meissner({ sense = 1, re = 1000, pos = 0.3, cbias = 10e-9, ce = 1e-9, ratio = 0.05 } = {}) {
+function meissner({ sense = 1, re = 1000, pos = 0.3, cbias = 10e-9, ce = 1e-9, ratio = 0.05, henrys = 250e-6, stations = [] } = {}) {
     const b = new BoardImpl(9);
     const [cb, cbOther] = sense > 0 ? ['c1', 'c2'] : ['c2', 'c1'];
     b.setNetlist([P('G', 'gnd', {}, ['gnd']), P('VS', 'vsource', { volts: 9 }, ['pos', 'neg']),
-        P('L1', 'ferrite_coil', { rodHeightM: 0, couplingRatio: ratio }, ['a', 'tap', 'b', 'c1', 'c2']),
+        P('L1', 'ferrite_coil', { rodHeightM: 0, couplingRatio: ratio, henrys }, ['a', 'tap', 'b', 'c1', 'c2']),
         P('TC', 'tuning_cap', { position: pos }, ['a', 'b']), P('Q1', 'npn', {}, ['base', 'collector', 'emitter']),
         P('R1', 'resistor', { ohms: 47e3 }, ['a', 'b']), P('R2', 'resistor', { ohms: 10e3 }, ['a', 'b']),
         P('CB', 'capacitor', { farads: cbias }, ['a', 'b']), P('RE', 'resistor', { ohms: re }, ['a', 'b']),
@@ -114,12 +114,25 @@ function meissner({ sense = 1, re = 1000, pos = 0.3, cbias = 10e-9, ce = 1e-9, r
         net('col', ['Q1', 'collector'], ['L1', 'b'], ['TC', 'b']),
         net('bias', ['R1', 'b'], ['R2', 'a'], ['CB', 'a'], ['L1', cbOther]),
         net('base', ['Q1', 'base'], ['L1', cb]), net('e', ['Q1', 'emitter'], ['RE', 'a'], ['CE', 'a'])]);
-    b.setBroadcast([]);
+    b.setBroadcast(stations);
     b.setPower(true);
     return b;
 }
 
 describe('radio bands: oscillation', () => {
+    it('a short-wave oscillator beside a station still oscillates: the band resolves its offset', () => {
+        // 5 µH, ~6.1 MHz. A carrier 20 kHz away puts the band's centre on the
+        // station; the oscillation then rotates at the offset in the band's
+        // frame, and a substep chosen for the station alone damped it away.
+        const lEff = 5e-6, c = 10e-12 + 490e-12 * 0.27;
+        const f0 = 1 / (2 * Math.PI * Math.sqrt(lEff * c));
+        const b = meissner({ henrys: lEff, pos: 0.27, ratio: 0.15,
+            stations: [{ id: 'cw', hz: f0 + 20e3, fieldVPerM: 0.005, mod: 'cw', audio: { type: 'morse', text: 'T', wpm: 5 } }] });
+        let m = 0;
+        for (const t of [2, 2.5, 3]) { ms(b, t); m = Math.max(m, tankAmp(b, 'col')); }
+        assert.ok(m > 0.5, `oscillates at ~${(f0 / 1e6).toFixed(2)} MHz beside the station: ${m} V`);
+    });
+
     it('a Meissner oscillator starts from noise at the LC frequency, limits, and is deterministic', () => {
         // Small bias capacitors (10 nF base, 1 nF emitter): with the bias
         // network much faster than the tank's envelope the oscillation runs
@@ -139,6 +152,21 @@ describe('radio bands: oscillation', () => {
         assert.ok(amp > 0.5 && amp < 12, `the collector swings volts, limited below the supply's reach: ${amp} V`);
         // The same bench again: the same swing (seeded noise).
         close(swing(meissner()), amp, 1e-9, 'deterministic');
+    });
+
+    it('the tank capacitor is an RF part: not in the time-domain solve, so an oscillator stays cheap', () => {
+        // Gap found building the AM transmitter: a capacitor across a winding
+        // (whose time-domain view is its copper resistance) is a
+        // sub-nanosecond mode that every change of the rectified current rang;
+        // the transient step control chased it at ~38 000 solves per ms.
+        const b = meissner();
+        ms(b, 1);
+        assert.ok(!b._solveParts.some(p => p.id === 'TC'), 'tuning capacitor left out of the transient solve');
+        assert.ok(b._radio.rfView(b._solveParts, b._solveNets).parts.some(p => p.id === 'TC'), '…and kept in the RF view');
+        const w0 = b.transientAnalysisStatus().work.solves;
+        ms(b, 2);
+        const perMs = b.transientAnalysisStatus().work.solves - w0;
+        assert.ok(perMs < 12000, `oscillating, ${perMs} solves per simulated ms`);
     });
 
     it('the coupling winding the wrong way round: no oscillation', () => {

@@ -41,7 +41,7 @@ export function registerRadioParts() {
     registerDevice('ferrite_coil', { terminals: ['a', 'tap', 'b', 'c1', 'c2'], init() { return { drives: {} }; } });
     // Air-core VHF coil and varicap diode: networks in the solver view too
     // (an inductor with its RF loss; a diode whose capacitance the RF bands see).
-    registerDevice('air_coil', { terminals: ['a', 'b'], init() { return { drives: {} }; } });
+    registerDevice('vhf_coil', { terminals: ['a', 'b'], init() { return { drives: {} }; } });
     registerDevice('varicap', { terminals: ['anode', 'cathode'], init() { return { drives: {} }; } });
 
     // ─── Junction rectification (solver-only) ───────────────────────────

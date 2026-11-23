@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 /**
  * Radio front end: long-wire antenna, earth, tuning capacitor, ferrite-rod
- * medium-wave coil, air-core VHF coil, varicap diode, a broadcast
+ * medium-wave coil, air-core VHF coil (vhf_coil), varicap diode, a broadcast
  * environment of AM, FM and Morse (CW) stations, and the RF behaviour of
  * every junction in the circuit: detection, amplification, regeneration,
  * oscillation, super-regeneration and mixing.
@@ -362,7 +362,7 @@ export const RF_DETECT_KIND = 'rf_detect';
 export const COUPLED_INDUCTORS_KIND = 'coupled_inductors';
 export const FERRITE_DEFAULTS = Object.freeze({ henrys: 250e-6, tap: 0.25, couplingRatio: 0.1, k: 0.98, couplingK: 0.9, q: 120,
     rodHeightM: 0.01, angleDeg: 0, distanceM: 1, linkRadiusM: 0.1 });
-export const AIR_COIL_DEFAULTS = Object.freeze({ henrys: 0.15e-6, q: 80 });
+export const VHF_COIL_DEFAULTS = Object.freeze({ henrys: 0.15e-6, q: 80 });
 export const ANTENNA_DEFAULTS = Object.freeze({ heightM: 5, ohms: 50, farads: 200e-12 });
 export const TUNING_CAP_DEFAULTS = Object.freeze({ minFarads: 10e-12, maxFarads: 500e-12, position: 0.5 });
 export const VARICAP_DEFAULTS = Object.freeze({ cjo: 40e-12, vj: 0.7, m: 0.5, is: 1e-14, n: 1, vf: 0.7 });
@@ -424,7 +424,7 @@ function ferriteWindings(part, has) {
  * @param {{controls: () => Map<string, number>}} opts
  */
 export function expandRadio(parts, nets, opts) {
-    const kinds = new Set(['antenna', 'earth', 'tuning_cap', 'ferrite_coil', 'air_coil', 'varicap']);
+    const kinds = new Set(['antenna', 'earth', 'tuning_cap', 'ferrite_coil', 'vhf_coil', 'varicap']);
     if (!parts.some(p => kinds.has(p.kind))) return { parts, nets, radio: null };
     if (chooseFrontEnd(parts, nets) === 'phasor') return expandRadioPhasor(parts, nets, opts);
     let outParts = [...parts];
@@ -461,14 +461,14 @@ export function expandRadio(parts, nets, opts) {
     // RF coils: the transient view uses the engine's inductor/transformer
     // with an RF damping resistor; the RF view swaps in the full coupled set.
     const coils = [];
-    for (const p of parts.filter(q => q.kind === 'ferrite_coil' || q.kind === 'air_coil')) {
+    for (const p of parts.filter(q => q.kind === 'ferrite_coil' || q.kind === 'vhf_coil')) {
         const has = (t) => !!netOf(p.id, t);
         let fw;
-        if (p.kind === 'air_coil') {
+        if (p.kind === 'vhf_coil') {
             if (!has('a') || !has('b')) continue;
             const P = p.params ?? {};
-            fw = { windings: [{ a: 'a', b: 'b', turns: 1, main: true }], L: [[num(P.henrys, AIR_COIL_DEFAULTS.henrys)]],
-                q: Math.max(0, num(P.q, AIR_COIL_DEFAULTS.q)) };
+            fw = { windings: [{ a: 'a', b: 'b', turns: 1, main: true }], L: [[num(P.henrys, VHF_COIL_DEFAULTS.henrys)]],
+                q: Math.max(0, num(P.q, VHF_COIL_DEFAULTS.q)) };
         } else fw = ferriteWindings(p, has);
         const wn = fw.windings.filter(w => netOf(p.id, w.a) !== netOf(p.id, w.b));
         if (wn.length !== fw.windings.length || !wn.length) continue;
@@ -476,14 +476,12 @@ export function expandRadio(parts, nets, opts) {
         const ends = (w) => [netOf(p.id, w.a), netOf(p.id, w.b)];
         // The TIME-domain view of a winding is its copper resistance only.
         // Everything a coil does at RF — resonance, coupling between windings,
-        // feedback — lives in the RF bands; at audio, where the transient
-        // solve works, a few hundred µH is a fraction of an ohm. Keeping the
-        // inductances (and the windings' mutual coupling) in the transient
-        // view as well would let the circuit's RF feedback loop exist twice:
-        // a Meissner oscillator also became a broadband blocking oscillator
-        // there, pinching its own bias off. (Round 3 kept them, damped by ωL
-        // at 1 MHz; nothing it built needed more than their DC path.)
-        const copper = p.kind === 'air_coil' ? 0.05 : 2;
+        // feedback — lives in the RF bands; at audio a few hundred µH is a
+        // fraction of an ohm. Coupling the windings here as well let the RF
+        // feedback loop exist twice (a Meissner oscillator also ran as a
+        // broadband blocking oscillator). A capacitor straight across a
+        // winding is the tank's and moves to the RF view below.
+        const copper = p.kind === 'vhf_coil' ? 0.05 : 2;
         wn.forEach((w, i) => {
             const id = `${p.id}_w${i}`;
             const [na, nb] = ends(w);
@@ -493,6 +491,33 @@ export function expandRadio(parts, nets, opts) {
         });
         coils.push({ part: p, kind: p.kind, windings: wn, L: fw.L, q: fw.q, hidden,
             nets: wn.map(w => [netOf(p.id, w.a).id, netOf(p.id, w.b).id]) });
+    }
+
+    // Capacitors straight across a coil (a winding, or the whole main
+    // winding) are tank capacitors: RF parts. In the time domain they would
+    // sit across the winding's copper resistance — a sub-nanosecond mode
+    // that every change of the rectified current rings and the transient
+    // step control then has to chase (measured: 38 000 solves per simulated
+    // ms on a Meissner transmitter). At audio the winding shorts them anyway,
+    // so they move to the RF view only.
+    const rfOnly = [];
+    {
+        const pairs = new Set();
+        const key = (a, b) => [a, b].sort().join('|');
+        for (const c of coils) {
+            c.nets.forEach(([a, b]) => pairs.add(key(a, b)));
+            const main = c.windings.map((w, i) => (w.main ? c.nets[i] : null)).filter(Boolean);
+            if (main.length > 1) pairs.add(key(main[0][0], main[main.length - 1][1]));
+        }
+        outParts = outParts.filter(p => {
+            if (p.kind !== 'capacitor') return true;
+            const na = netOf(p.id, 'a'), nb = netOf(p.id, 'b');
+            if (!na || !nb || !pairs.has(key(na.id, nb.id))) return true;
+            rfOnly.push({ part: p, nets: [[na.id, 'a'], [nb.id, 'b']] });
+            na.terminals = na.terminals.filter(t => t.part !== p.id);
+            nb.terminals = nb.terminals.filter(t => t.part !== p.id);
+            return false;
+        });
     }
 
     // Couple linked ferrite rods (near field) into one coupled set; every
@@ -605,6 +630,7 @@ export function expandRadio(parts, nets, opts) {
     // Junctions: every diode, transistor and MOSFET can rectify and is
     // stamped into the RF bands by its describing function.
     const radio = new RadioFrontEnd({ antennas: antennaSpecs, detectors: [], coupled, controls: opts.controls });
+    radio.rfOnly = rfOnly;
     for (const p of outParts) {
         let terms, j, k2 = null;
         if (p.kind === 'diode') { terms = ['anode', 'cathode']; j = ['anode', 'cathode']; }
@@ -645,10 +671,10 @@ export function expandRadio(parts, nets, opts) {
  */
 export function chooseFrontEnd(parts, nets) {
     const byId = new Map(parts.map(p => [p.id, p]));
-    const coilT = (p, t) => (p.kind === 'ferrite_coil' && ['a', 'tap', 'b', 'c1', 'c2'].includes(t)) || (p.kind === 'air_coil');
+    const coilT = (p, t) => (p.kind === 'ferrite_coil' && ['a', 'tap', 'b', 'c1', 'c2'].includes(t)) || (p.kind === 'vhf_coil');
     const outT = (p, t) => ((p.kind === 'npn' || p.kind === 'pnp') && (t === 'collector' || t === 'emitter'))
         || ((p.kind === 'nmos' || p.kind === 'pmos') && (t === 'drain' || t === 'source'));
-    if (parts.some(p => ['air_coil', 'varicap', 'nmos', 'pmos'].includes(p.kind))) return 'envelope';
+    if (parts.some(p => ['vhf_coil', 'varicap', 'nmos', 'pmos'].includes(p.kind))) return 'envelope';
     if (parts.some(p => p.kind === 'ferrite_coil' && (p.params?.linkTo || Array.isArray(p.params?.stations)))) return 'envelope';
     const antennas = parts.filter(p => p.kind === 'antenna');
     if (!antennas.length) return 'envelope';
@@ -1102,7 +1128,7 @@ export class RadioFrontEnd {
         const outParts = parts.filter(p => p.kind !== RF_DETECT_KIND && !drop.has(p.id));
         const outNets = nets.map(n => ({ ...n, terminals: n.terminals.filter(t => !drop.has(t.part) && !t.part.endsWith(':det')) }));
         const byId = new Map(outNets.map(n => [n.id, n]));
-        for (const c of this.coupled) {
+        for (const c of [...this.coupled, ...(this.rfOnly ?? [])]) {
             outParts.push(c.part);
             for (const [netId, t] of c.nets) byId.get(netId)?.terminals.push({ part: c.part.id, terminal: t });
         }
@@ -1654,6 +1680,7 @@ class RfBand {
         const N = sys.N;
         // Re-centre: v = Re{X·e^{jωt}} must not change.
         if (this.X && hz !== this.hz) {
+            this._recentred = true;
             const ph = 2 * Math.PI * (this.hz - hz) * this.t;
             const c = Math.cos(ph), s = Math.sin(ph);
             for (let i = 0; i < this.X.re.length; i++) {
@@ -1665,6 +1692,7 @@ class RfBand {
             // A new band, or the circuit's RF system changed shape: start quiet.
             this.X = { re: new Float64Array(N), im: new Float64Array(N) };
             this.t = tSec;
+            this._recentred = true;
         }
         this.hz = hz;
         this.members = members;
@@ -1694,7 +1722,13 @@ class RfBand {
         // Thermal noise of each winding's loss conductance G = 1/(Q·ω·L).
         this.noise = sys.windings.filter(x => x.q > 0 && x.henrys > 0)
             .map(x => ({ sel: x.sel, psd: thermalCurrentPsd(1 / (x.q * w * x.henrys)) }));
-        this.hist = [{ t: this.t, vp: this.integ.portVoltages(this.X), X: this.X }];
+        // Keep the history a surviving band already has: the transient solve
+        // may still be querying times inside it. Re-starting it at the band's
+        // own (run-ahead) time froze the swing the solve saw until the solve
+        // caught up, then stepped it: a kink at every refresh.
+        if (!this.hist.length || this._recentred) this.hist = [{ t: this.t, vp: this.integ.portVoltages(this.X), X: this.X }];
+        else this.hist = this.hist.map(e => ({ ...e, vp: this.integ.portVoltages(e.X) }));
+        this._recentred = false;
         this._bound();
     }
 
