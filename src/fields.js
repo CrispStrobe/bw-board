@@ -63,7 +63,8 @@
  *            plate, a capacitance `paperFarads`·position in series with the
  *            body's own.
  * Every probe also has its stray capacitance to the room (`strayFarads`,
- * 5 pF) and an insulation leak (`leakOhms`, 1 TΩ).
+ * 5 pF) and an insulation leak (`leakOhms`, 100 TΩ; the solver's own floor at a
+ * MOSFET gate is lower, about 1 TΩ).
  *
  * ─── JUNCTION NOISE ──────────────────────────────────────────────────────
  *
@@ -119,7 +120,7 @@ const VT = 0.02585;
 const CR_NORM = Math.sqrt(70 / 57);
 
 export const PROBE_DEFAULTS = Object.freeze({
-    source: 'mains', position: 0, maxFarads: 2e-12, strayFarads: 5e-12, leakOhms: 1e12,
+    source: 'mains', position: 0, maxFarads: 2e-12, strayFarads: 5e-12, leakOhms: 1e14,
     mainsVolts: 230, mainsHz: 50, commonFarads: 50e-12, adaptorFarads: 0,
     rodVolts: 10000, moveSeconds: 0.2,
     contact: 'skin', skinOhms: 1e6, paperFarads: 20e-12, bodyMainsFarads: 3e-12, bodyEarthFarads: 150e-12,

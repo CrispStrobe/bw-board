@@ -13,7 +13,7 @@ untouched (`expandFields` returns its input arrays).
 | source | 'mains' | 'mains' (live cable), 'charge' (rubbed ruler), 'body' (finger) |
 | position | 0 | knob 0..1: how close the source is (a control; a change moves over moveSeconds) |
 | maxFarads | 2 pF (charge: 0.1 pF) | coupling at position 1 |
-| strayFarads / leakOhms | 5 pF / 1 TΩ | the wire's own capacitance and leak to the room |
+| strayFarads / leakOhms | 5 pF / 100 TΩ | the wire's own capacitance and leak to the room |
 | mainsVolts / mainsHz | 230 / 50 | the room's mains |
 | commonFarads | 50 pF | the circuit common's capacitance to the room (1 TΩ leak) |
 | adaptorFarads | 0 | > 0: powered from a mains adaptor, common coupled to half the mains |
