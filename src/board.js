@@ -3473,7 +3473,7 @@ export class BoardImpl {
   /** Re-solve the RF network now, at the last accepted operating point. */
   refreshRadio() {
     if (!this._radio) return null;
-    this._radio.refresh(this, Number(this.timeNs) / 1e9, this._mnaCache);
+    this._radio.refresh(this, Number(this.timeNs) / 1e9, this._radio._opView(this._mnaCache));
     return this.radioReport();
   }
 

@@ -310,15 +310,16 @@ describe('radio: reflex receiver', () => {
                 g.terminals.push({ part: 'CEA', terminal: 'b' });
             },
         });
-        ms(b, 80);
+        ms(b, 30);
         const t = b.buzzerTone('EP');
         close(t.hz, 400, 8, 'the station in the earphone');
+        // First pass: gm (≈ 50 mS at ~1.3 mA) into the choke's ~10 kΩ at 612 kHz.
         const rf = b.rfVoltage('col')[0].volts / b.rfVoltage('base')[0].volts;
-        assert.ok(rf > 20, `RF gain on the first pass: ${rf}`);
+        assert.ok(rf > 100, `RF gain on the first pass: ${rf}`);
         // Second pass: the audio at the collector side of the earphone is
         // larger than the detected audio fed back in.
-        const audioOut = swing(b, 'ep', 80, 90).pp;
-        const audioIn = swing(b, 'out', 90, 100).pp;
+        const audioOut = swing(b, 'ep', 30, 35).pp;
+        const audioIn = swing(b, 'out', 35, 40).pp;
         assert.ok(audioOut > 3 * audioIn, `audio gain on the second pass: ${audioIn} V p-p in, ${audioOut} V p-p out`);
     });
 });

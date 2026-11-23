@@ -428,6 +428,7 @@ const REFRESH_SEC = 2e-3;
 const BLEND_SEC = 1e-3;
 const IDC_TAU_SEC = 1e-3;
 const DEFAULT_LOAD_OHMS = 47e3;
+const OP_TAU_SEC = 5e-3;
 
 const cadd = (a, b) => [a[0] + b[0], a[1] + b[1]];
 const csub = (a, b) => [a[0] - b[0], a[1] - b[1]];
@@ -468,6 +469,7 @@ export class RadioFrontEnd {
         this._drive = new Map();     // junction / compression factors used by the RF solve
         this._netPhasors = null;
         this._groups = null;
+        this._opEma = null;
         this.error = null;
         this.refreshes = 0;
     }
@@ -562,9 +564,43 @@ export class RadioFrontEnd {
             if (!prev) this._idc.set(d.id, { v, i });
             else { prev.v += (v - prev.v) * alpha; prev.i += (i - prev.i) * alpha; }
         }
+        this._kindOf ??= new Map((board._solveParts ?? []).filter(p => p.kind === 'npn' || p.kind === 'pnp')
+            .map(p => [p.id, p.kind]));
+        this._smoothOperatingPoint(solution, dt);
         const key = JSON.stringify([...(board.controls ?? new Map())]);
         if (key !== this._controlsKey) { this._controlsKey = key; this._dirty = true; }
-        if (this._dirty || tSec - this._tRefresh >= REFRESH_SEC) this.refresh(board, tSec, solution);
+        if (this._dirty || tSec - this._tRefresh >= REFRESH_SEC) this.refresh(board, tSec, this._opView(solution));
+    }
+
+    /**
+     * The operating point the carrier is linearised at, smoothed over ~5 ms.
+     * A transistor's bias swings at audio rate (in a reflex receiver by
+     * volts); sampling that swing every refresh would turn the RF gain into
+     * a staircase at the refresh rate. The carrier-level gain follows the
+     * mean bias; its modulation by the programme is not modelled.
+     */
+    _smoothOperatingPoint(solution, dt) {
+        if (!solution?.nodeVoltages) return;
+        const a = dt > 0 ? 1 - Math.exp(-dt / OP_TAU_SEC) : 1;
+        const ema = this._opEma ?? (this._opEma = { v: new Map(), bc: new Map() });
+        for (const [id, v] of solution.nodeVoltages) {
+            const p = ema.v.get(id);
+            ema.v.set(id, p === undefined ? v : p + (v - p) * a);
+        }
+        for (const [id, m] of solution.branchCurrents ?? []) {
+            const kind = this._kindOf?.get(id);
+            if (kind !== 'npn' && kind !== 'pnp') continue;
+            let e = ema.bc.get(id);
+            if (!e) { e = new Map(m); ema.bc.set(id, e); continue; }
+            for (const [t, i] of m) e.set(t, (e.get(t) ?? i) + (i - (e.get(t) ?? i)) * a);
+        }
+    }
+
+    _opView(solution) {
+        if (!this._opEma) return solution;
+        const bc = new Map(solution.branchCurrents ?? []);
+        for (const [id, m] of this._opEma.bc) bc.set(id, m);
+        return { ...solution, nodeVoltages: this._opEma.v, branchCurrents: bc };
     }
 
     /** Junction voltage and DC current (forward sense) of detector d in a solution. */
