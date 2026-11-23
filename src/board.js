@@ -7233,8 +7233,21 @@ export class BoardImpl {
         const nextCorner = this._nextSourceEdgeSec(t);
         const featureSeed = nextCorner !== null && nextCorner > t + 1e-15
           ? (nextCorner - t) / 10 : Infinity;
-        const hSeed = Math.min(hEff, H_SEED, featureSeed);
-        const r = solveStep(t, hSeed, 'be', cv, il, cc, lv);
+        let hSeed = Math.min(hEff, H_SEED, featureSeed);
+        let r = solveStep(t, hSeed, 'be', cv, il, cc, lv);
+        // A seed whose Newton fails is refined like any trial, down to the
+        // floor, before its failure is recorded: right after an event that
+        // leaves a regenerative pair balanced (an astable's keys pressed with
+        // both bases at the knee), the 1 ns step was the one that could not
+        // converge, and accepting it failed the whole transient.
+        while (!validTransientSolution(r) && hSeed > H_MIN * 1.000001
+          && windowAttempts < MAX_ATTEMPTS) {
+          this._chargeBoundedAdvanceWork('attempts');
+          attempts++;
+          windowAttempts++;
+          hSeed = Math.max(H_MIN, hSeed / 8);
+          r = solveStep(t, hSeed, 'be', cv, il, cc, lv);
+        }
         t += hSeed;
         accept(r, t, null, 'be');
         // Only a seed that reached the edge crossed it.

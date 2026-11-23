@@ -3866,7 +3866,7 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
         const vOutX = part.kind === 'npn' ? vC - vE : vE - vC;
         const vJX = part.kind === 'npn' ? vB - vE : vE - vB;
         // A reverse-biased base drives the law with zero (`smoothLawBaseDrive`).
-        ic = (vJX < 0 ? 0 : ib) * bjtForcedBeta(vOutX, beta, /** @type {number} */ (part.params.betaR ?? 1)).f;
+        ic = (vJX < 0 ? smoothLawBaseDrive(vJX, ib / vJX, 0).iB0 : ib) * bjtForcedBeta(vOutX, beta, /** @type {number} */ (part.params.betaR ?? 1)).f;
         const ibc = pwlStampedCurrent(vJX - vOutX, bjtBcKnee(part), rd, BC_CLAMP_GOFF);
         const polarityX = part.kind === 'npn' ? 1 : -1;
         currents.set('base', -polarityX * (ib + ibc));
@@ -5141,15 +5141,26 @@ function bjtBcKnee(part) {
  *
  * A cut-off transistor conducts nothing from collector to emitter (Ebers-Moll
  * with both junctions reversed leaves Is-scale currents), so a reverse base
- * bias drives the law with zero. The value is continuous at Vbe = 0, where
- * the off-conductance current is zero from either side; a forward-biased
+ * bias drives the law with zero, faded in C1 over the 50 mV below 0 V (see
+ * the cubic in the body; a hard slope step at 0 V was a kink Newton cycled
+ * on). A forward-biased
  * junction below its knee keeps its small amplified current exactly as
  * before, so every conducting and forward-idling transistor is unchanged.
  */
 function smoothLawBaseDrive(vAcross, gEq, iEq) {
-  if (vAcross < 0) return { iB0: 0, gB: 0 };
-  return { iB0: gEq * vAcross + iEq, gB: gEq };
+  if (vAcross >= 0) return { iB0: gEq * vAcross + iEq, gB: gEq };
+  if (vAcross <= -SMOOTH_LAW_CUTOFF_V) return { iB0: 0, gB: 0 };
+  // Below 0 V the junction companion is its bare off conductance (gEq), and
+  // the drive fades to zero over SMOOTH_LAW_CUTOFF_V with a C1 cubic: value
+  // and slope match the off segment at 0 V and zero at the cutoff. A hard
+  // step in slope at 0 V was a kink Newton cycled on for a base resting near
+  // 0 V (lab-astable-tone, its supply keyed off: the transient failed at the
+  // first step after the keys were pressed again). The dip in between is at
+  // most 4/27 of gEq x the cutoff -- picoamperes.
+  const u = 1 + vAcross / SMOOTH_LAW_CUTOFF_V;
+  return { iB0: gEq * vAcross * u * u, gB: gEq * u * (1 + 3 * vAcross / SMOOTH_LAW_CUTOFF_V) };
 }
+const SMOOTH_LAW_CUTOFF_V = 0.05;
 
 /** True when a BJT solves with the smooth output law (`bjtForcedBeta`). */
 export function bjtSmoothOutput(part) {
