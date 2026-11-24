@@ -1895,11 +1895,29 @@ class RfBand {
         }
     }
 
-    /** The substep ceiling for the bias now (see _bound): growth extrapolated from the current. */
+    /**
+     * The substep ceiling for the bias now (see _bound). The growth rate is
+     * estimated afresh (_modes, two factorizations) whenever the stages'
+     * current has moved by a sixth, or the band's swing by a factor of two,
+     * since the last estimate. A linear extrapolation from the bound's
+     * reference current was the first answer here; a quench drives the
+     * current far past that reference, where the extrapolated rate ran away
+     * (Cπ grows with the current too, and a swinging band compresses) and
+     * held the band at 1 ns substeps: 160 000 per simulated millisecond.
+     */
     _kForBias() {
         if (!(this._dSigma > 0) || !(this._icRef > 0)) return this.kMax;
-        const ic = (this.radio._bias ?? []).reduce((a, b) => a + (b?.ic ?? 0), 0);
-        const sigma = this._sigma0 + this._dSigma * (ic / this._icRef - 1);
+        const r = this.radio;
+        const ic = (r._bias ?? []).reduce((a, b) => a + (b?.ic ?? 0), 0);
+        const amp = Math.max(1e-12, ...this.integ.portVoltages(this.X).map(p => Math.hypot(p[0], p[1])));
+        const c = this._sigmaCache;
+        let sigma;
+        if (c && Math.abs(ic - c.ic) <= c.ic / 6 && amp <= 2 * c.amp && amp >= c.amp / 2) sigma = c.sigma;
+        else {
+            const modes = r._modes(this.omega, this.integ.portVoltages(this.X), r._otherAmplitudes(this));
+            sigma = Math.max(...modes.map(m => m[0]));
+            this._sigmaCache = { ic, amp, sigma };
+        }
         // Only a clear growth (an e-fold in under 5 µs): an oscillation that
         // its own compression holds wobbles around σ = 0, and following those
         // wobbles cost a steady oscillator half its speed.

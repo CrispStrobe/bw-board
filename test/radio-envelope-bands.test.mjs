@@ -15,6 +15,7 @@ import assert from 'node:assert/strict';
 import { BoardImpl } from '../src/board.js';
 import { registerAllDevices } from '../src/register-all.js';
 import { createHash } from 'node:crypto';
+import { readFileSync } from 'node:fs';
 import { DMath } from '../src/det-math.js';
 import { normalizeStations, programmeValue, programmeIntegral, junctionCapacitance, stationModulation } from '../src/radio.js';
 
@@ -367,5 +368,29 @@ describe('radio bands: the same answer on every platform', () => {
             assert.equal(p.start, base.start, `${u} ulp: builds up at the same time`);
             assert.ok(Math.abs(p.mean / base.mean - 1) < 0.25, `${u} ulp: mean swing ${p.mean.toFixed(3)} against ${base.mean.toFixed(3)} V`);
         }
+    });
+});
+
+describe('radio bands: the cost of a quenched receiver', () => {
+    it('a super-regenerator\'s band steps follow the growth the quench sets, not a runaway extrapolation of it', () => {
+        // The band's substep is bounded by the growth rate at the bias the
+        // transient solve sets. It was extrapolated linearly from the
+        // current at the last bound; the quench drives the current far past
+        // that, the extrapolated rate ran away, and the band was held at
+        // 1 ns substeps: ~160 000 per simulated ms, 40 % of the run time.
+        // Now the rate is estimated afresh when the current or the swing has
+        // moved: ~5 300 per ms.
+        const fx = JSON.parse(readFileSync(new URL('./fixtures/superregen-vhf-netlist.json', import.meta.url), 'utf8'));
+        const b = new BoardImpl(fx.vcc);
+        b.setNetlist(fx.parts, fx.nets);
+        b.setPower(true);
+        ms(b, 1);
+        const s0 = b._radio.substeps;
+        let hi = 0;
+        for (let k = 1; k <= 25; k++) { ms(b, 1 + k * 0.01); hi = Math.max(hi, ...b._radio._bands.map(x => Math.max(...x.portVoltages().map(p => Math.hypot(p[0], p[1]))))); }
+        assert.equal(b.transientAnalysisStatus().failure, null);
+        assert.ok(hi > 1, `it still bursts: ${hi.toFixed(2)} V`);
+        const perMs = (b._radio.substeps - s0) / 0.25;
+        assert.ok(perMs < 20000, `${perMs} band substeps per simulated ms`);
     });
 });
