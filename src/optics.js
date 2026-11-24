@@ -216,6 +216,55 @@ export function receiverCard(part) {
     }
 }
 
+// ─── Room light with a spectrum (LED sensors) ────────────────────────────
+
+/**
+ * THE ROOM'S LIGHT HAS A COLOUR TOO. An LED used as a light sensor sees only
+ * wavelengths shorter than its own emission (receiverCard 'led'), and along a
+ * light_path that is applied line by line. The plain `light` control was a
+ * colourless 0..1, so a red LED and an IR LED under the same lamp could only
+ * differ by the photoSensitivity the author typed. With
+ * params.ambientSpectrum on the sensing LED, its room-light photocurrent is
+ * weighted by the share of that light it can see:
+ *
+ *   f = Σ S(λ)·R(λ) / Σ S(λ)   over 350..1100 nm in 5 nm steps,
+ *
+ * S the source's spectral power and R the LED's response, so
+ * photoSensitivity keeps meaning "amps at full light of a source it sees
+ * completely". Sources: 'incandescent' (a 2850 K black body: a bulb is
+ * mostly infrared), 'daylight' (5800 K), 'white-led' (the white emitter's two
+ * lines, 25 nm wide), 'flat'. Without the param nothing changes.
+ */
+export const AMBIENT_SPECTRA = Object.freeze(['incandescent', 'daylight', 'white-led', 'flat']);
+
+function blackBody(nm, kelvin) {
+    const l = nm * 1e-9;
+    return 1 / (l ** 5 * (DMath.exp(1.438777e-2 / (l * kelvin)) - 1));
+}
+
+function ambientPower(spectrum, nm) {
+    switch (spectrum) {
+        case 'incandescent': return blackBody(nm, 2850);
+        case 'daylight': return blackBody(nm, 5800);
+        case 'white-led': return EMITTER_TABLE.white.lines.reduce((a, [c, w]) => a + w * DMath.exp(-(((nm - c) / 25) ** 2)), 0);
+        case 'flat': return 1;
+        default: return null;
+    }
+}
+
+/** Share of `spectrum` a light-sensing LED responds to (0..1), or 1 without a known spectrum. */
+export function ambientSpectralShare(part, spectrum = part?.params?.ambientSpectrum) {
+    if (!AMBIENT_SPECTRA.includes(spectrum)) return 1;
+    const card = receiverCard({ ...part, kind: 'led' });
+    let num = 0, den = 0;
+    for (let nm = 350; nm <= 1100; nm += 5) {
+        const s = ambientPower(spectrum, nm);
+        num += s * card.response(nm);
+        den += s;
+    }
+    return den > 0 ? num / den : 1;
+}
+
 // ─── Surfaces, filters, dispersion ───────────────────────────────────────
 
 export const SURFACES = Object.freeze({

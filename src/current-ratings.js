@@ -155,6 +155,10 @@ const LOCAL_ONLY = {
   thermocouple:      { chip_mA: 0, supply_mA: 0 },
   air_coil:          { chip_mA: "circuit", supply_mA: 0 },
   electrolysis_cell: { chip_mA: "circuit", supply_mA: 0 },
+  // A salt-film humidity comb is a resistance; a dual-gate MOSFET's channel
+  // carries what the circuit drives through it (its gates draw nothing).
+  humidity_comb:     { chip_mA: "circuit", supply_mA: 0 },
+  dual_gate_mosfet:  { chip_mA: "circuit", supply_mA: 0 },
   vhf_coil:          { chip_mA: 0, supply_mA: 0 },
   varicap:           { chip_mA: 0, supply_mA: 0 },
   bargraph:          { chip_mA: "circuit", supply_mA: "circuit" },

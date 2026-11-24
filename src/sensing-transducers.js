@@ -56,11 +56,24 @@
  * that discharges through the electrolysis branch: the cell is briefly a
  * battery itself.
  *
+ * HUMIDITY COMB (`humidity_comb`, pins a/b): two interleaved copper combs on
+ * a board, coated with a thin salt film. A dry salt film is an insulator; the
+ * water it adsorbs from the air dissolves its ions, and the more water, the
+ * more ions are mobile, so the resistance between the combs falls steeply and
+ * roughly exponentially with relative humidity: about one decade per
+ * `decadePct` (12) % RH, from `r50` (10 MΩ) at 50 % RH. So ~460 MΩ at 30 %,
+ * ~4.6 kΩ at 90 % (breath on the film), clamped to 0..100 % RH. The relative
+ * humidity at the comb is the learner's control (0..1 = 0..100 % RH, a breath
+ * is ~0.9), else the part's `humidity` param (%), else the world's humidity.
+ * A real salt film polarises under DC and is better read with AC; the model
+ * is the film's resistance only (no electrode polarisation).
+ *
  * @module
  */
 
 import { JUNCTION_THERMAL_VOLTAGE } from './mna.js';
 import { DMath } from './det-math.js';
+import { ambient } from './world.js';
 
 export const MU0 = 4e-7 * Math.PI;
 const RHO_CU = 1.72e-8;
@@ -230,6 +243,24 @@ export function faradaicCurrent(card, v) {
 }
 
 export { FARADAY };
+
+// ─── Humidity comb ──────────────────────────────────────────────────────
+
+export const HUMIDITY_COMB_DEFAULTS = Object.freeze({ r50: 10e6, decadePct: 12 });
+
+/** Relative humidity (%) at the comb: control (0..1), else params.humidity / the world (%). */
+export function combHumidityPct(part, control) {
+    const rh = Number.isFinite(control) ? 100 * Number(control) : num(ambient(part, 'humidity', 50), 50);
+    return Math.min(100, Math.max(0, rh));
+}
+
+/** Film resistance (Ω) at relative humidity `rhPct`. */
+export function combOhms(part, rhPct) {
+    const P = part?.params ?? {};
+    const r50 = Math.max(1, num(P.r50, HUMIDITY_COMB_DEFAULTS.r50));
+    const decade = Math.max(0.5, num(P.decadePct, HUMIDITY_COMB_DEFAULTS.decadePct));
+    return r50 * DMath.pow(10, (50 - rhPct) / decade);
+}
 
 // ─── Solver view ────────────────────────────────────────────────────────
 

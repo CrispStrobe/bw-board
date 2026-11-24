@@ -8,6 +8,7 @@ import {shaftElectricalStep} from '../mechanical-shaft.js';
 import { registerDevice } from '../devices.js';
 import { stepMotorVelocity, motorDirectionOf } from './dc-motor.js';
 import { lightLevel } from '../world.js';
+import { ambientSpectralShare } from '../optics.js';
 import { photodiodeCurrent, solarCellParams, solarCellCurrent } from '../photo-junctions.js';
 
 const R_OUT = 50;
@@ -66,8 +67,10 @@ export function registerTier1Parts() {
   // Solver-only parts get no device state (the board initialises state for
   // drawn parts), so the current is evaluated at stamp time, which is also
   // what makes a setControl or a world change take effect in the same solve.
+  // With params.ambientSpectrum the room light has a colour, and the LED sees
+  // only the part of it shorter than its own wavelength (src/optics.js).
   const ledPhotoAmps = (part) => Math.max(0, lightLevel(part.lightOf ?? part, 0))
-    * Number(part.params?.photoSensitivity ?? 0);
+    * Number(part.params?.photoSensitivity ?? 0) * ambientSpectralShare(part.lightOf ?? part);
   registerDevice('led_photocurrent', {
     terminals: ['anode', 'cathode'],
     init() { return { drives: {} }; },

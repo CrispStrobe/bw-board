@@ -15,7 +15,7 @@ import { registerDevice } from '../devices.js';
 import { VOICE_COIL_KIND } from '../acoustics.js';
 import {
     thermocoupleCard, airCoilCard, dropEmf, coilRun, coilInductorParams, magnetFall, fluxLinkage,
-    electrolysisCard, FARADAY, INNER_PIN,
+    electrolysisCard, FARADAY, INNER_PIN, combHumidityPct, combOhms,
 } from '../sensing-transducers.js';
 
 const num = (v, d) => (Number.isFinite(Number(v)) ? Number(v) : d);
@@ -135,6 +135,25 @@ export function registerSensingParts() {
             state.taste = state.tasteLevel < 1 ? 'none' : state.tasteLevel < 10 ? 'faint' : 'strong';
             // Oxidation at the electrode the current enters by: acid (H⁺) there, a sour/metallic taste.
             state.sourAt = iF > 0 ? 'a' : iF < 0 ? 'b' : null;
+            return false;
+        },
+    });
+
+    // ─── Humidity comb ─────────────────────────────────────────────────
+    // A resistance between `a` and `b` that falls steeply with the relative
+    // humidity at the film (the learner's control, else the world).
+    registerDevice('humidity_comb', {
+        terminals: ['a', 'b'],
+        eventLocalization: false,
+        init() { return { drives: {}, humidityPct: 50, ohms: 0, amps: 0 }; },
+        stamp(ctx, part, state) {
+            const rh = combHumidityPct(part, ctx.control);
+            const ohms = combOhms(part, rh);
+            ctx.theveninBetween('a', 'b', 0, ohms);
+            if (state) { state.humidityPct = rh; state.ohms = ohms; }
+        },
+        update(part, state, read) {
+            if (state.ohms > 0) state.amps = (read('a') - read('b')) / state.ohms;
             return false;
         },
     });
