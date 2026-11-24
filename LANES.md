@@ -1,3 +1,23 @@
+## Kosmos CP1 and reusable MCS-48/8155 — CLAIMED, 2026-11-24
+
+Owner: Brickwright CP1 implementation lane, requested by CrispStrobe.
+Base: `eb3ec0a7b4e8557e6e3c181a70a3fad5e8d09f08`.
+Feature branch: `feat/kosmos-cp1-20261124`; isolated checkout.
+Own new src/mcs48*, src/i8155*, src/cp1*, focused tests and documentation,
+additive target/debug/media/export/device registrations, and scoped package
+exports. One CPU/machine/circuit state and simulated clock. Preserve existing
+targets and unrelated claimed hunks. Companion Lite plan:
+https://github.com/CrispStrobe/brickwright-lite/blob/feat/kosmos-cp1-20261124/docs/KOSMOS-CP1-PLAN.md
+
+GPL emulators are research/oracle only: independent implementation subagents
+receive hardware specs and observable facts, no GPL code or translated
+implementation structure. Record provenance and oracle versions; no historical
+ROMs/manual assets in shipped code. Commit/push coherent candidates incrementally.
+Qualify ISA/flags/timing/interrupt/port/8155 behavior, CP1 firmware boot/keypad/
+display/I/O/CP3, checkpoint integrity, and advertised debugger/circuit behavior.
+All existing required landing gates apply. No implementation merge or Lite
+production adoption is claimed by checkpoint preservation.
+
 ## Seal-compatible ordinary x86 toolchain repair — CANDIDATE, 2026-11-16
 
 Same existing x86 owner, explicitly requested by CrispStrobe, continues PR736.
