@@ -77,6 +77,7 @@
  *   | 'dual_gate_mosfet'
  *   | 'ptc_sensor' | 'cd4046' | 'bending_ruler' | 'spark_gap'
  *   | 'induction_loop' | 'coil_pendulum'
+ *   | 'sa612' | 'fm_if' | 'ceramic_filter' | 'dipole'
  *   | 'light_path' | 'laser_diode'} PartKind
  */
 

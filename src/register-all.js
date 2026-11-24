@@ -58,6 +58,8 @@ import { registerFieldParts } from './devices/field-parts.js';
 import { registerSensingParts } from './devices/sensing-parts.js';
 import { registerPll4046 } from './devices/pll-4046.js';
 import { registerSparkGap } from './devices/spark-gap.js';
+import { registerMixerIcParts } from './devices/mixer-ic-parts.js';
+import { registerFmIfParts } from './devices/fm-if-parts.js';
 import { registerOpticalParts } from './devices/optical-parts.js';
 import { registerDualGateParts } from './devices/dual-gate-parts.js';
 import { registerMPU6050 } from './devices/mpu6050.js';
@@ -121,6 +123,8 @@ export function registerAllDevices() {
   registerSensingParts();
   registerPll4046();
   registerSparkGap();
+  registerMixerIcParts();
+  registerFmIfParts();
   registerOpticalParts();
   registerDualGateParts();
   registerMPU6050();
