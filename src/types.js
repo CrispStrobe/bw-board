@@ -78,6 +78,7 @@
  *   | 'ptc_sensor'
  *   | 'cd4046'
  *   | 'bending_ruler'
+ *   | 'spark_gap'
  *   | 'light_path' | 'laser_diode'} PartKind
  */
 
