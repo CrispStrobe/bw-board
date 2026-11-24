@@ -914,6 +914,10 @@ const H_TARGET_MAX = 20e-6;
 const NOISE_SEED = 0x5eed1234;
 const RF_ONLY_FARADS = 47e-12;
 const SIGMA_FOLLOW = 2e5;
+/** Carrier tracking (RfBand._track): averaging time and the swing below which a port is not followed. */
+const TRACK_TAU_SEC = 30e-6;
+const BAND_STEP_LOG_TOL = 0.1;
+const TRACK_MIN_VOLTS = 0.02;
 /**
  * A band whose swing passes this, or that needs more substeps than this
  * ahead of the circuit's last accepted step, is refused (RfBand._refuse):
@@ -1623,28 +1627,37 @@ export class RadioFrontEnd {
         const bands = [];
         const assigned = new Set();
         for (const r of res) {
+            // A band that tracks its own oscillation (RfBand._track) keeps
+            // its centre on it: the tank's |Z| peak is not where an active
+            // stage oscillates (the loop's phase sets that, and a transistor's
+            // input network can pull it several per cent), and the envelope
+            // model is first-order in the offset from its centre.
+            const tracked = old.find(ob => ob.trackedHz && ob.tankHz !== undefined
+                && Math.abs(ob.tankHz - r.hz) <= Math.max(r.halfWidth ?? 0, 0.02 * r.hz));
+            const centre0 = tracked ? tracked.trackedHz : r.hz;
             const members = [];
             stations.forEach((s, k) => {
                 if (assigned.has(k)) return;
-                if (Math.abs(s.hz - r.hz) <= (r.halfWidth ?? bandHalfWidthHz(r.hz))) { members.push(k); assigned.add(k); }
+                if (Math.abs(s.hz - centre0) <= (r.halfWidth ?? bandHalfWidthHz(r.hz))) { members.push(k); assigned.add(k); }
             });
             // Centred on its strongest station when it has one: a circuit that
             // only responds then has a still envelope (no rotation to resolve);
             // its own oscillation, if it has one, beats against it as it should.
-            let hz = r.hz;
-            if (members.length) hz = stations[members.reduce((a, k) => (stations[k].fieldVPerM > stations[a].fieldVPerM ? k : a), members[0])].hz;
-            bands.push({ hz, members });
+            let hz = centre0;
+            if (!tracked && members.length) hz = stations[members.reduce((a, k) => (stations[k].fieldVPerM > stations[a].fieldVPerM ? k : a), members[0])].hz;
+            bands.push({ hz, members, tankHz: r.hz, prev: tracked ?? null });
         }
         // Keep each surviving band's envelope (re-centred onto the new
         // centre: the physical signal is unchanged).
         const next = [];
         for (const nb of bands) {
-            let prev = null, best = Infinity;
-            for (const ob of old) {
+            let prev = nb.prev, best = Infinity;
+            if (!prev) for (const ob of old) {
                 const d = Math.abs(ob.hz - nb.hz);
                 if (d <= bandHalfWidthHz(nb.hz) && d < best) { best = d; prev = ob; }
             }
             const band = prev && !next.includes(prev) ? prev : new RfBand(this, nb.hz, tSec);
+            band.tankHz = nb.tankHz;
             band.configure(nb.hz, nb.members, stations, tSec);
             next.push(band);
         }
@@ -1933,6 +1946,24 @@ class RfBand {
             if (!(a1 > 2 * a0)) this.growth = 0;
         }
         if (this.growth > 0) hT = Math.min(hT, 0.15 / this.growth);
+        // An oscillator: its small-signal network is unstable (it would
+        // start from noise), whatever its swing has settled to now.
+        {
+            const zero = this.integ.portVoltages(this.X).map(() => [0, 0]);
+            const m0 = r._modes(this.omega, zero, r._otherAmplitudes(this));
+            this._oscillator = m0.some(m => m[0] > 0);
+        }
+        // An oscillating band's own rotation in its frame (the dominant
+        // mode's Im λ, or the rotation it is measured to have): resolved, so
+        // that it can be measured and tracked (see _track).
+        if (this._oscillator) {
+            const dom = modes.reduce((a, m) => (m[0] > a[0] ? m : a), modes[0] ?? [0, 0]);
+            // …and the size of the last re-centring until a new rotation has
+            // been measured (a jump the next estimate cannot see would leave
+            // the band's frame rotating faster than its step resolves).
+            const rot = Math.max(Math.abs(dom[1] ?? 0) / (2 * Math.PI), Math.abs(this._rot?.hz ?? 0), this._rot ? 0 : (this._lastJump ?? 0));
+            if (rot > 200) hT = Math.min(hT, 1 / (ROTATION_STEPS * rot));
+        }
         this.kMax = Math.max(0, Math.min(K_MAX, Math.floor(DMath.log2(hT / H_UNIT))));
         this.k = Math.min(this.k, this.kMax);
         this._sinceBound = 0;
@@ -2034,7 +2065,7 @@ class RfBand {
         while (this.t < tSec && guard++ < 200000) {
             // While it grows, the growth rate changes with the swing (the
             // junctions compress): re-estimate it every few dozen substeps.
-            if (this.growth > 0 && ++this._sinceBound >= 48) this._bound();
+            if ((this.growth > 0 || this._sinceBound === Infinity) && ++this._sinceBound >= 48) this._bound();
             const kBias = this._kForBias();
             if (this.k > kBias) this.k = kBias;
             const other = r._otherAmplitudes(this);
@@ -2056,8 +2087,13 @@ class RfBand {
                     if (Math.max(m0, m1) < 1e-4) continue;
                     g = Math.max(g, Math.abs(DMath.log(Math.max(m1, 1e-12) / Math.max(m0, 1e-12))));
                 }
-                if (g > 0.7 && k > 0) { k--; this.calm = 0; continue; }
-                if (g > 0.35 && k > 0) { this.k = k - 1; this.calm = 0; }
+                // A band step changes the largest swing by at most ~10 % (halve
+                // the next step above that, redo above twice that): a looser
+                // 35 % let a super-regenerator's bursts overshoot their limit
+                // by half again, and the result depended on the step size.
+                const G1 = BAND_STEP_LOG_TOL;
+                if (g > 2 * G1 && k > 0) { k--; this.calm = 0; continue; }
+                if (g > G1 && k > 0) { this.k = k - 1; this.calm = 0; }
                 else if (g < 0.05) { if (++this.calm >= 8 && k < this.kMax) { this.k = k + 1; this.calm = 0; } else this.k = k; }
                 else this.k = k;
                 this.X = { re: res.re, im: res.im };
@@ -2065,6 +2101,7 @@ class RfBand {
                 let peak = 0;
                 for (const p of v1) { const m = Math.hypot(p[0], p[1]); if (!(m <= peak)) peak = m; }
                 if (!(peak < RF_RUNAWAY_VOLTS)) { this._refuse(`its swing ran away (${peak.toExponential(2)} V at ${(this.t * 1e3).toFixed(4)} ms)`); return; }
+                this._track(v1, this.hist[this.hist.length - 1]);
                 this.hist.push({ t: this.t, vp: v1, X: this.X, k });
                 if (this.hist.length > RF_HISTORY_LIMIT) { this._refuse(`it needed more than ${RF_HISTORY_LIMIT} substeps ahead of the circuit (${(this.t * 1e3).toFixed(4)} ms)`); return; }
                 break;
@@ -2103,6 +2140,48 @@ class RfBand {
             const db = pb === b ? (mb - ma) : (mag(pb, j) - ma) * dt / (pb.t - a.t);
             return [Math.max(0, h00 * ma + h10 * da + h01 * mb + h11 * db), 0];
         });
+    }
+
+    /**
+     * Carrier tracking. An oscillating band follows the rotation of its
+     * strongest port in its own frame (averaged over TRACK_TAU_SEC) and, once
+     * that rotation exceeds a quarter of the band's half-width, asks to be
+     * re-centred on it (trackedHz; the front end re-centres at its next
+     * refresh, carrying the envelope over with the phase correction). The
+     * envelope model is first-order in the offset from its centre, so an
+     * oscillation pulled several per cent off its tank — a regenerative
+     * stage whose transistor capacitance hangs on the tank — came out at the
+     * wrong frequency, and its beat with a station 2 kHz away at 250 kHz.
+     * Only a band whose growth has been confirmed tracks: a receiver's band
+     * sits on its station, whose FM swing it must not chase.
+     */
+    _track(v1, last) {
+        if (!this._oscillator || !last) return;
+        const h = this.t - last.t;
+        if (!(h > 0)) return;
+        let a = 0, m = 0;
+        for (let i = 0; i < v1.length; i++) { const x = Math.hypot(v1[i][0], v1[i][1]); if (x > m) { m = x; a = i; } }
+        const p = last.vp[a];
+        if (!(m > TRACK_MIN_VOLTS) || !p || !(Math.hypot(p[0], p[1]) > TRACK_MIN_VOLTS)) { this._rot = null; return; }
+        const re = v1[a][0] * p[0] + v1[a][1] * p[1], im = v1[a][1] * p[0] - v1[a][0] * p[1];
+        const dphi = DMath.atan2(im, re);
+        if (Math.abs(dphi) > Math.PI / 2) {
+            // Unresolved: this step was too long for the rotation; bound the
+            // next ones by what it at least is (a quarter turn per step).
+            this._lastJump = Math.max(this._lastJump ?? 0, 0.25 / h);
+            this._sinceBound = Infinity;
+            return;
+        }
+        const rate = dphi / (2 * Math.PI * h);
+        const w = 1 - DMath.exp(-h / TRACK_TAU_SEC);
+        this._rot = this._rot ? { hz: this._rot.hz + (rate - this._rot.hz) * w, span: this._rot.span + h } : { hz: rate, span: h };
+        if (this._rot.span < 3 * TRACK_TAU_SEC) return;
+        if (Math.abs(this._rot.hz) < 0.25 * bandHalfWidthHz(this.hz)) return;
+        if (this.trackedHz === this.hz + this._rot.hz) return;
+        this.trackedHz = this.hz + this._rot.hz;
+        this._lastJump = Math.abs(this._rot.hz);
+        this._rot = null;
+        this.radio._dirty = true;
     }
 
     _stepOnce() { this.advanceTo(this.t + 1e-15); }
