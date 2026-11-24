@@ -4401,10 +4401,14 @@ export class BoardImpl {
     let freqs;
     if (exactGrid) freqs = [...frequencies];
     else {
-      const decades = DMath.log10(to / from);
+      // The grid is a set of labels, not physics: a client that hands the
+      // points out one at a time (bw-circuit-ui's acPoints) reproduces it
+      // bit for bit with Math, so Math it stays (a last-bit difference
+      // between platforms moves a linear AC answer by as little).
+      const decades = Math.log10(to / from);
       const nPts = Math.max(2, Math.round(decades * pointsPerDecade) + 1);
       freqs = Array.from({ length: nPts },
-        (_, i) => from * DMath.pow(10, (i * decades) / (nPts - 1)));
+        (_, i) => from * Math.pow(10, (i * decades) / (nPts - 1)));
     }
     return acSweep({
       parts: this._solveParts,
