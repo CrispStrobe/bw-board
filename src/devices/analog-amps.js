@@ -424,6 +424,8 @@ function registerGroundSensingOpAmp({ kind, channels, legacyUnwiredFiveVoltSuppl
 // solved stage, added by BoardImpl through expandLm386). The package device
 // is what the user drew: no drive, never a re-solve; it reports whether it is
 // powered and maps the output and supply currents onto its own leads.
+const LM386_VT = 0.02585; // the RF front end's thermal voltage (src/rf-bands.js VT)
+
 function registerLm386() {
     const C = LM386_CARD;
     registerDevice('lm386', {
@@ -457,9 +459,18 @@ function registerLm386() {
     registerDevice(LM386_STAGE_KIND, {
         terminals: [...LM386_STAGE_TERMINALS],
         init() { return { drives: {} }; },
-        stamp(ctx) {
+        stamp(ctx, part) {
+            // RF at an input: the follower's junction rectifies it and the
+            // stage sees that input lower by Vt·ln I0 (src/radio.js).
+            const rf = part?.rfInputs;
+            const shift = (det) => {
+                if (!det) return 0;
+                const L = det.radio.junctionDrive(det.index, ctx.tSeconds ?? 0)?.[0]?.L ?? 0;
+                return L > 0 ? LM386_VT * L : 0;
+            };
+            const dP = shift(rf?.inp), dN = shift(rf?.inn);
             ctx.nonlinearCurrents('lm386', (read, scale) => {
-                const v = { inp: read('inp'), inn: read('inn'), e1: read('e1'), x: read('x'),
+                const v = { inp: read('inp') - dP, inn: read('inn') - dN, e1: read('e1'), x: read('x'),
                     pole: read('pole'), vout: read('vout'), vs: read('vs'), gnd: read('gnd') };
                 const { currents, jacobian } = evaluateLm386Stage(v, scale);
                 return { region: 'smooth', currents, jacobian, residualOhms: LM386_RESIDUAL_OHMS };

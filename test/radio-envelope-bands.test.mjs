@@ -394,3 +394,35 @@ describe('radio bands: the cost of a quenched receiver', () => {
         assert.ok(perMs < 20000, `${perMs} band substeps per simulated ms`);
     });
 });
+
+describe('radio bands: an audio amplifier\'s input rectifies', () => {
+    // A short wire straight on an LM386's +IN (gain 200, loudspeaker), no
+    // earth. The input is the base of a PNP follower; a strong AM station's
+    // swing there is rectified by that junction like any other and the
+    // programme comes out of the loudspeaker (RF interference into an
+    // LM386). A weak station barely does: the junction is square-law there.
+    function wireAmp(stations) {
+        const b = new BoardImpl(9);
+        b.setNetlist([P('G', 'gnd', {}, ['gnd']), P('VS', 'vsource', { volts: 9 }, ['pos', 'neg']),
+            P('ANT', 'antenna', { heightM: 0.3, farads: 10e-12 }, ['a']),
+            P('U', 'lm386', {}, ['gain1', 'inn', 'inp', 'gnd', 'vout', 'vs', 'bypass', 'gain8']),
+            P('CG', 'capacitor', { farads: 10e-6 }, ['a', 'b']), P('CB', 'capacitor', { farads: 10e-6 }, ['a', 'b']),
+            P('CO', 'capacitor', { farads: 220e-6 }, ['a', 'b']), P('SPK', 'speaker', { ohms: 8 }, ['a', 'b'])],
+        [net('g', ['G', 'gnd'], ['VS', 'neg'], ['U', 'gnd'], ['U', 'inn'], ['CB', 'b'], ['SPK', 'b']),
+            net('v', ['VS', 'pos'], ['U', 'vs']), net('in', ['ANT', 'a'], ['U', 'inp']),
+            net('g1', ['U', 'gain1'], ['CG', 'a']), net('g8', ['U', 'gain8'], ['CG', 'b']), net('by', ['U', 'bypass'], ['CB', 'a']),
+            net('o', ['U', 'vout'], ['CO', 'a']), net('s', ['CO', 'b'], ['SPK', 'a'])]);
+        b.setBroadcast(stations);
+        b.setPower(true);
+        ms(b, 60);
+        return b.buzzerTone('SPK');
+    }
+
+    it('a strong station plays through an LM386 with a bare wire on its input', () => {
+        const strong = wireAmp([{ id: 'local', hz: 1e6, fieldVPerM: 0.1, depth: 0.8, audio: { type: 'tone', hz: 400 } }]);
+        assert.ok(strong.on && Math.abs(strong.hz - 400) < 5, `the programme: ${JSON.stringify(strong)}`);
+        assert.ok(strong.amps > 0.05, `loud: ${strong.amps} A rms`);
+        const weak = wireAmp([{ id: 'far', hz: 1e6, fieldVPerM: 0.01, depth: 0.8, audio: { type: 'tone', hz: 400 } }]);
+        assert.ok(weak.amps < strong.amps / 5, `a tenth of the field, far less than a tenth of the sound: ${weak.amps} A`);
+    });
+});

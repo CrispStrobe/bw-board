@@ -662,6 +662,30 @@ export function expandRadio(parts, nets, opts) {
     radio.rfOnly = rfOnly;
     for (const p of outParts) {
         let terms, j, k2 = null;
+        if (p.kind === 'lm386') {
+            // An audio amplifier's inputs are the bases of PNP followers
+            // (src/lm386.js). An RF swing there is rectified by that junction
+            // like any other: the follower's emitter current is held, so its
+            // mean base–emitter voltage drops by Vt·ln I0(A/Vt) and the stage
+            // sees the input that much lower — an AM station's programme,
+            // amplified (RF interference into an LM386). The whole input
+            // swing is taken across the junction: an upper bound, as the
+            // follower's emitter follows some of it.
+            const gnd = netOf(p.id, 'gnd');
+            if (!gnd || !netOf(p.id, 'vs')) continue;
+            const inputs = {};
+            for (const t of ['inp', 'inn']) {
+                const n0 = netOf(p.id, t);
+                if (!n0 || n0 === gnd) continue;
+                const det = { id: `@rf:${p.id}:${t}`, partId: p.id, kind: 'amp-input', terminal: t, of: p,
+                    index: radio.detectors.length, nets: [n0.id, gnd.id], wired: [], nets2: null, generic: false };
+                Object.defineProperty(det, 'radio', { value: radio, enumerable: false });
+                radio.detectors.push(det);
+                inputs[t] = det;
+            }
+            Object.defineProperty(p, 'rfInputs', { value: inputs, enumerable: false, configurable: true, writable: true });
+            continue;
+        }
         if (p.kind === 'diode') { terms = ['anode', 'cathode']; j = ['anode', 'cathode']; }
         else if (p.kind === 'npn' || p.kind === 'pnp') { terms = ['base', 'collector', 'emitter']; j = ['base', 'emitter']; k2 = ['base', 'collector']; }
         else if (p.kind === 'nmos' || p.kind === 'pmos') { terms = ['gate', 'drain', 'source']; j = ['gate', 'source']; k2 = ['drain', 'source']; }
@@ -707,6 +731,12 @@ export function chooseFrontEnd(parts, nets) {
     if (parts.some(p => p.kind === 'ferrite_coil' && (p.params?.linkTo || Array.isArray(p.params?.stations)))) return 'envelope';
     const antennas = parts.filter(p => p.kind === 'antenna');
     if (!antennas.length) return 'envelope';
+    // A wire straight on an audio amplifier's input: the amplifier's input
+    // junction is the detector (RF interference into an LM386), which only
+    // the envelope bands model (amplifier inputs as detectors).
+    const ampIn = new Set();
+    for (const n of nets) if (n.terminals.some(t => byId.get(t.part)?.kind === 'lm386' && (t.terminal === 'inp' || t.terminal === 'inn'))) ampIn.add(n);
+    for (const n of ampIn) if (n.terminals.some(t => byId.get(t.part)?.kind === 'antenna')) return 'envelope';
     for (const a of antennas) for (const s of a.params?.stations ?? []) if (s?.mod && s.mod !== 'am') return 'envelope';
     for (const n of nets) {
         const ps = n.terminals.map(t => [byId.get(t.part), t.terminal]).filter(([p]) => p);
@@ -970,6 +1000,7 @@ export class RadioFrontEnd {
         const nv = (id) => solution?.nodeVoltages?.get(id) ?? 0;
         return this.detectors.map(d => {
             const P = d.of.params ?? {};
+            if (d.kind === 'amp-input') return { v: nv(d.nets[0]) - nv(d.nets[1]) };
             if (d.kind === 'diode') {
                 const v = nv(d.nets[0]) - nv(d.nets[1]);
                 // The DC current through it (rectification included): raw
