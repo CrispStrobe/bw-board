@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: MIT
+import { DMath } from './det-math.js';
 /**
  * Compliance laws for the light-driven parts (2026-11-23).
  *
@@ -27,10 +28,10 @@ export const VCE_KNEE = 0.1;
 export function vceShape(vce, vk = VCE_KNEE) {
     const x = vce / vk;
     if (x >= 0) {
-        const e = Math.exp(-x);
+        const e = DMath.exp(-x);
         return [1 - e, e / vk];
     }
-    const e = Math.exp(x);
+    const e = DMath.exp(x);
     return [x * e, (1 + x) * e / vk];
 }
 
@@ -42,8 +43,8 @@ export function vceShape(vce, vk = VCE_KNEE) {
 export function ledSegment(v, vf, rd, w = 0.05) {
     const x = (v - vf) / w;
     // softplus with overflow-safe branches
-    const sp = x > 30 ? x : Math.log1p(Math.exp(x));
-    const sig = x > 30 ? 1 : 1 / (1 + Math.exp(-x));
+    const sp = x > 30 ? x : DMath.log1p(DMath.exp(x));
+    const sig = x > 30 ? 1 : 1 / (1 + DMath.exp(-x));
     return [w * sp / rd + 1e-6 * v, sig / rd + 1e-6];
 }
 
@@ -58,7 +59,7 @@ export const PHOTODIODE = Object.freeze({ is: 1e-10, n: 1.0, vt: 0.025852, vLin:
 export function photodiodeCurrent(iL, v, p = PHOTODIODE) {
     const nvt = p.n * p.vt;
     const vv = Math.min(v, p.vLin);
-    const e = Math.exp(vv / nvt);
+    const e = DMath.exp(vv / nvt);
     let id = p.is * (e - 1);
     let g = p.is * e / nvt;
     if (v > p.vLin) id += g * (v - p.vLin);
@@ -90,7 +91,7 @@ export function solarCellParams(params = {}) {
     const rsh = Number(params.rsh ?? 50 * voc / isc);
     // Short circuit: Iph ≈ isc·(1 + rs/rsh) (diode negligible at V = −I·rs).
     const iph = isc * (1 + rs / rsh);
-    const is = Math.max((iph - voc / rsh) / Math.expm1(voc / nvt), 1e-30);
+    const is = Math.max((iph - voc / rsh) / DMath.expm1(voc / nvt), 1e-30);
     return { voc, isc, ns, nvt, rs, rsh, iph, is };
 }
 
@@ -99,10 +100,10 @@ export function solarCellCurrent(v, iph, p) {
     const VMAX = 40 * p.nvt;               // linear continuation of the exponential
     const diode = (vj) => {
         if (vj > VMAX) {
-            const e = Math.exp(VMAX / p.nvt);
+            const e = DMath.exp(VMAX / p.nvt);
             return [p.is * (e - 1) + p.is * e / p.nvt * (vj - VMAX), p.is * e / p.nvt];
         }
-        const e = Math.exp(vj / p.nvt);
+        const e = DMath.exp(vj / p.nvt);
         return [p.is * (e - 1), p.is * e / p.nvt];
     };
     // Scalar Newton on f(I) = iph − Id(v + I·rs) − (v + I·rs)/rsh − I.

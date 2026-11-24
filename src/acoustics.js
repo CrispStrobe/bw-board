@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: MIT
+import { DMath } from './det-math.js';
 /**
  * Sound reaching a loudspeaker or an earphone: the transducer as a
  * MICROPHONE, and acoustic coupling between transducers.
@@ -105,7 +106,7 @@ function vowelAmplitudes(f0) {
     const out = [];
     for (let k = 1; k * f0 < 2500 && k <= 24; k++) {
         const f = k * f0;
-        out.push(Math.exp(-(((f - 700) / 250) ** 2)) + 0.5 * Math.exp(-(((f - 1150) / 250) ** 2)) + 0.25 / k);
+        out.push(DMath.exp(-(((f - 700) / 250) ** 2)) + 0.5 * DMath.exp(-(((f - 1150) / 250) ** 2)) + 0.25 / k);
     }
     const rms = Math.sqrt(out.reduce((s, a) => s + a * a / 2, 0));
     return out.map(a => a / rms);
@@ -124,8 +125,8 @@ function bellSample(t, f, strikeHz, decayS) {
     const k0 = Math.floor(t / T);
     for (let k = k0; k >= 0 && k > k0 - 6; k--) {
         const age = t - k * T;
-        const env = Math.exp(-age / decayS);
-        s += env * (Math.sin(2 * Math.PI * f * age) + 0.35 * Math.sin(2 * Math.PI * 2.4 * f * age));
+        const env = DMath.exp(-age / decayS);
+        s += env * (DMath.sin(2 * Math.PI * f * age) + 0.35 * DMath.sin(2 * Math.PI * 2.4 * f * age));
     }
     return s;
 }
@@ -155,7 +156,7 @@ function bellRms(f, strikeHz, decayS) {
 export function soundWaveform(P, t) {
     const wave = P.soundWave ?? 'voice';
     const f = num(P.soundHz, SOUND_DEFAULT_HZ[wave] ?? 440);
-    if (wave === 'tone') return Math.SQRT2 * Math.sin(2 * Math.PI * f * t);
+    if (wave === 'tone') return Math.SQRT2 * DMath.sin(2 * Math.PI * f * t);
     if (wave === 'noise') {
         // White noise sampled at 10 kHz, linearly interpolated: band-limited
         // to the audio range and independent of the solver's step. Uniform
@@ -184,16 +185,16 @@ export function soundWaveform(P, t) {
         for (let k = k0; k >= 0 && k > k0 - 6; k--) {
             const age = sinceStart - k * T;
             if (age < 0) continue;
-            s += Math.exp(-age / decayS) * (Math.sin(2 * Math.PI * f * age) + 0.35 * Math.sin(2 * Math.PI * 2.4 * f * age));
+            s += DMath.exp(-age / decayS) * (DMath.sin(2 * Math.PI * f * age) + 0.35 * DMath.sin(2 * Math.PI * 2.4 * f * age));
         }
         return s / bellRms(f, strikeHz, decayS);
     }
     // 'voice': a sustained vowel on fundamental f, with a slight vibrato
     // (±2 % at 5 Hz) as a voice has.
     const amps = vowelAmplitudes(f);
-    const phase = 2 * Math.PI * f * t + 0.02 * f / 5 * (1 - Math.cos(2 * Math.PI * 5 * t));
+    const phase = 2 * Math.PI * f * t + 0.02 * f / 5 * (1 - DMath.cos(2 * Math.PI * 5 * t));
     let s = 0;
-    for (let k = 0; k < amps.length; k++) s += amps[k] * Math.sin((k + 1) * phase + 0.7 * k * k);
+    for (let k = 0; k < amps.length; k++) s += amps[k] * DMath.sin((k + 1) * phase + 0.7 * k * k);
     return s;
 }
 
@@ -211,7 +212,7 @@ function soundTopHz(P) {
 export function soundPressureRms(P) {
     const db = num(P.soundDb, null);
     if (db === null || db <= 0) return 0;
-    return P_REF * 10 ** (Math.min(db, 140) / 20);
+    return P_REF * DMath.pow(10, Math.min(db, 140) / 20);
 }
 
 // ─── The acoustic environment of one netlist ─────────────────────────────

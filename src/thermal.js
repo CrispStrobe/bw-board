@@ -1,3 +1,4 @@
+import { DMath } from './det-math.js';
 /**
  * A minimal, explicit, OPT-IN thermal model for discrete parts.
  *
@@ -153,7 +154,7 @@ export function stepThermal(entries, temps, powers, benchC, airflowMs, h) {
       : benchC;
     const P = powers.get(e.id) ?? 0;
     const target = surround + (Number.isFinite(P) ? P : 0) * e.rth / f;
-    const next = T + (target - T) * (1 - Math.exp(-h * f / e.tau));
+    const next = T + (target - T) * (1 - DMath.exp(-h * f / e.tau));
     temps.set(e.id, next);
     maxDelta = Math.max(maxDelta, Math.abs(next - T));
   }
@@ -176,5 +177,5 @@ export function ntcResistanceAt(part, celsius) {
   const r25 = finitePositive(part.params?.r25) ?? 10000;
   const beta = finitePositive(part.params?.beta) ?? 3950;
   const T = Math.max(celsius + 273.15, 1);
-  return Math.max(0.001, r25 * Math.exp(beta * (1 / T - 1 / 298.15)));
+  return Math.max(0.001, r25 * DMath.exp(beta * (1 / T - 1 / 298.15)));
 }

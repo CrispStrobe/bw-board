@@ -10,7 +10,7 @@
  */
 
 import { ledSegment, vceShape } from '../photo-junctions.js';
-import { registerDevice } from '../devices.js';
+import { registerDevice, DMath } from '../devices.js';
 import { classDefaults } from '../parts-library.js';
 
 const R_INPUT = 1e6;
@@ -87,7 +87,7 @@ export function registerAnalogICs() {
           const ion = Math.max(iB - 1e-6 * vbe, 0);
           const gon = iB - 1e-6 * vbe > 0 ? gB - 1e-6 : 0;
           const x = (read('collector') - read('emitter') - TIP120_VSAT_OFFSET) / TIP120_VSAT_WIDTH;
-          const sh = 1 / (1 + Math.exp(-Math.max(-50, Math.min(50, x))));
+          const sh = 1 / (1 + DMath.exp(-Math.max(-50, Math.min(50, x))));
           const dsh = sh * (1 - sh) / TIP120_VSAT_WIDTH;
           const ic = beta * ion * sh;
           const dB = beta * gon * sh;
@@ -226,7 +226,7 @@ export function registerAnalogICs() {
         const tSS = Math.min(p / pRated, 1.5);
         const dtMs = state._lastTNs === null ? 0 : Number(tNs - state._lastTNs) / 1e6;
         state._lastTNs = tNs;
-        const alpha = dtMs <= 0 ? 0 : 1 - Math.exp(-dtMs / tauMs);
+        const alpha = dtMs <= 0 ? 0 : 1 - DMath.exp(-dtMs / tauMs);
         state._tempK = state._tempK + (tSS - state._tempK) * alpha;
         const rNew = rCold + (rHot - rCold) * Math.min(state._tempK, 1);
         if (state._rNow === null || Math.abs(rNew - state._rNow) > state._rNow * 0.02) {

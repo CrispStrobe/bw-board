@@ -1,3 +1,4 @@
+import { DMath } from './det-math.js';
 /**
  * The sweep instrument — one stepping/measuring core, two faces.
  *
@@ -87,13 +88,13 @@ export function correlateAt(samples, f) {
   const w = 2 * Math.PI * f;
   let s = 0, c = 0;
   for (const { t, v } of samples) {
-    s += v * Math.sin(w * t);
-    c += v * Math.cos(w * t);
+    s += v * DMath.sin(w * t);
+    c += v * DMath.cos(w * t);
   }
   const n = samples.length || 1;
   const b = (2 / n) * s; // A·cosφ
   const a = (2 / n) * c; // A·sinφ
-  return { amp: Math.hypot(a, b), phaseDeg: (Math.atan2(a, b) * 180) / Math.PI };
+  return { amp: Math.hypot(a, b), phaseDeg: (DMath.atan2(a, b) * 180) / Math.PI };
 }
 
 /**
@@ -105,10 +106,10 @@ export function correlateAt(samples, f) {
  */
 export function logSpace(from, to, pointsPerDecade = 10) {
   const out = [];
-  const decades = Math.log10(to / from);
+  const decades = DMath.log10(to / from);
   const n = Math.max(2, Math.ceil(decades * pointsPerDecade) + 1);
   for (let k = 0; k < n; k++) {
-    out.push(from * Math.pow(10, (decades * k) / (n - 1)));
+    out.push(from * DMath.pow(10, (decades * k) / (n - 1)));
   }
   return out;
 }
@@ -174,7 +175,7 @@ export function runAcSweep(board, opts) {
       f,
       ain: vin.amp,
       aout: vout.amp,
-      magDb: 20 * Math.log10(Math.max(ratio, 1e-12)),
+      magDb: 20 * DMath.log10(Math.max(ratio, 1e-12)),
       phaseDeg: phase,
     });
   }

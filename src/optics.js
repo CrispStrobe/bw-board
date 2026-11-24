@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: MIT
+import { DMath } from './det-math.js';
 /**
  * Optical links: light from a placed emitter to a placed receiver along a
  * `light_path` part with learner-controlled geometry.
@@ -145,8 +146,8 @@ export function emitterCard(part) {
 
 /** cos^m order whose intensity halves at `halfDeg`. */
 export function lambertOrder(halfDeg) {
-    const c = Math.cos(Math.min(89, Math.max(1, halfDeg)) * Math.PI / 180);
-    return Math.log(0.5) / Math.log(c);
+    const c = DMath.cos(Math.min(89, Math.max(1, halfDeg)) * Math.PI / 180);
+    return DMath.log(0.5) / DMath.log(c);
 }
 
 /** Emitted radiant power, mW, at forward current `amps` and temperature `tC`. */
@@ -154,7 +155,7 @@ export function emitterPower(card, amps, tC = 25) {
     const I = Math.max(0, amps) * 1000; // mA
     const dT = tC - 25;
     if (card.laser) {
-        const ith = card.ith * 1000 * Math.exp(dT / card.t0);
+        const ith = card.ith * 1000 * DMath.exp(dT / card.t0);
         return Math.max(0, I - ith) * card.slope * Math.max(0, 1 + card.tc * dT);
     }
     return I * card.eta * Math.max(0, 1 + card.tc * dT);
@@ -164,7 +165,7 @@ export function emitterPower(card, amps, tC = 25) {
 export function beamPattern(card, deg) {
     const a = Math.abs(deg) * Math.PI / 180;
     if (a >= Math.PI / 2) return 0;
-    return Math.pow(Math.cos(a), card.m);
+    return DMath.pow(DMath.cos(a), card.m);
 }
 
 // ─── Receivers ───────────────────────────────────────────────────────────
@@ -205,7 +206,7 @@ export function receiverCard(part) {
             // An LED senses light of shorter wavelength than its own emission.
             const own = emitterCard(part).lines.reduce((a, [nm]) => Math.max(a, nm), 0);
             return { areaCm2: num(P.areaCm2, 0.02), tc: 0, fullAmps: num(P.photoSensitivity, 0),
-                response: (nm) => 1 / (1 + Math.exp((nm - (own - 15)) / 10)), law: 'source',
+                response: (nm) => 1 / (1 + DMath.exp((nm - (own - 15)) / 10)), law: 'source',
                 pos: 'anode', neg: 'cathode' };
         }
         default: return null;
@@ -245,7 +246,7 @@ export function filterTransmission(filter, nm) {
     const band = Array.isArray(filter) ? filter : FILTERS[String(filter).toLowerCase()];
     if (!band) return 1;
     // 85 % in band, 15 nm soft edges, 1 % blocking
-    const edge = (x) => 1 / (1 + Math.exp(-x / 6));
+    const edge = (x) => 1 / (1 + DMath.exp(-x / 6));
     return 0.01 + 0.84 * edge(nm - band[0]) * edge(band[1] - nm);
 }
 
@@ -260,9 +261,9 @@ export function refractiveIndex(material, nm) {
 /** Minimum deviation (degrees) of a prism with apex `apexDeg` at index n. */
 export function prismDeviation(n, apexDeg = 60) {
     const A = apexDeg * Math.PI / 180;
-    const s = n * Math.sin(A / 2);
+    const s = n * DMath.sin(A / 2);
     if (s >= 1) return 90;
-    return (2 * Math.asin(s) - A) * 180 / Math.PI;
+    return (2 * DMath.asin(s) - A) * 180 / Math.PI;
 }
 
 /** Overlap area of two discs (radii r1, r2) whose centres are d apart. */
@@ -270,8 +271,8 @@ export function discOverlap(r1, r2, d) {
     d = Math.abs(d);
     if (d >= r1 + r2) return 0;
     if (d <= Math.abs(r1 - r2)) return Math.PI * Math.min(r1, r2) ** 2;
-    const a = r1 * r1 * Math.acos((d * d + r1 * r1 - r2 * r2) / (2 * d * r1));
-    const b = r2 * r2 * Math.acos((d * d + r2 * r2 - r1 * r1) / (2 * d * r2));
+    const a = r1 * r1 * DMath.acos((d * d + r1 * r1 - r2 * r2) / (2 * d * r1));
+    const b = r2 * r2 * DMath.acos((d * d + r2 * r2 - r1 * r1) / (2 * d * r2));
     const c = 0.5 * Math.sqrt((-d + r1 + r2) * (d + r1 - r2) * (d - r1 + r2) * (d + r1 + r2));
     return a + b - c;
 }
@@ -302,9 +303,9 @@ export function pathTransfer(params, em, rx) {
     const freeSpace = (dCm, deg, areaCm2) => {
         if (em.laser) {
             const w = em.beamCm / 2 + Math.max(0, dCm) * em.divergence; // beam radius
-            const off = Math.max(0, dCm) * Math.tan(Math.abs(deg) * DEG);
+            const off = Math.max(0, dCm) * DMath.tan(Math.abs(deg) * DEG);
             const r = Math.sqrt(areaCm2 / Math.PI);
-            return (1 - Math.exp(-2 * r * r / (w * w))) * Math.exp(-2 * off * off / (w * w));
+            return (1 - DMath.exp(-2 * r * r / (w * w))) * DMath.exp(-2 * off * off / (w * w));
         }
         const d2 = dCm * dCm + (em.srcCm / 2) ** 2 + 0.09; // 3 mm near-field floor
         const I0 = (em.m + 1) / (2 * Math.PI);            // per mW, per sr
@@ -314,16 +315,16 @@ export function pathTransfer(params, em, rx) {
     if (medium === 'air' || medium === 'string') {
         const d = Math.max(0, num(P.distanceCm, 10));
         const deg = num(P.angleDeg, 0);
-        const tilt = Math.cos(Math.min(90, Math.abs(num(P.tiltDeg, 0))) * DEG);
+        const tilt = DMath.cos(Math.min(90, Math.abs(num(P.tiltDeg, 0))) * DEG);
         let geo;
         const f = num(P.lensFocalCm, 0);
         if (f > 0) {
             const u = Math.max(0.1, num(P.lensAtCm, 2 * f));
             const R = num(P.lensRadiusCm, 1.5);
             const L = Math.max(0, d - u);
-            const alpha = Math.atan(R / u);
+            const alpha = DMath.atan(R / u);
             const caught = em.laser ? freeSpace(u, deg, Math.PI * R * R)
-                : (1 - Math.pow(Math.cos(alpha), em.m + 1)) * beamPattern(em, deg);
+                : (1 - DMath.pow(DMath.cos(alpha), em.m + 1)) * beamPattern(em, deg);
             const invV = 1 / f - 1 / u;                       // 1/v
             const rGeo = R * Math.abs(1 - L * invV);
             const src = em.laser ? em.beamCm / 2 : em.srcCm / 2;
@@ -341,7 +342,7 @@ export function pathTransfer(params, em, rx) {
             const period = num(P.pluckPeriodS, 1), rest = num(P.restShade, 0.5);
             out.mod = (t) => {
                 const tp = period > 0 ? ((t % period) + period) % period : Math.max(0, t);
-                const s = rest + depth * Math.exp(-tp / tau) * Math.sin(2 * Math.PI * hz * tp);
+                const s = rest + depth * DMath.exp(-tp / tau) * DMath.sin(2 * Math.PI * hz * tp);
                 return 1 - Math.min(1, Math.max(0, s));
             };
             out.maxStepSec = 1 / (20 * hz);
@@ -369,7 +370,7 @@ export function pathTransfer(params, em, rx) {
             gain: (nm) => {
                 const dev = prismDeviation(refractiveIndex(material, nm), apex);
                 const x = (dev - slit) / (em.laser ? 0.05 : spread);
-                return g * Math.exp(-0.5 * x * x) * filt(nm);
+                return g * DMath.exp(-0.5 * x * x) * filt(nm);
             },
             mod: null, maxStepSec: null,
         };
@@ -381,16 +382,16 @@ export function pathTransfer(params, em, rx) {
         const beamH = num(P.beamHeight, 0.5), beamW = num(P.beamWidth, 0.05);
         const n = num(P.liquidIndex, 1.33);
         const R = num(P.glassRadiusCm, 3), b = Math.min(R * 0.99, num(P.beamOffsetCm, 1.5));
-        const i = Math.asin(b / R), r = Math.asin(Math.sin(i) / n);
+        const i = DMath.asin(b / R), r = DMath.asin(DMath.sin(i) / n);
         const deflect = 2 * (i - r) / DEG;   // degrees
         const after = Math.min(d, num(P.receiverFromGlassCm, 0.8 * d));
         // The deflected beam leaves the receiver `seen` degrees off its axis.
-        const seen = Math.atan(after * Math.tan(deflect * DEG) / Math.max(0.1, d)) / DEG;
+        const seen = DMath.atan(after * DMath.tan(deflect * DEG) / Math.max(0.1, d)) / DEG;
         // A round glass of liquid is also a cylindrical lens (focus nR/(2(n-1))
         // from its axis): past the focus the beam fans out in one plane.
         const fBack = Math.max(0.1, n * R / (2 * (n - 1)) - R);
         const fan = Math.min(1, fBack / Math.max(fBack, after - fBack));
-        const covered = 1 / (1 + Math.exp(-(level - beamH) / beamW));
+        const covered = 1 / (1 + DMath.exp(-(level - beamH) / beamW));
         const walls = 0.92;
         const straight = freeSpace(d, num(P.angleDeg, 0), rx.areaCm2);
         const bent = freeSpace(d, num(P.angleDeg, 0) + seen, rx.areaCm2) * fan;
@@ -401,7 +402,7 @@ export function pathTransfer(params, em, rx) {
     if (medium === 'fibre') {
         const a = num(P.coreMm, 1) / 20;                  // core radius, cm
         const na = num(P.na, 0.5);
-        const thNA = Math.asin(Math.min(0.99, na));
+        const thNA = DMath.asin(Math.min(0.99, na));
         const lengthM = Math.max(0, num(P.lengthM, 1));
         const cut = Math.min(1, Math.max(0, num(P.cutQuality, 1)));
         const face = 0.96 * (0.35 + 0.65 * cut);           // per end face
@@ -410,10 +411,10 @@ export function pathTransfer(params, em, rx) {
         let launch;
         if (em.laser) {
             const w = em.beamCm / 2 + inGap * em.divergence;
-            launch = 1 - Math.exp(-2 * a * a / (w * w));
+            launch = 1 - DMath.exp(-2 * a * a / (w * w));
         } else {
-            const cone = 1 - Math.pow(Math.cos(thNA), em.m + 1);
-            const spot = em.srcCm / 2 + inGap * Math.tan(em.half * DEG);
+            const cone = 1 - DMath.pow(DMath.cos(thNA), em.m + 1);
+            const spot = em.srcCm / 2 + inGap * DMath.tan(em.half * DEG);
             launch = cone * Math.min(1, (a * a) / (spot * spot));
         }
         // Bends: 0.5 (core diameter / R) / NA² lost per bend.
@@ -424,20 +425,20 @@ export function pathTransfer(params, em, rx) {
         let joint = 1;
         const jg = num(P.jointGapMm, null), jo = num(P.jointOffsetMm, 0), ja = num(P.jointAngleDeg, 0);
         if (jg !== null || jo || ja) {
-            const spot = a + Math.max(0, jg ?? 0) / 10 * Math.tan(thNA);
+            const spot = a + Math.max(0, jg ?? 0) / 10 * DMath.tan(thNA);
             joint = discOverlap(spot, a, jo / 10) / (Math.PI * spot * spot)
-                * Math.max(0, 1 - Math.sin(Math.abs(ja) * DEG) / (2 * na)) * face * face;
+                * Math.max(0, 1 - DMath.sin(Math.abs(ja) * DEG) / (2 * na)) * face * face;
         }
         // Exit cone onto the receiver.
         const outGap = Math.max(0, num(P.outGapMm, 1)) / 10;
-        const outSpot = a + outGap * Math.tan(thNA);
+        const outSpot = a + outGap * DMath.tan(thNA);
         const outOff = num(P.outOffsetMm, 0) / 10;
         const outAng = Math.abs(num(P.outAngleDeg, 0));
         const exit = discOverlap(outSpot, rRx, outOff) / (Math.PI * outSpot * outSpot)
-            * Math.max(0, 1 - Math.sin(outAng * DEG) / (2 * na));
-        const g = launch * face * face * Math.pow(perBend, bends) * joint * exit * block;
+            * Math.max(0, 1 - DMath.sin(outAng * DEG) / (2 * na));
+        const g = launch * face * face * DMath.pow(perBend, bends) * joint * exit * block;
         return {
-            gain: (nm) => g * Math.pow(10, -fibreAttenuationDbPerM(nm) * lengthM / 10) * filt(nm),
+            gain: (nm) => g * DMath.pow(10, -fibreAttenuationDbPerM(nm) * lengthM / 10) * filt(nm),
             mod: null, maxStepSec: null,
         };
     }

@@ -26,6 +26,10 @@
  * @module
  */
 
+// Device models take the solvers' bit-reproducible transcendentals from here
+// (src/det-math.js), on the one import line tests rewrite for mutants.
+export { DMath } from './det-math.js';
+
 /**
  * @typedef {object} DeviceModel
  * @property {string[]} terminals - terminal names, for validation

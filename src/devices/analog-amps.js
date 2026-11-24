@@ -21,7 +21,7 @@
  * @module
  */
 
-import { registerDevice } from '../devices.js';
+import { registerDevice, DMath } from '../devices.js';
 import { GROUND_SENSING_OPAMP_CARD, STAGE_KIND, STAGE_TERMINALS, STAGE_RESIDUAL_OHMS,
     evaluateStage, polePin, GROUND_SENSING_OPAMPS } from '../ground-sensing-opamp.js';
 import { LM386_CARD, LM386_TERMINALS, LM386_STAGE_KIND, LM386_STAGE_TERMINALS, LM386_RESIDUAL_OHMS,
@@ -636,7 +636,7 @@ function registerPrecisionOpAmp(kind, specOrResolver, terminalsOverride = null) 
                     Number.isFinite(beta) && beta > BETA_MIN ? beta + 1 / spec.a0 : 1 / spec.a0))
                 : (Number.isFinite(beta) && beta > BETA_MIN
                     ? spec.gbwHz * Math.min(1, beta) : spec.gbwHz);
-            const alpha = 1 - Math.exp(-2 * Math.PI * closedLoopBw * dtSec);
+            const alpha = 1 - DMath.exp(-2 * Math.PI * closedLoopBw * dtSec);
             const bandwidthStep = (target - drive) * alpha;
             const slewStep = spec.slewVPerUs * dtUs;
             const delta = clamp(bandwidthStep, -slewStep, slewStep);
@@ -848,7 +848,7 @@ function registerPrecisionMultiOpAmp(kind, spec, channels, terminals) {
                 const dtUs = dtSec * 1e6;
                 const closedLoopBw = Number.isFinite(beta) && beta > BETA_MIN
                     ? spec.gbwHz * Math.min(1, beta) : spec.gbwHz;
-                const alpha = 1 - Math.exp(-2 * Math.PI * closedLoopBw * dtSec);
+                const alpha = 1 - DMath.exp(-2 * Math.PI * closedLoopBw * dtSec);
                 const bandwidthStep = (target - drive) * alpha;
                 const slewStep = spec.slewVPerUs * dtUs;
                 const delta = clamp(bandwidthStep, -slewStep, slewStep);
@@ -1012,7 +1012,7 @@ export function registerAnalogAmps() {
             // full × 10^(−3·(10−i)/20) for i = 1..10.
             let level = 0;
             for (let i = 1; i <= 10; i++) {
-                const th = full * Math.pow(10, (-3 * (10 - i)) / 20);
+                const th = full * DMath.pow(10, (-3 * (10 - i)) / 20);
                 if (v >= th) level = i;
             }
             const bar = read('mode') > vcc * 0.5;

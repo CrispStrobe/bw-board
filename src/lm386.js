@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: MIT
+import { DMath } from './det-math.js';
 /**
  * LM386 low-voltage audio power amplifier: a macromodel solved INSIDE the MNA
  * Newton loop, in the style of the LM358 macromodel (ground-sensing-opamp.js).
@@ -122,10 +123,10 @@ export function evaluateLm386Stage(v, scale = 1) {
     const F1 = 0, F2 = n, P = 2 * n, O = 3 * n, S = 4 * n, G = 5 * n;
 
     // Emitter followers: E1 <- +IN, X <- -IN.
-    const t1 = Math.tanh(C.gFollow * (v.inp - v.e1) / C.iFollow);
+    const t1 = DMath.tanh(C.gFollow * (v.inp - v.e1) / C.iFollow);
     const iF1 = C.iFollow * t1;
     const g1 = C.gFollow * (1 - t1 * t1);
-    const t2 = Math.tanh(C.gFollow * (v.inn - v.x) / C.iFollow);
+    const t2 = DMath.tanh(C.gFollow * (v.inn - v.x) / C.iFollow);
     const iF2 = C.iFollow * t2;
     const g2 = C.gFollow * (1 - t2 * t2);
     J[F1 + I_INP] = g1; J[F1 + I_E1] = -g1;
@@ -134,7 +135,7 @@ export function evaluateLm386Stage(v, scale = 1) {
     // Balance error: the followers SINK what the networks push into their
     // nodes, so iF1 - iF2 < 0 means more current into E1 (output too high).
     const ev = R_T * (iF1 - iF2);
-    const tp = Math.tanh(GM * ev / I_SLEW);
+    const tp = DMath.tanh(GM * ev / I_SLEW);
     const gp = GM * (1 - tp * tp) * R_T;
     J[P + I_INP] = gp * g1; J[P + I_E1] = -gp * g1;
     J[P + I_INN] = -gp * g2; J[P + I_X] = gp * g2;
@@ -154,7 +155,7 @@ export function evaluateLm386Stage(v, scale = 1) {
 
     // Output stage, enabled by the supply.
     const [k, k1] = enable(v.vs - v.gnd, scale);
-    const tl = Math.tanh((v.pole - v.vout) / (C.iLimit * C.rOut));
+    const tl = DMath.tanh((v.pole - v.vout) / (C.iLimit * C.rOut));
     const f = C.iLimit * tl;
     const f1 = (1 - tl * tl) / C.rOut;
     const iOut = k * f;

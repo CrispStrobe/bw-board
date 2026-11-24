@@ -14,6 +14,8 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { BoardImpl } from '../src/board.js';
 import { registerAllDevices } from '../src/register-all.js';
+import { createHash } from 'node:crypto';
+import { DMath } from '../src/det-math.js';
 import { normalizeStations, programmeValue, programmeIntegral, junctionCapacitance, stationModulation } from '../src/radio.js';
 
 registerAllDevices();
@@ -120,6 +122,32 @@ function meissner({ sense = 1, re = 1000, pos = 0.3, cbias = 10e-9, ce = 1e-9, r
     return b;
 }
 
+
+/** An AM test transmitter (Meissner + modulator on one rod) and a crystal set on a second rod 0.5 m away. */
+function transmitter(ratio = 0.02) {
+    const b = new BoardImpl(9);
+    b.setNetlist([P('G', 'gnd', {}, ['gnd']), P('VS', 'vsource', { volts: 9 }, ['pos', 'neg']),
+        P('LT', 'ferrite_coil', { rodHeightM: 0, couplingRatio: ratio }, ['a', 'tap', 'b', 'c1', 'c2']),
+        P('TCT', 'tuning_cap', { position: 0.3 }, ['a', 'b']), P('Q1', 'npn', {}, ['base', 'collector', 'emitter']),
+        P('R1', 'resistor', { ohms: 22e3 }, ['a', 'b']), P('R2', 'resistor', { ohms: 22e3 }, ['a', 'b']),
+        P('CB', 'capacitor', { farads: 10e-9 }, ['a', 'b']), P('RE', 'resistor', { ohms: 1000 }, ['a', 'b']),
+        P('CE', 'capacitor', { farads: 1e-9 }, ['a', 'b']), P('Q2', 'npn', {}, ['base', 'collector', 'emitter']),
+        P('RE2', 'resistor', { ohms: 470 }, ['a', 'b']), P('RIN', 'resistor', { ohms: 10e3 }, ['a', 'b']),
+        P('FG', 'function_gen', { wave: 'sine', freq: 1000, amplitude: 0.1, offset: 1.2 }, ['out', 'gnd']),
+        P('LR', 'ferrite_coil', { rodHeightM: 0, linkTo: 'LT', distanceM: 0.5 }, ['a', 'tap', 'b', 'c1', 'c2']),
+        P('TCR', 'tuning_cap', { position: 0.309 }, ['a', 'b']), P('D', 'diode', { part: '1N34A' }, ['anode', 'cathode']),
+        P('CD', 'capacitor', { farads: 2.2e-9 }, ['a', 'b']), P('RD', 'resistor', { ohms: 47e3 }, ['a', 'b'])],
+    [net('v', ['VS', 'pos'], ['LT', 'a'], ['TCT', 'a'], ['R1', 'a']), net('col', ['Q1', 'collector'], ['LT', 'b'], ['TCT', 'b']),
+        net('bias', ['R1', 'b'], ['R2', 'a'], ['CB', 'a'], ['LT', 'c2']), net('base', ['Q1', 'base'], ['LT', 'c1']),
+        net('e', ['Q1', 'emitter'], ['RE', 'a'], ['CE', 'a']), net('m', ['RE', 'b'], ['Q2', 'collector']),
+        net('e2', ['Q2', 'emitter'], ['RE2', 'a']), net('b2', ['Q2', 'base'], ['RIN', 'b']), net('fg', ['RIN', 'a'], ['FG', 'out']),
+        net('rx', ['LR', 'b'], ['TCR', 'a'], ['D', 'anode']), net('det', ['D', 'cathode'], ['CD', 'a'], ['RD', 'a']),
+        net('g', ['G', 'gnd'], ['VS', 'neg'], ['R2', 'b'], ['CB', 'b'], ['CE', 'b'], ['RE2', 'b'], ['FG', 'gnd'], ['LR', 'a'], ['TCR', 'b'], ['CD', 'b'], ['RD', 'b'])]);
+    b.setBroadcast([]);
+    b.setPower(true);
+    return b;
+}
+
 describe('radio bands: oscillation', () => {
     it('a short-wave oscillator beside a station still oscillates: the band resolves its offset', () => {
         // 5 µH, ~6.1 MHz. A carrier 20 kHz away puts the band's centre on the
@@ -164,10 +192,14 @@ describe('radio bands: oscillation', () => {
         ms(b, 1);
         assert.ok(!b._solveParts.some(p => p.id === 'TC'), 'tuning capacitor left out of the transient solve');
         assert.ok(b._radio.rfView(b._solveParts, b._solveNets).parts.some(p => p.id === 'TC'), '…and kept in the RF view');
+        // The oscillator squegs (bursts and pauses at the bias network's
+        // pace); its cost follows the bursts, so it is averaged over 2 ms.
+        // Before: ~38 000 per ms. Measured with the tank capacitor out:
+        // 10 000–17 000 per ms across 1-ulp changes of the coil.
         const w0 = b.transientAnalysisStatus().work.solves;
-        ms(b, 2);
-        const perMs = b.transientAnalysisStatus().work.solves - w0;
-        assert.ok(perMs < 12000, `oscillating, ${perMs} solves per simulated ms`);
+        ms(b, 3);
+        const perMs = (b.transientAnalysisStatus().work.solves - w0) / 2;
+        assert.ok(perMs < 20000, `oscillating, ${perMs} solves per simulated ms`);
     });
 
     it('an RF-size capacitor (a Colpitts feedback cap) is an RF part too', () => {
@@ -232,5 +264,108 @@ describe('radio bands: which front end', () => {
         assert.equal(chooseFrontEnd(fm, cn), 'envelope');
         // No long wire: the rod is the antenna.
         assert.equal(chooseFrontEnd(crystal.filter(p => p.id !== 'A'), cn), 'envelope');
+    });
+});
+
+describe('radio bands: unphysical parameters and runaways', () => {
+    it('a coupling winding with more turns than the main winding is clamped to it, with a warning', () => {
+        const b = transmitter(1.074);
+        ms(b, 0.05);
+        const w = b.getWarnings().find(x => x.type === 'param-clamped' && x.partId === 'LT');
+        assert.ok(w, `warned: ${JSON.stringify(b.getWarnings())}`);
+        assert.match(w.message, /couplingRatio/);
+    });
+
+    it('an RF band that runs away is refused, and its history stays bounded', () => {
+        // Gap found by sb3's circuit-params gate: lab-am-transmitter with the
+        // coupling ratio at 1.074 grew without bound — the bands integrated
+        // ahead of every rejected transient trial at 1 ns substeps, 200 000
+        // history entries per call, past 3 GB within the first millisecond.
+        const b = transmitter(1.074);
+        let longest = 0;
+        for (const t of [0.5, 1, 1.5, 2]) {
+            ms(b, t);
+            for (const band of b._radio._bands ?? []) longest = Math.max(longest, band.hist.length);
+        }
+        assert.ok(longest <= 20000, `band history bounded: ${longest} entries`);
+        const err = b._radio.error;
+        if (err) assert.ok(b.getWarnings().some(x => x.type === 'rf-refused'), 'a refused band is reported as a warning');
+    });
+});
+
+describe('radio bands: the same answer on every platform', () => {
+    it('the solvers\' transcendental functions are bit-reproducible (det-math)', () => {
+        // V8's Math.exp/log/sin/cos/pow… are C++ that the compiler may fuse
+        // into FMA instructions on arm64 and not on x64: one ulp apart on
+        // macOS and Linux for a few inputs in 10^5. An oscillator starting
+        // from noise turned that into a different trajectory within 70 µs
+        // (bw-board CI on Linux at 20c29a77; sb3's lab-shortwave-regen
+        // heard 10 kHz there, 5 kHz on macOS). src/det-math.js uses only
+        // exactly rounded operations: this digest is the same everywhere.
+        const xs = [];
+        let s = 0x2545F491;
+        for (let i = 0; i < 20000; i++) {
+            s = (Math.imul(s, 1103515245) + 12345) >>> 0;
+            const m = s / 4294967296 - 0.5, e = (i % 40) - 20;
+            xs.push(m * (e >= 0 ? (1 << e) : 1 / (1 << -e)));
+        }
+        const h = createHash('sha256'), f = new Float64Array(1), u = new Uint8Array(f.buffer);
+        const arg = { log: Math.abs, log10: Math.abs, log1p: Math.abs, asin: (x) => x / 1048576, acos: (x) => x / 1048576,
+            exp: (x) => x / 2048, expm1: (x) => x / 2048, sinh: (x) => x / 2048, cosh: (x) => x / 2048 };
+        let worst = 0;
+        for (const name of ['exp', 'log', 'log1p', 'expm1', 'log10', 'sin', 'cos', 'tan', 'atan', 'tanh', 'sinh', 'cosh', 'asin', 'acos']) {
+            for (const x of xs) {
+                const a = (arg[name] ?? ((v) => v))(x);
+                f[0] = DMath[name](a); h.update(u);
+                const ref = Math[name](a);
+                if (Number.isFinite(ref) && Math.abs(ref) > 1e-300 && !['sin', 'cos', 'tan'].includes(name)) worst = Math.max(worst, Math.abs(f[0] - ref) / Math.abs(ref) / 2 ** -52);
+            }
+        }
+        for (let i = 0; i < xs.length; i++) {
+            f[0] = DMath.atan2(xs[i], xs[(i + 7) % xs.length]); h.update(u);
+            f[0] = DMath.pow(Math.abs(xs[i]), xs[i] / 4096); h.update(u);
+        }
+        assert.equal(h.digest('hex'), '871ef96a878137aa522a26eaf3fc5f7ea16e92c4a2d0f3071dff7568e41a66a0');
+        assert.ok(worst < 3, `within ${worst.toFixed(2)} ulp of V8's own`);
+    });
+
+    it('an oscillator starting from noise: the same trajectory on every platform', () => {
+        // Measured identically on macOS arm64 and Linux x64 (Node 24/26).
+        // Without det-math the two parted at 67 µs (by 0.2 ms: 1750 against
+        // 1657 solves, tank 3.41 V against 5.32 V).
+        const b = meissner();
+        ms(b, 0.3);
+        assert.equal(b.transientAnalysisStatus().work.solves, 2158);
+        assert.equal(b._radio.substeps, 2853);
+        assert.equal(tankAmp(b, 'col'), 6.697898643480968);
+    });
+
+    it('1-ulp changes of the coil do not move the oscillator\'s outcome', () => {
+        // What a 1-ulp change may not move: the resonance, when the
+        // oscillation builds up out of the noise, and how big it is on
+        // average. The burst pattern of this oscillator is another matter:
+        // it squegs (the 10 nF bias capacitor charges from the rectified
+        // swing, cuts the stage off, recovers), and when each burst restarts
+        // from the noise floor is as sensitive to the state as in a real
+        // one — the burst instants, the peak and the solve count are not
+        // asserted. At build time: start 98 µs for all; mean swing over
+        // 1–3 ms 5.27–6.32 V.
+        const run = (ulps) => {
+            const b = meissner({ henrys: 250e-6 * (1 + ulps * 2 ** -52) });
+            let start = null;
+            for (let k = 1; k <= 100 && start === null; k++) { ms(b, k * 0.002); if (tankAmp(b, 'col') > 1) start = k * 0.002; }
+            ms(b, 1);
+            let sum = 0;
+            for (let k = 1; k <= 200; k++) { ms(b, 1 + k * 0.01); sum += tankAmp(b, 'col'); }
+            return { start, mean: sum / 200, res: b._radio._resonances.map(r => r.hz) };
+        };
+        const base = run(0);
+        assert.ok(base.start !== null && base.mean > 1, `oscillating: from ${base.start} ms, ${base.mean} V`);
+        for (const u of [1, 2, 3]) {
+            const p = run(u);
+            assert.deepEqual(p.res, base.res, 'the same resonance');
+            assert.equal(p.start, base.start, `${u} ulp: builds up at the same time`);
+            assert.ok(Math.abs(p.mean / base.mean - 1) < 0.25, `${u} ulp: mean swing ${p.mean.toFixed(3)} against ${base.mean.toFixed(3)} V`);
+        }
     });
 });

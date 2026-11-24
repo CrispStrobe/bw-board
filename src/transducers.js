@@ -40,6 +40,7 @@
  */
 
 import { buildAcoustics, needsVoiceCoil, VOICE_COIL_KIND } from './acoustics.js';
+import { DMath } from './det-math.js';
 
 export const SPEAKER_DEFAULTS = Object.freeze({ ohms: 8, henrys: 2e-4, ratedWatts: 0.5, motionalOhms: 20, qm: 2 });
 export const EARPHONE_DEFAULTS = Object.freeze({ ohms: 2000, henrys: 0.1, ratedWatts: 1e-3,
@@ -170,9 +171,9 @@ export function trackTone(state, x, ns, minSwing) {
         state._mean = x;
     } else if (ns > nsPrev) {
         const dt = (ns - nsPrev) * 1e-9;
-        state._mean += (x - state._mean) * (1 - Math.exp(-dt / HP_TAU_S));
+        state._mean += (x - state._mean) * (1 - DMath.exp(-dt / HP_TAU_S));
         const ac = x - state._mean;
-        state._msq += (ac * ac - state._msq) * (1 - Math.exp(-dt / RMS_TAU_S));
+        state._msq += (ac * ac - state._msq) * (1 - DMath.exp(-dt / RMS_TAU_S));
         state.rms = Math.sqrt(state._msq);
     }
     state._lastMean = state._mean;
@@ -180,7 +181,7 @@ export function trackTone(state, x, ns, minSwing) {
     // Envelope of the swing, decaying toward the present value over ~5 ms
     // of simulated time (whatever the step size) so a level change, or the
     // DC settling at switch-on, is followed without remembering forever.
-    const decay = nsPrev !== null && ns > nsPrev ? 1 - Math.exp(-(ns - nsPrev) * 1e-9 / ENV_TAU_S) : 0;
+    const decay = nsPrev !== null && ns > nsPrev ? 1 - DMath.exp(-(ns - nsPrev) * 1e-9 / ENV_TAU_S) : 0;
     state._lo = Math.min(x, state._lo + (x - state._lo) * decay);
     state._hi = Math.max(x, state._hi + (x - state._hi) * decay);
     const swing = state._hi - state._lo;

@@ -361,6 +361,7 @@ export const JUNCTION_RD = 10;
  * Matches board.js LED_I_RATED, which normalises brightness by the same value.
  */
 import { classDefaults } from './parts-library.js';
+import { DMath } from './det-math.js';
 
 export const JUNCTION_I_RATED = 0.020;
 
@@ -676,7 +677,7 @@ export function ebersMollVceSat(iC, iB, betaF, betaR = 1, fallback = 0.2) {
   if (!(denom > 1e-6)) return fallback;          // at or past the edge of saturation
   const arg = (1 + (1 + forced) / betaR) / denom;
   if (!(arg > 1)) return fallback;
-  const v = JUNCTION_THERMAL_VOLTAGE * Math.log(arg);
+  const v = JUNCTION_THERMAL_VOLTAGE * DMath.log(arg);
   return Number.isFinite(v) && v > 0 ? v : fallback;
 }
 
@@ -860,7 +861,7 @@ export function ebersMollParams(part) {
   // untouched (the card is the oracle's).
   const celsius = partTemperatures?.get(part.id);
   const isT = celsius === undefined ? is
-    : is * Math.exp(-(celsius - 25) * JUNCTION_TEMPCO_V_PER_K / (n * JUNCTION_THERMAL_VOLTAGE));
+    : is * DMath.exp(-(celsius - 25) * JUNCTION_TEMPCO_V_PER_K / (n * JUNCTION_THERMAL_VOLTAGE));
   return { is: isT, nVt: n * JUNCTION_THERMAL_VOLTAGE, bf, br, vaf, ikf, rb, rc,
     cje, cjc, tf };
 }
@@ -887,14 +888,14 @@ export function ebersMollChargeCompanion(vbe, vbc, p) {
     const potential = 0.75;
     const exponent = 0.33;
     const fc = 0.5;
-    if (v < fc * potential) return c0 * Math.pow(1 - v / potential, -exponent);
-    const f2 = Math.pow(1 - fc, 1 + exponent);
+    if (v < fc * potential) return c0 * DMath.pow(1 - v / potential, -exponent);
+    const f2 = DMath.pow(1 - fc, 1 + exponent);
     const f3 = 1 - fc * (1 + exponent);
     return c0 / f2 * (f3 + exponent * v / potential);
   };
 
   const cap = 80 * p.nVt;
-  const expF = Math.exp(Math.min(vbe, cap) / p.nVt);
+  const expF = DMath.exp(Math.min(vbe, cap) / p.nVt);
   const iF = p.is * (expF - 1);
   const gF = Math.min(p.is * expF / p.nVt, 1e6);
   const vaf = p.vaf ?? Infinity;
@@ -926,12 +927,12 @@ export function ebersMollChargeCompanion(vbe, vbc, p) {
 export function ebersMollCharges(vbe, vbc, p) {
   const depletion = (v, c0 = 0) => {
     const phi = .75, m = .33, fc = .5, corner = fc * phi;
-    const q = x => c0 * phi / (1 - m) * (1 - Math.pow(1 - x / phi, 1 - m));
+    const q = x => c0 * phi / (1 - m) * (1 - DMath.pow(1 - x / phi, 1 - m));
     if (v < corner) return q(v);
-    const f2 = Math.pow(1 - fc, 1 + m), f3 = 1 - fc * (1 + m);
+    const f2 = DMath.pow(1 - fc, 1 + m), f3 = 1 - fc * (1 + m);
     return q(corner) + c0 / f2 * (f3 * (v - corner) + m / (2 * phi) * (v * v - corner * corner));
   };
-  const iF = p.is * (Math.exp(Math.min(vbe, 80 * p.nVt) / p.nVt) - 1);
+  const iF = p.is * (DMath.exp(Math.min(vbe, 80 * p.nVt) / p.nVt) - 1);
   const early = 1 - vbc / (p.vaf ?? Infinity);
   const rolloff = Number.isFinite(p.ikf)
     ? 2 / (1 + Math.sqrt(Math.max(0, 1 + 4 * iF / p.ikf))) : 1;
@@ -982,8 +983,8 @@ function stampBjtTransientCharge(A, b, part, nets, nodeIndex, intrinsicB, intrin
  */
 export function ebersMollCompanion(vbe, vbc, p) {
   const cap = 80 * p.nVt;
-  const expF = Math.exp(Math.min(vbe, cap) / p.nVt);
-  const expR = Math.exp(Math.min(vbc, cap) / p.nVt);
+  const expF = DMath.exp(Math.min(vbe, cap) / p.nVt);
+  const expR = DMath.exp(Math.min(vbc, cap) / p.nVt);
   const iF = p.is * (expF - 1);
   const iR = p.is * (expR - 1);
   const gF = Math.min(p.is * expF / p.nVt, 1e6);
@@ -1162,7 +1163,7 @@ function shockleyParams(opts, vf) {
   let is = opts.is;
   if (is === undefined) {
     const vJrated = vf - 0.020 * rs;
-    const expVf = Math.exp(Math.min(vJrated / nVt, 80));
+    const expVf = DMath.exp(Math.min(vJrated / nVt, 80));
     is = 0.020 / Math.max(expVf - 1, 1e-30);
   }
   return { nVt, is, rs };
@@ -1185,7 +1186,7 @@ function shockleyEval(vJ, p) {
   // and the transient failed at the minimum step (regenerative-switching:
   // 'opening a switch on a coupled coil...'). The full exponential is
   // continuous, underflows harmlessly to -Is, and GMIN keeps the slope.
-  const expV = Math.exp(vClamped / p.nVt);
+  const expV = DMath.exp(vClamped / p.nVt);
   return {
     i: p.is * (expV - 1) + JUNCTION_GMIN * vClamped,
     gj: Math.min(p.is * expV / p.nVt + JUNCTION_GMIN, 1e6),
@@ -1289,9 +1290,9 @@ function pnjlim(vnew, vold, nVt, vcrit) {
   if (vnew > vcrit && Math.abs(vnew - vold) > 2 * nVt) {
     if (vold > 0) {
       const arg = 1 + (vnew - vold) / nVt;
-      return arg > 0 ? vold + nVt * Math.log(arg) : vcrit;
+      return arg > 0 ? vold + nVt * DMath.log(arg) : vcrit;
     }
-    return nVt * Math.log(vnew / nVt);
+    return nVt * DMath.log(vnew / nVt);
   }
   return vnew;
 }
@@ -1302,7 +1303,7 @@ function pnjlim(vnew, vold, nVt, vcrit) {
  * Ebers-Moll path cannot pick different ones.
  */
 function junctionVcrit(is, nVt) {
-  return nVt * Math.log(nVt / (Math.SQRT2 * is));
+  return nVt * DMath.log(nVt / (Math.SQRT2 * is));
 }
 
 /** Critical voltage + nVt for a part's junction (Shockley parts only). */
@@ -1360,7 +1361,7 @@ function shockleyCompanion(vAcross, vf, rd, is, n) {
   // Compute Is from Vf if not given: at Vf, I ≈ 20mA (rated)
   // Is = I_rated / (e^(Vf/nVt) - 1)
   if (is === undefined) {
-    const expVf = Math.exp(Math.min(vf / nVt, 80)); // clamp to avoid overflow
+    const expVf = DMath.exp(Math.min(vf / nVt, 80)); // clamp to avoid overflow
     is = 0.020 / Math.max(expVf - 1, 1e-30);
   }
 
@@ -1370,7 +1371,7 @@ function shockleyCompanion(vAcross, vf, rd, is, n) {
   // Reverse bias needs no branch of its own: the exponential underflows to
   // -is with GMIN in parallel, continuously (see shockleyEval).
 
-  const expV = Math.exp(vClamped / nVt);
+  const expV = DMath.exp(vClamped / nVt);
   const iD = is * (expV - 1) + JUNCTION_GMIN * vClamped;
   const gEq = is * expV / nVt + JUNCTION_GMIN; // dI/dV, GMIN in parallel
 
@@ -3420,7 +3421,7 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
   if (!converged && !transient) {
     let laddered = true;
     for (let k = 9; k >= 0; k--) {
-      if (!runNewton(GMIN * Math.pow(10, k))) { laddered = false; break; }
+      if (!runNewton(GMIN * DMath.pow(10, k))) { laddered = false; break; }
     }
     converged = laddered;
   }
@@ -4169,7 +4170,7 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
         const rDark = /** @type {number} */ (part.params.rDark ?? 1000000);
         const rLight = /** @type {number} */ (part.params.rLight ?? 100);
         const light = controls.get(part.id) ?? 0;
-        ohms = Math.max(0.001, rDark * Math.pow(rLight / rDark, light));
+        ohms = Math.max(0.001, rDark * DMath.pow(rLight / rDark, light));
       } else {
         ohms = /** @type {number} */ (controlledResistance(part, controls, partCelsius(part)));
       }
@@ -5088,7 +5089,7 @@ export function controlledResistance(part, controls = new Map(), celsius = undef
     const rDark = /** @type {number} */ (part.params?.rDark ?? 1000000);
     const rLight = /** @type {number} */ (part.params?.rLight ?? 100);
     const light = controls.get(part.id) ?? 0;
-    return Math.max(rDark * Math.pow(rLight / rDark, light), 0.001);
+    return Math.max(rDark * DMath.pow(rLight / rDark, light), 0.001);
   }
   if (part.kind === 'ntc') {
     // In the thermal model the NTC is a thermistor at its own temperature
@@ -5097,7 +5098,7 @@ export function controlledResistance(part, controls = new Map(), celsius = undef
     const rCold = /** @type {number} */ (part.params?.rCold ?? 100000);
     const rHot = /** @type {number} */ (part.params?.rHot ?? 1000);
     const temp = controls.get(part.id) ?? 0;
-    return Math.max(rCold * Math.pow(rHot / rCold, temp), 0.001);
+    return Math.max(rCold * DMath.pow(rHot / rCold, temp), 0.001);
   }
   return null;
 }
@@ -5155,11 +5156,11 @@ export function bjtForcedBeta(vce, beta, betaR = 1) {
   const a = 1 + 1 / betaR;
   const c = 1 / betaR;
   if (vce >= 0) {
-    const y = Math.exp(-vce / vt);
+    const y = DMath.exp(-vce / vt);
     const den = c * y + 1 / beta;
     return { f: (1 - a * y) / den, df: (a / beta + c) * (y / vt) / (den * den) };
   }
-  const x = Math.exp(vce / vt);
+  const x = DMath.exp(vce / vt);
   const den = c + x / beta;
   return { f: (x - a) / den, df: (x / vt) * (c + a / beta) / (den * den) };
 }
@@ -5710,16 +5711,16 @@ function zenerKneeCurrent(part) {
 
 export function zenerBreakdown(vRev, bv, ibv, rs, nVt) {
   // ln(I) ignoring RS is the starting point; it is exact when RS is 0.
-  let lnI = Math.log(ibv) + (vRev - bv) / nVt;
+  let lnI = DMath.log(ibv) + (vRev - bv) / nVt;
   for (let k = 0; k < 60; k++) {
-    const i = Math.exp(lnI);
-    const f = bv + nVt * (lnI - Math.log(ibv)) + i * rs - vRev;
+    const i = DMath.exp(lnI);
+    const f = bv + nVt * (lnI - DMath.log(ibv)) + i * rs - vRev;
     const df = nVt + i * rs;                 // d|V|/d(lnI)
     const step = f / df;
     lnI -= step;
     if (Math.abs(step) < 1e-15) break;
   }
-  const i = Math.exp(lnI);
+  const i = DMath.exp(lnI);
   // dI/d|V| = 1 / (nVt/I + RS), AND NOTHING ELSE.
   //
   // JUNCTION_GMIN was inside this slope for one revision and did nothing at
@@ -5944,8 +5945,8 @@ function softPlusVov(vov, ksub) {
   // For large x the soft-plus IS the identity to within double precision, and
   // taking the exponential there would overflow for no gain.
   if (x > 40) return [vov, 1];
-  const e = Math.exp(x);
-  return [ksub * Math.log1p(e), e / (1 + e)];
+  const e = DMath.exp(x);
+  return [ksub * DMath.log1p(e), e / (1 + e)];
 }
 
 /**
@@ -6602,7 +6603,7 @@ export function sourceVoltage(part, tSeconds, vcc) {
 
   switch (wave) {
     case 'sine':
-      return offset + amplitude * Math.sin(2 * Math.PI * frac);
+      return offset + amplitude * DMath.sin(2 * Math.PI * frac);
     case 'square':
       return offset + (frac < duty ? amplitude : -amplitude);
     case 'pulse':
