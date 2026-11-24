@@ -155,6 +155,8 @@ const LOCAL_ONLY = {
   thermocouple:      { chip_mA: 0, supply_mA: 0 },
   air_coil:          { chip_mA: "circuit", supply_mA: 0 },
   electrolysis_cell: { chip_mA: "circuit", supply_mA: 0 },
+  vhf_coil:          { chip_mA: 0, supply_mA: 0 },
+  varicap:           { chip_mA: 0, supply_mA: 0 },
   bargraph:          { chip_mA: "circuit", supply_mA: "circuit" },
   ir_transmitter:    { chip_mA: "circuit", supply_mA: 20 },
   darlington_driver: { chip_mA: "circuit", supply_mA: "circuit" },
