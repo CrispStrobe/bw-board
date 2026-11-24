@@ -5032,6 +5032,8 @@ function stampDevice(A, b, part, nets, nodeIndex, model, state, controls, vcc, t
     vcc,
     tSeconds,
     temperatureC: benchTemperatureC,
+    // This part's own temperature in the thermal model, else the bench.
+    partTemperatureC: partCelsius(part) ?? benchTemperatureC,
     dtSec,
     control: controls.get(part.id),
   };

@@ -159,6 +159,8 @@ const LOCAL_ONLY = {
   // carries what the circuit drives through it (its gates draw nothing).
   humidity_comb:     { chip_mA: "circuit", supply_mA: 0 },
   dual_gate_mosfet:  { chip_mA: "circuit", supply_mA: 0 },
+  // A silicon PTC temperature sensor is a resistor (src/thermal.js).
+  ptc_sensor:        { chip_mA: "circuit", supply_mA: 0 },
   vhf_coil:          { chip_mA: 0, supply_mA: 0 },
   varicap:           { chip_mA: 0, supply_mA: 0 },
   bargraph:          { chip_mA: "circuit", supply_mA: "circuit" },

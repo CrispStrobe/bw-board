@@ -75,6 +75,7 @@
  *   | 'field_probe'
  *   | 'thermocouple' | 'air_coil' | 'electrolysis_cell' | 'humidity_comb'
  *   | 'dual_gate_mosfet'
+ *   | 'ptc_sensor'
  *   | 'light_path' | 'laser_diode'} PartKind
  */
 

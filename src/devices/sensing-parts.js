@@ -17,6 +17,7 @@ import {
     thermocoupleCard, airCoilCard, dropEmf, coilRun, coilInductorParams, magnetFall, fluxLinkage,
     electrolysisCard, FARADAY, INNER_PIN, combHumidityPct, combOhms,
 } from '../sensing-transducers.js';
+import { ptcResistanceAt } from '../thermal.js';
 
 const num = (v, d) => (Number.isFinite(Number(v)) ? Number(v) : d);
 
@@ -33,6 +34,22 @@ export function registerSensingParts() {
             const ohms = Number(part.params?.ohms) > 0 ? Number(part.params.ohms) : 8;
             const e = ac ? ac.env.emf(ac.part, ctx.tSeconds ?? 0) : 0;
             ctx.theveninBetween('a', 'coil', e, ohms);
+        },
+    });
+
+    // ─── Silicon PTC temperature sensor ────────────────────────────────
+    // A resistor whose value follows its own temperature (src/thermal.js):
+    // the thermal model's when it takes part (surroundC, heatedBy, rth),
+    // else the bench temperature.
+    registerDevice('ptc_sensor', {
+        terminals: ['a', 'b'],
+        eventLocalization: false,
+        init() { return { drives: {}, ohms: 2000, celsius: 25 }; },
+        stamp(ctx, part, state) {
+            const celsius = num(ctx.partTemperatureC, num(ctx.temperatureC, 25));
+            const ohms = ptcResistanceAt(part, celsius);
+            ctx.conductance('a', 'b', 1 / ohms);
+            if (state) { state.ohms = ohms; state.celsius = celsius; }
         },
     });
 

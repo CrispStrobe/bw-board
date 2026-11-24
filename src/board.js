@@ -46,7 +46,7 @@ import { feedI2CSlave } from './devices/i2c-slave.js';
 import { checkCurrentBudget } from './current-ratings.js';
 import { createWorld, bindPartsToHost, lightLevel, lightControlDefault } from './world.js';
 import { junctionModelOf, chooseGroundReference, ledSeriesCurrent } from './mna.js';
-import { buildThermalEntries, stepThermal, shortestTau } from './thermal.js';
+import { buildThermalEntries, stepThermal, shortestTau, surroundOf } from './thermal.js';
 
 /** Re-solve when a thermal-model part has moved this far (K) since it last stamped. */
 const THERMAL_RESOLVE_K = 0.02;
@@ -5362,7 +5362,8 @@ export class BoardImpl {
     const th = this._thermal;
     if (!th) return;
     const bench = this.temperatureC;
-    for (const e of th.entries) th.temps.set(e.id, bench);
+    // A part in surroundings of its own (params.surroundC) starts there.
+    for (const e of th.entries) th.temps.set(e.id, surroundOf(e.part) ?? bench);
     th.solvedAt = new Map(th.temps);
   }
 
