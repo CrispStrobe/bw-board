@@ -75,10 +75,7 @@
  *   | 'field_probe'
  *   | 'thermocouple' | 'air_coil' | 'electrolysis_cell' | 'humidity_comb'
  *   | 'dual_gate_mosfet'
- *   | 'ptc_sensor'
- *   | 'cd4046'
- *   | 'bending_ruler'
- *   | 'spark_gap'
+ *   | 'ptc_sensor' | 'cd4046' | 'bending_ruler' | 'spark_gap'
  *   | 'light_path' | 'laser_diode'} PartKind
  */
 
