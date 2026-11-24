@@ -336,9 +336,13 @@ describe('radio bands: the same answer on every platform', () => {
         // 1657 solves, tank 3.41 V against 5.32 V).
         const b = meissner();
         ms(b, 0.3);
-        assert.equal(b.transientAnalysisStatus().work.solves, 2149);
-        assert.equal(b._radio.substeps, 2596);
-        assert.equal(tankAmp(b, 'col'), 0.8028399905986557);
+        // The state moved with the engine on 2026-11-24 (the transistor's
+        // large-signal input capacitance, the band's bias-loop step bound;
+        // was 2149 solves, 2596 substeps, 0.8028 V), checked identical on
+        // both platforms again.
+        assert.equal(b.transientAnalysisStatus().work.solves, 3136);
+        assert.equal(b._radio.substeps, 2533);
+        assert.equal(tankAmp(b, 'col'), 7.826070933483422);
     });
 
     it('1-ulp changes of the coil do not move the oscillator\'s outcome', () => {
@@ -470,3 +474,226 @@ describe('radio bands: MOSFET stages and hand-wound coils', () => {
     });
 });
 
+
+describe('radio bands: a short-wave regenerative receiver hears a Morse beacon (heterodyne)', () => {
+    // Gap (2026-11-24): the short-wave regenerative receiver never heard its
+    // beacon. Two engine faults stood behind it. (1) A transistor's input
+    // capacitance was τF·Ic/VT at its DC current even when its own swing had
+    // driven it into class C: tens of picofarads its junction does not
+    // have, hung on the tank through the 100 pF grid capacitor, put the
+    // oscillation 8 % below the tank (5.58 against 6.07 MHz), 480 kHz from
+    // the beacon. The diffusion charge is τF times the collector current, so
+    // the capacitance a swing sees is τF times the large-signal
+    // transconductance. (2) The band exchanges its swing and the bias with
+    // the transient solve once per substep; at substeps of 1–2 µs against
+    // the envelope's ~5 µs time constant that exchange itself oscillated,
+    // and the receiver's own amplitude jitter (tens of per cent, step to
+    // step) was 50–200 mV of noise in the earphone, beacon or not.
+    const fixture = (edit) => {
+        const fx = JSON.parse(readFileSync(new URL('./fixtures/shortwave-regen-netlist.json', import.meta.url), 'utf8'));
+        if (edit) edit(fx);
+        const b = new BoardImpl(fx.vcc);
+        b.setNetlist(fx.parts, fx.nets);
+        b.setPower(true);
+        const netOf = (part, term) => fx.nets.find(n => n.terminals.some(t => t.part === part && t.terminal === term)).id;
+        return { b, fx, tank: netOf('tuning_cap_7', 'a'), ep: [netOf('earphone_14', 'a'), netOf('earphone_14', 'b')] };
+    };
+    const noBeacon = (fx) => { const a = fx.parts.find(p => p.kind === 'antenna'); a.params.stations = a.params.stations.filter(s => s.id !== 'cw'); };
+    const record = (x, from, to, tr) => {
+        for (let t = from + 0.02; t <= to + 1e-9; t += 0.02) {
+            ms(x.b, t);
+            tr.push([t, x.b.nodeVoltages.get(x.ep[0]) - x.b.nodeVoltages.get(x.ep[1])]);
+        }
+        return tr;
+    };
+    /** Strongest line of a trace (V, Hz) and its rms, mean removed. */
+    const listen = (tr) => {
+        const m = tr.reduce((a, p) => a + p[1], 0) / tr.length;
+        const z = tr.map(([t, v]) => [t, v - m]);
+        let best = [0, 0];
+        for (let f = 200; f <= 8000; f += 25) {
+            let re = 0, im = 0;
+            for (const [t, v] of z) { re += v * Math.cos(2 * Math.PI * f * t / 1000); im += v * Math.sin(2 * Math.PI * f * t / 1000); }
+            const a = 2 * Math.hypot(re, im) / z.length;
+            if (a > best[1]) best = [f, a];
+        }
+        return { hz: best[0], line: best[1], rms: Math.sqrt(z.reduce((a, p) => a + p[1] * p[1], 0) / z.length) };
+    };
+
+    it('past its threshold it oscillates steadily at its tank\'s frequency, and quietly', () => {
+        const x = fixture(noBeacon);
+        x.b.setControl('potentiometer_10', 0.75);
+        ms(x.b, 3);
+        const w0 = x.b.transientAnalysisStatus().work.solves;
+        let lo = Infinity, hi = 0;
+        for (let k = 1; k <= 100; k++) { ms(x.b, 3 + k * 0.002); const a = tankAmp(x.b, x.tank); lo = Math.min(lo, a); hi = Math.max(hi, a); }
+        // Measured: 5.38 V, steady to 1e-4 (before: 1.8–3.5 V step to step).
+        assert.ok(lo > 3 && hi / lo < 1.01, `a steady swing: ${lo.toFixed(3)}–${hi.toFixed(3)} V`);
+        // Its frequency: the band's centre plus the rotation of its envelope.
+        const band = x.b._radio._bands.find(q => q.hz > 5e6 && q.hz < 7e6);
+        const i = x.b._radio._sys.builder.nodeIndex.get(x.tank);
+        const h = band.hist.filter(e => e.X);
+        const rot = [];
+        for (let k = 1; k < h.length; k++) {
+            const a = h[k - 1].X, c = h[k].X;
+            const d = DMath.atan2(c.im[i] * a.re[i] - c.re[i] * a.im[i], c.re[i] * a.re[i] + c.im[i] * a.im[i]);
+            rot.push(d / (2 * Math.PI * (h[k].t - h[k - 1].t)));
+        }
+        rot.sort((p, q) => p - q);
+        const f = band.hz + rot[rot.length >> 1];
+        // The tank's resonance as the scan finds it with the stage's gain off
+        // (6.07 MHz: 5 µH against 10 + 490·0.2506 pF is 6.18 MHz, the grid
+        // capacitor and the antenna on the tap load it). Measured 6.0604 MHz,
+        // 0.2 % below it; before, 5.58 MHz.
+        const f0 = x.b._radio._resonances.find(r => r.hz > 5e6 && r.hz < 7e6).hz;
+        close(f / f0, 1, 0.01, `oscillation ${(f / 1e6).toFixed(4)} MHz against the tank's ${(f0 / 1e6).toFixed(4)} MHz`);
+        const tr = record(x, 3.2, 8, []);
+        const s = listen(tr);
+        assert.ok(s.rms < 1e-4, `no beacon, no sound: ${s.rms.toExponential(2)} V rms in the earphone (before: 0.05–0.2 V)`);
+        const perMs = (x.b.transientAnalysisStatus().work.solves - w0) / 5;
+        assert.ok(perMs < 3000, `oscillating, ${perMs} solves per simulated ms`);
+    });
+
+    it('a resonance scan sees the tank, not the swing the oscillation has at that instant', () => {
+        // The scan looks for tanks with the transistors' gain off, but it
+        // saw the junctions at the bands' present swing: a collector
+        // swinging volts forward-biases its base–collector junction, and a
+        // scan taken mid-burst moved the tank (a squegging short-wave stage
+        // retuned while it squegged showed a peak at 4.5 MHz for its 6.1 MHz
+        // tank, and its band went there). Now: the same resonance whether
+        // the stage oscillates or is quiet when the tuning capacitor moves.
+        const scanAfterRetune = (pot) => {
+            const x = fixture(noBeacon);
+            x.b.setControl('potentiometer_10', pot);
+            ms(x.b, 2);
+            x.b.setControl('tuning_cap_7', 0.2507);
+            ms(x.b, 2.1);
+            return { hz: x.b._radio._resonances.find(r => r.hz > 5e6 && r.hz < 7e6)?.hz, swing: tankAmp(x.b, x.tank) };
+        };
+        const osc = scanAfterRetune(0.75), quiet = scanAfterRetune(0.95);
+        assert.ok(osc.swing > 3 && quiet.swing < 0.01, `oscillating ${osc.swing.toFixed(2)} V, quiet ${quiet.swing.toExponential(1)} V`);
+        close(osc.hz / quiet.hz, 1, 1e-5, `the tank found while oscillating (${osc.hz}) and while quiet (${quiet.hz})`);
+    });
+
+    it('key down: the beat with the beacon whistles in the earphone; key up: silence', () => {
+        // Below the threshold (pot 0.95) the beacon's bare carrier is
+        // inaudible. Past it (0.75) the oscillation, 1.9 kHz from the beacon,
+        // beats with it while the key is down (the first 60 ms); key up (and
+        // its last beat rung out of the earphone), the oscillation alone makes
+        // no sound.
+        const x = fixture();
+        const below = listen(record(x, 0, 12, []).filter(p => p[0] > 5));
+        x.b.setControl('potentiometer_10', 0.75);
+        ms(x.b, 18);
+        const down = listen(record(x, 18, 40, []));
+        ms(x.b, 70);
+        const up = listen(record(x, 70, 86, []));
+        // Measured: below 1e-5 V rms; key down 1850 Hz at 0.40 mV; key up
+        // 1.2 µV rms. Before: no line, 0.05–0.6 V of the receiver's own noise.
+        assert.ok(below.rms < 3e-5, `below the threshold, silent: ${below.rms.toExponential(2)} V rms`);
+        close(down.hz, 1850, 300, 'the beat (Hz)');
+        assert.ok(down.line > 1e-4, `key down, the beat: ${down.line.toExponential(2)} V`);
+        assert.ok(up.rms < down.line / 30, `key up, silence: ${up.rms.toExponential(2)} V rms against ${down.line.toExponential(2)} V`);
+        // Tuned a hair higher, the beat drops in pitch (the oscillation moves towards the beacon).
+        const y = fixture((fx) => { fx.parts.find(p => p.kind === 'tuning_cap').params.position = 0.2507; });
+        y.b.setControl('potentiometer_10', 0.75);
+        ms(y.b, 18);
+        const lower = listen(record(y, 18, 40, []));
+        assert.ok(lower.hz < down.hz - 500 && lower.line > 1e-4, `retuned: ${down.hz} -> ${lower.hz} Hz`);
+    });
+});
+
+describe('radio bands: band steps converge', () => {
+    it('a super-regenerator\'s bursts reach the same peak at every band step', () => {
+        // The adaptive band step overshot each burst's limiting by up to 40 %
+        // (bursts 2.97–4.20 V where 1 ns steps give 3.00 V): the exchange
+        // between the band's swing and the bias the transient solve sets
+        // closed once per substep, and at the burst's top the substep was a
+        // sizeable part of the envelope's time scale. It is now at most a
+        // 32nd of max(2Q/ω, the bias currents' smoothing) while the swing
+        // drives its junctions. Measured: 2.651–2.665 V over 25 bursts, 1 ns
+        // steps 2.670–2.672 V (the level itself moved with the input
+        // capacitance's large-signal value, see the short-wave receiver).
+        const fx = JSON.parse(readFileSync(new URL('./fixtures/superregen-vhf-netlist.json', import.meta.url), 'utf8'));
+        const ant = fx.parts.find(p => p.kind === 'antenna');
+        if (ant) ant.params.stations = [];
+        const b = new BoardImpl(fx.vcc);
+        b.setNetlist(fx.parts, fx.nets);
+        b.setPower(true);
+        ms(b, 3);
+        const peaks = [];
+        let cur = 0;
+        for (let k = 1; k <= 1000; k++) {
+            ms(b, 3 + k * 0.001);
+            cur = Math.max(cur, ...b._radio._bands.map(x => Math.max(...x.portVoltages().map(p => Math.hypot(p[0], p[1])))));
+            if (k % 40 === 0) { peaks.push(cur); cur = 0; }
+        }
+        const lo = Math.min(...peaks), hi = Math.max(...peaks);
+        assert.ok(hi / lo < 1.03, `burst peaks ${lo.toFixed(3)}–${hi.toFixed(3)} V`);
+        close((lo + hi) / 2, 2.67, 0.05, 'burst peak against 1 ns steps (V)');
+    });
+});
+
+describe('radio bands: a MOSFET regenerative receiver past its threshold', () => {
+    const fixture = (edit) => {
+        const fx = JSON.parse(readFileSync(new URL('./fixtures/mosfet-regen-netlist.json', import.meta.url), 'utf8'));
+        if (edit) edit(fx);
+        const b = new BoardImpl(fx.vcc);
+        b.setNetlist(fx.parts, fx.nets);
+        b.setPower(true);
+        const netOf = (part, term) => fx.nets.find(n => n.terminals.some(t => t.part === part && t.terminal === term)).id;
+        return { b, ep: [netOf('earphone_14', 'a'), netOf('earphone_14', 'b')] };
+    };
+    const lineAt = (x, from, to) => {
+        const tr = [];
+        for (let t = from + 0.02; t <= to + 1e-9; t += 0.02) { ms(x.b, t); tr.push([t, x.b.nodeVoltages.get(x.ep[0]) - x.b.nodeVoltages.get(x.ep[1])]); }
+        const m = tr.reduce((a, p) => a + p[1], 0) / tr.length;
+        const amp = (f) => {
+            let re = 0, im = 0;
+            for (const [t, v] of tr) { re += (v - m) * Math.cos(2 * Math.PI * f * t / 1000); im += (v - m) * Math.sin(2 * Math.PI * f * t / 1000); }
+            return 2 * Math.hypot(re, im) / tr.length;
+        };
+        let best = [0, 0];
+        for (let f = 200; f <= 8000; f += 25) { const a = amp(f); if (a > best[1]) best = [f, a]; }
+        return { hz: best[0], line: best[1], programme: amp(400) };
+    };
+
+    it('just past the threshold it whistles against the station; without the station, no whistle', () => {
+        // Pot 0.75: the gate a little further on than where the 400 Hz
+        // programme is detected (0.77). The square-law stage starts
+        // oscillating with the station's carrier in its tank, ~6 kHz from it,
+        // and the beat whistles. Measured: 6000 Hz at 56 mV against the
+        // programme's 4.6 mV; with no station on the air the tank stays at
+        // the noise floor and the earphone is quiet.
+        const x = fixture();
+        x.b.setControl('potentiometer_10', 0.75);
+        ms(x.b, 15);
+        const w = lineAt(x, 15, 21);
+        close(w.hz, 6000, 500, 'the whistle (Hz)');
+        assert.ok(w.line > 5 * w.programme && w.line > 0.01, `the whistle ${w.line.toExponential(2)} V over the programme ${w.programme.toExponential(2)} V`);
+        const y = fixture((fx) => { for (const p of fx.parts) if (p.kind === 'antenna') p.params.stations = []; });
+        y.b.setBroadcast([]);
+        y.b.setControl('potentiometer_10', 0.75);
+        ms(y.b, 15);
+        const q = lineAt(y, 15, 21);
+        assert.ok(q.line < w.line / 20, `no station, no whistle: ${q.line.toExponential(2)} V at ${q.hz} Hz`);
+    });
+
+    it('oscillating hard, it costs a few thousand steps per simulated millisecond', () => {
+        // Pot 0.72: oscillating at volts, its own rectified current runs the
+        // drain down to the source. The band's transconductance was cut off
+        // outright below 50 mV of drain while the rectified current faded
+        // smoothly (tanh(vds/0.2)); the stage sat on that switch and the
+        // transient solve chattered across it: 13 000–20 000 solves (7–10 s)
+        // per simulated ms. Both now fade by the same law. Measured: ~4 000.
+        const x = fixture();
+        x.b.setControl('potentiometer_10', 0.72);
+        ms(x.b, 1.5);
+        const w0 = x.b.transientAnalysisStatus().work.solves;
+        ms(x.b, 2.5);
+        const perMs = x.b.transientAnalysisStatus().work.solves - w0;
+        assert.equal(x.b._radio.error, null);
+        assert.ok(Math.max(0, ...x.b._radio._bands.map(q => Math.max(...q.portVoltages().map(p => Math.hypot(p[0], p[1]))))) > 1, 'oscillating');
+        assert.ok(perMs < 7000, `${perMs} solves per simulated ms`);
+    });
+});

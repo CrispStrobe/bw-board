@@ -10,7 +10,7 @@
 import { registerDevice } from '../devices.js';
 import { transducerCard, coneSignal, initToneTracker, trackTone } from '../transducers.js';
 import { acousticsOf } from '../acoustics.js';
-import { RF_DETECT_KIND, rectificationCurrentL, junctionCard, mosRectification } from '../radio.js';
+import { RF_DETECT_KIND, rectificationCurrentL, junctionCard, mosRectification, mosChannelFade } from '../radio.js';
 
 export function registerRadioParts() {
     // ─── Dynamic loudspeaker and earphone ───────────────────────────────
@@ -99,7 +99,7 @@ export function registerRadioParts() {
                     // fades as vds → 0 (a drain pulled below its source by a
                     // rectified current with nowhere to come from otherwise).
                     const vds = s * (read('drain') - read('source'));
-                    const fd = vds > 0 ? Math.tanh(vds / 0.2) : 0;
+                    const fd = mosChannelFade(vds);
                     const i = i0 * fd, g = g0 * fd;
                     // Extra drain current D → S (nmos); S → D (pmos).
                     return {
