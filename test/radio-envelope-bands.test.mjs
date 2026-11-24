@@ -336,9 +336,9 @@ describe('radio bands: the same answer on every platform', () => {
         // 1657 solves, tank 3.41 V against 5.32 V).
         const b = meissner();
         ms(b, 0.3);
-        assert.equal(b.transientAnalysisStatus().work.solves, 2158);
-        assert.equal(b._radio.substeps, 2853);
-        assert.equal(tankAmp(b, 'col'), 6.697898643480968);
+        assert.equal(b.transientAnalysisStatus().work.solves, 2149);
+        assert.equal(b._radio.substeps, 2596);
+        assert.equal(tankAmp(b, 'col'), 0.8028399905986557);
     });
 
     it('1-ulp changes of the coil do not move the oscillator\'s outcome', () => {
@@ -426,3 +426,47 @@ describe('radio bands: an audio amplifier\'s input rectifies', () => {
         assert.ok(weak.amps < strong.amps / 5, `a tenth of the field, far less than a tenth of the sound: ${weak.amps} A`);
     });
 });
+
+describe('radio bands: MOSFET stages and hand-wound coils', () => {
+    const fixture = (name, edit) => {
+        const fx = JSON.parse(readFileSync(new URL(`./fixtures/${name}`, import.meta.url), 'utf8'));
+        if (edit) edit(fx);
+        const b = new BoardImpl(fx.vcc);
+        b.setNetlist(fx.parts, fx.nets);
+        b.setPower(true);
+        return b;
+    };
+    const swing = (b) => Math.max(0, ...b._radio._bands.map(x => Math.max(...x.portVoltages().map(p => Math.hypot(p[0], p[1])))));
+
+    it('a MOSFET oscillator limits at its drain\'s headroom instead of growing without bound', () => {
+        // The square law only gains with the gate swing; nothing limited it,
+        // and the MOSFET regenerative receiver's band ran to 14 kV and was
+        // refused. The drain's own swing past its headroom to the triode
+        // edge now levels the fundamental off, and the rectified drain
+        // current fades as the channel enters triode.
+        const b = fixture('mosfet-regen-netlist.json', (fx) => {
+            fx.parts.find(p => p.kind === 'potentiometer').params.position = 0.2;     // gate ≈ 7 V: hard on
+            fx.parts.find(p => p.kind === 'ferrite_coil').params.couplingRatio = 0.04;
+        });
+        ms(b, 1.5);
+        assert.equal(b._radio.error, null, `no refused band: ${b._radio.error}`);
+        const a = swing(b);
+        assert.ok(a > 1 && a < 30, `it oscillates, limited: ${a.toFixed(2)} V`);
+    });
+
+    it('a hand-wound air coil in an RF circuit is an RF winding: a metal detector\'s oscillators run near 96 kHz', () => {
+        // Before, the air coil was a plain inductor in the time domain and a
+        // Colpitts oscillator at ~100 kHz had to be run at 1.5 kHz instead.
+        // Now its inductance (moved by metal, live) lives in the RF bands.
+        const b = fixture('metal-detector-netlist.json');
+        ms(b, 6);
+        const r = b._radio;
+        assert.ok(r._resonances.some(x => x.hz > 90e3 && x.hz < 102e3), `a resonance near 96 kHz: ${r._resonances.map(x => Math.round(x.hz))}`);
+        assert.ok(swing(b) > 1, `oscillating: ${swing(b).toFixed(2)} V`);
+        const coin = fixture('metal-detector-netlist.json', (fx) => { fx.parts.find(p => p.kind === 'air_coil').params.metalCm = 0; });
+        ms(coin, 6);
+        const f0 = Math.min(...r._resonances.map(x => x.hz)), f1 = Math.min(...coin._radio._resonances.map(x => x.hz));
+        assert.ok(f1 > f0 * 1.015, `a coin on the coil raises the search oscillator's tank: ${Math.round(f0)} -> ${Math.round(f1)} Hz`);
+    });
+});
+

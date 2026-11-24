@@ -80,6 +80,7 @@ import {
     thermalCurrentPsd, BandIntegrator, H_UNIT, K_MAX,
 } from './rf-bands.js';
 import { DMath } from './det-math.js';
+import { coilInductorParams } from './sensing-transducers.js';
 
 export { lnI0, besselGain };
 
@@ -364,6 +365,8 @@ export const COUPLED_INDUCTORS_KIND = 'coupled_inductors';
 export const FERRITE_DEFAULTS = Object.freeze({ henrys: 250e-6, tap: 0.25, couplingRatio: 0.1, k: 0.98, couplingK: 0.9, q: 120,
     rodHeightM: 0.01, angleDeg: 0, distanceM: 1, linkRadiusM: 0.1 });
 export const VHF_COIL_DEFAULTS = Object.freeze({ henrys: 0.15e-6, q: 80 });
+/** Q of a hand-wound air coil at RF when its part gives none (copper and proximity losses). */
+const AIR_COIL_RF_Q = 60;
 export const ANTENNA_DEFAULTS = Object.freeze({ heightM: 5, ohms: 50, farads: 200e-12 });
 export const TUNING_CAP_DEFAULTS = Object.freeze({ minFarads: 10e-12, maxFarads: 500e-12, position: 0.5 });
 export const VARICAP_DEFAULTS = Object.freeze({ cjo: 40e-12, vj: 0.7, m: 0.5, is: 1e-14, n: 1, vf: 0.7 });
@@ -464,6 +467,24 @@ export function expandRadio(parts, nets, opts) {
     // RF coils: the transient view uses the engine's inductor/transformer
     // with an RF damping resistor; the RF view swaps in the full coupled set.
     const coils = [];
+    // A hand-wound air coil (src/sensing-transducers.js) in a circuit that
+    // has an RF front end is an RF winding too: its inductance (moved by
+    // metal near it, live) lives in the RF bands, its copper stays in the
+    // time domain (the drawn coil's own branch a–m), and the hidden
+    // inductor m–b becomes a short. A metal detector's 100 kHz search
+    // oscillator then runs in a band, as an oscillator on a ferrite rod does.
+    for (const p of parts.filter(q => q.kind === 'air_coil')) {
+        const lp = coilInductorParams(p);
+        const inner = outParts.findIndex(q => q.id === `${p.id}_l` && q.kind === 'inductor');
+        if (!lp || inner < 0 || !netOf(p.id, 'a') || !netOf(p.id, 'b') || netOf(p.id, 'a') === netOf(p.id, 'b')) continue;
+        outParts[inner] = { ...outParts[inner], kind: 'resistor', params: { ohms: 1e-3 } };
+        const c = { part: p, kind: 'air_coil', windings: [{ a: 'a', b: 'b', turns: 1, main: true }],
+            // The short m–b is time-domain only: in the RF view the drawn
+            // coil's copper branch a–m would otherwise sit across the winding.
+            q: Math.max(0, num(p.params?.q, AIR_COIL_RF_Q)), hidden: [`${p.id}_l`], nets: [[netOf(p.id, 'a').id, netOf(p.id, 'b').id]] };
+        Object.defineProperty(c, 'L', { enumerable: true, get: () => [[lp.henrys]] });
+        coils.push(c);
+    }
     for (const p of parts.filter(q => q.kind === 'ferrite_coil' || q.kind === 'vhf_coil')) {
         const has = (t) => !!netOf(p.id, t);
         let fw;
@@ -883,7 +904,7 @@ function expandRadioPhasor(parts, nets, opts) {
 
 const REFRESH_SEC = 5e-3;
 const RESCAN_SEC = 200e-3;
-const SCAN_LO_HZ = 100e3;
+const SCAN_LO_HZ = 30e3;
 const SCAN_HI_HZ = 300e6;
 const SCAN_PER_DECADE = 20;
 const SLOW_BEAT_HZ = 10e3;
@@ -1039,7 +1060,7 @@ export class RadioFrontEnd {
             const vgs = s * (nv(d.nets[0]) - nv(d.nets[1]));
             const vds = d.nets2 ? s * (nv(d.nets2[0]) - nv(d.nets2[1])) : 0;
             const id = Math.abs(solution?.branchCurrents?.get(d.partId)?.get('drain') ?? 0);
-            return { vgs, vds, id, law: mosLaw(P), lambda: num(P.lambda, 0), cgs: num(P.cgs, 0), cgd: num(P.cgd, 0) };
+            return { vgs, vds, id, law: mosLaw(P), vth: Math.abs(num(P.vth, 2.0)), lambda: num(P.lambda, 0), cgs: num(P.cgs, 0), cgd: num(P.cgd, 0) };
         });
     }
 
@@ -1111,7 +1132,17 @@ export class RadioFrontEnd {
             } else if (j.kind === 'mos') {
                 const [pgs, pds] = j.p;
                 const A = Math.sqrt(sq(vp[pgs][0], vp[pgs][1]) + other.A2[pgs]);
-                const [, gmEff] = b.vds > 0.05 ? describeLaw(b.law, b.vgs, A) : [0, 0];
+                let [, gmEff] = b.vds > 0.05 ? describeLaw(b.law, b.vgs, A) : [0, 0];
+                // The drain's own swing: past the headroom to the triode edge
+                // (vds − vov) the channel stops being a current source for
+                // part of each cycle and the fundamental it delivers levels
+                // off. Without this a MOSFET oscillator's square law only
+                // ever gained with its swing, and grew without bound.
+                if (pds !== undefined && gmEff > 0) {
+                    const Ad = Math.sqrt(sq(vp[pds][0], vp[pds][1]) + other.A2[pds]);
+                    const head = Math.max(0.05, b.vds - Math.max(0, b.vgs - b.vth));
+                    gmEff /= Math.sqrt(1 + (Ad / head) * (Ad / head));
+                }
                 const gds = 1e-6 + b.lambda * b.id;
                 put(pgs, pgs, 0, b.cgs + b.cgd);
                 if (pds !== undefined) {

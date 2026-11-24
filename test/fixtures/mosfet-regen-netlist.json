@@ -1,0 +1,345 @@
+{
+ "note": "A MOSFET regenerative receiver as the circuit designer hands it to the engine (sb3-creator lab-mosfet-regen): ferrite rod tank on the gate through 100 pF, gate biased from a pot through 1 MOhm, tickler (2 %) and magnetic earphone in the drain, source 1 kOhm bypassed.",
+ "vcc": 9,
+ "parts": [
+  {
+   "id": "vsource_2",
+   "kind": "vsource",
+   "params": {
+    "volts": 9,
+    "variant": "9v"
+   },
+   "terminals": [
+    "pos",
+    "neg"
+   ]
+  },
+  {
+   "id": "gnd_3",
+   "kind": "gnd",
+   "params": {},
+   "terminals": [
+    "gnd"
+   ]
+  },
+  {
+   "id": "antenna_4",
+   "kind": "antenna",
+   "params": {
+    "heightM": 1,
+    "stations": [
+     {
+      "id": "local",
+      "name": "Local 612 kHz",
+      "hz": 612000,
+      "fieldVPerM": 0.005,
+      "depth": 0.5,
+      "audio": {
+       "type": "tone",
+       "hz": 400
+      }
+     }
+    ]
+   },
+   "terminals": [
+    "a"
+   ]
+  },
+  {
+   "id": "earth_5",
+   "kind": "earth",
+   "params": {},
+   "terminals": [
+    "earth"
+   ]
+  },
+  {
+   "id": "ferrite_coil_6",
+   "kind": "ferrite_coil",
+   "params": {
+    "couplingRatio": 0.02
+   },
+   "terminals": [
+    "a",
+    "tap",
+    "b",
+    "c1",
+    "c2"
+   ]
+  },
+  {
+   "id": "tuning_cap_7",
+   "kind": "tuning_cap",
+   "params": {
+    "minFarads": 1e-11,
+    "maxFarads": 5e-10,
+    "position": 0.5
+   },
+   "terminals": [
+    "a",
+    "b"
+   ]
+  },
+  {
+   "id": "capacitor_8",
+   "kind": "capacitor",
+   "params": {
+    "farads": 1e-10
+   },
+   "terminals": [
+    "a",
+    "b"
+   ]
+  },
+  {
+   "id": "resistor_9",
+   "kind": "resistor",
+   "params": {
+    "ohms": 1000000
+   },
+   "terminals": [
+    "a",
+    "b"
+   ]
+  },
+  {
+   "id": "potentiometer_10",
+   "kind": "potentiometer",
+   "params": {
+    "ohms": 100000,
+    "position": 0.8
+   },
+   "terminals": [
+    "a",
+    "wiper",
+    "b"
+   ]
+  },
+  {
+   "id": "nmos_11",
+   "kind": "nmos",
+   "params": {
+    "vth": 2,
+    "k": 0.002
+   },
+   "terminals": [
+    "gate",
+    "drain",
+    "source"
+   ]
+  },
+  {
+   "id": "resistor_12",
+   "kind": "resistor",
+   "params": {
+    "ohms": 1000
+   },
+   "terminals": [
+    "a",
+    "b"
+   ]
+  },
+  {
+   "id": "capacitor_13",
+   "kind": "capacitor",
+   "params": {
+    "farads": 1e-7
+   },
+   "terminals": [
+    "a",
+    "b"
+   ]
+  },
+  {
+   "id": "earphone_14",
+   "kind": "earphone",
+   "params": {
+    "type": "magnetic",
+    "ohms": 2000,
+    "henrys": 0.1
+   },
+   "terminals": [
+    "a",
+    "b"
+   ]
+  },
+  {
+   "id": "capacitor_15",
+   "kind": "capacitor",
+   "params": {
+    "farads": 1e-8
+   },
+   "terminals": [
+    "a",
+    "b"
+   ]
+  }
+ ],
+ "nets": [
+  {
+   "id": "breadboard_1:n-col-b11",
+   "terminals": [
+    {
+     "part": "capacitor_8",
+     "terminal": "a"
+    },
+    {
+     "part": "ferrite_coil_6",
+     "terminal": "b"
+    },
+    {
+     "part": "tuning_cap_7",
+     "terminal": "a"
+    }
+   ]
+  },
+  {
+   "id": "breadboard_1:n-col-b12",
+   "terminals": [
+    {
+     "part": "capacitor_8",
+     "terminal": "b"
+    },
+    {
+     "part": "nmos_11",
+     "terminal": "gate"
+    },
+    {
+     "part": "resistor_9",
+     "terminal": "b"
+    }
+   ]
+  },
+  {
+   "id": "breadboard_1:n-col-b14",
+   "terminals": [
+    {
+     "part": "capacitor_13",
+     "terminal": "a"
+    },
+    {
+     "part": "nmos_11",
+     "terminal": "source"
+    },
+    {
+     "part": "resistor_12",
+     "terminal": "a"
+    }
+   ]
+  },
+  {
+   "id": "breadboard_1:n-col-b16",
+   "terminals": [
+    {
+     "part": "ferrite_coil_6",
+     "terminal": "c1"
+    },
+    {
+     "part": "nmos_11",
+     "terminal": "drain"
+    }
+   ]
+  },
+  {
+   "id": "breadboard_1:n-col-b24",
+   "terminals": [
+    {
+     "part": "capacitor_15",
+     "terminal": "a"
+    },
+    {
+     "part": "earphone_14",
+     "terminal": "a"
+    },
+    {
+     "part": "ferrite_coil_6",
+     "terminal": "c2"
+    }
+   ]
+  },
+  {
+   "id": "breadboard_1:n-col-t12",
+   "terminals": [
+    {
+     "part": "potentiometer_10",
+     "terminal": "wiper"
+    },
+    {
+     "part": "resistor_9",
+     "terminal": "a"
+    }
+   ]
+  },
+  {
+   "id": "breadboard_1:n-col-t3",
+   "terminals": [
+    {
+     "part": "antenna_4",
+     "terminal": "a"
+    },
+    {
+     "part": "ferrite_coil_6",
+     "terminal": "tap"
+    }
+   ]
+  },
+  {
+   "id": "breadboard_1:rail-b-",
+   "terminals": [
+    {
+     "part": "capacitor_13",
+     "terminal": "b"
+    },
+    {
+     "part": "capacitor_15",
+     "terminal": "b"
+    },
+    {
+     "part": "earth_5",
+     "terminal": "earth"
+    },
+    {
+     "part": "ferrite_coil_6",
+     "terminal": "a"
+    },
+    {
+     "part": "gnd_3",
+     "terminal": "gnd"
+    },
+    {
+     "part": "potentiometer_10",
+     "terminal": "a"
+    },
+    {
+     "part": "resistor_12",
+     "terminal": "b"
+    },
+    {
+     "part": "tuning_cap_7",
+     "terminal": "b"
+    },
+    {
+     "part": "vsource_2",
+     "terminal": "neg"
+    }
+   ]
+  },
+  {
+   "id": "breadboard_1:rail-b+",
+   "terminals": [
+    {
+     "part": "earphone_14",
+     "terminal": "b"
+    },
+    {
+     "part": "potentiometer_10",
+     "terminal": "b"
+    },
+    {
+     "part": "vsource_2",
+     "terminal": "pos"
+    }
+   ]
+  }
+ ]
+}
