@@ -22,7 +22,7 @@ export function shaftElectricalStep(part, state, read, tNs) {
   return true;
 }
 
-export function publishShaftState(part, state, sample, supplyV) {
+export function validateShaftSample(part, state, sample) {
   if (!sample || !Number.isFinite(sample.angleRad) || !Number.isFinite(sample.velocityRadS)) {
     throw new Error('A shaft sample needs finite radians and radians per second');
   }
@@ -36,6 +36,13 @@ export function publishShaftState(part, state, sample, supplyV) {
     if (shaft.encoderEdge !== undefined && Math.abs(edge - shaft.encoderEdge) > 1) {
       throw new Error('Encoder exceeds mechanical sampling rate; reduce speed or pulses per revolution');
     }
+    return edge;
+  }
+}
+
+export function applyShaftSample(part, state, sample, supplyV, edge) {
+  const shaft = state.externalShaft;
+  if (edge !== undefined) {
     shaft.encoderEdge = edge;
     const phase = ((edge % 4) + 4) % 4;
     state.angle = sample.angleRad;
@@ -48,4 +55,8 @@ export function publishShaftState(part, state, sample, supplyV) {
   state.omega = Math.abs(sample.velocityRadS);
   state.direction = sample.velocityRadS > 0.01 ? 'forward' : sample.velocityRadS < -0.01 ? 'reverse' : 'stopped';
   if (part.kind === 'gearmotor') state.outputRpm = state.omega * 60 / (2 * Math.PI) / (part.params?.gearRatio ?? 48);
+}
+
+export function publishShaftState(part, state, sample, supplyV) {
+  applyShaftSample(part, state, sample, supplyV, validateShaftSample(part, state, sample));
 }

@@ -21,3 +21,34 @@ test('external servo keeps measured angle while decoding target; ultrasonic cons
  b.setPin('P1.1','pushpull',true);b.advanceTo(20_010_000n);b.setPin('P1.1','pushpull',false);const u=b.getDeviceState('u');assert.equal(u._echoEndNs-u._echoStartNs,1_450_000n);assert.equal(b.parts.find(p=>p.id==='u').params.distance,100);
  b.reset();assert.throws(()=>sensor.sample(50));assert.throws(()=>servo.sample(90));
 });
+
+test('simultaneous feedback solves once and rejects an invalid batch before updating either shaft', t => {
+  const board = new BoardImpl(5);
+  board.setNetlist([
+    {id:'power',kind:'vcc',params:{},terminals:['vcc']},
+    {id:'gnd',kind:'gnd',params:{},terminals:['gnd']},
+    ...['left','right'].map(id => ({
+      id,kind:'dc_motor',terminals:['a','b'],
+      params:{windingR:10,windingH:0,kV:.1,kT:.1,J:1e-12}
+    }))
+  ], [
+    {id:'v',terminals:[{part:'power',terminal:'vcc'},{part:'left',terminal:'a'},{part:'right',terminal:'a'}]},
+    {id:'g',terminals:[{part:'gnd',terminal:'gnd'},{part:'left',terminal:'b'},{part:'right',terminal:'b'}]}
+  ]);
+  board.attachMechanicalShaft('left');
+  board.attachMechanicalShaft('right');
+  const solve = t.mock.method(board, '_solve');
+  const left = {partId:'left',angleRad:.1,velocityRadS:20};
+  const right = {partId:'right',angleRad:.2,velocityRadS:60};
+  assert.throws(() => board.setMechanicalShaftStates([left,{...right,velocityRadS:NaN}]), /finite/);
+  assert.throws(() => board.setMechanicalShaftStates([left,left]), /Duplicate/);
+  assert.equal(solve.mock.callCount(), 0);
+  assert.equal(board.getDeviceState('left').velocity, 0);
+  assert.equal(board.getDeviceState('right').velocity, 0);
+  board.setMechanicalShaftStates([left,right]);
+  assert.equal(solve.mock.callCount(), 1);
+  assert.equal(board.timeNs, 0n);
+  board.advanceTo(5_000_000n);
+  close(board.takeMechanicalShaftImpulse('left').impulseNms,.00015,1e-8);
+  close(board.takeMechanicalShaftImpulse('right').impulseNms,-.00005,1e-8);
+});

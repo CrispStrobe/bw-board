@@ -1,4 +1,4 @@
-import {publishShaftState} from './mechanical-shaft.js';
+import {applyShaftSample, publishShaftState, validateShaftSample} from './mechanical-shaft.js';
 /**
  * Board implementation — boundary B, and the router between two solvers.
  *
@@ -5728,6 +5728,24 @@ export class BoardImpl {
     if (!part || !state?.externalShaft) throw new Error('Motor shaft is not externally owned');
     publishShaftState(part, state, sample, this.vcc);
     this._solve();
+  }
+
+  /** Publish mechanical feedback measured together at this circuit time. */
+  setMechanicalShaftStates(samples) {
+    const seen = new Set();
+    const updates = samples.map(sample => {
+      const partId = sample?.partId;
+      if (seen.has(partId)) throw new Error('Duplicate motor shaft sample');
+      seen.add(partId);
+      const part = this.parts.find(p => p.id === partId), state = this._deviceStates.get(partId);
+      if (!part || !state?.externalShaft) throw new Error('Motor shaft is not externally owned');
+      const edge = validateShaftSample(part, state, sample);
+      return {part, state, sample, edge};
+    });
+    for (const {part, state, sample, edge} of updates) {
+      applyShaftSample(part, state, sample, this.vcc, edge);
+    }
+    if (updates.length) this._solve();
   }
 
   /** Consume the electrical torque integral since the previous mechanical step (N m s). */
