@@ -163,6 +163,8 @@ const LOCAL_ONLY = {
   ptc_sensor:        { chip_mA: "circuit", supply_mA: 0 },
   // 4046-type CMOS PLL: outputs carry what the circuit draws; ~1 mA quiescent at 9 V.
   cd4046:            { chip_mA: "circuit", supply_mA: 1 },
+  // Bending-ruler scale: a linear Hall sensor module, ~6 mA.
+  bending_ruler:     { chip_mA: 1, supply_mA: 6 },
   vhf_coil:          { chip_mA: 0, supply_mA: 0 },
   varicap:           { chip_mA: 0, supply_mA: 0 },
   bargraph:          { chip_mA: "circuit", supply_mA: "circuit" },

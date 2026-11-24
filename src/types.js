@@ -77,6 +77,7 @@
  *   | 'dual_gate_mosfet'
  *   | 'ptc_sensor'
  *   | 'cd4046'
+ *   | 'bending_ruler'
  *   | 'light_path' | 'laser_diode'} PartKind
  */
 
