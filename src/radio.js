@@ -80,6 +80,7 @@ import {
     thermalCurrentPsd, BandIntegrator, H_UNIT, K_MAX,
 } from './rf-bands.js';
 import { DMath } from './det-math.js';
+import { coilInductorParams } from './sensing-transducers.js';
 
 export { lnI0, besselGain };
 
@@ -364,6 +365,8 @@ export const COUPLED_INDUCTORS_KIND = 'coupled_inductors';
 export const FERRITE_DEFAULTS = Object.freeze({ henrys: 250e-6, tap: 0.25, couplingRatio: 0.1, k: 0.98, couplingK: 0.9, q: 120,
     rodHeightM: 0.01, angleDeg: 0, distanceM: 1, linkRadiusM: 0.1 });
 export const VHF_COIL_DEFAULTS = Object.freeze({ henrys: 0.15e-6, q: 80 });
+/** Q of a hand-wound air coil at RF when its part gives none (copper and proximity losses). */
+const AIR_COIL_RF_Q = 60;
 export const ANTENNA_DEFAULTS = Object.freeze({ heightM: 5, ohms: 50, farads: 200e-12 });
 export const TUNING_CAP_DEFAULTS = Object.freeze({ minFarads: 10e-12, maxFarads: 500e-12, position: 0.5 });
 export const VARICAP_DEFAULTS = Object.freeze({ cjo: 40e-12, vj: 0.7, m: 0.5, is: 1e-14, n: 1, vf: 0.7 });
@@ -464,6 +467,24 @@ export function expandRadio(parts, nets, opts) {
     // RF coils: the transient view uses the engine's inductor/transformer
     // with an RF damping resistor; the RF view swaps in the full coupled set.
     const coils = [];
+    // A hand-wound air coil (src/sensing-transducers.js) in a circuit that
+    // has an RF front end is an RF winding too: its inductance (moved by
+    // metal near it, live) lives in the RF bands, its copper stays in the
+    // time domain (the drawn coil's own branch a–m), and the hidden
+    // inductor m–b becomes a short. A metal detector's 100 kHz search
+    // oscillator then runs in a band, as an oscillator on a ferrite rod does.
+    for (const p of parts.filter(q => q.kind === 'air_coil')) {
+        const lp = coilInductorParams(p);
+        const inner = outParts.findIndex(q => q.id === `${p.id}_l` && q.kind === 'inductor');
+        if (!lp || inner < 0 || !netOf(p.id, 'a') || !netOf(p.id, 'b') || netOf(p.id, 'a') === netOf(p.id, 'b')) continue;
+        outParts[inner] = { ...outParts[inner], kind: 'resistor', params: { ohms: 1e-3 } };
+        const c = { part: p, kind: 'air_coil', windings: [{ a: 'a', b: 'b', turns: 1, main: true }],
+            // The short m–b is time-domain only: in the RF view the drawn
+            // coil's copper branch a–m would otherwise sit across the winding.
+            q: Math.max(0, num(p.params?.q, AIR_COIL_RF_Q)), hidden: [`${p.id}_l`], nets: [[netOf(p.id, 'a').id, netOf(p.id, 'b').id]] };
+        Object.defineProperty(c, 'L', { enumerable: true, get: () => [[lp.henrys]] });
+        coils.push(c);
+    }
     for (const p of parts.filter(q => q.kind === 'ferrite_coil' || q.kind === 'vhf_coil')) {
         const has = (t) => !!netOf(p.id, t);
         let fw;
@@ -662,6 +683,30 @@ export function expandRadio(parts, nets, opts) {
     radio.rfOnly = rfOnly;
     for (const p of outParts) {
         let terms, j, k2 = null;
+        if (p.kind === 'lm386') {
+            // An audio amplifier's inputs are the bases of PNP followers
+            // (src/lm386.js). An RF swing there is rectified by that junction
+            // like any other: the follower's emitter current is held, so its
+            // mean base–emitter voltage drops by Vt·ln I0(A/Vt) and the stage
+            // sees the input that much lower — an AM station's programme,
+            // amplified (RF interference into an LM386). The whole input
+            // swing is taken across the junction: an upper bound, as the
+            // follower's emitter follows some of it.
+            const gnd = netOf(p.id, 'gnd');
+            if (!gnd || !netOf(p.id, 'vs')) continue;
+            const inputs = {};
+            for (const t of ['inp', 'inn']) {
+                const n0 = netOf(p.id, t);
+                if (!n0 || n0 === gnd) continue;
+                const det = { id: `@rf:${p.id}:${t}`, partId: p.id, kind: 'amp-input', terminal: t, of: p,
+                    index: radio.detectors.length, nets: [n0.id, gnd.id], wired: [], nets2: null, generic: false };
+                Object.defineProperty(det, 'radio', { value: radio, enumerable: false });
+                radio.detectors.push(det);
+                inputs[t] = det;
+            }
+            Object.defineProperty(p, 'rfInputs', { value: inputs, enumerable: false, configurable: true, writable: true });
+            continue;
+        }
         if (p.kind === 'diode') { terms = ['anode', 'cathode']; j = ['anode', 'cathode']; }
         else if (p.kind === 'npn' || p.kind === 'pnp') { terms = ['base', 'collector', 'emitter']; j = ['base', 'emitter']; k2 = ['base', 'collector']; }
         else if (p.kind === 'nmos' || p.kind === 'pmos') { terms = ['gate', 'drain', 'source']; j = ['gate', 'source']; k2 = ['drain', 'source']; }
@@ -707,6 +752,12 @@ export function chooseFrontEnd(parts, nets) {
     if (parts.some(p => p.kind === 'ferrite_coil' && (p.params?.linkTo || Array.isArray(p.params?.stations)))) return 'envelope';
     const antennas = parts.filter(p => p.kind === 'antenna');
     if (!antennas.length) return 'envelope';
+    // A wire straight on an audio amplifier's input: the amplifier's input
+    // junction is the detector (RF interference into an LM386), which only
+    // the envelope bands model (amplifier inputs as detectors).
+    const ampIn = new Set();
+    for (const n of nets) if (n.terminals.some(t => byId.get(t.part)?.kind === 'lm386' && (t.terminal === 'inp' || t.terminal === 'inn'))) ampIn.add(n);
+    for (const n of ampIn) if (n.terminals.some(t => byId.get(t.part)?.kind === 'antenna')) return 'envelope';
     for (const a of antennas) for (const s of a.params?.stations ?? []) if (s?.mod && s.mod !== 'am') return 'envelope';
     for (const n of nets) {
         const ps = n.terminals.map(t => [byId.get(t.part), t.terminal]).filter(([p]) => p);
@@ -853,7 +904,7 @@ function expandRadioPhasor(parts, nets, opts) {
 
 const REFRESH_SEC = 5e-3;
 const RESCAN_SEC = 200e-3;
-const SCAN_LO_HZ = 100e3;
+const SCAN_LO_HZ = 30e3;
 const SCAN_HI_HZ = 300e6;
 const SCAN_PER_DECADE = 20;
 const SLOW_BEAT_HZ = 10e3;
@@ -970,6 +1021,7 @@ export class RadioFrontEnd {
         const nv = (id) => solution?.nodeVoltages?.get(id) ?? 0;
         return this.detectors.map(d => {
             const P = d.of.params ?? {};
+            if (d.kind === 'amp-input') return { v: nv(d.nets[0]) - nv(d.nets[1]) };
             if (d.kind === 'diode') {
                 const v = nv(d.nets[0]) - nv(d.nets[1]);
                 // The DC current through it (rectification included): raw
@@ -1008,7 +1060,7 @@ export class RadioFrontEnd {
             const vgs = s * (nv(d.nets[0]) - nv(d.nets[1]));
             const vds = d.nets2 ? s * (nv(d.nets2[0]) - nv(d.nets2[1])) : 0;
             const id = Math.abs(solution?.branchCurrents?.get(d.partId)?.get('drain') ?? 0);
-            return { vgs, vds, id, law: mosLaw(P), lambda: num(P.lambda, 0), cgs: num(P.cgs, 0), cgd: num(P.cgd, 0) };
+            return { vgs, vds, id, law: mosLaw(P), vth: Math.abs(num(P.vth, 2.0)), lambda: num(P.lambda, 0), cgs: num(P.cgs, 0), cgd: num(P.cgd, 0) };
         });
     }
 
@@ -1080,7 +1132,17 @@ export class RadioFrontEnd {
             } else if (j.kind === 'mos') {
                 const [pgs, pds] = j.p;
                 const A = Math.sqrt(sq(vp[pgs][0], vp[pgs][1]) + other.A2[pgs]);
-                const [, gmEff] = b.vds > 0.05 ? describeLaw(b.law, b.vgs, A) : [0, 0];
+                let [, gmEff] = b.vds > 0.05 ? describeLaw(b.law, b.vgs, A) : [0, 0];
+                // The drain's own swing: past the headroom to the triode edge
+                // (vds − vov) the channel stops being a current source for
+                // part of each cycle and the fundamental it delivers levels
+                // off. Without this a MOSFET oscillator's square law only
+                // ever gained with its swing, and grew without bound.
+                if (pds !== undefined && gmEff > 0) {
+                    const Ad = Math.sqrt(sq(vp[pds][0], vp[pds][1]) + other.A2[pds]);
+                    const head = Math.max(0.05, b.vds - Math.max(0, b.vgs - b.vth));
+                    gmEff /= Math.sqrt(1 + (Ad / head) * (Ad / head));
+                }
                 const gds = 1e-6 + b.lambda * b.id;
                 put(pgs, pgs, 0, b.cgs + b.cgd);
                 if (pds !== undefined) {
@@ -1895,11 +1957,29 @@ class RfBand {
         }
     }
 
-    /** The substep ceiling for the bias now (see _bound): growth extrapolated from the current. */
+    /**
+     * The substep ceiling for the bias now (see _bound). The growth rate is
+     * estimated afresh (_modes, two factorizations) whenever the stages'
+     * current has moved by a sixth, or the band's swing by a factor of two,
+     * since the last estimate. A linear extrapolation from the bound's
+     * reference current was the first answer here; a quench drives the
+     * current far past that reference, where the extrapolated rate ran away
+     * (Cπ grows with the current too, and a swinging band compresses) and
+     * held the band at 1 ns substeps: 160 000 per simulated millisecond.
+     */
     _kForBias() {
         if (!(this._dSigma > 0) || !(this._icRef > 0)) return this.kMax;
-        const ic = (this.radio._bias ?? []).reduce((a, b) => a + (b?.ic ?? 0), 0);
-        const sigma = this._sigma0 + this._dSigma * (ic / this._icRef - 1);
+        const r = this.radio;
+        const ic = (r._bias ?? []).reduce((a, b) => a + (b?.ic ?? 0), 0);
+        const amp = Math.max(1e-12, ...this.integ.portVoltages(this.X).map(p => Math.hypot(p[0], p[1])));
+        const c = this._sigmaCache;
+        let sigma;
+        if (c && Math.abs(ic - c.ic) <= c.ic / 6 && amp <= 2 * c.amp && amp >= c.amp / 2) sigma = c.sigma;
+        else {
+            const modes = r._modes(this.omega, this.integ.portVoltages(this.X), r._otherAmplitudes(this));
+            sigma = Math.max(...modes.map(m => m[0]));
+            this._sigmaCache = { ic, amp, sigma };
+        }
         // Only a clear growth (an e-fold in under 5 µs): an oscillation that
         // its own compression holds wobbles around σ = 0, and following those
         // wobbles cost a steady oscillator half its speed.

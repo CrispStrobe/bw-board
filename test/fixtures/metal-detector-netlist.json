@@ -1,0 +1,611 @@
+{
+ "note": "A beat-frequency metal detector as the circuit designer hands it to the engine (sb3-creator lab-metal-detector): two Colpitts oscillators near 96 kHz, one on a hand-wound air coil (the search coil), one on a ferrite coil, mixed in a germanium diode.",
+ "vcc": 9,
+ "parts": [
+  {
+   "id": "vsource_2",
+   "kind": "vsource",
+   "params": {
+    "volts": 9,
+    "variant": "9v"
+   },
+   "terminals": [
+    "pos",
+    "neg"
+   ]
+  },
+  {
+   "id": "air_coil_3",
+   "kind": "air_coil",
+   "params": {
+    "turns": 30,
+    "radiusM": 0.05,
+    "lengthM": 0.02,
+    "wireMm": 0.5
+   },
+   "terminals": [
+    "a",
+    "b"
+   ]
+  },
+  {
+   "id": "capacitor_4",
+   "kind": "capacitor",
+   "params": {
+    "farads": 2.2e-8
+   },
+   "terminals": [
+    "a",
+    "b"
+   ]
+  },
+  {
+   "id": "capacitor_5",
+   "kind": "capacitor",
+   "params": {
+    "farads": 2.2e-7
+   },
+   "terminals": [
+    "a",
+    "b"
+   ]
+  },
+  {
+   "id": "npn_6",
+   "kind": "npn",
+   "params": {
+    "beta": 100
+   },
+   "terminals": [
+    "base",
+    "collector",
+    "emitter"
+   ]
+  },
+  {
+   "id": "resistor_7",
+   "kind": "resistor",
+   "params": {
+    "ohms": 4700
+   },
+   "terminals": [
+    "a",
+    "b"
+   ]
+  },
+  {
+   "id": "resistor_8",
+   "kind": "resistor",
+   "params": {
+    "ohms": 22000
+   },
+   "terminals": [
+    "a",
+    "b"
+   ]
+  },
+  {
+   "id": "resistor_9",
+   "kind": "resistor",
+   "params": {
+    "ohms": 10000
+   },
+   "terminals": [
+    "a",
+    "b"
+   ]
+  },
+  {
+   "id": "capacitor_10",
+   "kind": "capacitor",
+   "params": {
+    "farads": 0.000001
+   },
+   "terminals": [
+    "a",
+    "b"
+   ]
+  },
+  {
+   "id": "ferrite_coil_11",
+   "kind": "ferrite_coil",
+   "params": {
+    "henrys": 0.00014,
+    "q": 60
+   },
+   "terminals": [
+    "a",
+    "tap",
+    "b",
+    "c1",
+    "c2"
+   ]
+  },
+  {
+   "id": "capacitor_12",
+   "kind": "capacitor",
+   "params": {
+    "farads": 2.2e-8
+   },
+   "terminals": [
+    "a",
+    "b"
+   ]
+  },
+  {
+   "id": "capacitor_13",
+   "kind": "capacitor",
+   "params": {
+    "farads": 2.2e-7
+   },
+   "terminals": [
+    "a",
+    "b"
+   ]
+  },
+  {
+   "id": "npn_14",
+   "kind": "npn",
+   "params": {
+    "beta": 100
+   },
+   "terminals": [
+    "base",
+    "collector",
+    "emitter"
+   ]
+  },
+  {
+   "id": "resistor_15",
+   "kind": "resistor",
+   "params": {
+    "ohms": 4700
+   },
+   "terminals": [
+    "a",
+    "b"
+   ]
+  },
+  {
+   "id": "resistor_16",
+   "kind": "resistor",
+   "params": {
+    "ohms": 22000
+   },
+   "terminals": [
+    "a",
+    "b"
+   ]
+  },
+  {
+   "id": "resistor_17",
+   "kind": "resistor",
+   "params": {
+    "ohms": 10000
+   },
+   "terminals": [
+    "a",
+    "b"
+   ]
+  },
+  {
+   "id": "capacitor_18",
+   "kind": "capacitor",
+   "params": {
+    "farads": 0.000001
+   },
+   "terminals": [
+    "a",
+    "b"
+   ]
+  },
+  {
+   "id": "capacitor_19",
+   "kind": "capacitor",
+   "params": {
+    "farads": 1e-9
+   },
+   "terminals": [
+    "a",
+    "b"
+   ]
+  },
+  {
+   "id": "resistor_20",
+   "kind": "resistor",
+   "params": {
+    "ohms": 100000
+   },
+   "terminals": [
+    "a",
+    "b"
+   ]
+  },
+  {
+   "id": "capacitor_21",
+   "kind": "capacitor",
+   "params": {
+    "farads": 1e-9
+   },
+   "terminals": [
+    "a",
+    "b"
+   ]
+  },
+  {
+   "id": "resistor_22",
+   "kind": "resistor",
+   "params": {
+    "ohms": 100000
+   },
+   "terminals": [
+    "a",
+    "b"
+   ]
+  },
+  {
+   "id": "resistor_23",
+   "kind": "resistor",
+   "params": {
+    "ohms": 100000
+   },
+   "terminals": [
+    "a",
+    "b"
+   ]
+  },
+  {
+   "id": "diode_24",
+   "kind": "diode",
+   "params": {
+    "is": 2e-7,
+    "rs": 5,
+    "n": 1.3,
+    "vf": 0.5,
+    "part": "1N34A"
+   },
+   "terminals": [
+    "anode",
+    "cathode"
+   ]
+  },
+  {
+   "id": "capacitor_25",
+   "kind": "capacitor",
+   "params": {
+    "farads": 1e-9
+   },
+   "terminals": [
+    "a",
+    "b"
+   ]
+  },
+  {
+   "id": "resistor_26",
+   "kind": "resistor",
+   "params": {
+    "ohms": 100000
+   },
+   "terminals": [
+    "a",
+    "b"
+   ]
+  },
+  {
+   "id": "earphone_27",
+   "kind": "earphone",
+   "params": {
+    "type": "crystal"
+   },
+   "terminals": [
+    "a",
+    "b"
+   ]
+  }
+ ],
+ "nets": [
+  {
+   "id": "breadboard_1:n-col-b15",
+   "terminals": [
+    {
+     "part": "capacitor_10",
+     "terminal": "a"
+    },
+    {
+     "part": "npn_6",
+     "terminal": "base"
+    },
+    {
+     "part": "resistor_8",
+     "terminal": "b"
+    },
+    {
+     "part": "resistor_9",
+     "terminal": "a"
+    }
+   ]
+  },
+  {
+   "id": "breadboard_1:n-col-b21",
+   "terminals": [
+    {
+     "part": "capacitor_12",
+     "terminal": "a"
+    },
+    {
+     "part": "capacitor_21",
+     "terminal": "a"
+    },
+    {
+     "part": "ferrite_coil_11",
+     "terminal": "b"
+    },
+    {
+     "part": "npn_14",
+     "terminal": "collector"
+    }
+   ]
+  },
+  {
+   "id": "breadboard_1:n-col-b22",
+   "terminals": [
+    {
+     "part": "capacitor_12",
+     "terminal": "b"
+    },
+    {
+     "part": "capacitor_13",
+     "terminal": "a"
+    },
+    {
+     "part": "npn_14",
+     "terminal": "emitter"
+    },
+    {
+     "part": "resistor_15",
+     "terminal": "a"
+    }
+   ]
+  },
+  {
+   "id": "breadboard_1:n-col-b3",
+   "terminals": [
+    {
+     "part": "air_coil_3",
+     "terminal": "b"
+    },
+    {
+     "part": "capacitor_19",
+     "terminal": "a"
+    },
+    {
+     "part": "capacitor_4",
+     "terminal": "a"
+    },
+    {
+     "part": "npn_6",
+     "terminal": "collector"
+    }
+   ]
+  },
+  {
+   "id": "breadboard_1:n-col-b33",
+   "terminals": [
+    {
+     "part": "capacitor_18",
+     "terminal": "a"
+    },
+    {
+     "part": "npn_14",
+     "terminal": "base"
+    },
+    {
+     "part": "resistor_16",
+     "terminal": "b"
+    },
+    {
+     "part": "resistor_17",
+     "terminal": "a"
+    }
+   ]
+  },
+  {
+   "id": "breadboard_1:n-col-b4",
+   "terminals": [
+    {
+     "part": "capacitor_4",
+     "terminal": "b"
+    },
+    {
+     "part": "capacitor_5",
+     "terminal": "a"
+    },
+    {
+     "part": "npn_6",
+     "terminal": "emitter"
+    },
+    {
+     "part": "resistor_7",
+     "terminal": "a"
+    }
+   ]
+  },
+  {
+   "id": "breadboard_1:n-col-b40",
+   "terminals": [
+    {
+     "part": "capacitor_19",
+     "terminal": "b"
+    },
+    {
+     "part": "resistor_20",
+     "terminal": "a"
+    }
+   ]
+  },
+  {
+   "id": "breadboard_1:n-col-b43",
+   "terminals": [
+    {
+     "part": "capacitor_21",
+     "terminal": "b"
+    },
+    {
+     "part": "resistor_22",
+     "terminal": "a"
+    }
+   ]
+  },
+  {
+   "id": "breadboard_1:n-col-b49",
+   "terminals": [
+    {
+     "part": "diode_24",
+     "terminal": "anode"
+    },
+    {
+     "part": "resistor_20",
+     "terminal": "b"
+    },
+    {
+     "part": "resistor_22",
+     "terminal": "b"
+    },
+    {
+     "part": "resistor_23",
+     "terminal": "a"
+    }
+   ]
+  },
+  {
+   "id": "breadboard_1:n-col-b53",
+   "terminals": [
+    {
+     "part": "capacitor_25",
+     "terminal": "a"
+    },
+    {
+     "part": "diode_24",
+     "terminal": "cathode"
+    },
+    {
+     "part": "earphone_27",
+     "terminal": "a"
+    },
+    {
+     "part": "resistor_26",
+     "terminal": "a"
+    }
+   ]
+  },
+  {
+   "id": "breadboard_1:n-col-t22",
+   "terminals": [
+    {
+     "part": "ferrite_coil_11",
+     "terminal": "tap"
+    }
+   ]
+  },
+  {
+   "id": "breadboard_1:n-col-t24",
+   "terminals": [
+    {
+     "part": "ferrite_coil_11",
+     "terminal": "c1"
+    }
+   ]
+  },
+  {
+   "id": "breadboard_1:n-col-t25",
+   "terminals": [
+    {
+     "part": "ferrite_coil_11",
+     "terminal": "c2"
+    }
+   ]
+  },
+  {
+   "id": "breadboard_1:rail-b-",
+   "terminals": [
+    {
+     "part": "capacitor_10",
+     "terminal": "b"
+    },
+    {
+     "part": "capacitor_13",
+     "terminal": "b"
+    },
+    {
+     "part": "capacitor_18",
+     "terminal": "b"
+    },
+    {
+     "part": "capacitor_25",
+     "terminal": "b"
+    },
+    {
+     "part": "capacitor_5",
+     "terminal": "b"
+    },
+    {
+     "part": "earphone_27",
+     "terminal": "b"
+    },
+    {
+     "part": "resistor_15",
+     "terminal": "b"
+    },
+    {
+     "part": "resistor_17",
+     "terminal": "b"
+    },
+    {
+     "part": "resistor_23",
+     "terminal": "b"
+    },
+    {
+     "part": "resistor_26",
+     "terminal": "b"
+    },
+    {
+     "part": "resistor_7",
+     "terminal": "b"
+    },
+    {
+     "part": "resistor_9",
+     "terminal": "b"
+    },
+    {
+     "part": "vsource_2",
+     "terminal": "neg"
+    }
+   ]
+  },
+  {
+   "id": "breadboard_1:rail-t+",
+   "terminals": [
+    {
+     "part": "air_coil_3",
+     "terminal": "a"
+    },
+    {
+     "part": "ferrite_coil_11",
+     "terminal": "a"
+    },
+    {
+     "part": "resistor_16",
+     "terminal": "a"
+    },
+    {
+     "part": "resistor_8",
+     "terminal": "a"
+    },
+    {
+     "part": "vsource_2",
+     "terminal": "pos"
+    }
+   ]
+  }
+ ]
+}

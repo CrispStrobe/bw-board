@@ -15,6 +15,7 @@ import assert from 'node:assert/strict';
 import { BoardImpl } from '../src/board.js';
 import { registerAllDevices } from '../src/register-all.js';
 import { createHash } from 'node:crypto';
+import { readFileSync } from 'node:fs';
 import { DMath } from '../src/det-math.js';
 import { normalizeStations, programmeValue, programmeIntegral, junctionCapacitance, stationModulation } from '../src/radio.js';
 
@@ -335,9 +336,9 @@ describe('radio bands: the same answer on every platform', () => {
         // 1657 solves, tank 3.41 V against 5.32 V).
         const b = meissner();
         ms(b, 0.3);
-        assert.equal(b.transientAnalysisStatus().work.solves, 2158);
-        assert.equal(b._radio.substeps, 2853);
-        assert.equal(tankAmp(b, 'col'), 6.697898643480968);
+        assert.equal(b.transientAnalysisStatus().work.solves, 2149);
+        assert.equal(b._radio.substeps, 2596);
+        assert.equal(tankAmp(b, 'col'), 0.8028399905986557);
     });
 
     it('1-ulp changes of the coil do not move the oscillator\'s outcome', () => {
@@ -369,3 +370,103 @@ describe('radio bands: the same answer on every platform', () => {
         }
     });
 });
+
+describe('radio bands: the cost of a quenched receiver', () => {
+    it('a super-regenerator\'s band steps follow the growth the quench sets, not a runaway extrapolation of it', () => {
+        // The band's substep is bounded by the growth rate at the bias the
+        // transient solve sets. It was extrapolated linearly from the
+        // current at the last bound; the quench drives the current far past
+        // that, the extrapolated rate ran away, and the band was held at
+        // 1 ns substeps: ~160 000 per simulated ms, 40 % of the run time.
+        // Now the rate is estimated afresh when the current or the swing has
+        // moved: ~5 300 per ms.
+        const fx = JSON.parse(readFileSync(new URL('./fixtures/superregen-vhf-netlist.json', import.meta.url), 'utf8'));
+        const b = new BoardImpl(fx.vcc);
+        b.setNetlist(fx.parts, fx.nets);
+        b.setPower(true);
+        ms(b, 1);
+        const s0 = b._radio.substeps;
+        let hi = 0;
+        for (let k = 1; k <= 25; k++) { ms(b, 1 + k * 0.01); hi = Math.max(hi, ...b._radio._bands.map(x => Math.max(...x.portVoltages().map(p => Math.hypot(p[0], p[1]))))); }
+        assert.equal(b.transientAnalysisStatus().failure, null);
+        assert.ok(hi > 1, `it still bursts: ${hi.toFixed(2)} V`);
+        const perMs = (b._radio.substeps - s0) / 0.25;
+        assert.ok(perMs < 20000, `${perMs} band substeps per simulated ms`);
+    });
+});
+
+describe('radio bands: an audio amplifier\'s input rectifies', () => {
+    // A short wire straight on an LM386's +IN (gain 200, loudspeaker), no
+    // earth. The input is the base of a PNP follower; a strong AM station's
+    // swing there is rectified by that junction like any other and the
+    // programme comes out of the loudspeaker (RF interference into an
+    // LM386). A weak station barely does: the junction is square-law there.
+    function wireAmp(stations) {
+        const b = new BoardImpl(9);
+        b.setNetlist([P('G', 'gnd', {}, ['gnd']), P('VS', 'vsource', { volts: 9 }, ['pos', 'neg']),
+            P('ANT', 'antenna', { heightM: 0.3, farads: 10e-12 }, ['a']),
+            P('U', 'lm386', {}, ['gain1', 'inn', 'inp', 'gnd', 'vout', 'vs', 'bypass', 'gain8']),
+            P('CG', 'capacitor', { farads: 10e-6 }, ['a', 'b']), P('CB', 'capacitor', { farads: 10e-6 }, ['a', 'b']),
+            P('CO', 'capacitor', { farads: 220e-6 }, ['a', 'b']), P('SPK', 'speaker', { ohms: 8 }, ['a', 'b'])],
+        [net('g', ['G', 'gnd'], ['VS', 'neg'], ['U', 'gnd'], ['U', 'inn'], ['CB', 'b'], ['SPK', 'b']),
+            net('v', ['VS', 'pos'], ['U', 'vs']), net('in', ['ANT', 'a'], ['U', 'inp']),
+            net('g1', ['U', 'gain1'], ['CG', 'a']), net('g8', ['U', 'gain8'], ['CG', 'b']), net('by', ['U', 'bypass'], ['CB', 'a']),
+            net('o', ['U', 'vout'], ['CO', 'a']), net('s', ['CO', 'b'], ['SPK', 'a'])]);
+        b.setBroadcast(stations);
+        b.setPower(true);
+        ms(b, 60);
+        return b.buzzerTone('SPK');
+    }
+
+    it('a strong station plays through an LM386 with a bare wire on its input', () => {
+        const strong = wireAmp([{ id: 'local', hz: 1e6, fieldVPerM: 0.1, depth: 0.8, audio: { type: 'tone', hz: 400 } }]);
+        assert.ok(strong.on && Math.abs(strong.hz - 400) < 5, `the programme: ${JSON.stringify(strong)}`);
+        assert.ok(strong.amps > 0.05, `loud: ${strong.amps} A rms`);
+        const weak = wireAmp([{ id: 'far', hz: 1e6, fieldVPerM: 0.01, depth: 0.8, audio: { type: 'tone', hz: 400 } }]);
+        assert.ok(weak.amps < strong.amps / 5, `a tenth of the field, far less than a tenth of the sound: ${weak.amps} A`);
+    });
+});
+
+describe('radio bands: MOSFET stages and hand-wound coils', () => {
+    const fixture = (name, edit) => {
+        const fx = JSON.parse(readFileSync(new URL(`./fixtures/${name}`, import.meta.url), 'utf8'));
+        if (edit) edit(fx);
+        const b = new BoardImpl(fx.vcc);
+        b.setNetlist(fx.parts, fx.nets);
+        b.setPower(true);
+        return b;
+    };
+    const swing = (b) => Math.max(0, ...b._radio._bands.map(x => Math.max(...x.portVoltages().map(p => Math.hypot(p[0], p[1])))));
+
+    it('a MOSFET oscillator limits at its drain\'s headroom instead of growing without bound', () => {
+        // The square law only gains with the gate swing; nothing limited it,
+        // and the MOSFET regenerative receiver's band ran to 14 kV and was
+        // refused. The drain's own swing past its headroom to the triode
+        // edge now levels the fundamental off, and the rectified drain
+        // current fades as the channel enters triode.
+        const b = fixture('mosfet-regen-netlist.json', (fx) => {
+            fx.parts.find(p => p.kind === 'potentiometer').params.position = 0.2;     // gate ≈ 7 V: hard on
+            fx.parts.find(p => p.kind === 'ferrite_coil').params.couplingRatio = 0.04;
+        });
+        ms(b, 1.5);
+        assert.equal(b._radio.error, null, `no refused band: ${b._radio.error}`);
+        const a = swing(b);
+        assert.ok(a > 1 && a < 30, `it oscillates, limited: ${a.toFixed(2)} V`);
+    });
+
+    it('a hand-wound air coil in an RF circuit is an RF winding: a metal detector\'s oscillators run near 96 kHz', () => {
+        // Before, the air coil was a plain inductor in the time domain and a
+        // Colpitts oscillator at ~100 kHz had to be run at 1.5 kHz instead.
+        // Now its inductance (moved by metal, live) lives in the RF bands.
+        const b = fixture('metal-detector-netlist.json');
+        ms(b, 6);
+        const r = b._radio;
+        assert.ok(r._resonances.some(x => x.hz > 90e3 && x.hz < 102e3), `a resonance near 96 kHz: ${r._resonances.map(x => Math.round(x.hz))}`);
+        assert.ok(swing(b) > 1, `oscillating: ${swing(b).toFixed(2)} V`);
+        const coin = fixture('metal-detector-netlist.json', (fx) => { fx.parts.find(p => p.kind === 'air_coil').params.metalCm = 0; });
+        ms(coin, 6);
+        const f0 = Math.min(...r._resonances.map(x => x.hz)), f1 = Math.min(...coin._radio._resonances.map(x => x.hz));
+        assert.ok(f1 > f0 * 1.015, `a coin on the coil raises the search oscillator's tank: ${Math.round(f0)} -> ${Math.round(f1)} Hz`);
+    });
+});
+

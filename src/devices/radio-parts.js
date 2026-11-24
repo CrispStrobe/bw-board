@@ -94,7 +94,13 @@ export function registerRadioParts() {
                 if (!(A > 1e-9) || !det.wired.includes('drain')) return;
                 const s = det.kind === 'pmos' ? -1 : 1;
                 ctx.nonlinearCurrents('rf-detect', (read) => {
-                    const [i, g] = mosRectification(det.of, s * (read('gate') - read('source')), A);
+                    const [i0, g0] = mosRectification(det.of, s * (read('gate') - read('source')), A);
+                    // In triode the channel cannot carry it: the extra current
+                    // fades as vds → 0 (a drain pulled below its source by a
+                    // rectified current with nowhere to come from otherwise).
+                    const vds = s * (read('drain') - read('source'));
+                    const fd = vds > 0 ? Math.tanh(vds / 0.2) : 0;
+                    const i = i0 * fd, g = g0 * fd;
                     // Extra drain current D → S (nmos); S → D (pmos).
                     return {
                         region: 'smooth',

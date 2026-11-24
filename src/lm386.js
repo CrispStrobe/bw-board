@@ -245,7 +245,10 @@ export function expandLm386(parts, nets) {
         pole.terminals.push(TT(capId, 'a'));
         gnd.terminals.push(TT(capId, 'b'));
         const stageId = `${pre}stage`;
-        outParts.push({ id: stageId, kind: LM386_STAGE_KIND, params: {}, terminals: [...LM386_STAGE_TERMINALS] });
+        const stage = { id: stageId, kind: LM386_STAGE_KIND, params: {}, terminals: [...LM386_STAGE_TERMINALS] };
+        // RF rectified at the input followers (src/radio.js, amplifier inputs as detectors).
+        if (part.rfInputs) Object.defineProperty(stage, 'rfInputs', { value: part.rfInputs, enumerable: false });
+        outParts.push(stage);
         for (const [n, t] of [[inp, 'inp'], [inn, 'inn'], [e1, 'e1'], [x, 'x'], [pole, 'pole'],
             [vout, 'vout'], [vs, 'vs'], [gnd, 'gnd']]) n.terminals.push(TT(stageId, t));
     }
