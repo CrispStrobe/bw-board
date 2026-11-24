@@ -77,7 +77,7 @@ import { resolveParams } from './parts-library.js';
 import { chooseGroundReference, smoothVov, mosK } from './mna.js';
 import {
     VT, lnI0, besselGain, expCapped, describeLaw, cluFactor, cluSolve, mulberry32, gaussPair,
-    thermalCurrentPsd, BandIntegrator, H_UNIT, K_MAX,
+    thermalCurrentPsd, BandIntegrator, H_UNIT, K_MAX, QUAD_COS,
 } from './rf-bands.js';
 import { DMath } from './det-math.js';
 import { coilInductorParams } from './sensing-transducers.js';
@@ -347,15 +347,31 @@ function mosLaw(P) {
     return (vgs) => { const [vov] = smoothVov(vgs - vth); return k * vov * vov; };
 }
 
-/** Extra DC (drain→source) a gate swing of amplitude A adds, and d/dvgs. */
+/**
+ * How much of a MOSFET's square-law current its channel can still carry as
+ * the drain runs down towards the source (triode): 1 well above, → 0 at
+ * vds → 0. Shared by the rectified drain current (rf_detect) and the band's
+ * transconductance, so the two fade together.
+ */
+export function mosChannelFade(vds) { return vds > 0 ? Math.tanh(vds / 0.2) : 0; }
+
+/**
+ * Extra DC (drain→source) a gate swing of amplitude A adds, and d/dvgs: the
+ * cycle average of the square law and of its slope, in one pass over the
+ * cycle (it runs inside every Newton iteration of the transient solve).
+ */
 export function mosRectification(part, vgs, A) {
     if (!(A > 1e-9)) return [0, 0];
-    const f = mosLaw(part.params ?? {});
-    const [d0] = describeLaw(f, vgs, A);
-    const e = 1e-4;
-    const [dp] = describeLaw(f, vgs + e, A);
-    const [dm] = describeLaw(f, vgs - e, A);
-    return [d0, (dp - dm) / (2 * e)];
+    const P = part.params ?? {};
+    const vth = Math.abs(num(P.vth, 2.0));
+    const k = mosK(P);
+    let avg = 0, slope = 0;
+    for (const c of QUAD_COS) {
+        const [vov, dv] = smoothVov(vgs + A * c - vth);
+        avg += vov * vov; slope += vov * dv;
+    }
+    const [v0, d0] = smoothVov(vgs - vth);
+    return [k * (avg / QUAD_COS.length - v0 * v0), 2 * k * (slope / QUAD_COS.length - v0 * d0)];
 }
 
 // ─── Solver-view expansion ──────────────────────────────────────────────
@@ -923,6 +939,13 @@ const SIGMA_FOLLOW = 2e5;
  */
 const RF_RUNAWAY_VOLTS = 1e4;
 const RF_HISTORY_LIMIT = 20000;
+/** Substeps per envelope time constant while a band's swing drives its junctions (RfBand.advanceTo). */
+const LOOP_STEPS = 32;
+const LOOP_VOLTS = 2 * VT;
+/** How long a band counts as able to oscillate after it was last seen unstable (a quench turns it on and off). */
+const ACTIVE_HOLD_SEC = 20e-3;
+/** Swing above which a band whose small-signal network is unstable counts as oscillating (RfBand._bound). */
+const OSC_VOLTS = 0.05;
 const IS_TAU_SEC = 2e-3;
 const REBOUND_SEC = 0.1e-3;
 const CURRENT_TAU_SEC = 5e-6;
@@ -1112,8 +1135,18 @@ export class RadioFrontEnd {
             } else if (j.kind === 'bjt') {
                 const [pbe, pbc] = j.p;
                 const xbe = amp(pbe) / VT;
-                const gm = b.saturated ? 0 : b.ic * besselGain(xbe) / VT;
-                const cpi = b.ic / (VT * 2 * Math.PI * b.ft) + b.cje;
+                // Large-signal transconductance: the collector current's
+                // fundamental over the B-E swing.
+                const gmLarge = b.ic * besselGain(xbe) / VT;
+                // The diffusion charge is τF times the collector current, so its
+                // fundamental — the input capacitance a swing sees — is τF times
+                // the fundamental current: τF·gm at the same compression. (Was
+                // τF·ic/VT, the small-signal value at the DC current: a stage
+                // driven into class C by its own swing, whose DC current is
+                // nearly all rectified peaks, hung tens of picofarads on its
+                // tank that its junction does not have.)
+                const gm = b.saturated ? 0 : gmLarge;
+                const cpi = gmLarge / (2 * Math.PI * b.ft) + b.cje;
                 let gbc = 0;
                 if (pbc !== undefined) {
                     const xbc = amp(pbc) / VT;
@@ -1132,7 +1165,16 @@ export class RadioFrontEnd {
             } else if (j.kind === 'mos') {
                 const [pgs, pds] = j.p;
                 const A = Math.sqrt(sq(vp[pgs][0], vp[pgs][1]) + other.A2[pgs]);
-                let [, gmEff] = b.vds > 0.05 ? describeLaw(b.law, b.vgs, A) : [0, 0];
+                // The channel fades as the drain runs down to the source
+                // (triode) — by the same law as the rectified drain current
+                // the transient solve carries (mosChannelFade). It was cut off
+                // outright below 50 mV while the rectified current only faded:
+                // an oscillator whose own rectified current bottomed its drain
+                // then sat on that switch, gaining above it and not below, and
+                // the transient solve chattered across it at ~20 000 steps per
+                // simulated millisecond.
+                const fade = mosChannelFade(b.vds);
+                let gmEff = fade > 0 ? describeLaw(b.law, b.vgs, A)[1] * fade : 0;
                 // The drain's own swing: past the headroom to the triode edge
                 // (vds − vov) the channel stops being a current source for
                 // part of each cycle and the fundamental it delivers levels
@@ -1549,13 +1591,19 @@ export class RadioFrontEnd {
         if (!this._bias) this._bias = this._snapshot(solution);
         try {
             this._buildSystem(board, solution);
-            const other = this._otherAmplitudes(null);
             const vpNow = this._portsAt(null);
             if (tSec - this._tScan >= RESCAN_SEC || !this._resonances) {
                 const before = this._resonances ?? [];
                 const controlsMoved = this._controlsMoved === true;
                 this._controlsMoved = false;
-                const fresh = this._scan(vpNow, other);
+                // At small signal: the swing of a band that oscillates (or
+                // squegs) at the moment of the scan drives its stage's
+                // junctions hard — a collector swinging volts forward-biases
+                // its base–collector junction — and the network the scan saw
+                // then had peaks where no tank is (a short-wave stage scanned
+                // mid-burst showed one at 4.5 MHz for its 6.1 MHz tank).
+                const small = { L: new Float64Array(this._sys.K), A2: new Float64Array(this._sys.K) };
+                const fresh = this._scan(vpNow, small);
                 // A coarse grid can step over a sharp VHF peak it found
                 // before (12 % between points against a ~1 % wide tank):
                 // look again closely around every resonance the bands are
@@ -1567,7 +1615,7 @@ export class RadioFrontEnd {
                     // vanish while its controls stand still — keep following
                     // it (a quench can leave the stage cut off, or driven
                     // hard, at the instant of a scan).
-                    const again = (!controlsMoved && this._refine(old.hz, vpNow, other)) || (controlsMoved ? null : old);
+                    const again = (!controlsMoved && this._refine(old.hz, vpNow, small)) || (controlsMoved ? null : old);
                     if (again && !fresh.some(r => near(r, again))) fresh.push(again);
                 }
                 this._resonances = fresh.sort((x, y) => x.hz - y.hz);
@@ -1633,7 +1681,7 @@ export class RadioFrontEnd {
             // its own oscillation, if it has one, beats against it as it should.
             let hz = r.hz;
             if (members.length) hz = stations[members.reduce((a, k) => (stations[k].fieldVPerM > stations[a].fieldVPerM ? k : a), members[0])].hz;
-            bands.push({ hz, members });
+            bands.push({ hz, members, q: r.q });
         }
         // Keep each surviving band's envelope (re-centred onto the new
         // centre: the physical signal is unchanged).
@@ -1645,6 +1693,7 @@ export class RadioFrontEnd {
                 if (d <= bandHalfWidthHz(nb.hz) && d < best) { best = d; prev = ob; }
             }
             const band = prev && !next.includes(prev) ? prev : new RfBand(this, nb.hz, tSec);
+            band.tankQ = nb.q;
             band.configure(nb.hz, nb.members, stations, tSec);
             next.push(band);
         }
@@ -1840,6 +1889,7 @@ class RfBand {
         this.k = 6;
         this.calm = 0;
         this.hist = [];
+        this._tUnstable = -Infinity;
     }
 
     configure(hz, members, stations, tSec) {
@@ -1933,7 +1983,22 @@ class RfBand {
             if (!(a1 > 2 * a0)) this.growth = 0;
         }
         if (this.growth > 0) hT = Math.min(hT, 0.15 / this.growth);
+        // An oscillating band's own rotation in its frame (the dominant
+        // mode's Im λ: its offset from the band's centre, which is the tank
+        // or the station it is tuned to) is resolved like a station's offset:
+        // a step that turned it by a large angle damped it and put it at the
+        // wrong frequency.
+        const dom = modes.reduce((a, m) => (m[0] > a[0] ? m : a), modes[0] ?? [0, 0]);
+        if (this._unstable(modes)) this._tUnstable = this.t;
+        let peak = 0;
+        for (const p of this.integ.portVoltages(this.X)) peak = Math.max(peak, Math.hypot(p[0], p[1]));
+        this.oscHz = this._tUnstable === this.t && peak > OSC_VOLTS ? dom[1] / (2 * Math.PI) : 0;
+        if (Math.abs(this.oscHz) > 200) hT = Math.min(hT, 1 / (ROTATION_STEPS * Math.abs(this.oscHz)));
         this.kMax = Math.max(0, Math.min(K_MAX, Math.floor(DMath.log2(hT / H_UNIT))));
+        // The loop's time scale: the envelope's, 2Q/ω, but no faster than the
+        // bias currents the band's conductances follow (CURRENT_TAU_SEC).
+        const tau = Math.max(this.tankQ > 0 ? 2 * this.tankQ / this.omega : 0, CURRENT_TAU_SEC);
+        this._loopK = Math.max(0, Math.floor(DMath.log2(tau / LOOP_STEPS / H_UNIT)));
         this.k = Math.min(this.k, this.kMax);
         this._sinceBound = 0;
         this.hBound = hT;
@@ -1979,6 +2044,7 @@ class RfBand {
             const modes = r._modes(this.omega, this.integ.portVoltages(this.X), r._otherAmplitudes(this));
             sigma = Math.max(...modes.map(m => m[0]));
             this._sigmaCache = { ic, amp, sigma };
+            if (sigma > 0) this._tUnstable = this.t;
         }
         // Only a clear growth (an e-fold in under 5 µs): an oscillation that
         // its own compression holds wobbles around σ = 0, and following those
@@ -1989,6 +2055,18 @@ class RfBand {
     }
 
     portVoltages() { return this.integ ? this.integ.portVoltages(this.X) : []; }
+
+    /**
+     * Is this band's network unstable at small signal — would it start from
+     * noise (an oscillator, a regenerative stage past its threshold, a
+     * super-regenerator's burst)? `modes` are the large-signal ones at the
+     * present swing: growing there settles it.
+     */
+    _unstable(modes) {
+        if (modes.some(m => m[0] > 0)) return true;
+        const r = this.radio;
+        return r._modes(this.omega, this.integ.portVoltages(this.X).map(() => [0, 0]), r._otherAmplitudes(this)).some(m => m[0] > 0);
+    }
 
 
     _source(t) {
@@ -2040,6 +2118,22 @@ class RfBand {
             const other = r._otherAmplitudes(this);
             const stamps = (vp) => r._stamps(this.omega, vp, other);
             const v0 = this.integ.portVoltages(this.X);
+            // In a band that can oscillate, a swing that drives its junctions
+            // past the square law (a few VT) moves their bias through the
+            // rectified current, and the bias moves the gain that holds the
+            // swing: a loop between this band and the transient solve,
+            // closed once per substep (the band steps with the bias of the
+            // last accepted step). It acts on the envelope's own time scale
+            // 2Q/ω; at a substep that is not a small part of that, the
+            // exchange itself oscillates — a steady oscillator's swing
+            // jittered by tens of per cent step to step (and the audio it
+            // rectified was that jitter), a super-regenerator's bursts
+            // overshot their limit by up to 40 %.
+            if (this.t - (this._tUnstable ?? -Infinity) < ACTIVE_HOLD_SEC && this.k > this._loopK) {
+                let peak = 0;
+                for (const p of v0) peak = Math.max(peak, Math.hypot(p[0], p[1]));
+                if (peak > LOOP_VOLTS) this.k = this._loopK;
+            }
             let res, k = this.k;
             for (;;) {
                 this.integ.t = this.t;

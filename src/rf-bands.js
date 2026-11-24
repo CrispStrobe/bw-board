@@ -104,7 +104,7 @@ export function expCapped(u, is) {
 // ─── Field-effect describing function (quadrature over the cycle) ───────
 
 const QN = 32;
-const QCOS = Array.from({ length: QN }, (_, k) => DMath.cos(Math.PI * (k + 0.5) / QN));
+export const QUAD_COS = Array.from({ length: QN }, (_, k) => DMath.cos(Math.PI * (k + 0.5) / QN));
 
 /**
  * Cycle average and fundamental of a static law f(v) driven by
@@ -118,7 +118,7 @@ export function describeLaw(f, v0, A) {
         return [0, (f(v0 + d) - f(v0 - d)) / (2 * d)];
     }
     let avg = 0, fund = 0;
-    for (const c of QCOS) { const y = f(v0 + A * c); avg += y; fund += y * c; }
+    for (const c of QUAD_COS) { const y = f(v0 + A * c); avg += y; fund += y * c; }
     return [avg / QN - f0, 2 * fund / (QN * A)];
 }
 
