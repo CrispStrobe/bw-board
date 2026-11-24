@@ -147,6 +147,42 @@ describe('optical links on the board', () => {
   });
 });
 
+describe('step control at optical edges', () => {
+  it('a 555 flashing an LED at 100 kHz: the receiver\'s light switches in the emitter\'s seed step', () => {
+    // Before 2026-11-24 the receiver saw the new light only at the NEXT
+    // accepted step, the trapezoidal rule took that jump as error, and the
+    // controller halved its way down to ~10 ps on every edge: 993 attempts
+    // for this 0.1 ms, against 703 now.
+    const b = new BoardImpl(9);
+    b.setNetlist([
+      { id: 'VS', kind: 'vsource', params: { volts: 9 }, terminals: ['pos', 'neg'] },
+      { id: 'G', kind: 'gnd', params: {}, terminals: ['gnd'] },
+      { id: 'U', kind: 'timer_555', params: {}, terminals: ['gnd', 'trigger', 'output', 'reset', 'control', 'threshold', 'discharge', 'vcc'] },
+      { id: 'R1', kind: 'resistor', params: { ohms: 1000 }, terminals: ['a', 'b'] },
+      { id: 'R2', kind: 'resistor', params: { ohms: 6800 }, terminals: ['a', 'b'] },
+      { id: 'CT', kind: 'capacitor', params: { farads: 1e-9 }, terminals: ['a', 'b'] },
+      { id: 'RS', kind: 'resistor', params: { ohms: 150 }, terminals: ['a', 'b'] },
+      { id: 'D', kind: 'led', params: { color: 'red' }, terminals: ['anode', 'cathode'] },
+      { id: 'Q', kind: 'phototransistor', params: {}, terminals: ['collector', 'emitter'] },
+      { id: 'RL', kind: 'resistor', params: { ohms: 1000 }, terminals: ['a', 'b'] },
+      { id: 'CP', kind: 'capacitor', params: { farads: 100e-12 }, terminals: ['a', 'b'] },
+      { id: 'RP', kind: 'resistor', params: { ohms: 10000 }, terminals: ['a', 'b'] },
+      { id: 'P', kind: 'light_path', params: { from: 'D', to: 'Q', medium: 'fibre', lengthM: 1, outGapMm: 1 }, terminals: [] },
+    ], [
+      net('v', ['VS', 'pos'], ['RL', 'a'], ['U', 'vcc'], ['U', 'reset'], ['R1', 'a']),
+      net('m', ['U', 'output'], ['RS', 'a']), net('d', ['R1', 'b'], ['U', 'discharge'], ['R2', 'a']),
+      net('t', ['R2', 'b'], ['U', 'threshold'], ['U', 'trigger'], ['CT', 'a']),
+      net('g', ['G', 'gnd'], ['VS', 'neg'], ['U', 'gnd'], ['CT', 'b'], ['D', 'cathode'], ['Q', 'emitter'], ['RP', 'b']),
+      net('a', ['RS', 'b'], ['D', 'anode']), net('c', ['RL', 'b'], ['Q', 'collector'], ['CP', 'a']), net('p', ['CP', 'b'], ['RP', 'a']),
+    ]);
+    b.setPower(true);
+    b.advanceTo(100_000n);
+    assert.equal(b.transientAnalysisStatus().failure, null);
+    const { attempts } = b._transientAnalysisWork;
+    assert.ok(attempts < 850, `attempts ${attempts}`);
+  });
+});
+
 describe('fibre losses', () => {
   const fib = (p, color = 'red') => light(settle(link({ medium: 'fibre', lengthM: 1, outGapMm: 1, ...p },
     { em: { kind: 'led', params: { color } } })));
@@ -162,6 +198,23 @@ describe('fibre losses', () => {
     assert.ok(fib({ jointAngleDeg: 20 }) < 0.85 * j0, 'joint angle');
     assert.ok(fib({ outGapMm: 10 }) < 0.1 * straight, 'receiver far from the fibre end');
   });
+  it('a lens focuses a distant LED into the fibre: most light where the face sits at the image', () => {
+    const em = emitterCard({ kind: 'led', params: { color: 'red' } });
+    const rx = receiverCard({ kind: 'phototransistor' });
+    const g = (P) => pathTransfer({ medium: 'fibre', lengthM: 1, outGapMm: 1, ...P }, em, rx).gain(640);
+    // f = 2 cm, LED 6 cm in front: image 3 cm behind the lens, 9 cm from the LED.
+    const lens = { lensFocalCm: 2, lensAtCm: 6, lensRadiusCm: 1.5 };
+    let best = 0, bestAt = 0;
+    for (let at = 7; at <= 14.001; at += 0.25) { const v = g({ ...lens, fibreAtCm: at }); if (v > best) { best = v; bestAt = at; } }
+    assert.equal(bestAt, 9);
+    // The same 9 cm without the lens: a hundred times less.
+    assert.ok(best > 100 * g({ inGapMm: 90 }), `lens ${best} vs bare ${g({ inGapMm: 90 })}`);
+    // A fast lens (R/v beyond the fibre's NA) wastes the outer cone.
+    const fast = g({ lensFocalCm: 1, lensAtCm: 1.5, lensRadiusCm: 1.5, fibreAtCm: 4.5 });
+    const slow = g({ lensFocalCm: 1, lensAtCm: 1.5, lensRadiusCm: 0.75, fibreAtCm: 4.5 });
+    assert.ok(fast < 1.6 * slow, `twice the aperture, not four times the light: ${fast} vs ${slow}`);
+  });
+
   it('plastic fibre: infrared fades with length far faster than red', () => {
     const red = fib({ lengthM: 4 }, 'red') / fib({ lengthM: 0.5 }, 'red');
     const ir = fib({ lengthM: 4 }, 'ir') / fib({ lengthM: 0.5 }, 'ir');
