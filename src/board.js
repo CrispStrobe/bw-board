@@ -7578,6 +7578,8 @@ export class BoardImpl {
     let cc = this.capCurrents;
     let lv = this.inductorVoltages;
     let trapReady = this._trapValid;
+    // Set by accept() when an optical receiver's light jumped (src/optics.js).
+    let lightJumped = false;
     // POWER-ON ON A BALANCE POINT, WITH STORAGE. The transient from time
     // zero starts from every capacitor at its stored voltage, which is an
     // algebraic circuit at that instant. When that circuit is a
@@ -7661,6 +7663,7 @@ export class BoardImpl {
         // the trapezoidal history and look closely, as for a device flip.
         if (this._optics.lastEdge) {
           trapReady = false;
+          lightJumped = true;
           h = Math.max(H_MIN, h / 4);
         }
       }
@@ -7784,10 +7787,30 @@ export class BoardImpl {
         if (!validTransientSolution(r) && hSeed <= H_MIN * 1.000001) {
           r = solveStep(t, hSeed, 'be', cv, il, cc, lv, seed, true);
         }
+        // An emitter that switched at this discontinuity switches its
+        // receivers' light in the SAME seed: re-solve the seed with the light
+        // it just produced (a short fixpoint, as for an algebraic endpoint).
+        // Otherwise the light arrived one accepted step later, as a second
+        // discontinuity with its own seed, collapse to tiny steps and slow
+        // regrowth -- per edge of a 100 kHz optical link.
+        if (this._optics && validTransientSolution(r)) {
+          for (let k = 0; k < 4 && this._optics.observe(r, this._opticalTempOf(), t + hSeed); k++) {
+            const again = solveStep(t, hSeed, 'be', cv, il, cc, lv);
+            if (!validTransientSolution(again)) break;
+            r = again;
+          }
+        }
         t += hSeed;
         accept(r, t, null, 'be');
         // Only a seed that reached the edge crossed it.
-        trapReady = !(atEdge && hSeed >= hEff - 1e-18);
+        // A receiver whose light jumped at THIS accepted seed (its emitter
+        // switched in it) starts the next step with a source step of its own:
+        // that step is a seed too. Letting the trapezoidal rule take it, the
+        // jump read as an error no step size could shrink, and the controller
+        // halved its way down to ~10 ps on every edge of a 100 kHz optical
+        // link (30 rejected solves per edge, then 20 doublings back up).
+        trapReady = !(atEdge && hSeed >= hEff - 1e-18) && !lightJumped;
+        lightJumped = false;
         continue;
       }
 

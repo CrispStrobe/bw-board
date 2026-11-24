@@ -55,7 +55,10 @@ import { DMath } from './det-math.js';
  *           loss per bend 0.5 (core/R)/NA², a joint between two fibre
  *           pieces with gap, lateral offset and angle (disc overlap of the
  *           spreading exit cone), and the exit cone onto the receiver at
- *           outGapMm / outOffsetMm. Ambient light at the receiver can be
+ *           outGapMm / outOffsetMm. With lensFocalCm the light is launched
+ *           through a lens instead (lensAtCm, lensRadiusCm, fibreAtCm; see
+ *           lensLaunch): image size against the core, converging cone
+ *           against the NA. Ambient light at the receiver can be
  *           cut with params.shield (0..1).
  *   reflect a Lambertian surface at distanceCm: P_rx = rho(lambda) P A/(pi d²),
  *           rho from params.surface ('red', 'green', 'white', 'black', …, or
@@ -409,7 +412,10 @@ export function pathTransfer(params, em, rx) {
         const inGap = Math.max(0, num(P.inGapMm, 0)) / 10;
         // Launch: the beam's share inside the NA cone, and core vs. spot area.
         let launch;
-        if (em.laser) {
+        const launchF = num(P.lensFocalCm, 0);
+        if (launchF > 0) {
+            launch = lensLaunch(P, em, a, thNA, launchF);
+        } else if (em.laser) {
             const w = em.beamCm / 2 + inGap * em.divergence;
             launch = 1 - DMath.exp(-2 * a * a / (w * w));
         } else {
@@ -443,6 +449,50 @@ export function pathTransfer(params, em, rx) {
         };
     }
     throw new Error(`light_path: unknown medium "${medium}"`);
+}
+
+/**
+ * Launch efficiency into a fibre through a converging lens (fibre medium
+ * with lensFocalCm): the LED (or laser) at lensAtCm in front of the lens,
+ * the fibre's entrance face at fibreAtCm from the emitter.
+ *
+ *   caught   the share of the emitter's light inside the lens aperture
+ *            (radius lensRadiusCm): 1 - cos^(m+1)(atan(R/u)) for an LED,
+ *            the Gaussian share for a laser;
+ *   spot     the light's radius at the fibre face: defocus R |1 - L/v|
+ *            (1/v = 1/f - 1/u, L = face distance behind the lens) combined
+ *            with the image of the source (magnification v/u);
+ *   core     the share of the spot the core covers, min(1, a^2 / spot^2);
+ *   cone     the share of the converging cone the fibre accepts: the lens
+ *            delivers rays up to atan(R / v); beyond the fibre's acceptance
+ *            angle asin(NA) they leak out of the cladding at once,
+ *            min(1, (tan thNA / tan thCone)^2) for a uniformly lit aperture.
+ *
+ * The best launch sits where the face is at the LED's image and the lens is
+ * slow enough (R / v <= NA) that the cone fits the fibre.
+ */
+export function lensLaunch(P, em, a, thNA, f) {
+    const u = Math.max(0.1, num(P.lensAtCm, 3 * f));
+    const R = Math.max(0.05, num(P.lensRadiusCm, 0.75));
+    const face = Math.max(u, num(P.fibreAtCm, u + f * u / Math.max(1e-6, u - f)));
+    const L = face - u;
+    const invV = 1 / f - 1 / u;
+    let caught, src;
+    if (em.laser) {
+        const w = em.beamCm / 2 + u * em.divergence;
+        caught = 1 - DMath.exp(-2 * R * R / (w * w));
+        src = em.beamCm / 2;
+    } else {
+        caught = 1 - DMath.pow(DMath.cos(DMath.atan(R / u)), em.m + 1);
+        src = em.srcCm / 2;
+    }
+    const rGeo = R * Math.abs(1 - L * invV);
+    const rImg = src * (invV > 0 ? 1 / invV : L) / u;
+    const spot = Math.max(1e-4, Math.hypot(rGeo, rImg));
+    const core = Math.min(1, (a * a) / (spot * spot));
+    const tanCone = invV > 0 ? R * invV : 0;            // R / v; a diverging beam has no cone to match
+    const cone = tanCone > DMath.tan(thNA) ? (DMath.tan(thNA) / tanCone) ** 2 : 1;
+    return caught * core * cone * 0.92;                 // two lens surfaces
 }
 
 /** The geometry params a `light_path` exposes as its knob, by medium. */
