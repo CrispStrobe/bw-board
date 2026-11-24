@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: MIT
+import { DMath } from './det-math.js';
 /**
  * RF envelope ("dynamic phasor") machinery for the radio front end
  * (src/radio.js): dense complex linear algebra, the large-signal
@@ -63,7 +64,7 @@ const KT = 1.380649e-23 * 300;
 export function i0e(x) {
     if (x < 3.75) {
         const t = (x / 3.75) ** 2;
-        return Math.exp(-x) * (1 + t * (3.5156229 + t * (3.0899424 + t * (1.2067492
+        return DMath.exp(-x) * (1 + t * (3.5156229 + t * (3.0899424 + t * (1.2067492
             + t * (0.2659732 + t * (0.0360768 + t * 0.0045813))))));
     }
     const t = 3.75 / x;
@@ -75,7 +76,7 @@ export function i0e(x) {
 export function i1e(x) {
     if (x < 3.75) {
         const t = (x / 3.75) ** 2;
-        return Math.exp(-x) * x * (0.5 + t * (0.87890594 + t * (0.51498869 + t * (0.15084934
+        return DMath.exp(-x) * x * (0.5 + t * (0.87890594 + t * (0.51498869 + t * (0.15084934
             + t * (0.02658733 + t * (0.00301532 + t * 0.00032411))))));
     }
     const t = 3.75 / x;
@@ -84,7 +85,7 @@ export function i1e(x) {
 }
 
 /** ln I0(x). */
-export function lnI0(x) { return x + Math.log(i0e(x)); }
+export function lnI0(x) { return x + DMath.log(i0e(x)); }
 
 /** g(x) = 2·I1(x) / (x·I0(x)): 1 at x = 0, → 2/x for large x. */
 export function besselGain(x) {
@@ -95,15 +96,15 @@ export function besselGain(x) {
 /** Is·e^u, continued linearly above I_LIMIT (no series resistance modelled). */
 export const I_LIMIT = 0.5;
 export function expCapped(u, is) {
-    const uMax = Math.log(I_LIMIT / is);
-    if (u <= uMax) { const e = is * Math.exp(u); return [e, e]; }
+    const uMax = DMath.log(I_LIMIT / is);
+    if (u <= uMax) { const e = is * DMath.exp(u); return [e, e]; }
     return [I_LIMIT * (1 + u - uMax), I_LIMIT];
 }
 
 // ─── Field-effect describing function (quadrature over the cycle) ───────
 
 const QN = 32;
-const QCOS = Array.from({ length: QN }, (_, k) => Math.cos(Math.PI * (k + 0.5) / QN));
+const QCOS = Array.from({ length: QN }, (_, k) => DMath.cos(Math.PI * (k + 0.5) / QN));
 
 /**
  * Cycle average and fundamental of a static law f(v) driven by
@@ -220,8 +221,8 @@ export function mulberry32(seed) {
 export function gaussPair(rand) {
     const u = Math.max(1e-300, rand());
     const v = rand();
-    const r = Math.sqrt(-2 * Math.log(u));
-    return [r * Math.cos(2 * Math.PI * v), r * Math.sin(2 * Math.PI * v)];
+    const r = Math.sqrt(-2 * DMath.log(u));
+    return [r * DMath.cos(2 * Math.PI * v), r * DMath.sin(2 * Math.PI * v)];
 }
 
 /** One-sided thermal current-noise density of a conductance G, A²/Hz. */
@@ -271,7 +272,7 @@ export class BandIntegrator {
         let f = this._lus.get(key);
         if (f) return f;
         const { N, K } = this;
-        const h = H_UNIT * 2 ** k;
+        const h = H_UNIT * DMath.pow(2, k);
         const { Y0, Y1 } = this._lin;
         const Are = new Float64Array(N * N), Aim = new Float64Array(N * N);
         for (let i = 0; i < N * N; i++) {

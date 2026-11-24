@@ -8,7 +8,7 @@
  * @module
  */
 
-import { registerDevice } from '../devices.js';
+import { registerDevice, DMath } from '../devices.js';
 
 const ADP151_FIXED_OUTPUTS = new Set([
   1.1, 1.2, 1.5, 1.8, 2.1, 2.5, 2.6, 2.7, 2.75, 2.8, 2.85, 2.9, 3.0, 3.3,
@@ -17,8 +17,8 @@ const ADP151_FIXED_OUTPUTS = new Set([
 // ADP7118 Rev.H Table 1: typical EN-to-10% = 80 us, EN-to-90% = 380 us.
 // A delayed single pole interpolates these anchors; its shape is a stated
 // behavioural approximation, not an ADI transistor/feedback-loop model.
-const ADP7118_STARTUP_TAU_SEC = 300e-6 / Math.log(9);
-const ADP7118_STARTUP_DELAY_SEC = 80e-6 + ADP7118_STARTUP_TAU_SEC * Math.log(.9);
+const ADP7118_STARTUP_TAU_SEC = 300e-6 / DMath.log(9);
+const ADP7118_STARTUP_DELAY_SEC = 80e-6 + ADP7118_STARTUP_TAU_SEC * DMath.log(.9);
 const ADP7118_STARTUP_DELAY_NS = BigInt(Math.round(ADP7118_STARTUP_DELAY_SEC * 1e9));
 // A 10 us wake keeps the whole ~1.95 ms envelope below the existing 200
 // device-deadline budget. Reactive solves evaluate f(t) continuously, not
@@ -28,7 +28,7 @@ const ADP7118_STARTUP_TICK_NS = 10000n;
 function adp7118StartupTarget(part, state, tSeconds) {
   const elapsed = state._startupStartNs === null ? 0
     : tSeconds - Number(state._startupStartNs) / 1e9;
-  return (part.params.vOut ?? 5) * Math.max(0, 1 - Math.exp(
+  return (part.params.vOut ?? 5) * Math.max(0, 1 - DMath.exp(
     -Math.max(0, elapsed - Number(ADP7118_STARTUP_DELAY_NS) / 1e9) / ADP7118_STARTUP_TAU_SEC));
 }
 
@@ -412,7 +412,7 @@ export function registerPowerDevices() {
         } else {
           const elapsed = state._startupStartNs === null ? 0
             : ctx.tSeconds - Number(state._startupStartNs) / 1e9;
-          const fraction = Math.max(0, 1 - Math.exp(
+          const fraction = Math.max(0, 1 - DMath.exp(
             -Math.max(0, elapsed - Number(ADP7118_STARTUP_DELAY_NS) / 1e9) / ADP7118_STARTUP_TAU_SEC));
           const target = state._enabled
             ? Math.min(state._headroom, (part.params?.vOut ?? 5) * fraction) : 0;
@@ -459,7 +459,7 @@ export function registerPowerDevices() {
             state._startupStartNs = tNs;
           }
           const elapsedSec = Number(tNs - state._startupStartNs) / 1e9;
-          startupFraction = Math.max(0, 1 - Math.exp(
+          startupFraction = Math.max(0, 1 - DMath.exp(
             -Math.max(0, elapsedSec - Number(ADP7118_STARTUP_DELAY_NS) / 1e9) / ADP7118_STARTUP_TAU_SEC));
           state._wakeNs = tNs < state._startupStartNs + ADP7118_STARTUP_DELAY_NS
             ? state._startupStartNs + ADP7118_STARTUP_DELAY_NS

@@ -79,6 +79,7 @@ import {
     VT, lnI0, besselGain, expCapped, describeLaw, cluFactor, cluSolve, mulberry32, gaussPair,
     thermalCurrentPsd, BandIntegrator, H_UNIT, K_MAX,
 } from './rf-bands.js';
+import { DMath } from './det-math.js';
 
 export { lnI0, besselGain };
 
@@ -209,17 +210,17 @@ function morseKey(audio, t) {
 /** The programme signal s(t) in [−1, 1] (phase-continuous); a Morse key 0..1. */
 export function programmeValue(audio, t) {
     switch (audio.type) {
-        case 'tone': return Math.sin(2 * Math.PI * audio.hz * t);
-        case 'chord': return 0.5 * (Math.sin(2 * Math.PI * audio.hz[0] * t) + Math.sin(2 * Math.PI * audio.hz[1] * t));
+        case 'tone': return DMath.sin(2 * Math.PI * audio.hz * t);
+        case 'chord': return 0.5 * (DMath.sin(2 * Math.PI * audio.hz[0] * t) + DMath.sin(2 * Math.PI * audio.hz[1] * t));
         case 'two-tone': {
             const half = audio.period / 2;
             const n = Math.floor(t / audio.period);
             const w = t - n * audio.period;
             const [f1, f2] = audio.hz;
             const cycles = (f1 + f2) * half * n + (w < half ? f1 * w : f1 * half + f2 * (w - half));
-            return Math.sin(2 * Math.PI * cycles);
+            return DMath.sin(2 * Math.PI * cycles);
         }
-        case 'melody': { const m = melodyAt(audio, t); return m.hz > 0 ? Math.sin(2 * Math.PI * m.cycles) : 0; }
+        case 'melody': { const m = melodyAt(audio, t); return m.hz > 0 ? DMath.sin(2 * Math.PI * m.cycles) : 0; }
         case 'morse': return morseKey(audio, t);
         default: return 0;
     }
@@ -227,7 +228,7 @@ export function programmeValue(audio, t) {
 
 /** ∫₀ᵗ s(τ) dτ, for frequency modulation. */
 export function programmeIntegral(audio, t) {
-    const sinInt = (f, c0, c1) => (Math.cos(2 * Math.PI * c0) - Math.cos(2 * Math.PI * c1)) / (2 * Math.PI * f);
+    const sinInt = (f, c0, c1) => (DMath.cos(2 * Math.PI * c0) - DMath.cos(2 * Math.PI * c1)) / (2 * Math.PI * f);
     switch (audio.type) {
         case 'tone': return sinInt(audio.hz, 0, audio.hz * t);
         case 'chord': return 0.5 * (sinInt(audio.hz[0], 0, audio.hz[0] * t) + sinInt(audio.hz[1], 0, audio.hz[1] * t));
@@ -286,7 +287,7 @@ function audioMaxHz(audio) {
 export function stationModulation(s, t) {
     if (s.mod === 'fm') {
         const ph = 2 * Math.PI * s.deviationHz * programmeIntegral(s.audio, t);
-        return [Math.cos(ph), Math.sin(ph)];
+        return [DMath.cos(ph), DMath.sin(ph)];
     }
     if (s.mod === 'cw') return [programmeValue(s.audio, t), 0];
     return [Math.max(0, 1 + s.depth * programmeValue(s.audio, t)), 0];
@@ -323,7 +324,7 @@ export function junctionCard(part) {
     if (num(P.is, 0) > 0) return { is: Number(P.is), nVt };
     // Calibrated as the engine does: the datasheet drop at 20 mA.
     const vf = num(junctionVf(part), 0.7);
-    return { is: 0.02 / Math.max(Math.exp(Math.min(vf / nVt, 80)) - 1, 1e-30), nVt };
+    return { is: 0.02 / Math.max(DMath.exp(Math.min(vf / nVt, 80)) - 1, 1e-30), nVt };
 }
 
 /** A diode's junction capacitance at forward voltage v (SPICE law, linear above vj/2). */
@@ -333,8 +334,8 @@ export function junctionCapacitance(P, v) {
     const vj = Math.max(0.05, num(P.vj, 0.7));
     const m = Math.min(0.99, Math.max(0.01, num(P.m, 0.5)));
     const fc = 0.5;
-    if (v < fc * vj) return cjo / (1 - v / vj) ** m;
-    const c0 = cjo / (1 - fc) ** m;
+    if (v < fc * vj) return cjo / DMath.pow(1 - v / vj, m);
+    const c0 = cjo / DMath.pow(1 - fc, m);
     return c0 * (1 + m * (v - fc * vj) / (vj * (1 - fc)));
 }
 
@@ -390,7 +391,9 @@ function ferriteWindings(part, has) {
     const P = part.params ?? {};
     const L = num(P.henrys, FERRITE_DEFAULTS.henrys);
     const r = Math.min(0.95, Math.max(0.05, num(P.tap, FERRITE_DEFAULTS.tap)));
-    const n = Math.max(1e-3, num(P.couplingRatio, FERRITE_DEFAULTS.couplingRatio));
+    // The coupling winding is a fraction of the main winding's turns
+    // (couplingRatio ≤ 1; the board warns when a part asks for more).
+    const n = Math.min(1, Math.max(1e-3, num(P.couplingRatio, FERRITE_DEFAULTS.couplingRatio)));
     const k = Math.min(0.999, Math.max(0, num(P.k, FERRITE_DEFAULTS.k)));
     const kc = Math.min(0.999, Math.max(0, num(P.couplingK, FERRITE_DEFAULTS.couplingK)));
     const w = [];
@@ -553,7 +556,7 @@ export function expandRadio(parts, nets, opts) {
             const d = Math.max(1e-3, num(P.distanceM, FERRITE_DEFAULTS.distanceM));
             const r0 = Math.max(1e-4, num(P.linkRadiusM, FERRITE_DEFAULTS.linkRadiusM));
             const da = (rodAngleDeg(c.part, control(c.part.id)) - rodAngleDeg(partner.part, control(partner.part.id))) * Math.PI / 180;
-            return Math.min(0.5, (r0 / d) ** 3) * Math.cos(da);
+            return Math.min(0.5, DMath.pow(r0 / d, 3)) * DMath.cos(da);
         };
         const params = { q: c.q };
         Object.defineProperty(params, 'L', {
@@ -860,6 +863,15 @@ const H_TARGET_MAX = 20e-6;
 const NOISE_SEED = 0x5eed1234;
 const RF_ONLY_FARADS = 47e-12;
 const SIGMA_FOLLOW = 2e5;
+/**
+ * A band whose swing passes this, or that needs more substeps than this
+ * ahead of the circuit's last accepted step, is refused (RfBand._refuse):
+ * no circuit on a bench swings kilovolts, and a band that cannot keep up
+ * with its own growth at a nanosecond step would otherwise keep integrating
+ * — and remembering — ahead of every trial step the transient solve rejects.
+ */
+const RF_RUNAWAY_VOLTS = 1e4;
+const RF_HISTORY_LIMIT = 20000;
 const IS_TAU_SEC = 2e-3;
 const REBOUND_SEC = 0.1e-3;
 const CURRENT_TAU_SEC = 5e-6;
@@ -930,7 +942,7 @@ export class RadioFrontEnd {
         const own = r.stations ? r.stations.find(x => x.id === s.id) : s;
         if (!own || !(r.heightM > 0)) return 0;
         const angle = rodAngleDeg(r.part, this._controls?.()?.get(r.part.id));
-        return own.fieldVPerM * r.heightM * (own.hz / 1e6) * Math.cos((angle - own.bearingDeg) * Math.PI / 180);
+        return own.fieldVPerM * r.heightM * (own.hz / 1e6) * DMath.cos((angle - own.bearingDeg) * Math.PI / 180);
     }
 
     /**
@@ -988,7 +1000,7 @@ export class RadioFrontEnd {
                 // law it had, as a real junction would.
                 const conducting = ic > 1e-6 && vbe > 0.55;
                 const isEff = !d.generic ? card.is
-                    : conducting ? ic * (beta + 1) / beta * Math.exp(-Math.min(vbe, 1.5) / VT) : NaN;
+                    : conducting ? ic * (beta + 1) / beta * DMath.exp(-Math.min(vbe, 1.5) / VT) : NaN;
                 return { vbe, vbc, ic, saturated, card, isEff, beta,
                     ft: Math.max(1e6, num(P.ft, 300e6)), cjc: num(P.cfb, num(P.cjc, 4e-12)), cje: num(P.cje, 0) };
             }
@@ -1016,7 +1028,7 @@ export class RadioFrontEnd {
         const L = lnI0(x) + Lother;
         if (b.v > 0 && b.iDev > 0) return Math.max(0, b.i) + is;
         const R = b.rLoad ?? DEFAULT_LOAD_OHMS;
-        const h = (v) => is * (Math.exp(Math.min(700, v / nVt + L)) - 1) + v / R;
+        const h = (v) => is * (DMath.exp(Math.min(700, v / nVt + L)) - 1) + v / R;
         let lo = -(x * nVt + 2), hi = 0.5;
         for (let k = 0; k < 50; k++) { const mid = (lo + hi) / 2; if (h(mid) > 0) hi = mid; else lo = mid; }
         return expCapped((lo + hi) / 2 / nVt + L, is)[0];
@@ -1301,8 +1313,8 @@ export class RadioFrontEnd {
         try {
             let best = null;
             this._sys.windings.forEach((_, w) => {
-                const zAt = (lf) => this._windingZ(2 * Math.PI * Math.exp(lf), vp, other)[w];
-                let a = Math.log(hz * 0.92), b = Math.log(hz * 1.08);
+                const zAt = (lf) => this._windingZ(2 * Math.PI * DMath.exp(lf), vp, other)[w];
+                let a = DMath.log(hz * 0.92), b = DMath.log(hz * 1.08);
                 const g = (Math.sqrt(5) - 1) / 2;
                 let c = b - g * (b - a), d = a + g * (b - a);
                 let zc = zAt(c), zd = zAt(d);
@@ -1310,7 +1322,7 @@ export class RadioFrontEnd {
                     if (zc > zd) { b = d; d = c; zd = zc; c = b - g * (b - a); zc = zAt(c); }
                     else { a = c; c = d; zc = zd; d = a + g * (b - a); zd = zAt(d); }
                 }
-                const f = Math.exp((a + b) / 2), z = Math.max(zc, zd);
+                const f = DMath.exp((a + b) / 2), z = Math.max(zc, zd);
                 if (f < hz * 0.921 || f > hz * 1.079) return;
                 const z2 = this._windingZ(2 * Math.PI * f * 1.02, vp, other)[w];
                 const r2 = z / Math.max(z2, 1e-30);
@@ -1323,8 +1335,8 @@ export class RadioFrontEnd {
 
     _scanAt(vp, other) {
         const { windings } = this._sys;
-        const n = Math.ceil(Math.log10(SCAN_HI_HZ / SCAN_LO_HZ) * SCAN_PER_DECADE);
-        const fs = Array.from({ length: n + 1 }, (_, i) => SCAN_LO_HZ * 10 ** (i / SCAN_PER_DECADE));
+        const n = Math.ceil(DMath.log10(SCAN_HI_HZ / SCAN_LO_HZ) * SCAN_PER_DECADE);
+        const fs = Array.from({ length: n + 1 }, (_, i) => SCAN_LO_HZ * DMath.pow(10, i / SCAN_PER_DECADE));
         const Z = fs.map(f => this._windingZ(2 * Math.PI * f, vp, other));
         const found = [];
         const span = 4;
@@ -1335,16 +1347,16 @@ export class RadioFrontEnd {
                 const lo = Z[Math.max(0, i - span)][w], hi = Z[Math.min(fs.length - 1, i + span)][w];
                 if (!(z > 2 * Math.sqrt(lo * hi))) continue;
                 // Golden-section refinement of the peak on [f_{i−1}, f_{i+1}].
-                let a = Math.log(fs[i - 1]), b = Math.log(fs[i + 1]);
+                let a = DMath.log(fs[i - 1]), b = DMath.log(fs[i + 1]);
                 const g = (Math.sqrt(5) - 1) / 2;
-                const zAt = (lf) => this._windingZ(2 * Math.PI * Math.exp(lf), vp, other)[w];
+                const zAt = (lf) => this._windingZ(2 * Math.PI * DMath.exp(lf), vp, other)[w];
                 let c = b - g * (b - a), d = a + g * (b - a);
                 let zc = zAt(c), zd = zAt(d);
                 for (let it = 0; it < 28 && b - a > 2e-6; it++) {
                     if (zc > zd) { b = d; d = c; zd = zc; c = b - g * (b - a); zc = zAt(c); }
                     else { a = c; c = d; zc = zd; d = a + g * (b - a); zd = zAt(d); }
                 }
-                const hz = Math.exp((a + b) / 2), zPeak = Math.max(zc, zd);
+                const hz = DMath.exp((a + b) / 2), zPeak = Math.max(zc, zd);
                 // Its loaded Q from the Lorentzian |Z| 2 % off the peak: a
                 // band must hold every station on the tank's slopes (FM slope
                 // detection), not just the ones near its top.
@@ -1378,17 +1390,17 @@ export class RadioFrontEnd {
         // step, and its error control answers that with ever smaller steps.
         const dt = this._tAccept === undefined ? Infinity : Math.max(0, tSec - this._tAccept);
         this._tAccept = tSec;
-        const w = Number.isFinite(dt) ? 1 - Math.exp(-dt / IS_TAU_SEC) : 1;
+        const w = Number.isFinite(dt) ? 1 - DMath.exp(-dt / IS_TAU_SEC) : 1;
         this._isLog ??= new Map();
         this._bias.forEach((b, i) => {
             if (b.isEff === undefined) return;
             const prev = this._isLog.get(i);
             // Not conducting and never calibrated: the generic law's knee,
             // 1 mA at 0.7 V.
-            const lg = Number.isFinite(b.isEff) ? Math.log(b.isEff) : (prev ?? Math.log(1e-3) - 0.7 / VT);
+            const lg = Number.isFinite(b.isEff) ? DMath.log(b.isEff) : (prev ?? DMath.log(1e-3) - 0.7 / VT);
             const next = prev === undefined ? lg : prev + (lg - prev) * w;
             this._isLog.set(i, next);
-            b.isEff = Math.exp(next);
+            b.isEff = DMath.exp(next);
             // The transistor's DC collector current is the device's own plus
             // what its rf_detect companion rectifies (they are separate parts
             // in the transient solve). The RF transconductance follows the
@@ -1401,7 +1413,7 @@ export class RadioFrontEnd {
         // CURRENT_TAU_SEC: their rectified part answers the band's swing one
         // step late, and following it step by step makes the two solves chase
         // each other (a detector's own RC is slower than this anyway).
-        const wc = Number.isFinite(dt) ? 1 - Math.exp(-dt / CURRENT_TAU_SEC) : 1;
+        const wc = Number.isFinite(dt) ? 1 - DMath.exp(-dt / CURRENT_TAU_SEC) : 1;
         const prevBias = this._biasPrev;
         if (prevBias && prevBias.length === this._bias.length) {
             this._bias.forEach((b, i) => {
@@ -1411,7 +1423,7 @@ export class RadioFrontEnd {
             });
         }
         // A detector's DC load, R = −v/I, smoothed over LOAD_TAU_SEC.
-        const wl = Number.isFinite(dt) ? 1 - Math.exp(-dt / LOAD_TAU_SEC) : 1;
+        const wl = Number.isFinite(dt) ? 1 - DMath.exp(-dt / LOAD_TAU_SEC) : 1;
         this._bias.forEach((b, i) => {
             if (b.card === undefined || b.ic !== undefined || b.v === undefined) return;
             const r = (b.i > 1e-10 && b.v < -1e-5) ? Math.min(1e8, Math.max(10, -b.v / b.i)) : null;
@@ -1504,7 +1516,7 @@ export class RadioFrontEnd {
             this._biasAtBound = this._bias;
             this._tBound = tSec;
             this._solveStations(stations, tSec);
-            this.error = null;
+            this.error = this._bands.find(b => b.dead)?.dead ?? null;
         } catch (err) {
             this.error = String(err?.message ?? err);
         }
@@ -1715,7 +1727,7 @@ export class RadioFrontEnd {
             substeps: this.substeps,
             error: this.error,
             resonances: (this._resonances ?? []).map(r => ({ hz: r.hz })),
-            bands: this._bands.map(b => ({ hz: b.hz, stations: b.members.map(k => st[k]?.id), substepSec: H_UNIT * 2 ** b.k })),
+            bands: this._bands.map(b => ({ hz: b.hz, stations: b.members.map(k => st[k]?.id), substepSec: H_UNIT * DMath.pow(2, b.k) })),
             detectors: this.detectors.map((d, i) => {
                 const drive = this._sys ? this.junctionDrive(i, tSec) : null;
                 return {
@@ -1776,7 +1788,7 @@ class RfBand {
         if (this.X && hz !== this.hz) {
             this._recentred = true;
             const ph = 2 * Math.PI * (this.hz - hz) * this.t;
-            const c = Math.cos(ph), s = Math.sin(ph);
+            const c = DMath.cos(ph), s = DMath.sin(ph);
             for (let i = 0; i < this.X.re.length; i++) {
                 const a = this.X.re[i], b = this.X.im[i];
                 this.X.re[i] = a * c - b * s; this.X.im[i] = a * s + b * c;
@@ -1839,7 +1851,7 @@ class RfBand {
         // envelope by e^{4.5} over 30 steps of 0.15/σ; if it does not even
         // double, the band is not unstable and the estimate is dropped.
         if (this.growth > 0 && !this._trial) {
-            const k = Math.max(0, Math.min(K_MAX, Math.floor(Math.log2(0.15 / this.growth / H_UNIT))));
+            const k = Math.max(0, Math.min(K_MAX, Math.floor(DMath.log2(0.15 / this.growth / H_UNIT))));
             const amp = () => Math.max(1e-12, ...this.integ.portVoltages(this.X).map(p => Math.hypot(p[0], p[1])),
                 ...this.noise.map(n => Math.hypot(this.X.re[n.sel.pos ?? 0] ?? 0, this.X.im[n.sel.pos ?? 0] ?? 0)));
             const save = { X: this.X, t: this.t, hist: this.hist, k: this.k, kMax: this.kMax, calm: this.calm };
@@ -1859,7 +1871,7 @@ class RfBand {
             if (!(a1 > 2 * a0)) this.growth = 0;
         }
         if (this.growth > 0) hT = Math.min(hT, 0.15 / this.growth);
-        this.kMax = Math.max(0, Math.min(K_MAX, Math.floor(Math.log2(hT / H_UNIT))));
+        this.kMax = Math.max(0, Math.min(K_MAX, Math.floor(DMath.log2(hT / H_UNIT))));
         this.k = Math.min(this.k, this.kMax);
         this._sinceBound = 0;
         this.hBound = hT;
@@ -1892,7 +1904,7 @@ class RfBand {
         // its own compression holds wobbles around σ = 0, and following those
         // wobbles cost a steady oscillator half its speed.
         if (!(sigma > SIGMA_FOLLOW)) return this.kMax;
-        const k = Math.floor(Math.log2(0.15 / sigma / H_UNIT));
+        const k = Math.floor(DMath.log2(0.15 / sigma / H_UNIT));
         return Math.max(0, Math.min(this.kMax, K_MAX, k));
     }
 
@@ -1905,7 +1917,7 @@ class RfBand {
         for (const { s, u, off } of this.units) {
             const [mr, mi] = stationModulation(s, t);
             if (mr === 0 && mi === 0) continue;
-            const c = Math.cos(off * t), sn = Math.sin(off * t);
+            const c = DMath.cos(off * t), sn = DMath.sin(off * t);
             const cr = mr * c - mi * sn, ci = mr * sn + mi * c;
             for (let i = 0; i < N; i++) {
                 const ur = u.re[i], ui = u.im[i];
@@ -1930,6 +1942,14 @@ class RfBand {
 
     advanceTo(tSec) {
         const r = this.radio;
+        if (this.dead) {
+            if (tSec > this.t) {
+                this.t = tSec;
+                this.hist.push({ t: this.t, vp: this.hist[0].vp, X: this.X, k: this.k });
+                if (this.hist.length > 4) this.hist = this.hist.slice(-4);
+            }
+            return;
+        }
         let guard = 0;
         while (this.t < tSec && guard++ < 200000) {
             // While it grows, the growth rate changes with the swing (the
@@ -1946,7 +1966,7 @@ class RfBand {
                 this.integ.X = this.X;
                 const last = this.hist[this.hist.length - 1];
                 const prev = this.hist[this.hist.length - 2];
-                const Xprev = prev?.X && last?.k === k && prev && Math.abs((last.t - prev.t) - H_UNIT * 2 ** k) < 1e-15 ? prev.X : null;
+                const Xprev = prev?.X && last?.k === k && prev && Math.abs((last.t - prev.t) - H_UNIT * DMath.pow(2, k)) < 1e-15 ? prev.X : null;
                 res = this.integ.step(k, stamps, (t) => this._source(t), (rr, ri, h) => this._noise(rr, ri, h), Xprev);
                 r.substeps++;
                 const v1 = this.integ.portVoltages({ re: res.re, im: res.im });
@@ -1954,7 +1974,7 @@ class RfBand {
                 for (let a = 0; a < v0.length; a++) {
                     const m0 = Math.hypot(v0[a][0], v0[a][1]), m1 = Math.hypot(v1[a][0], v1[a][1]);
                     if (Math.max(m0, m1) < 1e-4) continue;
-                    g = Math.max(g, Math.abs(Math.log(Math.max(m1, 1e-12) / Math.max(m0, 1e-12))));
+                    g = Math.max(g, Math.abs(DMath.log(Math.max(m1, 1e-12) / Math.max(m0, 1e-12))));
                 }
                 if (g > 0.7 && k > 0) { k--; this.calm = 0; continue; }
                 if (g > 0.35 && k > 0) { this.k = k - 1; this.calm = 0; }
@@ -1962,7 +1982,11 @@ class RfBand {
                 else this.k = k;
                 this.X = { re: res.re, im: res.im };
                 this.t = res.t;
+                let peak = 0;
+                for (const p of v1) { const m = Math.hypot(p[0], p[1]); if (!(m <= peak)) peak = m; }
+                if (!(peak < RF_RUNAWAY_VOLTS)) { this._refuse(`its swing ran away (${peak.toExponential(2)} V at ${(this.t * 1e3).toFixed(4)} ms)`); return; }
                 this.hist.push({ t: this.t, vp: v1, X: this.X, k });
+                if (this.hist.length > RF_HISTORY_LIMIT) { this._refuse(`it needed more than ${RF_HISTORY_LIMIT} substeps ahead of the circuit (${(this.t * 1e3).toFixed(4)} ms)`); return; }
                 break;
             }
         }
@@ -2003,6 +2027,16 @@ class RfBand {
 
     _stepOnce() { this.advanceTo(this.t + 1e-15); }
 
+    /** Stop this band: silent from here, the reason on the front end (radio.error, a board warning). */
+    _refuse(why) {
+        const N = this.X.re.length;
+        this.dead = `RF band at ${(this.hz / 1e6).toFixed(4)} MHz refused: ${why}`;
+        this.radio.error = this.dead;
+        this.X = { re: new Float64Array(N), im: new Float64Array(N) };
+        const K = this.radio._sys?.K ?? 0;
+        this.hist = [{ t: this.t, vp: Array.from({ length: K }, () => [0, 0]), X: this.X, k: this.k }];
+    }
+
     /** Accepted transient step at t: history before it is no longer needed. */
     prune(tSec) {
         const h = this.hist;
@@ -2041,13 +2075,13 @@ function p_phasorOf(results, n0, n1) {
         const r = n ? results.get(n) : null;
         if (!r) return [0, 0];
         const th = r.phaseDeg * Math.PI / 180;
-        return [r.mag * Math.cos(th), r.mag * Math.sin(th)];
+        return [r.mag * DMath.cos(th), r.mag * DMath.sin(th)];
     };
     return p_csub(at(n0), n1 ? at(n1) : [0, 0]);
 }
 const P_SLOW_BEAT_HZ = 10e3;
 const P_ENVELOPE_POINTS_PER_CYCLE = 10;
-const P_THETA16 = Array.from({ length: 16 }, (_, i) => [Math.cos((i + 0.5) * Math.PI / 8), Math.sin((i + 0.5) * Math.PI / 8)]);
+const P_THETA16 = Array.from({ length: 16 }, (_, i) => [DMath.cos((i + 0.5) * Math.PI / 8), DMath.sin((i + 0.5) * Math.PI / 8)]);
 
 export class PhasorFrontEnd {
     constructor({ antennas, detectors, coupled }) {
@@ -2129,7 +2163,7 @@ export class PhasorFrontEnd {
             const env = Math.max(0, 1 + s.depth * programmeValue(s.audio, tSec));
             const [hr, hi] = this._phasor(d, k, tSec);
             const ph = 2 * Math.PI * (s.hz - fr) * tSec;
-            const c = Math.cos(ph), sn = Math.sin(ph);
+            const c = DMath.cos(ph), sn = DMath.sin(ph);
             sr += env * (hr * c - hi * sn);
             si += env * (hr * sn + hi * c);
         }
@@ -2156,7 +2190,7 @@ export class PhasorFrontEnd {
         // switch-on transient is forgotten quickly.
         const dt = this._lastAcceptSec === null ? 0 : Math.max(0, tSec - this._lastAcceptSec);
         this._lastAcceptSec = tSec;
-        const alpha = dt > 0 ? 1 - Math.exp(-dt / P_IDC_TAU_SEC) : 1;
+        const alpha = dt > 0 ? 1 - DMath.exp(-dt / P_IDC_TAU_SEC) : 1;
         for (const d of this.detectors) {
             const env = this._H ? this.amplitude(d.index, tSec) : 0;
             const { v, i } = this._junctionDc(d, solution, env);
@@ -2181,7 +2215,7 @@ export class PhasorFrontEnd {
      */
     _smoothOperatingPoint(solution, dt) {
         if (!solution?.nodeVoltages) return;
-        const a = dt > 0 ? 1 - Math.exp(-dt / P_OP_TAU_SEC) : 1;
+        const a = dt > 0 ? 1 - DMath.exp(-dt / P_OP_TAU_SEC) : 1;
         const ema = this._opEma ?? (this._opEma = { v: new Map(), bc: new Map() });
         for (const [id, v] of solution.nodeVoltages) {
             const p = ema.v.get(id);
@@ -2239,11 +2273,11 @@ export class PhasorFrontEnd {
             iAvg = m.i + card.is;
         } else {
             const rl = (m.i > 1e-10 && m.v < -1e-5) ? Math.min(1e8, Math.max(10, -m.v / m.i)) : P_DEFAULT_LOAD_OHMS;
-            const h = (v) => card.is * (Math.exp(Math.min(700, v / card.nVt + L)) - 1) + v / rl;
+            const h = (v) => card.is * (DMath.exp(Math.min(700, v / card.nVt + L)) - 1) + v / rl;
             let lo = -(A + 2), hi = 0.5;
             for (let k = 0; k < 60; k++) { const mid = (lo + hi) / 2; if (h(mid) > 0) hi = mid; else lo = mid; }
             const v = (lo + hi) / 2;
-            iAvg = card.is * Math.exp(Math.min(700, v / card.nVt + L));
+            iAvg = card.is * DMath.exp(Math.min(700, v / card.nVt + L));
         }
         return iAvg * besselGain(x) / card.nVt;
     }

@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: MIT
+import { DMath } from './det-math.js';
 /**
  * LM358 / LM324 — a time-domain macromodel solved INSIDE the MNA Newton loop.
  *
@@ -126,7 +127,7 @@ function enable(supply, scale) {
 /** Limited output current law and its slope with respect to the drive d. */
 function outputLaw(d) {
     const iLim = d >= 0 ? CARD.iSource : CARD.iSink;
-    const t = Math.tanh(d / (iLim * CARD.rOut));
+    const t = DMath.tanh(d / (iLim * CARD.rOut));
     return [iLim * t, (1 - t * t) / CARD.rOut];
 }
 
@@ -141,7 +142,7 @@ export function evaluateStage(v, scale, fixedVcc = null) {
     const supply = vc - vg;
 
     // Input stage.
-    const tIn = Math.tanh(GM * (v.inp - v.inn) / I_SLEW);
+    const tIn = DMath.tanh(GM * (v.inp - v.inn) / I_SLEW);
     const iIn = I_SLEW * tIn;
     const gIn = GM * (1 - tIn * tIn);
 

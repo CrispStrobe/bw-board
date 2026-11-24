@@ -60,6 +60,7 @@
  */
 
 import { JUNCTION_THERMAL_VOLTAGE } from './mna.js';
+import { DMath } from './det-math.js';
 
 export const MU0 = 4e-7 * Math.PI;
 const RHO_CU = 1.72e-8;
@@ -125,7 +126,7 @@ export function airCoilCard(part) {
     if (metalCm !== null && metalCm >= 0) {
         const dm = metalCm / 100;
         const sign = P.metalKind === 'ferrous' ? 1 : -1;
-        metal = sign * Math.max(0, Math.min(0.5, num(P.metalCoupling, D.metalCoupling))) * (r * r / (r * r + dm * dm)) ** 3;
+        metal = sign * Math.max(0, Math.min(0.5, num(P.metalCoupling, D.metalCoupling))) * DMath.pow(r * r / (r * r + dm * dm), 3);
     }
     return {
         N, r, l,
@@ -152,7 +153,7 @@ export function axialTeslaPerAmp(N, r, l, x) {
 export function fluxLinkageSlope(card, z) {
     const { N, r, l, magnetAm2: m } = card;
     const k = MU0 * m * N / (2 * l);
-    const f = (u) => r * r / (r * r + u * u) ** 1.5;
+    const f = (u) => r * r / DMath.pow(r * r + u * u, 1.5);
     return k * (f(z + l / 2) - f(z - l / 2));
 }
 
@@ -216,7 +217,7 @@ export function electrolysisCard(part) {
         farads: Math.max(1e-12, num(P.farads, D.farads)),
         onsetV, tafelV, i0,
         tasteAmps: Math.max(1e-9, num(P.tasteAmps, D.tasteAmps)),
-        is: i0 * Math.exp(-onsetV / tafelV),
+        is: i0 * DMath.exp(-onsetV / tafelV),
         // The solver's junction law uses its own thermal voltage; n is set
         // against it so the diodes carry exactly I_F(V).
         n: tafelV / JUNCTION_THERMAL_VOLTAGE,
@@ -225,7 +226,7 @@ export function electrolysisCard(part) {
 
 /** Faradaic current (A) at interface voltage v. */
 export function faradaicCurrent(card, v) {
-    return card.i0 * (Math.exp((v - card.onsetV) / card.tafelV) - Math.exp((-v - card.onsetV) / card.tafelV));
+    return card.i0 * (DMath.exp((v - card.onsetV) / card.tafelV) - DMath.exp((-v - card.onsetV) / card.tafelV));
 }
 
 export { FARADAY };
@@ -269,7 +270,7 @@ export function expandSensingTransducers(parts, nets) {
         } else {
             const card = electrolysisCard(p);
             add(`${p.id}_cdl`, 'capacitor', { farads: card.farads }, m, b);
-            const dp = { is: card.is, n: card.n, rs: 0, vf: card.onsetV + card.tafelV * Math.log(0.02 / card.i0) };
+            const dp = { is: card.is, n: card.n, rs: 0, vf: card.onsetV + card.tafelV * DMath.log(0.02 / card.i0) };
             add(`${p.id}_fa`, 'diode', { ...dp }, m, b, 'anode', 'cathode');
             add(`${p.id}_fc`, 'diode', { ...dp }, b, m, 'anode', 'cathode');
         }

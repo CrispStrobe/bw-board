@@ -12,7 +12,7 @@
  * @module
  */
 
-import { registerDevice } from '../devices.js';
+import { registerDevice, DMath } from '../devices.js';
 import { ambient, lightLevel, surfaceDistanceCm } from '../world.js';
 import { vceShape } from '../photo-junctions.js';
 import { controlledResistance } from '../mna.js';
@@ -179,7 +179,7 @@ export function registerSensors() {
       const rFull = part.params?.rFull ?? 200;    // full force: 200Ω
       // Exponential interpolation (FSRs are logarithmic)
       const newOhms = force > 0.01
-        ? rNone * Math.pow(rFull / rNone, force)
+        ? rNone * DMath.pow(rFull / rNone, force)
         : rNone;
       if (Math.abs(newOhms - state._ohms) / state._ohms < 0.01) return false;
       state._ohms = newOhms;

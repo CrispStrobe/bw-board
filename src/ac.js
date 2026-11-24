@@ -31,6 +31,7 @@ import {
 import { CooMatrix, SparseLU, toCSC } from './sparse.js';
 import { getDevice } from './devices.js';
 import { ntcResistanceAt } from './thermal.js';
+import { DMath } from './det-math.js';
 
 const VT = 0.02585;
 
@@ -309,7 +310,7 @@ export function acSweep(args) {
           const lo = part.kind === 'ldr' ? (P.rLight ?? 100) : (P.rHot ?? 1000);
           const x = controls.get(part.id) ?? 0;
           addG2(netOf(part.id, 'a'), netOf(part.id, 'b'),
-            1 / Math.max(0.001, hi * Math.pow(lo / hi, x)));
+            1 / Math.max(0.001, hi * DMath.pow(lo / hi, x)));
           break;
         }
         case 'capacitor':
@@ -862,7 +863,7 @@ export function acSweep(args) {
       const im = x[i + N];
       results.set(netId, {
         mag: Math.hypot(re, im),
-        phaseDeg: Math.atan2(im, re) * 180 / Math.PI,
+        phaseDeg: DMath.atan2(im, re) * 180 / Math.PI,
       });
     }
     out.push(outOfLinear.length ? { hz, results, profile, outOfLinear } : { hz, results, profile });

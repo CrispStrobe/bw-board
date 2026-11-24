@@ -1,3 +1,4 @@
+import { DMath } from './det-math.js';
 /**
  * Exact source waveforms whose parameter contract differs from the native
  * function-generator shapes in mna.js.
@@ -143,9 +144,9 @@ export function spiceExpValue(params, tSeconds) {
   if (!finite(tSeconds)) throw new Error('spice-exp: simulation time must be finite');
   const p = spiceExpParams(params);
   if (tSeconds <= p.td1) return p.v1;
-  const rising = (p.v2 - p.v1) * (1 - Math.exp(-(tSeconds - p.td1) / p.tau1));
+  const rising = (p.v2 - p.v1) * (1 - DMath.exp(-(tSeconds - p.td1) / p.tau1));
   if (tSeconds <= p.td2) return p.v1 + rising;
-  const falling = (p.v1 - p.v2) * (1 - Math.exp(-(tSeconds - p.td2) / p.tau2));
+  const falling = (p.v1 - p.v2) * (1 - DMath.exp(-(tSeconds - p.td2) / p.tau2));
   return p.v1 + rising + falling;
 }
 
@@ -176,8 +177,8 @@ export function spiceSineValue(params, tSeconds) {
   const p = spiceSineParams(params);
   const elapsed = Math.max(0, tSeconds - p.td);
   const phase = p.phase * Math.PI / 180;
-  return p.offset + p.amplitude * Math.sin(2 * Math.PI * p.freq * elapsed + phase)
-    * Math.exp(-p.theta * elapsed);
+  return p.offset + p.amplitude * DMath.sin(2 * Math.PI * p.freq * elapsed + phase)
+    * DMath.exp(-p.theta * elapsed);
 }
 
 /** Exact time derivative of a validated SPICE sine value. */
@@ -188,9 +189,9 @@ export function spiceSineDerivative(params, tSeconds) {
   const elapsed = tSeconds - p.td;
   const phase = p.phase * Math.PI / 180;
   const angle = 2 * Math.PI * p.freq * elapsed + phase;
-  const decay = Math.exp(-p.theta * elapsed);
+  const decay = DMath.exp(-p.theta * elapsed);
   return p.amplitude * decay
-    * (2 * Math.PI * p.freq * Math.cos(angle) - p.theta * Math.sin(angle));
+    * (2 * Math.PI * p.freq * DMath.cos(angle) - p.theta * DMath.sin(angle));
 }
 
 /** Exact integral on an ordered interval, including delay, phase and damping.
@@ -203,23 +204,23 @@ export function spiceSineIntegral(params, from, to, derivative = false) {
   const p = spiceSineParams(params);
   const phase = p.phase * Math.PI / 180;
   const pre = Math.max(0, Math.min(to, p.td) - from);
-  let area = derivative ? 0 : pre * (p.offset + p.amplitude * Math.sin(phase));
+  let area = derivative ? 0 : pre * (p.offset + p.amplitude * DMath.sin(phase));
   const start = Math.max(from, p.td), d = Math.max(0, to - start);
   if (d > 0) {
     const u = start - p.td, omega = 2 * Math.PI * p.freq;
-    const angle = omega * u + phase, decay = Math.exp(-p.theta * u);
-    const e = Math.exp(-p.theta * d), s = e * Math.sin(omega * d);
-    const oneMinusCos = -Math.expm1(-p.theta * d)
-      + e * 2 * Math.sin(omega * d / 2) ** 2;
+    const angle = omega * u + phase, decay = DMath.exp(-p.theta * u);
+    const e = DMath.exp(-p.theta * d), s = e * DMath.sin(omega * d);
+    const oneMinusCos = -DMath.expm1(-p.theta * d)
+      + e * 2 * DMath.sin(omega * d / 2) ** 2;
     if (derivative) {
-      area += p.amplitude * decay * (-Math.sin(angle) * oneMinusCos + Math.cos(angle) * s);
+      area += p.amplitude * decay * (-DMath.sin(angle) * oneMinusCos + DMath.cos(angle) * s);
     } else {
       // Normalize before squaring to avoid needless overflow at high frequency.
       const scale = Math.max(p.theta, omega), a = p.theta / scale, b = omega / scale;
       const den = (a * a + b * b) * scale;
       area += p.offset * d + p.amplitude * decay * (
-        Math.sin(angle) * (a * oneMinusCos + b * s)
-        + Math.cos(angle) * (b * oneMinusCos - a * s)) / den;
+        DMath.sin(angle) * (a * oneMinusCos + b * s)
+        + DMath.cos(angle) * (b * oneMinusCos - a * s)) / den;
     }
   }
   if (!finite(area)) throw new Error('spice-sine integral: non-finite result');

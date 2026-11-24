@@ -113,6 +113,7 @@
  */
 
 import { chooseGroundReference } from './mna.js';
+import { DMath } from './det-math.js';
 
 export const Q_E = 1.602176634e-19;
 const VT = 0.02585;
@@ -169,7 +170,7 @@ export function gaussianAt(seed, k) {
     const b = mix32((seed ^ mix32(k * 2 + 1 + 0x7f4a7c15)) >>> 0);
     const u1 = (a + 1) / 4294967297;
     const u2 = b / 4294967296;
-    return Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
+    return Math.sqrt(-2 * DMath.log(u1)) * DMath.cos(2 * Math.PI * u2);
 }
 
 /**
@@ -205,9 +206,9 @@ export function breakdownCard(part) {
 /** Breakdown current at reverse voltage vr, and dI/dvr. */
 export function breakdownCurrent(vr, card) {
     const u = (vr - card.bv) / card.nVt;
-    const uMax = Math.log(I_LIMIT / card.ibv);
+    const uMax = DMath.log(I_LIMIT / card.ibv);
     if (u <= uMax) {
-        const i = card.ibv * Math.exp(Math.max(u, -700));
+        const i = card.ibv * DMath.exp(Math.max(u, -700));
         return [i, i / card.nVt];
     }
     return [I_LIMIT * (1 + u - uMax), I_LIMIT / card.nVt];
@@ -470,13 +471,13 @@ export class FieldEnvironment {
 
     /** Mains voltage against earth at time t. */
     mainsAt(t) {
-        return this.mains.volts * Math.SQRT2 * Math.sin(2 * Math.PI * this.mains.hz * t);
+        return this.mains.volts * Math.SQRT2 * DMath.sin(2 * Math.PI * this.mains.hz * t);
     }
 
     /** d/dt of the mains voltage at time t. */
     mainsRate(t) {
         const w = 2 * Math.PI * this.mains.hz;
-        return this.mains.volts * Math.SQRT2 * w * Math.cos(w * t);
+        return this.mains.volts * Math.SQRT2 * w * DMath.cos(w * t);
     }
 
     /** A probe's position at time t (the hand's path toward the knob). */
@@ -488,7 +489,7 @@ export class FieldEnvironment {
         const s = (t - p.t0) / T;
         if (s <= 0) return p.x0;
         if (s >= 1) return p.target;
-        return p.x0 + (p.target - p.x0) * (1 - Math.cos(Math.PI * s)) / 2;
+        return p.x0 + (p.target - p.x0) * (1 - DMath.cos(Math.PI * s)) / 2;
     }
 
     /** A knob moved at time t: the hand starts moving from where it is. */
@@ -511,7 +512,7 @@ export class FieldEnvironment {
         if (p.x0 === p.target || !(T > 0)) return 0;
         const s = (t - p.t0) / T;
         if (s <= 0 || s >= 1) return 0;
-        return (p.target - p.x0) * Math.PI / (2 * T) * Math.sin(Math.PI * s);
+        return (p.target - p.x0) * Math.PI / (2 * T) * DMath.sin(Math.PI * s);
     }
 
     /** The latest time the environment has seen (accepted step or control). */
@@ -539,7 +540,7 @@ export class FieldEnvironment {
         const dt = this._lastAcceptSec === null ? 0 : Math.max(0, tSec - this._lastAcceptSec);
         this._lastAcceptSec = tSec;
         this._now = tSec;
-        const alpha = dt > 0 ? 1 - Math.exp(-dt / IDC_TAU_SEC) : 1;
+        const alpha = dt > 0 ? 1 - DMath.exp(-dt / IDC_TAU_SEC) : 1;
         const nv = (id) => solution?.nodeVoltages?.get(id) ?? 0;
         for (const j of this.junctions) {
             const [i] = breakdownCurrent(nv(j.nets[0]) - nv(j.nets[1]), j.card);

@@ -55,6 +55,7 @@ import {
   nextSpiceExpCorner, nextSpicePulseCorner, nextSpicePwlCorner, nextSpiceSineCorner,
   spiceSineDerivative, spiceSineIntegral,
 } from './source-waveforms.js';
+import { DMath } from './det-math.js';
 
 /**
  * Internal pin state.
@@ -4400,10 +4401,10 @@ export class BoardImpl {
     let freqs;
     if (exactGrid) freqs = [...frequencies];
     else {
-      const decades = Math.log10(to / from);
+      const decades = DMath.log10(to / from);
       const nPts = Math.max(2, Math.round(decades * pointsPerDecade) + 1);
       freqs = Array.from({ length: nPts },
-        (_, i) => from * Math.pow(10, (i * decades) / (nPts - 1)));
+        (_, i) => from * DMath.pow(10, (i * decades) / (nPts - 1)));
     }
     return acSweep({
       parts: this._solveParts,
@@ -5924,7 +5925,29 @@ export class BoardImpl {
       }
     }
 
+    // Parameters outside what a part can be: say what the engine used.
+    for (const p of this.parts ?? []) {
+      if (p.kind === 'ferrite_coil' && Number(p.params?.couplingRatio) > 1) {
+        warnings.push({
+          severity: 'warning',
+          type: 'param-clamped',
+          partId: p.id,
+          message: `${p.id}: couplingRatio ${p.params.couplingRatio} asks for a coupling winding with more turns ` +
+            'than the main winding; it is a fraction of the main turns, so 1 is used.',
+        });
+      }
+    }
+
     if (!this.powered) return warnings;
+
+    // An RF band the radio front end had to stop (src/radio.js RfBand._refuse).
+    if (this._radio?.error) {
+      warnings.push({
+        severity: 'danger',
+        type: 'rf-refused',
+        message: `Radio front end: ${this._radio.error}. The RF there is not simulated from that point on.`,
+      });
+    }
 
     // Transient attempt overflow: the adaptive integrator hit its runaway
     // backstop and finished the interval with one coarse BE step.
@@ -7862,8 +7885,8 @@ export class BoardImpl {
       // the step that meets the tolerance is h * err^(-1/q). Each class of
       // state proposes its own; the smaller wins.
       const stepFactor = () => Math.min(
-        errTrap > 0 ? Math.pow(errTrap, -1 / 3) : Infinity,
-        errBe > 0 ? Math.pow(errBe, -1 / 2) : Infinity);
+        errTrap > 0 ? DMath.pow(errTrap, -1 / 3) : Infinity,
+        errBe > 0 ? DMath.pow(errBe, -1 / 2) : Infinity);
 
       const atFloor = hEff <= H_MIN * 1.000001 && err > 1;
       // An error that does not shrink with the step is not truncation error:
@@ -8284,7 +8307,7 @@ export class BoardImpl {
         continue;
       } else {
         const rc = rSource * farads;
-        vNew = vCap + (vTarget - vCap) * (1 - Math.exp(-dtSec / rc));
+        vNew = vCap + (vTarget - vCap) * (1 - DMath.exp(-dtSec / rc));
       }
 
       this.capVoltages.set(part.id, vNew);
@@ -8628,7 +8651,7 @@ export class BoardImpl {
           const rDark = /** @type {number} */ (part.params.rDark ?? 1000000);
           const rLight = /** @type {number} */ (part.params.rLight ?? 100);
           const light = this.controls.get(part.id) ?? 0;
-          const ohms = rDark * Math.pow(rLight / rDark, light);
+          const ohms = rDark * DMath.pow(rLight / rDark, light);
           const otherT = t.terminal === 'a' ? 'b' : 'a';
           const otherNet = this._netForTerminal(part.id, otherT);
           if (otherNet) {
@@ -8642,7 +8665,7 @@ export class BoardImpl {
           const rCold = /** @type {number} */ (part.params.rCold ?? 100000);
           const rHot = /** @type {number} */ (part.params.rHot ?? 1000);
           const temp = this.controls.get(part.id) ?? 0;
-          const ohms = rCold * Math.pow(rHot / rCold, temp);
+          const ohms = rCold * DMath.pow(rHot / rCold, temp);
           const otherT = t.terminal === 'a' ? 'b' : 'a';
           const otherNet = this._netForTerminal(part.id, otherT);
           if (otherNet) {
@@ -8873,7 +8896,7 @@ export class BoardImpl {
           const rDark = /** @type {number} */ (part.params.rDark ?? 1000000);
           const rLight = /** @type {number} */ (part.params.rLight ?? 100);
           const light = this.controls.get(part.id) ?? 0;
-          const ohms = rDark * Math.pow(rLight / rDark, light);
+          const ohms = rDark * DMath.pow(rLight / rDark, light);
           const otherTerminal = t.terminal === 'a' ? 'b' : 'a';
           const otherNet = this._netForTerminal(part.id, otherTerminal);
           if (!otherNet) continue;
@@ -8886,7 +8909,7 @@ export class BoardImpl {
           const rCold = /** @type {number} */ (part.params.rCold ?? 100000);
           const rHot = /** @type {number} */ (part.params.rHot ?? 1000);
           const temp = this.controls.get(part.id) ?? 0;
-          const ohms = rCold * Math.pow(rHot / rCold, temp);
+          const ohms = rCold * DMath.pow(rHot / rCold, temp);
           const otherTerminal = t.terminal === 'a' ? 'b' : 'a';
           const otherNet = this._netForTerminal(part.id, otherTerminal);
           if (!otherNet) continue;
