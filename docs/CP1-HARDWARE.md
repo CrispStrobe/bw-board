@@ -171,6 +171,14 @@ driven. Port snapshots separate `latch`, physical digital `value`,
 `floatingMask`. An undriven CP3 input is explicitly floating and samples high
 as a deterministic simulator convention. This does not invent a CP3 pull-up.
 
+At the external circuit boundary, Board's existing generic pin policy uses
+a 21.7 kΩ quasi pull-up and a 25 Ω strong-drive equivalent. These are shared
+teaching-model values from `pin-model.js`, **not calibrated NMOS 8049 or 8155
+current/voltage curves**. Circuit voltage and LED-current examples establish
+that the pins reach the solver; they do not claim transistor-level drive
+accuracy for the historical chips. The CP1 connector's supply is a regulated
+5 V source under the same board-level abstraction.
+
 ## Public API and ownership
 
 ```js
@@ -214,6 +222,18 @@ outputs use `pushpull`; input ports use `input`. Rendering and snapshots do not
 advance time. Fractional instruction scheduling credit is retained between
 small `advanceNs()` calls, so render slice size does not become an extra clock.
 
+An attached circuit can already have elapsed time from an earlier runner.
+The adapter translates machine timestamps by the positive difference between
+the board clock and machine clock at attachment. Its public `timeNs()` remains
+machine-relative: attaching a fresh CP1 at board time 100 ms leaves CPU time
+at zero, and a subsequent 1 ms of CPU execution advances the board to 101 ms.
+Reset preserves both elapsed clocks. At an explicit reset or input/advance
+boundary, a board advanced by the designer while the CPU was paused is
+adopted without running extra CPU cycles. Replacing the runner establishes a
+new attachment offset. A host using `boardTimeBase = board.timeNs -
+target.timeNs()` consequently publishes the same absolute endpoint; it does
+not add elapsed CPU time twice.
+
 CPU I/O callbacks are timestamped at the beginning of the executing
 instruction, before that instruction's machine cycles are charged. This is
 an instruction-boundary convention, not bus-phase timing. An observer that
@@ -226,7 +246,11 @@ immediately writes another value.
 `unloggedBoardInputs()` is true when a board's `readPin()` is sampled, since
 those external values need recording for deterministic replay. A boolean-only
 `readPin()` cannot communicate high impedance; undefined/null samples retain
-the floating distinction. Cassette transport, serial emulation, analog drive
+the floating distinction. When BoardImpl topology is available, unwired pins
+and isolated singleton pin nets remain released; a missing-net digital-zero
+sentinel is never treated as external ground. Input samples are discarded
+when their pin becomes an output, so an earlier sensed low cannot masquerade
+as an opposed external driver. Cassette transport, serial emulation, calibrated analog drive
 strength, propagation delays, supply faults, and the analog overvoltage
 indicator are outside this implementation.
 

@@ -1,4 +1,12 @@
-/** CP1 system connector. Execution belongs to Cp1Machine, not this solver model. */
+// SPDX-License-Identifier: MIT
+/**
+ * CP1 system connector. Execution belongs to Cp1Machine, not this solver model.
+ * GPIO uses Board's shared quasi/pushpull Thevenin policy. In particular its
+ * quasi pull-up is a generic lesson-model value, not a calibrated NMOS 8049
+ * current-voltage characteristic. See docs/CP1-HARDWARE.md.
+ * Optional CP3 terminals remain discoverable here; extractCp1Machine gates
+ * their electrical use when the connector's expansion option is disabled.
+ */
 import {registerDevice} from '../devices.js';
 
 export const CP1_TERMINALS = Object.freeze([
