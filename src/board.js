@@ -30,6 +30,7 @@ import { resolveParams, classDefaults } from './parts-library.js';
 import { acSweep } from './ac.js';
 import { expandTransducers, transducerCard } from './transducers.js';
 import { expandSensingTransducers, combHumidityPct } from './sensing-transducers.js';
+import { inductionLoopCard } from './magnetic-coupling.js';
 import { expandDualGateMosfets } from './dual-gate-mosfet.js';
 import { expandRadio, normalizeStations, DEFAULT_STATIONS } from './radio.js';
 import { expandFields } from './fields.js';
@@ -5712,7 +5713,9 @@ export class BoardImpl {
       // A ferrite rod turns: 0..1 is 0..360° (src/radio.js, direction finding).
       'ferrite_coil',
       // Relative humidity at a salt-film comb, 0..1 = 0..100 % RH (src/sensing-transducers.js).
-      'humidity_comb'];
+      'humidity_comb',
+      // A magnetic field source's distance to its pickup, 0 far .. 1 near (src/magnetic-coupling.js).
+      'induction_loop'];
     return this.parts
       .filter(p => controllable.includes(p.kind) || lightControlDefault(p) !== null)
       .map(p => lightControlDefault(p) !== null ? {
@@ -5734,7 +5737,8 @@ export class BoardImpl {
                 : p.kind === 'field_probe' ? (p.params?.position ?? 0)
                   : p.kind === LIGHT_PATH_KIND ? pathKnobRest(p)
                     : p.kind === 'ferrite_coil' ? (Number(p.params?.angleDeg ?? 0) / 360)
-                      : p.kind === 'humidity_comb' ? combHumidityPct(p, undefined) / 100 : 0),
+                      : p.kind === 'humidity_comb' ? combHumidityPct(p, undefined) / 100
+                        : p.kind === 'induction_loop' ? inductionLoopCard(p).position : 0),
       }));
   }
 
