@@ -17,6 +17,8 @@ import {
     thermocoupleCard, airCoilCard, dropEmf, coilRun, coilInductorParams, magnetFall, fluxLinkage,
     electrolysisCard, FARADAY, INNER_PIN, combHumidityPct, combOhms,
 } from '../sensing-transducers.js';
+import { ptcResistanceAt } from '../thermal.js';
+import { rulerCard, hallOutput } from '../bending-ruler.js';
 
 const num = (v, d) => (Number.isFinite(Number(v)) ? Number(v) : d);
 
@@ -33,6 +35,49 @@ export function registerSensingParts() {
             const ohms = Number(part.params?.ohms) > 0 ? Number(part.params.ohms) : 8;
             const e = ac ? ac.env.emf(ac.part, ctx.tSeconds ?? 0) : 0;
             ctx.theveninBetween('a', 'coil', e, ohms);
+        },
+    });
+
+    // ─── Silicon PTC temperature sensor ────────────────────────────────
+    // A resistor whose value follows its own temperature (src/thermal.js):
+    // the thermal model's when it takes part (surroundC, heatedBy, rth),
+    // else the bench temperature.
+    registerDevice('ptc_sensor', {
+        terminals: ['a', 'b'],
+        eventLocalization: false,
+        init() { return { drives: {}, ohms: 2000, celsius: 25 }; },
+        stamp(ctx, part, state) {
+            const celsius = num(ctx.partTemperatureC, num(ctx.temperatureC, 25));
+            const ohms = ptcResistanceAt(part, celsius);
+            ctx.conductance('a', 'b', 1 / ohms);
+            if (state) { state.ohms = ohms; state.celsius = celsius; }
+        },
+    });
+
+    // ─── Bending ruler with a magnet over a linear Hall sensor ──────────
+    // src/bending-ruler.js: load -> deflection -> magnet distance -> field
+    // -> ratiometric output on ao (50 Ohm). Its knob is params.loadG.
+    registerDevice('bending_ruler', {
+        terminals: ['vcc', 'gnd', 'ao'],
+        eventLocalization: false,
+        init() { return { drives: {}, loadG: 0, deflectionMm: 0, distanceMm: 15, fieldMt: 0 }; },
+        stamp(ctx, part) {
+            // The sensor's own supply current, about 6 mA at 5 V: ~830 Ohm.
+            ctx.conductance('vcc', 'gnd', 1 / 830);
+        },
+        update(part, state, read) {
+            const card = rulerCard(part);
+            const vcc = read('vcc') - read('gnd');
+            const vTh = read('gnd') + (vcc > 0.5 ? hallOutput(part, vcc, card.fieldMt) : 0);
+            state.loadG = card.loadG;
+            state.deflectionMm = card.deflectionMm;
+            state.distanceMm = card.distanceMm;
+            state.fieldMt = card.fieldMt;
+            state.touching = card.touching;
+            const d = state.drives.ao;
+            if (d && Math.abs(d.vTh - vTh) < 1e-6) return false;
+            state.drives.ao = { vTh, rTh: 50 };
+            return true;
         },
     });
 

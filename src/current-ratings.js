@@ -159,6 +159,14 @@ const LOCAL_ONLY = {
   // carries what the circuit drives through it (its gates draw nothing).
   humidity_comb:     { chip_mA: "circuit", supply_mA: 0 },
   dual_gate_mosfet:  { chip_mA: "circuit", supply_mA: 0 },
+  // A silicon PTC temperature sensor is a resistor (src/thermal.js).
+  ptc_sensor:        { chip_mA: "circuit", supply_mA: 0 },
+  // 4046-type CMOS PLL: outputs carry what the circuit draws; ~1 mA quiescent at 9 V.
+  cd4046:            { chip_mA: "circuit", supply_mA: 1 },
+  // Bending-ruler scale: a linear Hall sensor module, ~6 mA.
+  bending_ruler:     { chip_mA: 1, supply_mA: 6 },
+  // A spark gap carries whatever the discharge drives through it.
+  spark_gap:         { chip_mA: "circuit", supply_mA: 0 },
   vhf_coil:          { chip_mA: 0, supply_mA: 0 },
   varicap:           { chip_mA: 0, supply_mA: 0 },
   bargraph:          { chip_mA: "circuit", supply_mA: "circuit" },

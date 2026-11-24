@@ -72,6 +72,10 @@ import { DMath } from './det-math.js';
  *   string  air path half-shaded by a plucked string: the shading swings at
  *           stringHz, decaying with decayS, re-plucked every pluckPeriodS —
  *           a light-modulated "electric guitar".
+ *   jet     air path crossed by a thin stream of tap water that a charged
+ *           comb or ruler pulls sideways (waterJetDeflectionMm): the jet's
+ *           shadow on the beam shrinks as it bends out of it, so the
+ *           receiver sees more light the harder the comb pulls.
  *
  * NUMERICS. Coupling is a FUNCTION EVALUATED PER STEP, not a new unknown:
  * each accepted (or adopted) solution sets the emitters' powers, and every
@@ -339,6 +343,46 @@ export const fibreAttenuationDbPerM = (nm) => interp(PMMA_DB, nm);
 function num(x, d) { const n = Number(x); return x !== undefined && x !== null && x !== '' && Number.isFinite(n) ? n : d; }
 const DEG = Math.PI / 180;
 
+// ─── A water jet bent by a charged comb ──────────────────────────────────
+
+/**
+ * How far (mm, at the beam) a thin stream of tap water bends toward a
+ * charged comb or ruler `combCm` away holding `combKv` kilovolts.
+ *
+ * The stream is earthed through the tap, so the comb draws a charge of the
+ * opposite sign onto it by induction, proportional to the comb's potential,
+ * and then pulls on that charge with a field that is also proportional to
+ * it: the force goes as V², so BOTH signs of charge attract (the lesson of
+ * the experiment), and as 1/d² for a comb long compared with its distance
+ * (a line charge's induced charge and field each fall as 1/d). The
+ * stiffness of the falling stream is folded into one calibration: 10 kV at
+ * 2 cm bends it 10 mm where it crosses the beam (params.jetBendMm), the
+ * order seen with a comb run through dry hair. The stream sticks to the
+ * comb beyond 25 mm (params.jetMaxMm). Not modelled: the stream breaking
+ * into drops, the comb's charge leaking away, water spraying onto it.
+ */
+export function waterJetDeflectionMm(P) {
+    const kv = num(P.combKv, 10);
+    const d = Math.max(0.5, num(P.combCm, 10));
+    const ref = num(P.jetBendMm, 10);
+    const bend = ref * (kv / 10) ** 2 * (2 / d) ** 2;
+    return Math.min(num(P.jetMaxMm, 25), bend);
+}
+
+/**
+ * The fraction of a beam `beamMm` wide that the stream (jetMm wide, centred
+ * in the beam at rest plus jetOffsetMm) shadows once bent, times its
+ * opacity (jetOpacity, 0.9: a water stream scatters most of what crosses it).
+ */
+export function waterJetShadow(P) {
+    const b = Math.max(0.1, num(P.beamMm, 4));
+    const w = Math.max(0, num(P.jetMm, 3));
+    const x = num(P.jetOffsetMm, 0) + waterJetDeflectionMm(P);
+    const lo = Math.max(-b / 2, x - w / 2), hi = Math.min(b / 2, x + w / 2);
+    const overlap = Math.max(0, hi - lo) / b;
+    return Math.min(1, Math.max(0, num(P.jetOpacity, 0.9))) * overlap;
+}
+
 /**
  * Fraction (per spectral line nm) of the emitter's power P that the receiver
  * collects through `path` at time t: returns { gain(nm), mod(t) } where the
@@ -348,7 +392,8 @@ export function pathTransfer(params, em, rx) {
     const P = params;
     const medium = String(P.medium ?? 'air');
     const rRx = Math.sqrt(rx.areaCm2 / Math.PI); // cm
-    const block = 1 - Math.min(1, Math.max(0, num(P.blocked, 0)));
+    const block = (1 - Math.min(1, Math.max(0, num(P.blocked, 0))))
+        * (medium === 'jet' ? 1 - waterJetShadow(P) : 1);
     const filt = (nm) => filterTransmission(P.filter, nm);
 
     // Free-space beam onto an area at distance dCm, off-axis angle deg.
@@ -364,7 +409,7 @@ export function pathTransfer(params, em, rx) {
         return Math.min(1, I0 * beamPattern(em, deg) * areaCm2 / d2);
     };
 
-    if (medium === 'air' || medium === 'string') {
+    if (medium === 'air' || medium === 'string' || medium === 'jet') {
         const d = Math.max(0, num(P.distanceCm, 10));
         const deg = num(P.angleDeg, 0);
         const tilt = DMath.cos(Math.min(90, Math.abs(num(P.tiltDeg, 0))) * DEG);
@@ -548,6 +593,7 @@ export function lensLaunch(P, em, a, thNA, f) {
 export const DEFAULT_KNOB = Object.freeze({
     air: ['distanceCm', 1, 30], string: ['stringHz', 80, 330], reflect: ['distanceCm', 0.3, 5],
     prism: ['slitAngleDeg', 35, 41], liquid: ['level', 0, 1], fibre: ['outGapMm', 0, 20],
+    jet: ['combCm', 20, 1],
 });
 
 /** A path's params with its knob applied (control 0..1 → knob param). */
