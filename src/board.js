@@ -7730,6 +7730,7 @@ export class BoardImpl {
     let windowAttempts = 0;
     let windowEnd = t + ATTEMPT_WINDOW_SEC;
     let fatalTrialFailure = false;
+    let trapFloorRestartAt = null;
     while (t < tEnd - 1e-15 && windowAttempts < MAX_ATTEMPTS) {
       if (t >= windowEnd) {
         windowAttempts = 0;
@@ -7795,6 +7796,18 @@ export class BoardImpl {
         if (validTransientSolution(r)) return false;
         if (hEff > H_MIN * 1.000001) {
           h = Math.max(H_MIN, hEff / 2);
+          return true;
+        }
+        // At the floor the trapezoidal rule cannot converge here: restart
+        // its history with the L-stable backward-Euler seed step (what any
+        // discontinuity gets) — once per instant. A stiff winding edge (a
+        // motor switched on again through its flyback diode) put the trap
+        // step at the floor with Newton failing, or not, on the last bit of
+        // one exp(): fatal on one CPU, fine on another.
+        if (trapFloorRestartAt !== t) {
+          trapFloorRestartAt = t;
+          trapReady = false;
+          h = Math.max(H_MIN, h);
           return true;
         }
         markSolveFailure(r, 'trap', t + hEff);
