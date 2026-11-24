@@ -73,7 +73,8 @@
  *   | 'decade_counter' | 'dff' | 'jkff' | 'darlington_driver' | 'piezo' | 'lm386'
  *   | 'speaker' | 'earphone' | 'antenna' | 'earth' | 'tuning_cap' | 'ferrite_coil'
  *   | 'field_probe'
- *   | 'thermocouple' | 'air_coil' | 'electrolysis_cell'
+ *   | 'thermocouple' | 'air_coil' | 'electrolysis_cell' | 'humidity_comb'
+ *   | 'dual_gate_mosfet'
  *   | 'light_path' | 'laser_diode'} PartKind
  */
 

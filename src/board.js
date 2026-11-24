@@ -29,7 +29,8 @@ import {
 import { resolveParams, classDefaults } from './parts-library.js';
 import { acSweep } from './ac.js';
 import { expandTransducers, transducerCard } from './transducers.js';
-import { expandSensingTransducers } from './sensing-transducers.js';
+import { expandSensingTransducers, combHumidityPct } from './sensing-transducers.js';
+import { expandDualGateMosfets } from './dual-gate-mosfet.js';
 import { expandRadio, normalizeStations, DEFAULT_STATIONS } from './radio.js';
 import { expandFields } from './fields.js';
 import { expandOptics, pathKnobRest, LIGHT_PATH_KIND } from './optics.js';
@@ -1250,7 +1251,10 @@ export class BoardImpl {
       ? expandGroundSensingOpAmps(lm741View.parts, lm741View.nets) : lm741View;
     // LM386 audio power amp macromodel (src/lm386.js), same pattern.
     const linearView = getDevice(LM386_STAGE_KIND) ? expandLm386(gsView.parts, gsView.nets) : gsView;
-    const macroView = BoardImpl._expandOpampMacros(linearView.parts, linearView.nets, this.vcc);
+    // Dual-gate MOSFETs are two solver `nmos` in series on a hidden middle
+    // node (src/dual-gate-mosfet.js); a circuit without one passes through.
+    const tetrodeView = expandDualGateMosfets(linearView.parts, linearView.nets);
+    const macroView = BoardImpl._expandOpampMacros(tetrodeView.parts, tetrodeView.nets, this.vcc);
     // An IR transmitter IS an IR LED electrically. The solver sees it as an
     // `led` of the same id (so its branch current and the LED junction model,
     // knee and limiting are the LED's) with the IR forward voltage unless the
@@ -5616,7 +5620,9 @@ export class BoardImpl {
     const controllable = ['potentiometer', 'button', 'switch', 'slide_switch', 'ldr', 'ntc', 'light_sensor', 'vsource', 'tuning_cap',
       'field_probe', LIGHT_PATH_KIND,
       // A ferrite rod turns: 0..1 is 0..360° (src/radio.js, direction finding).
-      'ferrite_coil'];
+      'ferrite_coil',
+      // Relative humidity at a salt-film comb, 0..1 = 0..100 % RH (src/sensing-transducers.js).
+      'humidity_comb'];
     return this.parts
       .filter(p => controllable.includes(p.kind) || lightControlDefault(p) !== null)
       .map(p => lightControlDefault(p) !== null ? {
@@ -5637,7 +5643,8 @@ export class BoardImpl {
               : p.kind === 'tuning_cap' ? (p.params?.position ?? 0.5)
                 : p.kind === 'field_probe' ? (p.params?.position ?? 0)
                   : p.kind === LIGHT_PATH_KIND ? pathKnobRest(p)
-                    : p.kind === 'ferrite_coil' ? (Number(p.params?.angleDeg ?? 0) / 360) : 0),
+                    : p.kind === 'ferrite_coil' ? (Number(p.params?.angleDeg ?? 0) / 360)
+                      : p.kind === 'humidity_comb' ? combHumidityPct(p, undefined) / 100 : 0),
       }));
   }
 

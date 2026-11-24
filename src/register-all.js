@@ -57,6 +57,7 @@ import { registerRadioParts } from './devices/radio-parts.js';
 import { registerFieldParts } from './devices/field-parts.js';
 import { registerSensingParts } from './devices/sensing-parts.js';
 import { registerOpticalParts } from './devices/optical-parts.js';
+import { registerDualGateParts } from './devices/dual-gate-parts.js';
 import { registerMPU6050 } from './devices/mpu6050.js';
 import { registerSSD1306 } from './devices/ssd1306.js';
 import { registerUartFrame } from './devices/uart-frame.js';
@@ -117,6 +118,7 @@ export function registerAllDevices() {
   registerFieldParts();
   registerSensingParts();
   registerOpticalParts();
+  registerDualGateParts();
   registerMPU6050();
   registerSSD1306();
   registerUartFrame();
