@@ -7629,6 +7629,7 @@ export class BoardImpl {
     };
     const accept = (r, atSec,quadratic = null, stage = 'trap') => {
       markSolveFailure(r, stage, atSec);
+      if (stage === 'trap' && validTransientSolution(r)) trapAcceptedSinceRestart = true;
       cv = r.capVoltagesNext ?? cv;
       il = r.inductorCurrentsNext ?? il;
       cc = r.capCurrentsNext ?? cc;
@@ -7731,6 +7732,7 @@ export class BoardImpl {
     let windowEnd = t + ATTEMPT_WINDOW_SEC;
     let fatalTrialFailure = false;
     let trapFloorRestartAt = null;
+    let trapAcceptedSinceRestart = false;
     while (t < tEnd - 1e-15 && windowAttempts < MAX_ATTEMPTS) {
       if (t >= windowEnd) {
         windowAttempts = 0;
@@ -7800,12 +7802,16 @@ export class BoardImpl {
         }
         // At the floor the trapezoidal rule cannot converge here: restart
         // its history with the L-stable backward-Euler seed step (what any
-        // discontinuity gets) — once per instant. A stiff winding edge (a
-        // motor switched on again through its flyback diode) put the trap
-        // step at the floor with Newton failing, or not, on the last bit of
-        // one exp(): fatal on one CPU, fine on another.
-        if (trapFloorRestartAt !== t) {
+        // discontinuity gets). A stiff winding edge (a motor switched on
+        // again through its flyback diode) put the trap step at the floor
+        // with Newton failing, or not, on the last bit of one exp(): fatal
+        // on one CPU, fine on another. Only where the trapezoidal rule has
+        // been working: once per instant, and not again until a trap step
+        // has been accepted since — a circuit the trap rule cannot step at
+        // all (a charge-free card past its edge) still fails, and fast.
+        if (trapFloorRestartAt !== t && (trapFloorRestartAt === null || trapAcceptedSinceRestart)) {
           trapFloorRestartAt = t;
+          trapAcceptedSinceRestart = false;
           trapReady = false;
           h = Math.max(H_MIN, h);
           return true;
