@@ -4,6 +4,7 @@
  * No firmware or reference-emulator source is included or interpreted here.
  * See docs/CP1-SEMANTIC-DEBUG.md for the observations and their limits.
  */
+import {CP1_INDEPENDENT_MONITOR_SEMANTICS} from './cp1-monitor-profile.generated.js';
 const freeze = value => {
   if (value && typeof value === 'object') {
     for (const item of Object.values(value)) freeze(item);
@@ -31,4 +32,5 @@ export const CP1_SEMANTIC_PROFILES = freeze([
       digitMasks: [0x3f, 0x06, 0x5b, 0x4f, 0x66, 0x6d, 0x7d, 0x27, 0x7f, 0x6f],
     },
   },
+  CP1_INDEPENDENT_MONITOR_SEMANTICS,
 ]);

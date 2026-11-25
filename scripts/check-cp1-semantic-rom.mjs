@@ -3,14 +3,21 @@
 import assert from 'node:assert/strict';
 import {readFileSync, writeFileSync} from 'node:fs';
 import {createHash} from 'node:crypto';
+import {parseArgs} from 'node:util';
 import {createCp1Adapter} from '../src/cp1-adapter.js';
 import {createCp1DebugTarget} from '../src/cp1-debug.js';
 import {identifyCp1Rom} from '../src/cp1-rom-profiles.js';
 
-if (!process.argv[2]) throw new Error('Usage: node scripts/check-cp1-semantic-rom.mjs /path/to/user-monitor.bin [report.json]');
-const rom = new Uint8Array(readFileSync(process.argv[2]));
+const {positionals: [romPath, reportPath], values: {profile: profilePath}} = parseArgs({
+  allowPositionals: true, options: {profile: {type: 'string'}},
+});
+if (!romPath) throw new Error('Usage: node scripts/check-cp1-semantic-rom.mjs ROM.bin [report.json] [--profile profile.json]');
+const rom = new Uint8Array(readFileSync(romPath));
 const identity = identifyCp1Rom(rom);
-assert.equal(identity.sha1, 'ff4befcf82a664950186d3af1843fdef70d2209f', 'this check qualifies only the exact 2716 ROM');
+const profile = profilePath ? JSON.parse(readFileSync(profilePath, 'utf8')) : null;
+if (profile) assert.equal(identity.sha1, profile.romSha1, 'the observation profile must identify the exact supplied ROM');
+else assert.ok(['cp1-2716', 'cp1-independent-monitor-v1'].includes(identity.id),
+  'supply a matching explicit profile for unknown firmware');
 const cases = [
   {name: 'loads-stores-full-accumulator', words: [[5, 90], [6, 91], [4, 73], [1, 0]], data: [[90, 17, 231]],
     pcs: [1, 2, 3, 4], acc: [[17, 231], [17, 231], [0, 73], [0, 73]]},
@@ -32,7 +39,7 @@ const cases = [
 const results = [];
 for (const scenario of cases) {
   const adapter = createCp1Adapter({rom, expansion: !!scenario.expansion});
-  const target = createCp1DebugTarget(adapter);
+  const target = createCp1DebugTarget(adapter, profile ? {semanticProfiles: [profile]} : {});
   const machine = adapter.machine;
   const events = [], halts = [], observations = [];
   target.onEvent(event => events.push(event)); target.onHalt(why => halts.push(why));
@@ -87,10 +94,10 @@ const sourcePaths = ['src/cp1-machine.js', 'src/cp1-adapter.js', 'src/cp1-debug.
 const sourceSha256 = Object.fromEntries(sourcePaths.map(path => [path,
   createHash('sha256').update(readFileSync(new URL(`../${path}`, import.meta.url))).digest('hex')]));
 const report = {format: 'brickwright.cp1-semantic-observation', version: 1, romSha1: identity.sha1,
+  profileSha256: profilePath ? createHash('sha256').update(readFileSync(profilePath)).digest('hex') : null,
   node: process.version, clockHz: 6000000, sourceSha256, cases: results,
-  limits: ['Original programs executed on the independent machine, not physical-hardware qualification.',
-    'No GPL reference emulator, annotated source, firmware bytes, or downloads are included.',
-    'Only the named 2716 image is qualified; mask ROM B remains raw-only.']};
-if (process.argv[3]) writeFileSync(process.argv[3], JSON.stringify(report, (_, value) => typeof value === 'bigint' ? value.toString() : value, 2) + '\n');
+  limits: ['The scope is execution of original programs on the cycle-accounted simulator.',
+    'The report records observations and identifies one exact ROM.']};
+if (reportPath) writeFileSync(reportPath, JSON.stringify(report, (_, value) => typeof value === 'bigint' ? value.toString() : value, 2) + '\n');
 console.log(JSON.stringify({passed: results.length, romSha1: identity.sha1,
   cases: results.map(result => ({name: result.name, commandEvents: result.events.filter(event => event.type === 'cp1.command').length}))}));

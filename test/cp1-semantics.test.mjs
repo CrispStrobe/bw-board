@@ -7,6 +7,7 @@ import {createCp1DebugTarget} from '../src/cp1-debug.js';
 import {createDebugSession} from '../src/debug-session.js';
 import {sha1Bytes} from '../src/cp1-rom-profiles.js';
 import {CP1_SEMANTIC_PROFILES} from '../src/cp1-semantic-profiles.js';
+import {CP1_INDEPENDENT_MONITOR_ROM} from '../src/cp1-monitor-profile.generated.js';
 import {validateCp1SemanticProfile} from '../src/cp1-semantics.js';
 
 function testFirmware() {
@@ -95,8 +96,10 @@ test('exact ROM bytes admit semantic control; names and one changed byte do not'
   assert.deepEqual(f.events, []);
 });
 
-test('built-in profile has only the measured 2716 identity and detached validated metadata', () => {
-  assert.deepEqual(CP1_SEMANTIC_PROFILES.map(profile => profile.romSha1), ['ff4befcf82a664950186d3af1843fdef70d2209f']);
+test('built-in profiles qualify the measured 2716 and independent identities with detached metadata', () => {
+  assert.deepEqual(CP1_SEMANTIC_PROFILES.map(profile => profile.romSha1), [
+    'ff4befcf82a664950186d3af1843fdef70d2209f', CP1_INDEPENDENT_MONITOR_ROM.sha1,
+  ]);
   const source = testProfile(testFirmware());
   const profile = validateCp1SemanticProfile(source);
   source.registers.accumulator.opcode = 127;
