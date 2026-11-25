@@ -68,6 +68,26 @@ describe('dual-gate MOSFET: depletion mode', () => {
         assert.equal(b.getDeviceState('Q').pinchedBy, 'gate1');
     });
 
+    it('gate 1 alone pinching is reported as gate 1, whatever gate 2 is doing above its own pinch-off', () => {
+        // With the series current cut, the hidden middle node has nothing to
+        // hold it: it floats up between the drain and the source (GMIN) until
+        // the upper half reads "cut off" against it too. That is a symptom of
+        // the lower half's pinch-off, not a second one: gate 2 at 0..4 V is
+        // far above Vp against the source, where the middle node sits as soon
+        // as gate 1 lets current through. The defect reported 'both' here.
+        for (const vg2 of [4, 2, 0, -1]) {
+            const { i, b } = bench({ vd: 9, vg1: -2, vg2 });
+            assert.ok(Math.abs(i) < 1e-6, `cut off: ${i} A`);
+            assert.equal(b.getDeviceState('Q').pinchedBy, 'gate1', `Vg2s = ${vg2} V`);
+        }
+    });
+
+    it('both gates below pinch-off is "both"', () => {
+        const { i, b } = bench({ vd: 9, vg1: -2, vg2: -2 });
+        assert.ok(Math.abs(i) < 1e-6, `cut off: ${i} A`);
+        assert.equal(b.getDeviceState('Q').pinchedBy, 'both');
+    });
+
     it('gate 2 alone pinches it too, with gate 1 wide open', () => {
         const { i, b } = bench({ vd: 9, vg1: 0, vg2: -2 });
         assert.ok(Math.abs(i) < 1e-6, `pinched by gate 2: ${i} A`);

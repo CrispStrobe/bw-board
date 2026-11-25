@@ -6,6 +6,7 @@
  */
 
 import { registerDevice } from '../devices.js';
+import { rose } from './edge-detect.js';
 
 const R_OUT = 50;
 // Input pins draw nothing here, on purpose. These models used to declare
@@ -33,7 +34,7 @@ export function registerDigitalICs() {
       for (let i = 0; i < 10; i++) {
         drives[`q${i}`] = { vTh: i === 0 ? 5 : 0, rTh: R_OUT };
       }
-      return { drives, count: 0, _lastClk: false };
+      return { drives, count: 0 }; // _lastClk: primed (edge-detect.js)
     },
 
     update(part, state, read) {
@@ -45,15 +46,15 @@ export function registerDigitalICs() {
       const enLow = read('en') < threshold; // enable is active LOW
 
       let newCount = state.count;
+      const clkRose = rose(state, '_lastClk', clkHigh, read);
 
       // Reset
       if (rstHigh) {
         newCount = 0;
-      } else if (enLow && clkHigh && !state._lastClk) {
+      } else if (enLow && clkRose) {
         // Rising edge on CLK with enable active
         newCount = (state.count + 1) % 10;
       }
-      state._lastClk = clkHigh;
 
       if (newCount === state.count) return false;
 
@@ -75,8 +76,7 @@ export function registerDigitalICs() {
     init() {
       return {
         drives: { q: { vTh: 0, rTh: R_OUT }, q_bar: { vTh: 5, rTh: R_OUT } },
-        _q: 0,
-        _lastClk: false,
+        _q: 0, // _lastClk: primed (edge-detect.js)
       };
     },
 
@@ -87,17 +87,17 @@ export function registerDigitalICs() {
       const clkHigh = read('clk') > threshold;
       const setHigh = read('set') > threshold;
       const rstHigh = read('rst') > threshold;
+      const clkRose = rose(state, '_lastClk', clkHigh, read);
 
       let newQ = state._q;
 
       // Async set/reset (active HIGH)
       if (setHigh) newQ = 1;
       else if (rstHigh) newQ = 0;
-      else if (clkHigh && !state._lastClk) {
+      else if (clkRose) {
         // Rising edge: capture D
         newQ = read('d') > threshold ? 1 : 0;
       }
-      state._lastClk = clkHigh;
 
       if (newQ === state._q) return false;
       state._q = newQ;
@@ -115,8 +115,7 @@ export function registerDigitalICs() {
     init() {
       return {
         drives: { q: { vTh: 0, rTh: R_OUT }, q_bar: { vTh: 5, rTh: R_OUT } },
-        _q: 0,
-        _lastClk: false,
+        _q: 0, // _lastClk: primed (edge-detect.js)
       };
     },
 
@@ -128,11 +127,12 @@ export function registerDigitalICs() {
       const setHigh = read('set') > threshold;
       const rstHigh = read('rst') > threshold;
 
+      const clkRose = rose(state, '_lastClk', clkHigh, read);
       let newQ = state._q;
 
       if (setHigh) newQ = 1;
       else if (rstHigh) newQ = 0;
-      else if (clkHigh && !state._lastClk) {
+      else if (clkRose) {
         const j = read('j') > threshold ? 1 : 0;
         const k = read('k') > threshold ? 1 : 0;
         if (j && k) newQ = state._q ? 0 : 1; // toggle
@@ -140,7 +140,6 @@ export function registerDigitalICs() {
         else if (k) newQ = 0;
         // else hold
       }
-      state._lastClk = clkHigh;
 
       if (newQ === state._q) return false;
       state._q = newQ;

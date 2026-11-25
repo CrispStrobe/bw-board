@@ -6,6 +6,7 @@ import {shaftElectricalStep} from '../mechanical-shaft.js';
  */
 
 import { registerDevice } from '../devices.js';
+import { rose } from './edge-detect.js';
 import { stepMotorVelocity, motorDirectionOf } from './dc-motor.js';
 import { lightLevel } from '../world.js';
 import { ambientSpectralShare } from '../optics.js';
@@ -365,7 +366,7 @@ export function registerTier1Parts() {
     terminals: ['clk', 'dio', 'vcc', 'gnd'],
     init() {
       return { drives: {}, digits: [0, 0, 0, 0], colon: false,
-               _bitCount: 0, _byte: 0, _lastClk: false };
+               _bitCount: 0, _byte: 0 }; // _lastClk: primed (edge-detect.js)
     },
     update(part, state, read) {
       // Simplified TM1637 protocol: clock in bytes, decode as segment data
@@ -374,7 +375,7 @@ export function registerTier1Parts() {
       const clk = read('clk') > threshold;
       const dio = read('dio') > threshold;
 
-      if (clk && !state._lastClk) {
+      if (rose(state, '_lastClk', clk, read)) {
         // Rising clock edge: sample DIO
         state._byte = (state._byte << 1) | (dio ? 1 : 0);
         state._bitCount++;
@@ -387,7 +388,6 @@ export function registerTier1Parts() {
           state._bitCount = 0;
         }
       }
-      state._lastClk = clk;
       return false; // display state only, no electrical change
     },
   });
