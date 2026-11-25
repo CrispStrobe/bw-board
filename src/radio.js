@@ -2002,7 +2002,16 @@ export class RadioFrontEnd {
         // Band history past this instant was integrated with the previous
         // operating point: discard it, so it is redone with this one.
         for (const b of this._bands) b.prune(tSec);
-        if (this._replan && !this._dirty) { this._replan = false; this._planProducts(); }
+        // Products' homes follow where an oscillation really is
+        // (_planProducts): re-plan when one has moved by a quarter of the
+        // narrowest band's half-width since they were planned.
+        if (!this._dirty && this._bands.length > 1) {
+            const hw = Math.min(...this._bands.map(x => x.halfWidth ?? bandHalfWidthHz(x.hz)));
+            for (const b of this._bands) {
+                const rot = b.oscHz ? b.rotationHz() : 0;
+                if (Math.abs(rot - (b._rotPlanned ?? 0)) > 0.25 * hw) { this._planProducts(); break; }
+            }
+        }
         this._portCache.t = NaN;
         const key = JSON.stringify([...(board.controls ?? new Map())]);
         if (key !== this._controlsKey) { this._controlsKey = key; this._dirty = true; this._tScan = -Infinity; this._controlsMoved = true; }
@@ -2243,7 +2252,6 @@ export class RadioFrontEnd {
         const bands = this._bands;
         for (const b of bands) b.products = [];
         if (!this._sys || bands.length < 1) return;
-        for (const b of bands) b._oscPlanned = b.oscHz ?? 0;
         for (const b of bands) if (b.hRot0 !== undefined) b.hRot = b.hRot0;
         // A source's own rotation: its stations' offsets and modulation
         // (the band's substep before products bound it — a product's
@@ -2262,7 +2270,7 @@ export class RadioFrontEnd {
         // rotation in its band's frame still follows from the centres (the
         // band's own envelope carries the offset).
         const sources = [
-            ...bands.map(b => ({ band: b, hz: b.hz, fe: b.hz + (b.oscHz ? b.rotationHz() : 0), rot: rotOf(b) })),
+            ...bands.map(b => { b._rotPlanned = b.oscHz ? b.rotationHz() : 0; return { band: b, hz: b.hz, fe: b.hz + b._rotPlanned, rot: rotOf(b) }; }),
             ...this._static.map(x => ({ s: x.s, H: x.H, hz: x.s.hz, fe: x.s.hz,
                 rot: (x.s.mod === 'fm' ? x.s.deviationHz : 0) + audioMaxHz(x.s.audio) })),
         ];
@@ -2321,7 +2329,7 @@ export class RadioFrontEnd {
                 // set the step (it bound the aerial band to 35 ns substeps).
                 const primary = (x) => !x || !x.band || x.band.members.length > 0 || !!x.band.oscHz;
                 const main = terms.filter(t => primary(t.p) && primary(t.q));
-                const rot = Math.max(...(main.length ? main : terms).map(t => t.rot));
+                const rot = Math.max(0, ...main.map(t => t.rot));
                 const h = Math.min(H_TARGET_MAX, 1 / (ROTATION_STEPS * Math.max(200, rot)));
                 if (h < c.hRot) { c.hRot = h; c._bound(); }
             }
@@ -2692,13 +2700,6 @@ class RfBand {
         let peak = 0;
         for (const p of this.integ.portVoltages(this.X)) peak = Math.max(peak, Math.hypot(p[0], p[1]));
         this.oscHz = this._tUnstable === this.t && peak > OSC_VOLTS ? dom[1] / (2 * Math.PI) : 0;
-        // Its products' homes follow where it really is (_planProducts):
-        // re-plan when the oscillation has moved by a quarter of the
-        // narrowest band's half-width.
-        if (this.oscHz !== (this._oscPlanned ?? 0) && r._bands.length > 1) {
-            const hw = Math.min(...r._bands.map(x => x.halfWidth ?? bandHalfWidthHz(x.hz)));
-            if (Math.abs(this.oscHz - (this._oscPlanned ?? 0)) > 0.25 * hw) r._replan = true;
-        }
         if (Math.abs(this.oscHz) > 200) hT = Math.min(hT, 1 / (ROTATION_STEPS * Math.abs(this.oscHz)));
         this.kMax = Math.max(0, Math.min(K_MAX, Math.floor(DMath.log2(hT / H_UNIT))));
         // The loop's time scale: the envelope's, 2Q/ω, but no faster than the
@@ -2996,12 +2997,25 @@ class RfBand {
         return ra + (rb - ra) * Math.min(1, (t - ta) / (tb - ta));
     }
 
-    /** The rotation (Hz) of the band's strongest port in its frame now. */
+    /**
+     * The rotation (Hz) of the band's strongest port in its frame: its phase
+     * turned over the whole history the band holds (one substep's turn is
+     * noisy, and a product placed by it could land in the wrong band).
+     */
     rotationHz() {
-        const vp = this.portVoltages();
+        const h = this.hist;
+        if (h.length < 2 || this.dead) return 0;
+        const vp = h[h.length - 1].vp;
         let a = -1, m = 0;
         vp.forEach((p, i) => { const x = Math.hypot(p[0], p[1]); if (x > m) { m = x; a = i; } });
-        return a < 0 ? 0 : this.phaseRateAt(a, this.t) / (2 * Math.PI);
+        if (a < 0) return 0;
+        let phi = 0;
+        for (let i = 1; i < h.length; i++) {
+            const e0 = h[i - 1].vp[a], e1 = h[i].vp[a];
+            phi += DMath.atan2(e1[1] * e0[0] - e1[0] * e0[1], e1[0] * e0[0] + e1[1] * e0[1]);
+        }
+        const dt = h[h.length - 1].t - h[0].t;
+        return dt > 0 ? phi / dt / (2 * Math.PI) : 0;
     }
 
     /** Stop this band: silent from here, the reason on the front end (radio.error, a board warning). */
