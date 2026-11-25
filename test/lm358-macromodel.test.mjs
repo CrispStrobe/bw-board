@@ -265,14 +265,17 @@ describe('LM358 slow integrators and charge packets (builder 3)', () => {
     };
 
     it('a 10 s integrator (1 MΩ, 10 µF) runs 10 s in 10 ms ticks quickly and on its ramp', () => {
-        // 0.1 V below the 4.5 V reference: +0.1/(1 MΩ·10 µF) = +10 mV/s.
+        // 0.1 V below the 4.5 V reference: +0.1/(1 MΩ·10 µF) = +10 mV/s,
+        // less the - input's own bias current (42.5 nA out of the pin into
+        // the summing node, test/opamp-input-bias.test.mjs): 57.5 nA into
+        // 10 µF, +5.75 mV/s.
         const board = integrator([V('VI', 4.4)],
             { gnd: [['VI', 'neg']], ref: [], nn: [['RI', 'b']], more: [net('nin', ['VI', 'pos'], ['RI', 'a'])] },
             10e-6, 1e6);
         const t0 = performance.now();
         for (let ms = 10n; ms <= 10000n; ms += 10n) board.advanceTo(ms * 1_000_000n);
         const wall = performance.now() - t0;
-        assert.ok(Math.abs(board.nodeVoltage('no') - 4.6) < 0.001, `10 s ramp end ${board.nodeVoltage('no')}`);
+        assert.ok(Math.abs(board.nodeVoltage('no') - 4.5575) < 0.001, `10 s ramp end ${board.nodeVoltage('no')}`);
         assert.ok(wall < 60000, `10 s integrator took ${wall.toFixed(0)} ms`
             + perfHint('Wall-clock cost of a 10 s LM358 integrator'));
     });

@@ -23,7 +23,7 @@
 
 import { registerDevice, DMath } from '../devices.js';
 import { GROUND_SENSING_OPAMP_CARD, STAGE_KIND, STAGE_TERMINALS, STAGE_RESIDUAL_OHMS,
-    evaluateStage, polePin, GROUND_SENSING_OPAMPS } from '../ground-sensing-opamp.js';
+    evaluateStage, groundSensingBias, polePin, GROUND_SENSING_OPAMPS } from '../ground-sensing-opamp.js';
 import { LM386_CARD, LM386_TERMINALS, LM386_STAGE_KIND, LM386_STAGE_TERMINALS, LM386_RESIDUAL_OHMS,
     LM386_POLE_PIN, LM386_POLE_CHANNEL, lm386PoleClamped, evaluateLm386Stage } from '../lm386.js';
 import {LM741_CARD, lm741LinearParameters, assertLm741LinearTopology, assertLm741LinearSolution,
@@ -400,19 +400,22 @@ function registerGroundSensingOpAmp({ kind, channels, legacyUnwiredFiveVoltSuppl
                 // An expanded channel's pole is clamped at or above GND + 5 mV;
                 // an unexpanded one (output unwired) has no pole net and reads 0.
                 if (pole === 0) continue;
-                const { currents } = evaluateStage({
+                const { currents, iBias } = evaluateStage({
                     inp: read(`${ch}_pos`), inn: read(`${ch}_neg`), pole,
                     out: read(`${ch}_out`), vcc, gnd,
-                }, 1, fixed ? 5.0 : null);
+                }, 1, fixed ? 5.0 : null, groundSensingBias(part.params));
                 // Package leads: the pole loop closes through GND inside the
                 // die, so only the output current reaches the rails — sourced
-                // from VCC (or the implicit legacy supply), sunk to GND.
+                // from VCC (or the implicit legacy supply), sunk to GND — plus
+                // the input bias currents, out of the inputs and drawn from VCC.
                 const iOut = currents.get('out');
-                const src = fixed ? 0 : -currents.get('vcc');
+                const src = fixed ? 0 : -currents.get('vcc') - iBias;
                 const snk = fixed ? Math.min(iOut, 0) : iOut - src;
                 out.set(`${ch}_out`, iOut);
-                out.set('vcc', out.get('vcc') - src);
-                out.set('gnd', out.get('gnd') - snk);
+                out.set(`${ch}_pos`, currents.get('inp') ?? 0);
+                out.set(`${ch}_neg`, currents.get('inn') ?? 0);
+                out.set('vcc', out.get('vcc') - src - (fixed ? 0 : iBias));
+                out.set('gnd', out.get('gnd') - snk + (fixed ? -iBias : 0));
             }
             return out;
         },
@@ -901,7 +904,7 @@ export function registerAnalogAmps() {
             ctx.nonlinearCurrents('ground-sensing-opamp', (read, scale) => {
                 const v = Object.fromEntries(terms.map(t => [t, read(t)]));
                 const { currents, jacobian } = evaluateStage(v, scale,
-                    fixedVcc === null ? null : fixedVcc * scale);
+                    fixedVcc === null ? null : fixedVcc * scale, part.params?.bias ?? null);
                 return { region: 'smooth', currents, jacobian, residualOhms: STAGE_RESIDUAL_OHMS };
             });
         },

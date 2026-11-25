@@ -704,6 +704,9 @@ export function expandOptics(parts, nets, opts = {}) {
         const id = `${rxId}_optical`;
         const hidden = { id, kind: OPTICAL_RX_KIND, terminals: ['p', 'n'], params: { law: card.law } };
         Object.defineProperty(hidden, 'optics', { value: { model: optics, rxId }, enumerable: false });
+        // Whose current this is: the receiver's own terminals, so a reading of
+        // the receiver (BoardImpl.branchCurrent) includes the optical share.
+        Object.defineProperty(hidden, 'hostTerminals', { value: { p: tp, n: tn }, enumerable: false });
         np.terminals.push({ part: id, terminal: 'p' });
         nn.terminals.push({ part: id, terminal: 'n' });
         outParts.push(hidden);

@@ -921,6 +921,110 @@ export class BoardImpl {
   }
 
   /**
+   * A 555's comparator and reset inputs are CLAMPED TO ITS RAILS, as on the
+   * die: in the bipolar NE555 the input transistors' junctions and the
+   * substrate junction conduct as soon as a pin is driven a diode drop below
+   * GND or above VCC, and a CMOS 555 has ESD diodes to both rails. Per wired
+   * input (trigger, threshold, reset; the control pin has its divider), one
+   * solver diode from the input up to the VCC net and one from the GND net up
+   * to the input -- the L293D clamp pattern above: no new nets, solver view
+   * only, so DRC and the drawn netlist keep seeing one 555.
+   *
+   * The card is a small junction (Is 10 fA, 50 Ohm bulk): about 0.4 V at a
+   * microamp and 0.65 V at half a milliamp, nothing at all inside the rails.
+   * Why: the inputs drew nothing at any voltage, so an unguarded trigger lead
+   * on 22 MOhm beside a mains cable swung from -8 V to +26 V on a 9 V supply
+   * (r12, 2026-11-25). An input whose net holds nothing but this timer's own
+   * pins gets no clamps: there is nothing to clamp, and the free-running
+   * fallback reads such a pin as an island. `params.inputClamps: false`
+   * leaves the bare inputs.
+   */
+  static _expandTimerInputClamps(parts, nets) {
+    const PINS = {
+      '555': [['vcc', 'gnd', ['trigger', 'threshold', 'reset']]],
+      timer_555: [['vcc', 'gnd', ['trigger', 'threshold', 'reset']]],
+      '556': [['vcc', 'gnd', ['1trg', '1thr', '1rst', '2trg', '2thr', '2rst']]],
+      timer_556: [['vcc', 'gnd', ['1_trigger', '1_threshold', '1_reset', '2_trigger', '2_threshold', '2_reset']]],
+    };
+    const timers = parts.filter((p) => PINS[p.kind] && p.params?.inputClamps !== false);
+    if (!timers.length) return { parts, nets };
+    const netOf = new Map();
+    for (const n of nets) for (const t of n.terminals) netOf.set(`${t.part}\0${t.terminal}`, n);
+    const outParts = [...parts];
+    const outNets = nets.map((n) => ({ ...n, terminals: [...n.terminals] }));
+    const byId = new Map(outNets.map((n) => [n.id, n]));
+    const card = { is: 1e-14, n: 1, rs: 50 };
+    for (const u of timers) {
+      for (const [vccPin, gndPin, inputs] of PINS[u.kind]) {
+        const vccNet = netOf.get(`${u.id}\0${vccPin}`);
+        const gndNet = netOf.get(`${u.id}\0${gndPin}`);
+        if (!vccNet || !gndNet || vccNet === gndNet) continue;
+        for (const pin of inputs) {
+          const inNet = netOf.get(`${u.id}\0${pin}`);
+          if (!inNet || inNet.terminals.every((t) => t.part === u.id)) continue;
+          const add = (suffix, anodeNet, cathodeNet) => {
+            if (anodeNet === cathodeNet) return;
+            const id = `${u.id}_clamp_${pin}_${suffix}`;
+            outParts.push({ id, kind: 'diode', params: { ...card }, terminals: ['anode', 'cathode'] });
+            byId.get(anodeNet.id).terminals.push({ part: id, terminal: 'anode' });
+            byId.get(cathodeNet.id).terminals.push({ part: id, terminal: 'cathode' });
+          };
+          add('hi', inNet, vccNet);
+          add('lo', gndNet, inNet);
+        }
+      }
+    }
+    return { parts: outParts, nets: outNets };
+  }
+
+  /**
+   * A TRANSISTOR LEAD THAT LEADS NOWHERE IS AN OPEN LEAD. A net whose only
+   * member able to carry current is one BJT terminal carries no current
+   * (Kirchhoff: there is nowhere for it to flow), so the solver sees that
+   * terminal as unconnected -- exactly the open lead the stamps already
+   * handle when a terminal is on no net at all. "Able to carry current"
+   * excludes a two-terminal passive (resistor, capacitor, diode, LED, zener,
+   * inductor) whose other lead is itself on no net or on such a dead net:
+   * a collector wired to an empty breadboard strip, or to a resistor or LED
+   * whose far end hangs in the air, is still an open collector.
+   *
+   * Why: kept as a node, such a lead is a row held by nothing but the
+   * collector-base junction. The default BJT carries no base-collector
+   * charge, so at a base edge that node must jump by volts within one time
+   * point, further than Newton's per-iteration junction limit takes it, and
+   * no smaller step helps: a 555 astable driving a transistor whose collector
+   * connects to nothing failed `transient-solve-not-converged` within
+   * milliseconds (r12, 2026-11-25), while the same transistor with its lead
+   * on no net at all solved. The drawn net keeps its id; only the solver
+   * view drops it, so the node reads 0 V like any other unconnected terminal.
+   */
+  static _openLoneTransistorLeads(nets, parts) {
+    const byId = new Map(parts.map((p) => [p.id, p]));
+    if (!parts.some((p) => p.kind === 'npn' || p.kind === 'pnp')) return nets;
+    const PASSIVE = new Set(['resistor', 'capacitor', 'diode', 'led', 'zener', 'inductor']);
+    const netOf = new Map();
+    for (const n of nets) for (const t of n.terminals) netOf.set(`${t.part}\0${t.terminal}`, n);
+    const dead = new Set();
+    const live = (t) => {
+      const p = byId.get(t.part);
+      if (!p || !PASSIVE.has(p.kind) || (p.terminals?.length ?? 0) !== 2) return true;
+      const other = p.terminals.find((x) => x !== t.terminal);
+      const on = netOf.get(`${t.part}\0${other}`);
+      return Boolean(on) && !dead.has(on);
+    };
+    const isBjt = (t) => ['npn', 'pnp'].includes(byId.get(t.part)?.kind);
+    for (let changed = true; changed;) {
+      changed = false;
+      for (const n of nets) {
+        if (dead.has(n) || !n.terminals.some(isBjt)) continue;
+        const carriers = n.terminals.filter(live);
+        if (carriers.length <= 1 && carriers.every(isBjt)) { dead.add(n); changed = true; }
+      }
+    }
+    return dead.size ? nets.filter((n) => !dead.has(n)) : nets;
+  }
+
+  /**
    * Merge nets that share any (part, terminal) — electrically they are
    * one node, whatever the wire-derivation upstream produced. Union-find
    * keyed on terminal membership; the surviving net keeps the FIRST
@@ -1285,7 +1389,8 @@ export class BoardImpl {
     const piezoView = BoardImpl._expandPiezoCapacitance(opticView.parts, opticView.nets);
     const windingView = BoardImpl._expandMotorWindings(piezoView.parts, piezoView.nets);
     const capView = BoardImpl._expandPolarizedCaps(windingView.parts, windingView.nets);
-    const solveView = BoardImpl._expandBridgeClampDiodes(capView.parts, capView.nets);
+    const bridgeView = BoardImpl._expandBridgeClampDiodes(capView.parts, capView.nets);
+    const solveView = BoardImpl._expandTimerInputClamps(bridgeView.parts, bridgeView.nets);
     const lm741View = expandLm741LinearPoles(solveView.parts, solveView.nets);
     // LM358/LM324 macromodel (src/ground-sensing-opamp.js); only when its
     // solver stage is registered, i.e. registerAnalogAmps() has run.
@@ -1307,7 +1412,7 @@ export class BoardImpl {
         ? Object.defineProperty({ ...p, kind: 'led', params: { color: 'red', vf: 2.2, ...p.params } },
           'opticalKind', { value: 'laser_diode', enumerable: false })
         : p);
-    this._solveNets = macroView.nets;
+    this._solveNets = BoardImpl._openLoneTransistorLeads(macroView.nets, this._solveParts);
     this._macroFallbacks = macroView.notes;
 
     // RESOLVE EACH JUNCTION'S MODEL ONCE, HERE, FOR THE WHOLE SOLVE.
@@ -3261,7 +3366,14 @@ export class BoardImpl {
     this._assertDeterminateCurrent(this._mnaCache, partId, terminal);
     const partCurrents = this._mnaCache.branchCurrents.get(partId);
     if (!partCurrents) return 0;
-    const i = partCurrents.get(terminal) ?? 0;
+    let i = partCurrents.get(terminal) ?? 0;
+    // A light-path receiver's optical photocurrent is solved in a hidden part
+    // beside it (src/optics.js expandOptics); it flows through the receiver's
+    // own leads, so it is part of the receiver's current.
+    const twin = this._solveParts?.find(p => p.id === `${partId}_optical`);
+    const twinTerminal = twin?.hostTerminals
+      && Object.keys(twin.hostTerminals).find(k => twin.hostTerminals[k] === terminal);
+    if (twinTerminal) i += this._mnaCache.branchCurrents.get(twin.id)?.get(twinTerminal) ?? 0;
     return Number.isFinite(i) ? i : 0;
   }
 

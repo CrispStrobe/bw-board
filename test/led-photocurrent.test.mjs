@@ -20,6 +20,10 @@ registerAllDevices();
 const net = (id, ...pins) => ({ id, terminals: pins.map(([part, terminal]) => ({ part, terminal })) });
 const close = (a, e, tol, what) => assert.ok(Math.abs(a - e) < tol, `${what}: ${a} vs ${e}`);
 const LM358 = { id: 'U1', kind: 'lm358', params: {}, terminals: ['vcc', 'gnd', '1_pos', '1_neg', '1_out', '2_pos', '2_neg', '2_out'] };
+// The LM358's - input sources its own bias current (Ib - Ios/2 = 42.5 nA,
+// test/opamp-input-bias.test.mjs) into the same 1 MOhm, against the
+// photocurrent: the output sits 42.5 mV lower.
+const IB_NEG_V = 42.5e-9 * 1e6;
 
 // lab-led-light-sensor's front end with the photodiode replaced by an LED:
 // photocurrent into the inverting input of an LM358 transimpedance stage,
@@ -54,7 +58,7 @@ describe('LED photocurrent', () => {
   it('photoSensitivity 5 µA at light 0.8 gives 4 µA -> 4.0 V out of a 1 MΩ TIA', () => {
     const b = tia({ photoSensitivity: 5e-6, light: 0.8 });
     b.advanceTo(2_000_000n);
-    close(b.nodeVoltage('o'), 4.0, 0.02, 'TIA output');
+    close(b.nodeVoltage('o'), 4.0 - IB_NEG_V, 0.01, 'TIA output');
     close(b.nodeVoltage('n'), 0, 0.01, 'virtual ground');
   });
 
@@ -66,7 +70,7 @@ describe('LED photocurrent', () => {
     assert.ok(c && c.kind === 'led' && c.value === 0, 'listed, dark');
     b.setControl('D', 0.4);
     b.advanceTo(3_000_000n);
-    close(b.nodeVoltage('o'), 2.0, 0.02, '2 µA x 1 MΩ');
+    close(b.nodeVoltage('o'), 2.0 - IB_NEG_V, 0.01, '2 µA x 1 MΩ');
   });
 
   it('open circuit: the photocurrent forward-biases the LED to a bounded voltage', () => {

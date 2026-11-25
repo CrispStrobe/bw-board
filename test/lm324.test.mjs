@@ -47,10 +47,12 @@ describe('LM324 powered quad op amp', () => {
     // 2026-11-23: the outputs are no longer Thévenin `drives` (the LM324 is
     // the Newton-solved macromodel in src/ground-sensing-opamp.js). The
     // physical channel contract is that each output lead carries its own
-    // load current: Vout / 100 kΩ out of `${ch}_out`.
+    // load current: Vout / 100 kΩ out of `${ch}_out`, less what the - input
+    // (on the same node) sources itself: its bias current, Ib - Ios/2 =
+    // 42.5 nA (test/opamp-input-bias.test.mjs).
     for (let ch = 1; ch <= 4; ch++) {
-      const iLoad = board.nodeVoltage(`out${ch}`) / 100000;
-      assert.ok(Math.abs(board.branchCurrent('U1', `${ch}_out`) - iLoad) < 1e-8,
+      const iLoad = board.nodeVoltage(`out${ch}`) / 100000 - 42.5e-9;
+      assert.ok(Math.abs(board.branchCurrent('U1', `${ch}_out`) - iLoad) < 1e-9,
         `channel ${ch} output lead current`);
     }
   });

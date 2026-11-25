@@ -47,8 +47,19 @@ import { DMath } from './det-math.js';
  * Card: TI SLOS068 (LM358) typicals — 100 dB large-signal gain, 0.7–1.2 MHz
  * unity-gain bandwidth (LM358 / LM358B; 1 MHz used), 0.3 V/µs slew, output
  * high ≈ VCC − 1.5 V, output low ≈ 5 mV at light load, 40 mA source / 20 mA
- * (at VO = 2 V) sink. Quiescent supply current, input bias/offset, noise and
- * phase reversal are NOT modelled.
+ * (at VO = 2 V) sink. Quiescent supply current, noise and phase reversal are
+ * NOT modelled.
+ *
+ * INPUT BIAS AND OFFSET CURRENT (2026-11-25). The input stage is a PNP pair,
+ * so each input's base current flows OUT of the pin, supplied from VCC: card
+ * typicals 45 nA bias and 5 nA offset, `params.inputBiasA` and
+ * `params.inputOffsetCurrentA` on the package (the + input carries Ib + Ios/2,
+ * the - input Ib - Ios/2; a negative offset swaps them). The current fades
+ * out smoothly within a few hundred millivolts of VCC, where the pair's tail
+ * source has no headroom left, so it never drives an input past the rail;
+ * it follows the output enable when the supply drops out. Before this an
+ * input drew nothing, and a gallery bench drew a labelled 45 nA source as a
+ * stand-in for the chip's own bias current.
  *
  * POLE INTEGRATION. While a pole rests on its swing clamp, its hidden
  * capacitor is integrated with backward Euler instead of the trapezoidal
@@ -86,7 +97,35 @@ export const GROUND_SENSING_OPAMP_CARD = Object.freeze({
     iSource: 0.040,         // short-circuit source current
     iSink: 0.025,           // sink capability (20 mA typ at VO = 2 V)
     minSupply: 3.0,
+    inputBiasA: 45e-9,      // typical input bias current (PNP: out of each pin)
+    inputOffsetCurrentA: 5e-9, // typical input offset current
 });
+
+/** Headroom (V) over which an input's bias current fades out below VCC. */
+const BIAS_KNEE = 0.1;
+
+/**
+ * The share of its bias current an input carries at `d` volts below VCC:
+ * 0 at or above VCC, (1 - e^(-d/k))^2 below (C1 at 0, 99 % at 0.5 V).
+ * Returns [share, d share / d d].
+ */
+function biasShape(d) {
+    if (d <= 0) return [0, 0];
+    const e = DMath.exp(-d / BIAS_KNEE);
+    return [(1 - e) * (1 - e), 2 * (1 - e) * e / BIAS_KNEE];
+}
+
+/**
+ * Per-input bias currents (A, out of each pin) of a package, from its params
+ * and the card: { p, n }.
+ */
+export function groundSensingBias(params = {}) {
+    const ib = Number.isFinite(Number(params.inputBiasA)) && params.inputBiasA !== null && params.inputBiasA !== undefined
+        ? Number(params.inputBiasA) : CARD.inputBiasA;
+    const ios = Number.isFinite(Number(params.inputOffsetCurrentA)) && params.inputOffsetCurrentA !== null && params.inputOffsetCurrentA !== undefined
+        ? Number(params.inputOffsetCurrentA) : CARD.inputOffsetCurrentA;
+    return { p: ib + ios / 2, n: ib - ios / 2 };
+}
 
 const CARD = GROUND_SENSING_OPAMP_CARD;
 const GM = 2 * Math.PI * CARD.gbwHz * CARD.cInt;
@@ -136,7 +175,7 @@ function outputLaw(d) {
  * Jacobian, for one channel. `v` holds terminal volts; `fixedVcc` (volts
  * above GND, already source-scaled) replaces an unwired VCC pin.
  */
-export function evaluateStage(v, scale, fixedVcc = null) {
+export function evaluateStage(v, scale, fixedVcc = null, bias = null) {
     const vg = v.gnd;
     const vc = fixedVcc === null ? v.vcc : vg + fixedVcc;
     const supply = vc - vg;
@@ -185,17 +224,43 @@ export function evaluateStage(v, scale, fixedVcc = null) {
         gnd[i] = -pole[i] - (1 - dSrc) * out[i];
         vccRow[i] = -dSrc * out[i];
     }
+    // Input bias currents, out of each input pin, drawn from VCC (from GND
+    // when VCC is the legacy implicit supply): see INPUT BIAS above.
+    let iBias = 0;
+    const biasRows = [];
+    if (bias && (bias.p || bias.n)) {
+        for (const [t, i0, col] of [['inp', bias.p, 0], ['inn', bias.n, 1]]) {
+            if (!i0) continue;
+            const [sh, dsh] = biasShape(vc - v[t]);
+            const a = i0 * scale;
+            const i = a * k * sh;
+            const r = [0, 0, 0, 0, 0, 0];
+            r[col] -= a * k * dsh;
+            r[VC] += a * (k * dsh + k1 * sh);
+            r[5] -= a * k1 * sh;
+            biasRows.push([t, i, r]);
+            iBias += i;
+        }
+        for (const [, , r] of biasRows) {
+            const supplyRow = fixed ? gnd : vccRow;
+            for (let c = 0; c < 6; c++) supplyRow[c] -= r[c];
+        }
+    }
     const J = new Map([['pole', row(pole)], ['out', row(out)], ['gnd', row(gnd)]]);
     const currents = new Map([
         ['pole', iPole],
         ['out', iOut],
-        ['gnd', -iPole - snk],
+        ['gnd', -iPole - snk - (fixed ? iBias : 0)],
     ]);
+    for (const [t, i, r] of biasRows) {
+        currents.set(t, i);
+        J.set(t, row(r));
+    }
     if (!fixed) {
-        currents.set('vcc', -src);
+        currents.set('vcc', -src - iBias);
         J.set('vcc', row(vccRow));
     }
-    return { currents, jacobian: J, iOut };
+    return { currents, jacobian: J, iOut, iBias };
 }
 
 // Residual currents are checked as volts across this resistance. The pole
@@ -241,7 +306,7 @@ export function expandGroundSensingOpAmps(parts, nets, kinds = GROUND_SENSING_OP
             const stageId = `${prefix}stage`, capId = `${prefix}cap`, rpId = `${prefix}rp`, poleNet = `${prefix}pole`;
             outParts.push(
                 { id: stageId, kind: STAGE_KIND,
-                    params: { fixedVcc: vccNet ? null : 5.0 },
+                    params: { fixedVcc: vccNet ? null : 5.0, bias: groundSensingBias(part.params) },
                     terminals: [...STAGE_TERMINALS] },
                 // Damped while clamped: see POLE INTEGRATION above.
                 { id: capId, kind: 'capacitor', params: { farads: POLE_FARADS, dampedBy: { part: part.id, channel: ch } },

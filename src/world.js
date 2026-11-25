@@ -429,6 +429,19 @@ export function lightLevel (part, fallback) {
   return ambient(part, 'light', fallback) * shade;
 }
 
+/**
+ * The photocurrent (A, before compliance) a receiver's optical links deliver
+ * at `tSec`: light_path paths solved by the board's optics model in a hidden
+ * part beside the receiver (src/optics.js). 0 without a host or links.
+ * @param {object} part
+ * @param {number} tSec
+ */
+export function opticalAmps (part, tSec) {
+  const optics = PART_HOST.get(part)?._optics;
+  const amps = optics && typeof optics.rxAmps === 'function' ? optics.rxAmps(part?.id, tSec) : 0;
+  return Number.isFinite(amps) && amps > 0 ? amps : 0;
+}
+
 /** Light-sensing kinds on the LDR control path, with their dark/legacy default. */
 export const LIGHT_CONTROL_DEFAULTS = Object.freeze({
   phototransistor: 0, photodiode: 0, solar_cell: 1, ambient_light: 0.5,
