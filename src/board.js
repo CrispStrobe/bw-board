@@ -2199,6 +2199,11 @@ export class BoardImpl {
         }
         this._unseenEdge = false;
 
+        // A scheduled device can change LED current before the requested
+        // endpoint. Record that settled edge now so perceived brightness
+        // integrates its actual duration, independent of host frame chunks.
+        this._recordLedSamples();
+
         // Feed the scope at every sub-step, not only at the advance's
         // end: a digital channel records its transition AT the wake that
         // caused it (E4.2 — the end-of-advance feed alone collapsed a

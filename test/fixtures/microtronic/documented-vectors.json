@@ -1,0 +1,814 @@
+{
+  "notes": [
+    "Independent expected vectors derived from manufacturer manual only. Sparse maps intentionally leave unconstrained state unspecified.",
+    "Digits in register/storage maps are integer nibbles; map keys are hexadecimal register identifiers.",
+    "These are behavior specifications, not a harness coupled to an implementation.",
+    "Native timing, input sampling edge polarity, random-counter algorithm, held-key behavior, malformed-opcode handling and invalid decimal DZHX output are not specified by consulted pages."
+  ],
+  "vectors": [
+    {
+      "name": "MOV preserves carry and sets zero",
+      "source": "https://www.busch-model.com/online/produktinfos/docs/anl2090-1.pdf",
+      "printed_page": 74,
+      "opcode": "025",
+      "initial": {
+        "registers": {
+          "2": 0,
+          "5": 7
+        },
+        "carry": true,
+        "zero": false
+      },
+      "expected": {
+        "registers": {
+          "2": 0,
+          "5": 0
+        },
+        "carry": true,
+        "zero": true
+      }
+    },
+    {
+      "name": "MOVI preserves carry",
+      "source": "https://www.busch-model.com/online/produktinfos/docs/anl2090-1.pdf",
+      "printed_page": 74,
+      "opcode": "1F5",
+      "initial": {
+        "carry": true,
+        "zero": true
+      },
+      "expected": {
+        "registers": {
+          "5": 15
+        },
+        "carry": true,
+        "zero": false
+      }
+    },
+    {
+      "name": "AND resets carry",
+      "source": "https://www.busch-model.com/online/produktinfos/docs/anl2090-1.pdf",
+      "printed_page": 74,
+      "opcode": "223",
+      "initial": {
+        "registers": {
+          "2": 10,
+          "3": 5
+        },
+        "carry": true
+      },
+      "expected": {
+        "registers": {
+          "2": 10,
+          "3": 0
+        },
+        "carry": false,
+        "zero": true
+      }
+    },
+    {
+      "name": "ADD wraps and reports carry",
+      "source": "https://www.busch-model.com/online/produktinfos/docs/anl2090-1.pdf",
+      "printed_page": 74,
+      "opcode": "4AB",
+      "initial": {
+        "registers": {
+          "A": 15,
+          "B": 1
+        }
+      },
+      "expected": {
+        "registers": {
+          "A": 15,
+          "B": 0
+        },
+        "carry": true,
+        "zero": true
+      }
+    },
+    {
+      "name": "SUB reports borrow",
+      "source": "https://www.busch-model.com/online/produktinfos/docs/anl2090-1.pdf",
+      "printed_page": 74,
+      "opcode": "6AB",
+      "initial": {
+        "registers": {
+          "A": 1,
+          "B": 0
+        }
+      },
+      "expected": {
+        "registers": {
+          "A": 1,
+          "B": 15
+        },
+        "carry": true,
+        "zero": false
+      }
+    },
+    {
+      "name": "CMP sets carry when SOURCE is LESS than destination",
+      "source": "https://www.busch-model.com/online/produktinfos/docs/anl2090-1.pdf",
+      "printed_page": 74,
+      "opcode": "8AB",
+      "initial": {
+        "registers": {
+          "A": 2,
+          "B": 7
+        }
+      },
+      "expected": {
+        "registers": {
+          "A": 2,
+          "B": 7
+        },
+        "carry": true,
+        "zero": false
+      }
+    },
+    {
+      "name": "CMP reverse unequal ordering",
+      "source": "https://www.busch-model.com/online/produktinfos/docs/anl2090-1.pdf",
+      "printed_page": 74,
+      "opcode": "8AB",
+      "initial": {
+        "registers": {
+          "A": 7,
+          "B": 2
+        },
+        "carry": true
+      },
+      "expected": {
+        "registers": {
+          "A": 7,
+          "B": 2
+        },
+        "carry": false,
+        "zero": false
+      }
+    },
+    {
+      "name": "CMP equal",
+      "source": "https://www.busch-model.com/online/produktinfos/docs/anl2090-1.pdf",
+      "printed_page": 74,
+      "opcode": "8AB",
+      "initial": {
+        "registers": {
+          "A": 7,
+          "B": 7
+        },
+        "carry": true
+      },
+      "expected": {
+        "registers": {
+          "A": 7,
+          "B": 7
+        },
+        "carry": false,
+        "zero": true
+      }
+    },
+    {
+      "name": "CMPI uses constant-less-than-register comparison",
+      "source": "https://www.busch-model.com/online/produktinfos/docs/anl2090-1.pdf",
+      "printed_page": 74,
+      "opcode": "923",
+      "initial": {
+        "registers": {
+          "3": 7
+        }
+      },
+      "expected": {
+        "registers": {
+          "3": 7
+        },
+        "carry": true,
+        "zero": false
+      }
+    },
+    {
+      "name": "MAS copies to storage without touching flags",
+      "source": "https://www.busch-model.com/online/produktinfos/docs/anl2090-1.pdf",
+      "printed_page": 75,
+      "opcode": "F75",
+      "initial": {
+        "registers": {
+          "5": 10
+        },
+        "storage": {
+          "5": 11
+        },
+        "carry": true,
+        "zero": true
+      },
+      "expected": {
+        "registers": {
+          "5": 10
+        },
+        "storage": {
+          "5": 10
+        },
+        "carry": true,
+        "zero": true
+      }
+    },
+    {
+      "name": "SHR drops bit0 into carry",
+      "source": "https://www.busch-model.com/online/produktinfos/docs/anl2090-1.pdf",
+      "printed_page": 75,
+      "opcode": "F90",
+      "initial": {
+        "registers": {
+          "0": 1
+        }
+      },
+      "expected": {
+        "registers": {
+          "0": 0
+        },
+        "carry": true,
+        "zero": true
+      }
+    },
+    {
+      "name": "SHL drops bit3 into carry",
+      "source": "https://www.busch-model.com/online/produktinfos/docs/anl2090-1.pdf",
+      "printed_page": 75,
+      "opcode": "FA0",
+      "initial": {
+        "registers": {
+          "0": 8
+        }
+      },
+      "expected": {
+        "registers": {
+          "0": 0
+        },
+        "carry": true,
+        "zero": true
+      }
+    },
+    {
+      "name": "ADC consumes incoming carry before replacing it",
+      "source": "https://www.busch-model.com/online/produktinfos/docs/anl2090-1.pdf",
+      "printed_page": 75,
+      "opcode": "FB4",
+      "initial": {
+        "registers": {
+          "4": 15
+        },
+        "carry": true
+      },
+      "expected": {
+        "registers": {
+          "4": 0
+        },
+        "carry": true,
+        "zero": true
+      }
+    },
+    {
+      "name": "ADC with clear carry does not increment",
+      "source": "https://www.busch-model.com/online/produktinfos/docs/anl2090-1.pdf",
+      "printed_page": 75,
+      "opcode": "FB4",
+      "initial": {
+        "registers": {
+          "4": 15
+        },
+        "carry": false
+      },
+      "expected": {
+        "registers": {
+          "4": 15
+        },
+        "carry": false,
+        "zero": false
+      }
+    },
+    {
+      "name": "SUBC reports borrow",
+      "source": "https://www.busch-model.com/online/produktinfos/docs/anl2090-1.pdf",
+      "printed_page": 75,
+      "opcode": "FC4",
+      "initial": {
+        "registers": {
+          "4": 0
+        },
+        "carry": true
+      },
+      "expected": {
+        "registers": {
+          "4": 15
+        },
+        "carry": true,
+        "zero": false
+      }
+    },
+    {
+      "name": "DIN maps terminals1 and3 to nibble5",
+      "source": "https://www.busch-model.com/online/produktinfos/docs/anl2090-1.pdf",
+      "printed_page": 75,
+      "opcode": "FD3",
+      "initial": {
+        "inputs": 5,
+        "carry": true
+      },
+      "expected": {
+        "registers": {
+          "3": 5
+        },
+        "carry": false,
+        "zero": false
+      }
+    },
+    {
+      "name": "DOT latches output nibble",
+      "source": "https://www.busch-model.com/online/produktinfos/docs/anl2090-1.pdf",
+      "printed_page": 75,
+      "opcode": "FE2",
+      "initial": {
+        "registers": {
+          "2": 9
+        },
+        "carry": true
+      },
+      "expected": {
+        "outputs": 9,
+        "carry": false,
+        "zero": false
+      }
+    },
+    {
+      "name": "DISP starts with source at RIGHT edge",
+      "source": "https://www.busch-model.com/online/produktinfos/docs/anl2090-1.pdf",
+      "printed_page": 75,
+      "opcode": "F32",
+      "initial": {
+        "registers": {
+          "2": 1,
+          "3": 2,
+          "4": 3
+        },
+        "carry": true,
+        "zero": true
+      },
+      "expected": {
+        "display": "   321",
+        "carry": true,
+        "zero": true
+      }
+    },
+    {
+      "name": "DISP wraps past register F",
+      "source": "https://www.busch-model.com/online/produktinfos/docs/anl2090-1.pdf",
+      "printed_page": 75,
+      "opcode": "F6E",
+      "initial": {
+        "registers": {
+          "E": 14,
+          "F": 15,
+          "0": 0,
+          "1": 1,
+          "2": 2,
+          "3": 3
+        }
+      },
+      "expected": {
+        "display": "3210FE"
+      }
+    },
+    {
+      "name": "HXDZ conversion of hex2AF into decimal687",
+      "source": "https://www.busch-model.com/online/produktinfos/docs/anl2090-1.pdf",
+      "printed_page": 76,
+      "opcode": "F03",
+      "initial": {
+        "registers": {
+          "D": 15,
+          "E": 10,
+          "F": 2
+        },
+        "carry": true,
+        "zero": true
+      },
+      "expected": {
+        "registers": {
+          "D": 7,
+          "E": 8,
+          "F": 6
+        },
+        "carry": false,
+        "zero": false
+      }
+    },
+    {
+      "name": "HXDZ zero is NOT a zero-flag condition",
+      "source": "https://www.busch-model.com/online/produktinfos/docs/anl2090-1.pdf",
+      "printed_page": 76,
+      "opcode": "F03",
+      "initial": {
+        "registers": {
+          "D": 0,
+          "E": 0,
+          "F": 0
+        },
+        "zero": true
+      },
+      "expected": {
+        "registers": {
+          "D": 0,
+          "E": 0,
+          "F": 0
+        },
+        "carry": false,
+        "zero": false
+      }
+    },
+    {
+      "name": "HXDZ overflow clears all three output digits",
+      "source": "https://www.busch-model.com/online/produktinfos/docs/anl2090-1.pdf",
+      "printed_page": 43,
+      "opcode": "F03",
+      "initial": {
+        "registers": {
+          "D": 8,
+          "E": 14,
+          "F": 3
+        }
+      },
+      "expected": {
+        "registers": {
+          "D": 0,
+          "E": 0,
+          "F": 0
+        },
+        "carry": false,
+        "zero": true
+      }
+    },
+    {
+      "name": "DZHX decimal999 converts to hex3E7",
+      "source": "https://www.busch-model.com/online/produktinfos/docs/anl2090-1.pdf",
+      "printed_page": 76,
+      "opcode": "F04",
+      "initial": {
+        "registers": {
+          "D": 9,
+          "E": 9,
+          "F": 9
+        },
+        "carry": true,
+        "zero": true
+      },
+      "expected": {
+        "registers": {
+          "D": 7,
+          "E": 14,
+          "F": 3
+        },
+        "carry": false,
+        "zero": false
+      }
+    },
+    {
+      "name": "CLEAR does not clear storage or output latch",
+      "source": "https://www.busch-model.com/online/produktinfos/docs/anl2090-1.pdf",
+      "printed_page": 76,
+      "opcode": "F08",
+      "initial": {
+        "registers": {
+          "0": 0,
+          "1": 1,
+          "2": 2,
+          "3": 3,
+          "4": 4,
+          "5": 5,
+          "6": 6,
+          "7": 7,
+          "8": 8,
+          "9": 9,
+          "A": 10,
+          "B": 11,
+          "C": 12,
+          "D": 13,
+          "E": 14,
+          "F": 15
+        },
+        "storage": {
+          "0": 9,
+          "F": 3
+        },
+        "outputs": 5,
+        "carry": true
+      },
+      "expected": {
+        "registers": {
+          "0": 0,
+          "1": 0,
+          "2": 0,
+          "3": 0,
+          "4": 0,
+          "5": 0,
+          "6": 0,
+          "7": 0,
+          "8": 0,
+          "9": 0,
+          "A": 0,
+          "B": 0,
+          "C": 0,
+          "D": 0,
+          "E": 0,
+          "F": 0
+        },
+        "storage": {
+          "0": 9,
+          "F": 3
+        },
+        "outputs": 5,
+        "carry": false,
+        "zero": true
+      }
+    },
+    {
+      "name": "MULT12345 by12 gives148140",
+      "source": "https://www.busch-model.com/online/produktinfos/docs/anl2090-1.pdf",
+      "printed_page": 76,
+      "opcode": "F0B",
+      "initial": {
+        "registers": {
+          "0": 5,
+          "1": 4,
+          "2": 3,
+          "3": 2,
+          "4": 1,
+          "5": 0
+        },
+        "storage": {
+          "0": 2,
+          "1": 1,
+          "2": 0,
+          "3": 0,
+          "4": 0,
+          "5": 0
+        }
+      },
+      "expected": {
+        "registers": {
+          "0": 0,
+          "1": 4,
+          "2": 1,
+          "3": 8,
+          "4": 4,
+          "5": 1
+        },
+        "carry": false,
+        "zero": false
+      }
+    },
+    {
+      "name": "MULT zero result still clears zero flag",
+      "source": "https://www.busch-model.com/online/produktinfos/docs/anl2090-1.pdf",
+      "printed_page": 76,
+      "opcode": "F0B",
+      "initial": {
+        "registers": {
+          "0": 0,
+          "1": 0,
+          "2": 0,
+          "3": 0,
+          "4": 0,
+          "5": 0
+        },
+        "storage": {
+          "0": 2,
+          "1": 1,
+          "2": 0,
+          "3": 0,
+          "4": 0,
+          "5": 0
+        },
+        "zero": true
+      },
+      "expected": {
+        "registers": {
+          "0": 0,
+          "1": 0,
+          "2": 0,
+          "3": 0,
+          "4": 0,
+          "5": 0
+        },
+        "carry": false,
+        "zero": false
+      }
+    },
+    {
+      "name": "MULT overflow produces six Es",
+      "source": "https://www.busch-model.com/online/produktinfos/docs/anl2090-1.pdf",
+      "printed_page": 76,
+      "opcode": "F0B",
+      "initial": {
+        "registers": {
+          "0": 9,
+          "1": 9,
+          "2": 9,
+          "3": 9,
+          "4": 9,
+          "5": 9
+        },
+        "storage": {
+          "0": 2,
+          "1": 0,
+          "2": 0,
+          "3": 0,
+          "4": 0,
+          "5": 0
+        }
+      },
+      "expected": {
+        "registers": {
+          "0": 14,
+          "1": 14,
+          "2": 14,
+          "3": 14,
+          "4": 14,
+          "5": 14
+        },
+        "carry": true,
+        "zero": false
+      }
+    },
+    {
+      "name": "DIV storage1234 by working12 yields quotient102 remainder10",
+      "source": "https://www.busch-model.com/online/produktinfos/docs/anl2090-1.pdf",
+      "printed_page": 76,
+      "opcode": "F0C",
+      "initial": {
+        "registers": {
+          "0": 2,
+          "1": 1,
+          "2": 0,
+          "3": 0,
+          "4": 0,
+          "5": 0
+        },
+        "storage": {
+          "0": 4,
+          "1": 3,
+          "2": 2,
+          "3": 1,
+          "4": 0,
+          "5": 0
+        }
+      },
+      "expected": {
+        "registers": {
+          "0": 2,
+          "1": 0,
+          "2": 1,
+          "3": 0
+        },
+        "storage": {
+          "0": 0,
+          "1": 1,
+          "2": 0,
+          "3": 0
+        },
+        "carry": false,
+        "zero": true
+      }
+    },
+    {
+      "name": "DIV exact result has clear zero flag",
+      "source": "https://www.busch-model.com/online/produktinfos/docs/anl2090-1.pdf",
+      "printed_page": 76,
+      "opcode": "F0C",
+      "initial": {
+        "registers": {
+          "0": 0,
+          "1": 1,
+          "2": 0,
+          "3": 0,
+          "4": 0,
+          "5": 0
+        },
+        "storage": {
+          "0": 0,
+          "1": 0,
+          "2": 0,
+          "3": 1,
+          "4": 0,
+          "5": 0
+        }
+      },
+      "expected": {
+        "registers": {
+          "0": 0,
+          "1": 0,
+          "2": 1,
+          "3": 0
+        },
+        "storage": {
+          "0": 0,
+          "1": 0,
+          "2": 0,
+          "3": 0
+        },
+        "carry": false,
+        "zero": false
+      }
+    },
+    {
+      "name": "DIV zero DIVIDEND is an error too",
+      "source": "https://www.busch-model.com/online/produktinfos/docs/anl2090-1.pdf",
+      "printed_page": 76,
+      "opcode": "F0C",
+      "initial": {
+        "registers": {
+          "0": 5,
+          "1": 0,
+          "2": 0,
+          "3": 0,
+          "4": 0,
+          "5": 0
+        },
+        "storage": {
+          "0": 0,
+          "1": 0,
+          "2": 0,
+          "3": 0,
+          "4": 0,
+          "5": 0
+        }
+      },
+      "expected": {
+        "registers": {
+          "0": 14,
+          "1": 14,
+          "2": 14,
+          "3": 14,
+          "4": 14,
+          "5": 14
+        },
+        "carry": true
+      }
+    },
+    {
+      "name": "EXRA swaps working banks only",
+      "source": "https://www.busch-model.com/online/produktinfos/docs/anl2090-1.pdf",
+      "printed_page": 76,
+      "opcode": "F0F",
+      "initial": {
+        "registers": {
+          "0": 0,
+          "1": 1,
+          "2": 2,
+          "3": 3,
+          "4": 4,
+          "5": 5,
+          "6": 6,
+          "7": 7,
+          "8": 8,
+          "9": 9,
+          "A": 10,
+          "B": 11,
+          "C": 12,
+          "D": 13,
+          "E": 14,
+          "F": 15
+        },
+        "storage": {
+          "0": 9
+        },
+        "carry": true,
+        "zero": true
+      },
+      "expected": {
+        "registers": {
+          "0": 8,
+          "1": 9,
+          "2": 10,
+          "3": 11,
+          "4": 12,
+          "5": 13,
+          "6": 14,
+          "7": 15,
+          "8": 0,
+          "9": 1,
+          "A": 2,
+          "B": 3,
+          "C": 4,
+          "D": 5,
+          "E": 6,
+          "F": 7
+        },
+        "storage": {
+          "0": 9
+        },
+        "carry": true,
+        "zero": true
+      }
+    }
+  ]
+}
