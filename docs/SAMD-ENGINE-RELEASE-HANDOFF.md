@@ -70,7 +70,7 @@ rejected. This qualifies those observed boundaries only.
 
 ## Remaining tasks, in order
 
-1. Complete [Lite adoption](https://github.com/CrispStrobe/brickwright-lite/blob/main/docs/SAMD-NATIVE-GAME-HANDOFF.md)
+1. Complete [Brickwright adoption](https://github.com/CrispStrobe/brickwright/blob/main/docs/SAMD-NATIVE-GAME-HANDOFF.md)
    using this tag and the exact hashes above. Proposed isolated branch
    qualification is coordinated with the native-package owner; main pin
    publication still requires that coordination. Fresh actual Chromium and
