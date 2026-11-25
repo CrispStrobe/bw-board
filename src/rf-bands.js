@@ -506,12 +506,15 @@ export class BandIntegrator {
                         if (F(r1, 1) < 0) {
                             for (let i = 0; i < 20; i++) { lo /= 2; rLo = at(lo); if (F(rLo, lo) >= 0) break; }
                         } else {
-                            // No further than twice the larger of the start's and
-                            // the explicit end's swing: a "consistent" end far
-                            // beyond both is a pole of the port solve, not a swing
-                            // (a medium-wave oscillator ran away on one).
-                            const sMax = 2 * Math.max(1, n0 / n1);
-                            for (let i = 0; i < 20 && hi * 2 <= sMax; i++) { hi *= 2; rHi = at(hi); if (F(rHi, hi) <= 0) break; }
+                            // Up to the swing the step started from (5 % over):
+                            // this undoes a collapse the stamps at the start
+                            // made. Past it, describing functions far beyond
+                            // the swing a step reached have "consistent" ends
+                            // that are no swing at all (a medium-wave
+                            // oscillator, following one step after step, ran
+                            // away to 10 kV); a step's own growth is left to
+                            // its growth control.
+                            hi = 1.05 * Math.max(1, n0 / n1); rHi = at(hi);
                         }
                         let best = Math.abs(F(rLo, lo)) < Math.abs(F(rHi, hi)) ? rLo : rHi;
                         let bestF = Math.min(Math.abs(F(rLo, lo)), Math.abs(F(rHi, hi)));

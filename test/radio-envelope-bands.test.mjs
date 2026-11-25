@@ -342,11 +342,13 @@ describe('radio bands: the same answer on every platform', () => {
         // both platforms again. Moved again 2026-11-25: the junction stamps
         // are made consistent with each band step's end (the collector's
         // swing no longer collapses where it reaches the base–collector
-        // junction); was 3136 solves, 2533 substeps, 7.826 V. Checked
-        // identical on macOS arm64 and Linux x64.
-        assert.equal(b.transientAnalysisStatus().work.solves, 832);
+        // junction); was 3136 solves, 2533 substeps, 7.826 V. Then 832
+        // solves, 8.670 V until a step's upward correction was capped at
+        // the swing it started from (same day). Checked identical on macOS
+        // arm64 and Linux x64.
+        assert.equal(b.transientAnalysisStatus().work.solves, 892);
         assert.equal(b._radio.substeps, 470);
-        assert.equal(tankAmp(b, 'col'), 8.670223968015401);
+        assert.equal(tankAmp(b, 'col'), 8.671373858807078);
     });
 
     it('1-ulp changes of the coil do not move the oscillator\'s outcome', () => {
