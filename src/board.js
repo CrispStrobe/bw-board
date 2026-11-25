@@ -7877,18 +7877,11 @@ export class BoardImpl {
     // nanosecond time constant damps even that: whether it fell depended on
     // how the first advance was chunked and on the junction model's rounding
     // (it stayed balanced for 20 ms with exponential steering diodes). The
-    // power-on solve falls off it deterministically (`settleMetastable`).
-    //
-    // THE DEVICE CAPACITANCES START AT THE POWER-ON POINT, fallen off a
-    // balance or not. They are picofarads, charged within nanoseconds of
-    // power-on, and the power-on solve has every transistor where it will
-    // sit. Seeded at 0 V instead, a transistor that is ON at power-on
-    // started with its base uncharged: off for ~10 ns while its junction
-    // charged, so its collector pulsed, and a counter clocked from it
-    // counted once in the first microsecond of a circuit in which nothing
-    // happened (sb3 lab-barrier-counter carried a 1 nF clock capacitor as a
-    // workaround). Drawn capacitors keep the power-on-at-rest rule: the
-    // power-on solve holds them at their stored voltage.
+    // power-on solve falls off it deterministically (`settleMetastable`);
+    // when it did, the device input capacitances start charged to where it
+    // fell -- they are picofarads, charged within nanoseconds of power-on --
+    // so the transient begins on one side. A stable power-on point is left
+    // exactly as it was, and nothing else is seeded.
     let coldEntry = null;
     if (t0 <= 0 && !trapReady && this.powered && this._hasDeviceCapacitance()) {
       const op = this._solveLiveMNA(pinSources, {
@@ -7896,7 +7889,7 @@ export class BoardImpl {
         partTemperatures: this._thermal?.temps, capVoltages: cv,
         deviceStates: this._deviceStates, qualifiedSources: qual,
         settleMetastable: true });
-      if (op?.converged) {
+      if (op?.converged && op.fellOffBalance) {
         cv = new Map(cv);
         for (const part of this._solveParts) {
           for (const cap of parasiticCaps(part)) {
