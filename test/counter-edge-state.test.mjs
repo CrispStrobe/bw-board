@@ -77,6 +77,35 @@ describe('74HC93 master reset is asynchronous and releasing it clocks nothing', 
     b.setControl('MR', 0);
     assert.equal(count(), 0);
   });
+
+  it('a CKB edge seen while reset is held is ignored and not fired on release', () => {
+    // CKB driven on its own (not from QA): every stage stays cleared while
+    // MR is asserted, whatever either clock does, and release clocks nothing.
+    const b = new BoardImpl(5);
+    b.setNetlist([...RAILS, P('U', '74hc93', T93),
+      P('CA', 'vsource', ['pos', 'neg'], { volts: 0 }), P('CB', 'vsource', ['pos', 'neg'], { volts: 0 }),
+      P('MR', 'vsource', ['pos', 'neg'], { volts: 0 })],
+    [net('vcc', ['V', 'vcc'], ['U', 'vcc']), net('gnd', ['G', 'gnd'], ['U', 'gnd'], ['CA', 'neg'], ['CB', 'neg'], ['MR', 'neg']),
+      net('ca', ['CA', 'pos'], ['U', 'clk_a']), net('cb', ['CB', 'pos'], ['U', 'clk_b']),
+      net('mr', ['MR', 'pos'], ['U', 'r0_1'], ['U', 'r0_2']),
+      net('qa', ['U', 'qa']), net('qb', ['U', 'qb']), net('qc', ['U', 'qc']), net('qd', ['U', 'qd'])]);
+    b.setPower(true);
+    const count = () => word(b, ['qa', 'qb', 'qc', 'qd']);
+    b.setControl('CB', 5); b.setControl('CB', 0);
+    assert.equal(count(), 2, 'one CKB falling edge counts QB');
+    b.setControl('CB', 5);           // CKB high going into reset
+    b.setControl('MR', 5);
+    assert.equal(count(), 0, 'reset clears');
+    b.setControl('CB', 0);           // falling edge DURING reset: ignored
+    assert.equal(count(), 0, 'stays cleared while MR is held');
+    b.setControl('CB', 5); b.setControl('CB', 0);   // a whole pulse during reset
+    b.setControl('CA', 5); b.setControl('CA', 0);
+    assert.equal(count(), 0, 'every flip-flop ignores clocks under reset');
+    b.setControl('MR', 0);
+    assert.equal(count(), 0, 'release fires no stored edge');
+    b.setControl('CB', 5); b.setControl('CB', 0);
+    assert.equal(count(), 2, 'counting resumes from 0');
+  });
 });
 
 /** Powers a single device with `clkLevel` held on its clock and returns the board. */
