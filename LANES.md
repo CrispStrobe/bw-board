@@ -6,8 +6,8 @@ Feature branch: `feat/kosmos-cp1-20261124`; isolated checkout.
 Own new src/mcs48*, src/i8155*, src/cp1*, focused tests and documentation,
 additive target/debug/media/export/device registrations, and scoped package
 exports. One CPU/machine/circuit state and simulated clock. Preserve existing
-targets and unrelated claimed hunks. Companion Lite plan:
-https://github.com/CrispStrobe/brickwright-lite/blob/feat/kosmos-cp1-20261124/docs/KOSMOS-CP1-PLAN.md
+targets and unrelated claimed hunks. Companion Brickwright plan:
+https://github.com/CrispStrobe/brickwright/blob/main/docs/KOSMOS-CP1-PLAN.md
 
 GPL emulators are research/oracle only: independent implementation subagents
 receive hardware specs and observable facts, no GPL code or translated

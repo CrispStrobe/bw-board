@@ -42,7 +42,7 @@ HDD writes remain in emulated memory unless the console receives explicit `--hdd
 
 ## App and debugger
 
-Use [Lite's user paths](https://github.com/CrispStrobe/brickwright-lite/blob/main/docs/X86-USER-PATHS.md) for the actual Machine Manager forms, Controller screen and debugger controls. The board's [target factory](../src/debug-target-factory.js) composes the 386 adapter with the shared [debug target](../src/i8086-debug.js).
+Use [Brickwright user paths](https://github.com/CrispStrobe/brickwright/blob/main/docs/X86-USER-PATHS.md) for the actual Machine Manager forms, Controller screen and debugger controls. The board's [target factory](../src/debug-target-factory.js) composes the 386 adapter with the shared [debug target](../src/i8086-debug.js).
 
 The dedicated [386 target](../src/i80386-debug.js) now supplies full-width
 register capture and unsigned addresses while reusing the shared forward-debug

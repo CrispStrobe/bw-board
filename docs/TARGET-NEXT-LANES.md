@@ -78,7 +78,7 @@ this summary does not replace old failures or reinterpret them as successes.
   Hardware re-capture remains owed. CP13/CP14 and all-target WASM >=1x stay open.
 
 User-facing priorities and all target boundaries:
-[Lite handoff](https://github.com/CrispStrobe/brickwright-lite/blob/main/docs/TARGET-NEXT-LANES.md).
+[Brickwright handoff](https://github.com/CrispStrobe/brickwright/blob/main/docs/TARGET-NEXT-LANES.md).
 Engine-native board contracts:
 [LabWired handoff](https://github.com/CrispStrobe/labwired-core/blob/main/docs/engineering/target-next-lanes.md).
 SPIKE firmware's newer canonical tasks:
