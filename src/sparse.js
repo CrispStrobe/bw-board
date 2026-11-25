@@ -29,8 +29,10 @@ export class CooMatrix {
     this.n = n;
     this.rows = n;
     this.cols = n;
-    /** @type {Map<number, number>} cell key (r*n+c) → slot in v */
-    this.idx = new Map();
+    // Small circuits can index cells directly without hashing. Bound the
+    // table to 8 KiB and keep the existing sparse index for larger boards.
+    this.directIndex = n <= 64 ? new Int16Array(n * n) : null;
+    this.idx = this.directIndex ? null : new Map();
     /** @type {number[]} */ this.ri = [];
     /** @type {number[]} */ this.ci = [];
     /** @type {number[]} */ this.v = [];
@@ -39,10 +41,12 @@ export class CooMatrix {
   /** @param {number} r @param {number} c @returns {number} slot */
   _slot(r, c) {
     const k = r * this.n + c;
-    let s = this.idx.get(k);
-    if (s === undefined) {
+    const direct = this.directIndex;
+    let s = direct ? direct[k] - 1 : (this.idx.get(k) ?? -1);
+    if (s < 0) {
       s = this.v.length;
-      this.idx.set(k, s);
+      if (direct) direct[k] = s + 1;
+      else this.idx.set(k, s);
       this.ri.push(r);
       this.ci.push(c);
       this.v.push(0);
@@ -58,8 +62,9 @@ export class CooMatrix {
 
   /** @param {number} r @param {number} c @returns {number} */
   get(r, c) {
-    const s = this.idx.get(r * this.n + c);
-    return s === undefined ? 0 : this.v[s];
+    const k = r * this.n + c;
+    const s = this.directIndex ? this.directIndex[k] - 1 : (this.idx.get(k) ?? -1);
+    return s >= 0 ? this.v[s] : 0;
   }
 
   /** Zero the values, keep the pattern (slots survive for the next fill). */
