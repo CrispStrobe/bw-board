@@ -1029,7 +1029,7 @@ Preserve the separate F0 profile work. The IRQ fixture remains independently
 bound to its reviewed source/linker bytes. No engine or guest ran locally;
 no adapter API, package dependency, workflow, benchmark or threshold changed.
 
-Lite [PR988](https://github.com/CrispStrobe/brickwright-lite/pull/988) merged
+Lite [PR988](https://github.com/CrispStrobe/brickwright/pull/988) merged
 as `3753d3b4`, adopting the new release after all 12 enabled final-head checks
 passed (two declared conditional skips). Real compiled V2 JSON/text CLI proofs
 passed greeting/counter and matrix/fault/time bounds; a fresh browser V2 ELF
@@ -1113,7 +1113,7 @@ uses the original two independent build payloads, with the 123-pass retained
 qualification above. Original build/test failures, release lineage and prior
 radio evidence remain preserved. No threshold, capture or ACK date changed.
 
-[Lite PR988](https://github.com/CrispStrobe/brickwright-lite/pull/988) adopts
+[Lite PR988](https://github.com/CrispStrobe/brickwright/pull/988) adopts
 only the engine pin and serial consumer behavior; its actual CLI/browser
 qualification remains pending. Producer completion does not qualify that
 consumer or physical timing.

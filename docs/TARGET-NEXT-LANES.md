@@ -44,7 +44,7 @@ this summary does not replace old failures or reinterpret them as successes.
   complete-board or WASM measurement. The earlier rates above remain historical.
   [Exact qualification and next rectangular driver/panel lane](https://github.com/CrispStrobe/labwired-core/blob/main/docs/engineering/st7735-color-foundation.md).
   Production module binding, IRQ/DMA and app adoption remain open; no pin moved.
-- Lite [target run37463042960](https://github.com/CrispStrobe/brickwright-lite/actions/runs/37463042960)
+- Lite [target run37463042960](https://github.com/CrispStrobe/brickwright/actions/runs/37463042960)
   on `23bc15cf4e9f5910f1f7455425b238cccd4c4834` measured Arduboy **5.561x**,
   ATtiny88 **10.227x**, Uno **5.178x**, micro:bit-class WASM **26.818x** and
   PyBadge-class WASM **33.417x**. The two WASM rows are terminal post-boot

@@ -386,7 +386,7 @@ First unify DOSBox relative-path resolution and raw-disk geometry validation acr
 
 Read Lite `docs/I80386-GUI.md`, `docs/I80386-FREEDOS-INTERACTION.md`, `docs/X86-LOADING-SCOPE.md`, and `docs/generated/LANGUAGE-DEVICE-MATRIX.md`. The bounded actual FreeDOS browser scenario above is reached; preserve its source, dependency pin, screen/input records and previous failed harness evidence.
 
-**Next deliverable:** exercise direct Circuits guest input, drag capture outside the pane, reserved browser keys, restart/error handling and a real guest mouse-driver/application response. [Lite PR707](https://github.com/CrispStrobe/brickwright-lite/pull/707) owns the direct Circuits input gate. Its first two attempts stopped before guest launch on installed-source origin and build-identity checks. The [third run 37632115411](https://github.com/CrispStrobe/brickwright-lite/actions/runs/37632115411) reached guest boot, listing and PS/2 setup, then failed because the Controller canvas covered the VDP parent click point; it did not prove direct guest keys. The fourth [run 37640159639](https://github.com/CrispStrobe/brickwright-lite/actions/runs/37640159639) at source `2befc3bd` physically selected Debugger and focused the VDP, then failed its prior-output pixel assertion before sending Circuit keys. Its screenshot visibly retains `PS2 DONE`; investigate the pixel observer against the actual renderer rather than replacing it with guest-memory acceptance. Corrections retain exact repository/commit/package-byte admission; direct Circuits guest input remains unqualified until an actual result passes. Do not infer acceptance from its source controls. Preserve Widgets fullscreen/resize and Code tab behavior. For CLI, separately exercise live TTY input, redraw/exit, restored host terminal state and mouse-capable terminal handling. Do not infer those results from tab switching, synthetic DOM input or a hardware mouse packet alone.
+**Next deliverable:** exercise direct Circuits guest input, drag capture outside the pane, reserved browser keys, restart/error handling and a real guest mouse-driver/application response. [Lite PR707](https://github.com/CrispStrobe/brickwright/pull/707) owns the direct Circuits input gate. Its first two attempts stopped before guest launch on installed-source origin and build-identity checks. The [third run 37632115411](https://github.com/CrispStrobe/brickwright/actions/runs/37632115411) reached guest boot, listing and PS/2 setup, then failed because the Controller canvas covered the VDP parent click point; it did not prove direct guest keys. The fourth [run 37640159639](https://github.com/CrispStrobe/brickwright/actions/runs/37640159639) at source `2befc3bd` physically selected Debugger and focused the VDP, then failed its prior-output pixel assertion before sending Circuit keys. Its screenshot visibly retains `PS2 DONE`; investigate the pixel observer against the actual renderer rather than replacing it with guest-memory acceptance. Corrections retain exact repository/commit/package-byte admission; direct Circuits guest input remains unqualified until an actual result passes. Do not infer acceptance from its source controls. Preserve Widgets fullscreen/resize and Code tab behavior. For CLI, separately exercise live TTY input, redraw/exit, restored host terminal state and mouse-capable terminal handling. Do not infer those results from tab switching, synthetic DOM input or a hardware mouse packet alone.
 
 **Completion gate:** one reproducible free-media scenario with an observable guest response for each newly claimed interaction. Publish the exact dependency pin and browser build; update generated matrix inputs through their generator rather than manually asserting support. Engine fixes require explicit consumer adoption and installed/browser qualification.
 
@@ -2724,15 +2724,15 @@ strict-386DX, DPMI/high-linear/timer, full-OS, whole-disk, mouse/IRQ, physical
 timing, performance/RTx, installed-GUI or license-clearance claim follows.
 
 The next dependency gate is the existing Lite HDD/GUI handoff, including its
-unmerged [runner prerequisite PR986](https://github.com/CrispStrobe/brickwright-lite/pull/986),
+unmerged [runner prerequisite PR986](https://github.com/CrispStrobe/brickwright/pull/986),
 consumer-owned checks, explicit dependency adoption and fresh installed acceptance.
 The unrelated WeDo inventory policy failure was repaired on Lite main by
-[PR998](https://github.com/CrispStrobe/brickwright-lite/pull/998), merged as
+[PR998](https://github.com/CrispStrobe/brickwright/pull/998), merged as
 `d413bd2d`. The integrated PR986 and
-[PR989](https://github.com/CrispStrobe/brickwright-lite/pull/989) heads have all
+[PR989](https://github.com/CrispStrobe/brickwright/pull/989) heads have all
 enabled checks successful as of 2026-10-16; those checks do not prove the
 supplier API was adopted or the optional GUI persistence scenario ran.
-[Proposed handoff PR1006](https://github.com/CrispStrobe/brickwright-lite/pull/1006)
+[Proposed handoff PR1006](https://github.com/CrispStrobe/brickwright/pull/1006)
 records the remaining coordinated supplier/lock ownership, exact qualified
 Board adoption and genuine installed download/chooser-reload gates. It transfers
 no implementation or pin ownership. No consumer pin/notice change or repeated
@@ -3082,10 +3082,10 @@ admitted clean guest/oracle run. Keep those gates distinct from this observer.
    guards remain false until distinct source, setup, runtime and original-only
    admission. Acceptance is a fresh, independently checked setup/result chain,
    then the existing owned oracle comparison on a clean hosted guest.
-2. **Admit the Lite GUI consumer separately.** The [Lite GUI claim PR1305](https://github.com/CrispStrobe/brickwright-lite/pull/1305)
+2. **Admit the Lite GUI consumer separately.** The [Lite GUI claim PR1305](https://github.com/CrispStrobe/brickwright/pull/1305)
    covers current frontend/source/runtime/request/event/original admission for
    the existing [HDD persistence and forward-debug scenarios](https://github.com/CrispStrobe/brickwright/blob/main/docs/X86-NEXT-LANES.md).
-   Coordinate with [Arcade PR1128](https://github.com/CrispStrobe/brickwright-lite/pull/1128)
+   Coordinate with [Arcade PR1128](https://github.com/CrispStrobe/brickwright/pull/1128)
    and the D7 supplier owner; preserve their active ownership and dependency
    pins. Do not treat a selected Board API or unit pass as an installed GUI
    result. Acceptance requires exact current source and supplier joins, a
@@ -3753,7 +3753,7 @@ The next agent should complete these separate tasks in order:
 ### Handoff: 386 integration and user-facing work
 
 Refresh the default branches, open PRs and ownership claims before taking a
-lane. [Lite PR1540](https://github.com/CrispStrobe/brickwright-lite/pull/1540)
+lane. [Lite PR1540](https://github.com/CrispStrobe/brickwright/pull/1540)
 is the GUI qualification candidate; [Board PR720](https://github.com/CrispStrobe/bw-board/pull/720)
 is the separate direct-address allocation candidate. Both remain open. Do not
 infer qualification from an older head, a green build alone, or an artifact's

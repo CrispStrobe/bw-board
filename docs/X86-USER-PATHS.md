@@ -62,7 +62,7 @@ installed Lite debugger.
 | Checkpoint/replay | Architectural 386 checkpoint, restore and replay remain refused. |
 
 Lite still needs coordinated supplier adoption and affected installed acceptance.
-The proposed [adoption handoff PR1006](https://github.com/CrispStrobe/brickwright-lite/pull/1006)
+The proposed [adoption handoff PR1006](https://github.com/CrispStrobe/brickwright/pull/1006)
 transfers no pin ownership. A visible debugger pane or a successful Board test
 cannot establish which API an installed app contains.
 

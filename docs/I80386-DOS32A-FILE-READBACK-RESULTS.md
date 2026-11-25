@@ -120,7 +120,7 @@ finite protected-buffer file-input boundary. It does not qualify general DOS
 error paths, strict original 386DX behavior, DPMI/high-linear/timer behavior,
 physical timing, mouse/IRQ fidelity, full OS compatibility, installed GUI or a
 release. The next dependency gate is the existing Lite HDD/GUI handoff:
-[runner prerequisite PR986](https://github.com/CrispStrobe/brickwright-lite/pull/986)
+[runner prerequisite PR986](https://github.com/CrispStrobe/brickwright/pull/986)
 remains unmerged with an unrelated WeDo policy unit-check failure. Consumer-owned
 prerequisite checks, explicit dependency adoption and fresh installed acceptance
 remain separate. This result changes no consumer pin or notice and does not
