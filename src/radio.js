@@ -96,7 +96,7 @@ import {
 } from './rf-bands.js';
 import { DMath } from './det-math.js';
 import { coilInductorParams } from './sensing-transducers.js';
-import { MIXER_IC_KIND, MIXER_IC_LO_REF, mixerCard, mixerTail, mixerOutputFade } from './mixer-ic.js';
+import { MIXER_IC_KIND, LO_BIAS_RATIO, mixerCard, mixerTail, mixerOutputFade } from './mixer-ic.js';
 import { FM_IF_KIND, fmIfCard, fmQuadHz, fmDetector } from './fm-if-ic.js';
 import { i0e, i1e } from './rf-bands.js';
 
@@ -884,7 +884,7 @@ export function expandRadio(parts, nets, opts) {
             // input, LO, output pair. Its oscillator transistor is a hidden
             // npn and gets its own detector below.
             const pin = (t) => netOf(p.id, t);
-            const ns = ['in_a', 'in_b', 'osc_b', MIXER_IC_LO_REF, 'out_a', 'out_b', 'vcc', 'gnd'].map(pin);
+            const ns = ['in_a', 'in_b', 'osc_b', 'gnd', 'out_a', 'out_b', 'vcc', 'gnd'].map(pin);
             if (ns.some(n => !n) || ns[0] === ns[1] || ns[4] === ns[5]) continue;
             const det = { id: `@rf:${p.id}:mix`, partId: p.id, kind: 'mixer', of: p, index: radio.detectors.length,
                 nets: [ns[0].id, ns[1].id], netsLo: [ns[2].id, ns[3].id], netsOut: [ns[4].id, ns[5].id],
@@ -1307,7 +1307,7 @@ export class RadioFrontEnd {
                 const iT = mixerTail(card, nv(d.netsSupply[0]) - g);
                 const fade = (mixerOutputFade(nv(d.netsOut[0]) - g) + mixerOutputFade(nv(d.netsOut[1]) - g)) / 2;
                 // ic: the tail the outputs can carry (a resonance scan zeroes it, as a transistor's).
-                return { mixer: true, card, iT, ic: iT * fade, fade, vlo: nv(d.netsLo[0]) - nv(d.netsLo[1]) };
+                return { mixer: true, card, iT, ic: iT * fade, fade, vlo: nv(d.netsLo[0]) - g - LO_BIAS_RATIO * (nv(d.netsSupply[0]) - g) };
             }
             if (d.kind === 'diode') {
                 const v = nv(d.nets[0]) - nv(d.nets[1]);

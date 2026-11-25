@@ -68,14 +68,13 @@ import { DMath } from './det-math.js';
 
 export const MIXER_IC_KIND = 'sa612';
 export const MIXER_IC_PINS = Object.freeze(['in_a', 'in_b', 'gnd', 'out_a', 'out_b', 'osc_b', 'osc_e', 'vcc']);
-/** The internal LO bias node's terminal on the solver part (hidden). */
-export const MIXER_IC_LO_REF = 'lo_ref';
 export const MIXER_IC_DEFAULTS = Object.freeze({ itail: 1e-3, gm: 8e-3, rin: 1500, rout: 1500, beta: 100, ft: 500e6 });
 
 const VT = 0.02585;
 /** Input bias, LO bias: fractions of the supply. */
 const RF_BIAS_RATIO = 0.23;
-const LO_BIAS_RATIO = 0.27;
+/** The LO bias (osc_b's rest) as a fraction of the supply above gnd. */
+export const LO_BIAS_RATIO = 0.27;
 const LO_BIAS_OHMS = 18e3;
 const OSC_EMITTER_OHMS = 4000;
 const SUPPLY_OHMS = 6000;
@@ -126,8 +125,7 @@ export function expandMixerIcs(parts, nets) {
     const selected = parts.filter((p) => p.kind === MIXER_IC_KIND);
     if (!selected.length) return { parts, nets };
     const present = new Set(parts.map((p) => p.id));
-    const outParts = parts.map((p) => (p.kind === MIXER_IC_KIND && !p.terminals?.includes(MIXER_IC_LO_REF)
-        ? { ...p, terminals: [...MIXER_IC_PINS, MIXER_IC_LO_REF] } : p));
+    const outParts = [...parts];
     const outNets = nets.map((n) => ({ ...n, terminals: [...n.terminals] }));
     const netOf = (id, t) => outNets.find((n) => n.terminals.some((x) => x.part === id && x.terminal === t));
     for (const p of selected) {
@@ -142,7 +140,7 @@ export function expandMixerIcs(parts, nets) {
         };
         const [inA, inB, gnd, outA, outB, oscB, oscE, vcc] = MIXER_IC_PINS.map(pin);
         const rfBias = { id: `n_${p.id}_rfbias`, terminals: [] };
-        const loRef = { id: `n_${p.id}_${MIXER_IC_LO_REF}`, terminals: [{ part: p.id, terminal: MIXER_IC_LO_REF }] };
+        const loRef = { id: `n_${p.id}_lobias`, terminals: [] };
         outNets.push(rfBias, loRef);
         const card = mixerCard(p);
         const add = (id, kind, params, ends) => {

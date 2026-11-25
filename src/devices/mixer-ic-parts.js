@@ -10,15 +10,17 @@
  */
 
 import { registerDevice } from '../devices.js';
-import { MIXER_IC_KIND, MIXER_IC_PINS, MIXER_IC_LO_REF, mixerCard, mixerCurrents, mixerTail } from '../mixer-ic.js';
+import { MIXER_IC_KIND, MIXER_IC_PINS, LO_BIAS_RATIO, mixerCard, mixerCurrents, mixerTail } from '../mixer-ic.js';
 
-const TERMS = ['in_a', 'in_b', 'out_a', 'out_b', 'osc_b', 'vcc', 'gnd', MIXER_IC_LO_REF];
+const TERMS = ['in_a', 'in_b', 'out_a', 'out_b', 'osc_b', 'vcc', 'gnd'];
 
 function pinVolts(read) {
     const g = read('gnd');
     return {
         rf: read('in_a') - read('in_b'),
-        lo: read('osc_b') - read(MIXER_IC_LO_REF),
+        // The LO: the oscillator base against its internal bias, a fixed
+        // fraction of the supply.
+        lo: read('osc_b') - g - LO_BIAS_RATIO * (read('vcc') - g),
         vcc: read('vcc') - g,
         outA: read('out_a') - g,
         outB: read('out_b') - g,
@@ -27,7 +29,7 @@ function pinVolts(read) {
 
 export function registerMixerIcParts() {
     registerDevice(MIXER_IC_KIND, {
-        terminals: [...MIXER_IC_PINS, MIXER_IC_LO_REF],
+        terminals: [...MIXER_IC_PINS],
         eventLocalization: false,
         init() { return { drives: {}, vRf: 0, vLo: 0, iTail: 0, iOutA: 0, iOutB: 0, audio: 0 }; },
         stamp(ctx, part) {
