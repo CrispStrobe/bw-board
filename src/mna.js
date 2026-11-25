@@ -3432,20 +3432,24 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
   // Every piece of Newton state a run mutates, so a continuation can rewind
   // to a point it accepted. Cheap (a handful of small maps); taken for
   // operating-point solves only, which are the ones with fallback ladders.
+  let checkpointMaps;
   const snapshotNewton = () => {
-    const maps = [diodeVoltages, mosVsb, mosVdb, mosVds, bjtVbc, bjtVce, bjtVceDamp,
-      bjtVceLastStep, opampRegions, bjtRegions, bjtVceSat, mosRegions, vccsClamps, deviceStamps]
-      .map(m => [m, m.size === 0 ? null : new Map(m)]);
-    const sol = Float64Array.from(solution);
-    const nl = Float64Array.from(nonlinearIterate);
-    const cc = parts.filter(p => p._ccClampedVolts !== undefined).map(p => [p, p._ccClampedVolts]);
+    const maps = checkpointMaps ??= [diodeVoltages, mosVsb, mosVdb, mosVds, bjtVbc, bjtVce,
+      bjtVceDamp, bjtVceLastStep, opampRegions, bjtRegions, bjtVceSat, mosRegions, vccsClamps, deviceStamps];
+    const savedMaps = maps.map(m => m.size === 0 ? null : new Map(m));
+    const sol = solution.slice();
+    const nl = nonlinearIterate === solution ? sol : nonlinearIterate.slice();
+    const cc = [];
+    for (const p of parts) if (p._ccClampedVolts !== undefined) cc.push([p, p._ccClampedVolts]);
     return () => {
-      for (const [m, saved] of maps) {
-        m.clear();
-        if (saved) for (const [k, v] of saved) m.set(k, v);
+      for (let i = 0; i < maps.length; i++) {
+        const map = maps[i], saved = savedMaps[i];
+        map.clear();
+        if (saved) for (const [k, v] of saved) map.set(k, v);
       }
-      solution = Float64Array.from(sol);
-      nonlinearIterate = Float64Array.from(nl);
+      // Return independent vectors even when they shared a snapshot.
+      solution = sol.slice();
+      nonlinearIterate = nl.slice();
       for (const p of parts) delete p._ccClampedVolts;
       for (const [p, v] of cc) p._ccClampedVolts = v;
     };
@@ -4467,13 +4471,11 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
   // Transient next-state: what the caller stores for the next step. The
   // trapezoidal companions need the element's own current (cap) and voltage
   // (inductor) history too, so both are returned alongside the classic pair.
-  const regionDiagnostics = opts.inspectBjtRegions === true ? {
-    bjtRegionDiagnostics: new Map([...bjtRegions].map(([id, region]) => [id,
+  const bjtRegionDiagnostics = opts.inspectBjtRegions === true ? new Map([...bjtRegions].map(([id, region]) => [id,
       bjtVce.has(id) ? smoothBjtDiagnostic(parts.find(part => part.id === id), bjtVce.get(id)) :
       Object.freeze({region: bjtVbc.has(id) ? 'ebers-moll' : region,
         saturationVoltage: bjtVbc.has(id) ? null
-          : parts.find(part => part.id === id)?.params?.vceSat ?? bjtVceSat.get(id) ?? .2})])),
-  } : {};
+          : parts.find(part => part.id === id)?.params?.vceSat ?? bjtVceSat.get(id) ?? .2})])) : undefined;
   if (transient) {
     const capVoltagesNext = new Map();
     const capCurrentsNext = new Map();
@@ -4533,22 +4535,28 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
       }
     }
     dropOpenEnds(nodeVoltages);
-    return { nodeVoltages, branchCurrents, indeterminateBranchCurrents, railCurrents,
-      capVoltagesNext, capCurrentsNext,
-      inductorCurrentsNext, inductorVoltagesNext, converged, opampRegions, deviceStamps, blanketShunt,
-      newtonState: converged ? captureNewtonState() : undefined,
-      ...regionDiagnostics, warmState: { bjtRegions, bjtVceSat, mosRegions },
-      railConflicts: railConflicts.length ? [...new Set(railConflicts)] : undefined };
+    const result = { nodeVoltages, branchCurrents, indeterminateBranchCurrents, railCurrents,
+      capVoltagesNext, capCurrentsNext, inductorCurrentsNext, inductorVoltagesNext,
+      converged, opampRegions, deviceStamps, blanketShunt,
+      newtonState: converged ? captureNewtonState() : undefined };
+    if (bjtRegionDiagnostics) result.bjtRegionDiagnostics = bjtRegionDiagnostics;
+    result.warmState = { bjtRegions, bjtVceSat, mosRegions };
+    result.railConflicts = railConflicts.length ? [...new Set(railConflicts)] : undefined;
+    return result;
   }
 
   dropOpenEnds(nodeVoltages);
-  return { nodeVoltages, branchCurrents, indeterminateBranchCurrents, railCurrents,
-    ...(opts.capVoltages && chargedBjtIds.length ? {deferredBjtChargeIds: chargedBjtIds} : {}),
-    converged, opampRegions, deviceStamps, ...regionDiagnostics,
-    ...(fellOffBalance ? {fellOffBalance} : {}),
-    newtonState: converged ? captureNewtonState() : undefined,
-    warmState: { bjtRegions, bjtVceSat, mosRegions },
-    railConflicts: railConflicts.length ? [...new Set(railConflicts)] : undefined };
+  const result = { nodeVoltages, branchCurrents, indeterminateBranchCurrents, railCurrents };
+  if (opts.capVoltages && chargedBjtIds.length) result.deferredBjtChargeIds = chargedBjtIds;
+  result.converged = converged;
+  result.opampRegions = opampRegions;
+  result.deviceStamps = deviceStamps;
+  if (bjtRegionDiagnostics) result.bjtRegionDiagnostics = bjtRegionDiagnostics;
+  if (fellOffBalance) result.fellOffBalance = fellOffBalance;
+  result.newtonState = converged ? captureNewtonState() : undefined;
+  result.warmState = { bjtRegions, bjtVceSat, mosRegions };
+  result.railConflicts = railConflicts.length ? [...new Set(railConflicts)] : undefined;
+  return result;
 }
 
 // ─── Stamp functions ─────────────────────────────────────────────────────────
