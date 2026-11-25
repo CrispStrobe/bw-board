@@ -183,8 +183,16 @@ describe('mixing: a superhet on the mixer IC', () => {
         const probe = superhet();
         ms(probe, 0.3);
         const hz = probe.radioReport().bands.map(x => x.hz);
-        const fLo = nearest(hz, 1067e3), fIf = nearest(hz, 455e3), fTank = nearest(hz, 612e3);
-        assert.ok(bandAt(probe, 'lo', fLo, 0.001) > 1, 'the chip\'s oscillator runs');
+        const fBand = nearest(hz, 1067e3), fIf = nearest(hz, 455e3), fTank = nearest(hz, 612e3);
+        assert.ok(bandAt(probe, 'lo', fBand, 0.001) > 1, 'the chip\'s oscillator runs');
+        // The oscillator runs where its envelope turns, ~12.6 kHz above its
+        // band's centre (the resonance scan sees the tank without the
+        // transistor's gain). Was taken at the centre: the "20 kHz off"
+        // station then landed 7 kHz from the IF, nearer than the "tuned" one
+        // (13 kHz) — it only stayed out because products were placed by the
+        // bands' centres (bw-board 2026-11-25).
+        const loBand = probe._radio._bands.find(x => x.hz === fBand);
+        const fLo = fBand + loBand.rotationHz();
         // The station where the IF wants it, the aerial tank retuned onto it.
         const fs = fLo - fIf;
         const run = (hz) => {
@@ -199,6 +207,71 @@ describe('mixing: a superhet on the mixer IC', () => {
         assert.ok(vOn > 0.1, `aligned: the IF tank carries the station (${vOn} V)`);
         assert.ok(vOff < vOn / 1000, `20 kHz off: outside the IF tank (${vOff} V)`);
         assert.ok(vImg > 100 * vOff && vImg < vOn / 10, `the image (f_LO + f_IF) mixes into the IF too, weakened by the aerial tank (${vImg} V)`);
+    });
+});
+
+/**
+ * A VHF FM superhet: dipole → 1 pF → aerial tank (0.135 µH ‖ BB910) → 2.2 pF
+ * → mixer input A; the mixer's own transistor a Colpitts on a second tank
+ * (0.0987 µH ‖ BB910, both varicaps on one tuning voltage) 10.7 MHz above;
+ * output A → ceramic filter → FM IF IC → 10 nF.
+ */
+function vhfSuperhet(stations, pot = 0.75) {
+    const b = new BoardImpl(6);
+    b.setNetlist([P('G', 'gnd', {}, ['gnd']), P('VS', 'vsource', { volts: 6 }, ['pos', 'neg']),
+        P('D', 'dipole', { stations }, ['a', 'b']), P('CA', 'capacitor', { farads: 1e-12 }, ['a', 'b']),
+        P('L1', 'vhf_coil', { henrys: 0.135e-6, q: 60 }, ['a', 'b']), P('V1', 'varicap', { part: 'BB910' }, ['anode', 'cathode']), P('CV1', 'capacitor', { farads: 1e-9 }, ['a', 'b']),
+        P('RT1', 'resistor', { ohms: 100e3 }, ['a', 'b']), P('POT', 'potentiometer', { ohms: 100e3, position: pot }, ['a', 'wiper', 'b']),
+        P('CI', 'capacitor', { farads: 2.2e-12 }, ['a', 'b']), P('U', 'sa612', {}, MIXER_PINS), P('CB', 'capacitor', { farads: 100e-9 }, ['a', 'b']),
+        P('CO1', 'capacitor', { farads: 10e-12 }, ['a', 'b']), P('CO2', 'capacitor', { farads: 22e-12 }, ['a', 'b']), P('CK', 'capacitor', { farads: 10e-12 }, ['a', 'b']),
+        P('L2', 'vhf_coil', { henrys: 0.0987e-6, q: 60 }, ['a', 'b']), P('V2', 'varicap', { part: 'BB910' }, ['anode', 'cathode']), P('CV2', 'capacitor', { farads: 1e-9 }, ['a', 'b']),
+        P('RT2', 'resistor', { ohms: 100e3 }, ['a', 'b']),
+        P('F', 'ceramic_filter', {}, ['in', 'gnd', 'out']), P('IF', 'fm_if', {}, ['in', 'gnd', 'vcc', 'out']), P('CAU', 'capacitor', { farads: 10e-9 }, ['a', 'b'])],
+    [net('g', ['G', 'gnd'], ['VS', 'neg'], ['D', 'b'], ['L1', 'a'], ['V1', 'anode'], ['POT', 'b'], ['U', 'gnd'], ['CB', 'b'], ['CO2', 'b'], ['L2', 'a'], ['V2', 'anode'], ['F', 'gnd'], ['IF', 'gnd'], ['CAU', 'b']),
+        net('v', ['VS', 'pos'], ['U', 'vcc'], ['POT', 'a'], ['IF', 'vcc']),
+        net('ant', ['D', 'a'], ['CA', 'a']), net('rf', ['CA', 'b'], ['L1', 'b'], ['CV1', 'a'], ['CI', 'a']), net('k1', ['CV1', 'b'], ['V1', 'cathode'], ['RT1', 'a']),
+        net('vt', ['POT', 'wiper'], ['RT1', 'b'], ['RT2', 'b']),
+        net('ina', ['CI', 'b'], ['U', 'in_a']), net('inb', ['U', 'in_b'], ['CB', 'a']),
+        net('ob', ['U', 'osc_b'], ['CO1', 'a'], ['CK', 'a']), net('oe', ['U', 'osc_e'], ['CO1', 'b'], ['CO2', 'a']),
+        net('lo', ['CK', 'b'], ['L2', 'b'], ['CV2', 'a']), net('k2', ['CV2', 'b'], ['V2', 'cathode'], ['RT2', 'a']),
+        net('oa', ['U', 'out_a'], ['F', 'in']), net('fo', ['F', 'out'], ['IF', 'in']), net('aud', ['IF', 'out'], ['CAU', 'a'])]);
+    b.setBroadcast([]);
+    b.setPower(true);
+    return b;
+}
+
+describe('mixing: a VHF FM superhet', () => {
+    it('the oscillator 10.7 MHz above the station: its FM programme at the IF chip\'s output; the IF in the filter\'s band', () => {
+        // Gap (2026-11-25): three things kept it silent. The aerial band
+        // took the local oscillator's mode (10 % above it, accurately
+        // estimated from there) for its own oscillation and ran away
+        // resolving a 10 MHz rotation; the products were placed by the
+        // bands' centres, and the oscillator runs ~290 kHz below the tank
+        // the resonance scan sees, so the IF went into the wrong pole of the
+        // ceramic filter; and the IF chip read the IF's frequency over a
+        // microsecond the history had already pruned.
+        const fm = { id: 'fm', hz: 98e6, mod: 'fm', deviationHz: 75e3, fieldVPerM: 0.05, audio: { type: 'tone', hz: 1000 } };
+        const b = vhfSuperhet([fm]);
+        ms(b, 1.5);
+        assert.equal(b._radio.error, null);
+        const lo = b._radio._bands.find(x => Math.abs(x.oscHz) > 0);
+        assert.ok(lo, 'the oscillator runs');
+        const fLo = lo.hz + lo.rotationHz();
+        close(fLo - 98e6, 10.7e6, 150e3, 'the oscillator 10.7 MHz above the station (Hz)');
+        const tr = [];
+        for (let i = 1; i <= 100; i++) { ms(b, 1.5 + i * 0.01); tr.push(b.nodeVoltages.get('aud')); }
+        const m = tr.reduce((a, x) => a + x, 0) / tr.length;
+        const amp = (f) => { let re = 0, im = 0; tr.forEach((v, i) => { re += (v - m) * Math.cos(2 * Math.PI * f * i * 1e-5); im += (v - m) * Math.sin(2 * Math.PI * f * i * 1e-5); }); return 2 * Math.hypot(re, im) / tr.length; };
+        // MEASURED 2026-11-25: 1 kHz 0.24 V (atan(2·20·75k/10.7M) = 0.27 rad through the 5 kΩ / 10 nF output), 2 kHz 3 mV.
+        assert.ok(amp(1000) > 0.15, `the programme: ${amp(1000)} V at 1 kHz`);
+        assert.ok(amp(2000) < amp(1000) / 10, `undistorted: ${amp(2000)} V at 2 kHz`);
+        const silent = vhfSuperhet([]);
+        ms(silent, 1.5);
+        const tq = [];
+        for (let i = 1; i <= 100; i++) { ms(silent, 1.5 + i * 0.01); tq.push(silent.nodeVoltages.get('aud')); }
+        const mq = tq.reduce((a, x) => a + x, 0) / tq.length;
+        let re = 0, im = 0; tq.forEach((v, i) => { re += (v - mq) * Math.cos(2 * Math.PI * 1000 * i * 1e-5); im += (v - mq) * Math.sin(2 * Math.PI * 1000 * i * 1e-5); });
+        assert.ok(2 * Math.hypot(re, im) / tq.length < amp(1000) / 10, 'no station, no tone');
     });
 });
 

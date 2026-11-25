@@ -177,7 +177,8 @@ const MODS = new Set(['am', 'fm', 'cw']);
  * rod), `audio` programme ({type:'tone', hz} | {type:'two-tone', hz:[f1,f2],
  * period} alternating | {type:'chord', hz:[f1,f2]} both at once |
  * {type:'melody', notes:[[hz, s], …]} | {type:'morse', text, wpm} the key
- * (cw) | {type:'none'} carrier only).
+ * (cw) | {type:'none'} carrier only). `skyFieldVPerM` (default 0): the
+ * field its SKY WAVE adds after dark (stationField).
  */
 export function normalizeStations(list) {
     if (!Array.isArray(list)) throw new Error('broadcast: expected an array of stations');
@@ -193,6 +194,7 @@ export function normalizeStations(list) {
             name: String(s.name ?? s.id ?? `${Math.round(hz / 1e3)} kHz`),
             hz,
             fieldVPerM: Math.max(0, num(s.fieldVPerM, 0.01)),
+            skyFieldVPerM: Math.max(0, num(s.skyFieldVPerM, 0)),
             mod,
             depth: Math.min(1, Math.max(0, num(s.depth, 0.5))),
             deviationHz: Math.max(0, num(s.deviationHz, 75e3)),
@@ -200,6 +202,31 @@ export function normalizeStations(list) {
             audio,
         };
     });
+}
+
+/**
+ * Night share of the sky wave at hour h (0..24): 0 by day, 1 at night, a
+ * smooth twilight between 17:00 and 19:00 (and 05:00–07:00). By day the
+ * ionosphere's lowest layer, ionised by the sun, absorbs medium and long
+ * waves on their way up; after sunset it fades within an hour or two and
+ * the waves are reflected by the higher layers instead, coming down again
+ * hundreds of kilometres away: distant stations appear in the evening.
+ */
+export function nightShare(h) {
+    const x = Math.abs((((h % 24) + 24) % 24) - 12);   // hours from noon, 0..12
+    const s = Math.min(1, Math.max(0, (x - 5) / 2));
+    return s * s * (3 - 2 * s);
+}
+
+/**
+ * A station's field at the receiver at hour h: its ground wave
+ * (`fieldVPerM`, there day and night) plus its sky wave (`skyFieldVPerM`)
+ * scaled by nightShare(h). NOT MODELLED: the sky wave's fading (two paths
+ * beating), its dependence on frequency and distance (the station states
+ * its own night field), seasons and latitude (sunset fixed at 18:00).
+ */
+export function stationField(s, h) {
+    return s.fieldVPerM + (s.skyFieldVPerM > 0 ? s.skyFieldVPerM * nightShare(h) : 0);
 }
 
 function melodyAt(audio, t) {
@@ -853,7 +880,8 @@ export function expandRadio(parts, nets, opts) {
             R(`@rf:${a.id}:rant`, Math.max(0.1, num(P.ohms, ANTENNA_DEFAULTS.ohms)), emf, mid);
             Cp(`@rf:${a.id}:cant`, Math.max(1e-15, num(P.farads, ANTENNA_DEFAULTS.farads)), mid, netOf(a.id, 'a'));
             antennaSpecs.push({ id: a.id, sourceId: srcId, heightM: Math.max(0, num(P.heightM, ANTENNA_DEFAULTS.heightM)),
-                stations: Array.isArray(P.stations) ? normalizeStations(P.stations) : null });
+                stations: Array.isArray(P.stations) ? normalizeStations(P.stations) : null,
+                clock: !!P.clock, hourOfDay: Math.min(24, Math.max(0, num(P.hourOfDay, 12))) });
         }
     }
 
@@ -974,6 +1002,8 @@ export function chooseFrontEnd(parts, nets) {
         || ((p.kind === 'nmos' || p.kind === 'pmos') && (t === 'drain' || t === 'source'));
     if (parts.some(p => ['vhf_coil', 'varicap', 'nmos', 'pmos', MIXER_IC_KIND].includes(p.kind))) return 'envelope';
     if (parts.some(p => p.kind === 'ferrite_coil' && (p.params?.linkTo || p.params?.slideWinding || Array.isArray(p.params?.stations)))) return 'envelope';
+    // An antenna with a clock (the sky wave by the hour) is heard through the bands.
+    if (parts.some(p => p.kind === 'antenna' && p.params?.clock)) return 'envelope';
     if (parts.some(p => ['dipole', 'ceramic_filter', 'fm_if'].includes(p.kind) || (['air_coil', 'vhf_coil'].includes(p.kind) && p.params?.linkTo))) return 'envelope';
     const antennas = parts.filter(p => p.kind === 'antenna');
     if (!antennas.length) return 'envelope';
@@ -1282,9 +1312,21 @@ export class RadioFrontEnd {
         if (!own) return 0;
         if (a.dipole) {
             const turn = dipoleAngleDeg(a.dipole, this._controls?.()?.get(a.id));
-            return own.fieldVPerM * a.heightM * DMath.cos((turn - own.bearingDeg) * Math.PI / 180);
+            return stationField(own, this.hour()) * a.heightM * DMath.cos((turn - own.bearingDeg) * Math.PI / 180);
         }
-        return own.fieldVPerM * a.heightM;
+        return stationField(own, this.hour()) * a.heightM;
+    }
+
+    /**
+     * The hour of the day (0..24) the broadcast is heard at: an antenna with
+     * `params.clock` carries it on its dial (0..1 = 00:00..24:00), else its
+     * `params.hourOfDay`; noon otherwise (no sky wave).
+     */
+    hour() {
+        const a = this.antennas.find(x => x.clock);
+        if (!a) return 12;
+        const v = this._controls?.()?.get(a.id);
+        return Number.isFinite(v) ? 24 * Math.min(1, Math.max(0, v)) : a.hourOfDay;
     }
 
     /** EMF (V peak, signed) station `s` induces in the whole main winding of rod `r`. */
@@ -1292,7 +1334,7 @@ export class RadioFrontEnd {
         const own = r.stations ? r.stations.find(x => x.id === s.id) : s;
         if (!own || !(r.heightM > 0)) return 0;
         const angle = rodAngleDeg(r.part, rodControlIsSlide(r.part) ? undefined : this._controls?.()?.get(r.part.id));
-        return own.fieldVPerM * r.heightM * (own.hz / 1e6) * DMath.cos((angle - own.bearingDeg) * Math.PI / 180);
+        return stationField(own, this.hour()) * r.heightM * (own.hz / 1e6) * DMath.cos((angle - own.bearingDeg) * Math.PI / 180);
     }
 
     /**
@@ -1960,12 +2002,16 @@ export class RadioFrontEnd {
         // Band history past this instant was integrated with the previous
         // operating point: discard it, so it is redone with this one.
         for (const b of this._bands) b.prune(tSec);
+        if (this._replan && !this._dirty) { this._replan = false; this._planProducts(); }
         this._portCache.t = NaN;
         const key = JSON.stringify([...(board.controls ?? new Map())]);
         if (key !== this._controlsKey) { this._controlsKey = key; this._dirty = true; this._tScan = -Infinity; this._controlsMoved = true; }
         // A varicap's bias moved (its tuning voltage settling after the pot
         // turned): the resonance moved with it; look again.
-        if (!this._dirty && tSec - this._tScan >= RETUNE_SEC && this._varicapMoved()) { this._dirty = true; this._tScan = -Infinity; }
+        if (!this._dirty && tSec - this._tScan >= RETUNE_SEC && this._varicapMoved()) {
+            // As a turned control: a resonance the scan no longer finds has moved away with it.
+            this._dirty = true; this._tScan = -Infinity; this._controlsMoved = true;
+        }
         if (this._dirty || tSec - this._tRefresh >= REFRESH_SEC) this.refresh(board, tSec, solution);
         else if (this._biasMoved() && tSec - (this._tBound ?? -Infinity) >= REBOUND_SEC) {
             // The operating point moved (a bias network charging, a pot
@@ -2197,28 +2243,53 @@ export class RadioFrontEnd {
         const bands = this._bands;
         for (const b of bands) b.products = [];
         if (!this._sys || bands.length < 1) return;
-        const rotOf = (b) => 1 / (ROTATION_STEPS * b.hRot) + Math.abs(b.oscHz ?? 0);
+        for (const b of bands) b._oscPlanned = b.oscHz ?? 0;
+        for (const b of bands) if (b.hRot0 !== undefined) b.hRot = b.hRot0;
+        // A source's own rotation: its stations' offsets and modulation
+        // (the band's substep before products bound it — a product's
+        // rotation inherited through another product compounded, band to
+        // band, into ~60 ns substeps); where it really is, `fe`, carries
+        // an oscillation's offset.
+        const rotOf = (b) => 1 / (ROTATION_STEPS * (b.hRot0 ?? b.hRot));
+        // `fe`: where a source really is. An oscillating band's carrier sits
+        // off its centre (the transistor's capacitances pull a running
+        // oscillator off the tank the resonance scan sees) by the rotation
+        // its envelope actually has: a VHF superhet's oscillator 290 kHz
+        // below its band's centre put the difference into the wrong one of
+        // the ceramic filter's two resonances. (Not oscHz, the mode
+        // estimate's Im λ: for a hard-driven medium-wave oscillator it said
+        // 253 kHz where the envelope turns at 4 kHz.) The product's
+        // rotation in its band's frame still follows from the centres (the
+        // band's own envelope carries the offset).
         const sources = [
-            ...bands.map(b => ({ band: b, hz: b.hz, rot: rotOf(b) })),
-            ...this._static.map(x => ({ s: x.s, H: x.H, hz: x.s.hz,
+            ...bands.map(b => ({ band: b, hz: b.hz, fe: b.hz + (b.oscHz ? b.rotationHz() : 0), rot: rotOf(b) })),
+            ...this._static.map(x => ({ s: x.s, H: x.H, hz: x.s.hz, fe: x.s.hz,
                 rot: (x.s.mod === 'fm' ? x.s.deviationHz : 0) + audioMaxHz(x.s.audio) })),
         ];
         const juncs = this._sys.junctions.filter(j => ['bjt', 'diode', 'mos', 'mixer'].includes(j.kind));
+        // Each product goes to ONE band: the nearest whose half-width holds
+        // it (two close resonances of one network — a ceramic filter's two
+        // poles — each took the same product and carried it twice).
+        const hwOf = (c) => c.halfWidth ?? bandHalfWidthHz(c.hz);
+        const home = (fe) => {
+            let best = null;
+            for (const c of bands) if (fe > 0 && Math.abs(fe - c.hz) <= hwOf(c) && (!best || Math.abs(fe - c.hz) < Math.abs(fe - best.hz))) best = c;
+            return best;
+        };
         for (const c of bands) {
-            const hw = c.halfWidth ?? bandHalfWidthHz(c.hz);
-            const near = (f) => f > 0 && Math.abs(f - c.hz) <= hw;
+            const near = (fe) => home(fe) === c;
             const terms = [];
             const srcs = sources.filter(x => x.band !== c);
-            const add = (t, f, rot) => { t.off = 2 * Math.PI * (f - c.hz); t.rot = Math.abs(f - c.hz) + rot; terms.push(t); };
+            const add = (t, f, rot, fe) => { t.off = 2 * Math.PI * (f - c.hz); t.rot = Math.abs(fe - c.hz) + rot; terms.push(t); };
             for (const j of juncs) {
                 if (j.kind === 'mixer') {
                     const port = j.p[2];
                     for (const p of srcs) for (const q of srcs) {
                         if (!p.band && !q.band) continue;
                         const rot = p.rot + q.rot;
-                        if (near(p.hz - q.hz)) add({ type: 'mix', j, port, p, q, sign: -1 }, p.hz - q.hz, rot);
-                        else if (near(q.hz - p.hz)) add({ type: 'mix', j, port, p, q, sign: -2 }, q.hz - p.hz, rot);
-                        if (near(p.hz + q.hz)) add({ type: 'mix', j, port, p, q, sign: 1 }, p.hz + q.hz, rot);
+                        if (near(p.fe - q.fe)) add({ type: 'mix', j, port, p, q, sign: -1 }, p.hz - q.hz, rot, p.fe - q.fe);
+                        else if (near(q.fe - p.fe)) add({ type: 'mix', j, port, p, q, sign: -2 }, q.hz - p.hz, rot, q.fe - p.fe);
+                        if (near(p.fe + q.fe)) add({ type: 'mix', j, port, p, q, sign: 1 }, p.hz + q.hz, rot, p.fe + q.fe);
                     }
                     continue;
                 }
@@ -2228,28 +2299,35 @@ export class RadioFrontEnd {
                     const p = srcs[i];
                     if (p.band) for (const k of [2, 3]) {
                         if (j.kind === 'mos' && k === 3) continue;
-                        if (near(k * p.hz)) add({ type: 'harm', j, port, p, k }, k * p.hz, k * p.rot);
+                        if (near(k * p.fe)) add({ type: 'harm', j, port, p, k }, k * p.hz, k * p.rot, k * p.fe);
                     }
                     for (let m = i + 1; m < srcs.length; m++) {
                         const q = srcs[m];
                         if (!p.band && !q.band) continue;
-                        const [hi, lo] = p.hz >= q.hz ? [p, q] : [q, p];
+                        const [hi, lo] = p.fe >= q.fe ? [p, q] : [q, p];
                         const rot = p.rot + q.rot;
-                        if (near(hi.hz - lo.hz)) add({ type: 'mix', j, port, p: hi, q: lo, sign: -1 }, hi.hz - lo.hz, rot);
-                        if (near(p.hz + q.hz)) add({ type: 'mix', j, port, p, q, sign: 1 }, p.hz + q.hz, rot);
+                        if (near(hi.fe - lo.fe)) add({ type: 'mix', j, port, p: hi, q: lo, sign: -1 }, hi.hz - lo.hz, rot, hi.fe - lo.fe);
+                        if (near(p.fe + q.fe)) add({ type: 'mix', j, port, p, q, sign: 1 }, p.hz + q.hz, rot, p.fe + q.fe);
                     }
                 }
             }
             c.products = terms;
             if (terms.length) {
-                const rot = Math.max(...terms.map(t => t.rot));
+                // The substep resolves the rotations of products between
+                // PRIMARY sources: stations, bands that carry stations and
+                // oscillating bands. A product of a product (a VHF
+                // superhet's IF mixed back up with a neighbouring station
+                // into its aerial band) is carried, but its rotation does not
+                // set the step (it bound the aerial band to 35 ns substeps).
+                const primary = (x) => !x || !x.band || x.band.members.length > 0 || !!x.band.oscHz;
+                const main = terms.filter(t => primary(t.p) && primary(t.q));
+                const rot = Math.max(...(main.length ? main : terms).map(t => t.rot));
                 const h = Math.min(H_TARGET_MAX, 1 / (ROTATION_STEPS * Math.max(200, rot)));
                 if (h < c.hRot) { c.hRot = h; c._bound(); }
             }
         }
     }
 
-    /** Complex port-a voltage of a product's source at time t. */
     _sourcePhasor(src, a, t) {
         if (src.band) return src.band.phasorAt(a, t);
         const [mr, mi] = stationModulation(src.s, t);
@@ -2354,10 +2432,7 @@ export class RadioFrontEnd {
             if (m > A) { A = m; best = band; }
         }
         if (!best) return 0;
-        const dt = 1e-6;
-        const v1 = best.phasorAt(a, tSec), v0 = best.phasorAt(a, tSec - dt);
-        const dphi = DMath.atan2(v1[1] * v0[0] - v1[0] * v0[1], v1[0] * v0[0] + v1[1] * v0[1]);
-        const fi = best.hz + dphi / (2 * Math.PI * dt);
+        const fi = best.hz + best.phaseRateAt(a, tSec) / (2 * Math.PI);
         const card = fmIfCard(j.d.of);
         return fmDetector(card, fmQuadHz(card, this._controls?.()?.get(j.d.partId)), fi, A);
     }
@@ -2560,6 +2635,7 @@ class RfBand {
             rot = Math.max(rot, Math.abs(s.hz - hz) + (s.mod === 'fm' ? s.deviationHz + audioMaxHz(s.audio) : audioMaxHz(s.audio)));
         }
         this.hRot = Math.min(H_TARGET_MAX, 1 / (ROTATION_STEPS * rot));
+        this.hRot0 = this.hRot;
         // Thermal noise of each winding's loss conductance G = 1/(Q·ω·L).
         this.noise = sys.windings.filter(x => x.q > 0 && x.henrys > 0)
             .map(x => ({ sel: x.sel, psd: thermalCurrentPsd(1 / (x.q * w * x.henrys)) }));
@@ -2577,7 +2653,7 @@ class RfBand {
     _bound() {
         const r = this.radio;
         let hT = this.hRot;
-        const modes = r._modes(this.omega, this.integ.portVoltages(this.X), r._otherAmplitudes(this));
+        const modes = this._own(r._modes(this.omega, this.integ.portVoltages(this.X), r._otherAmplitudes(this)));
         this.growth = Math.max(0, ...modes.map(m => m[0]));
         // The estimate is first-order in a winding's admittance and can be
         // fooled by a peak that is not one simple mode: confirm it by
@@ -2616,6 +2692,13 @@ class RfBand {
         let peak = 0;
         for (const p of this.integ.portVoltages(this.X)) peak = Math.max(peak, Math.hypot(p[0], p[1]));
         this.oscHz = this._tUnstable === this.t && peak > OSC_VOLTS ? dom[1] / (2 * Math.PI) : 0;
+        // Its products' homes follow where it really is (_planProducts):
+        // re-plan when the oscillation has moved by a quarter of the
+        // narrowest band's half-width.
+        if (this.oscHz !== (this._oscPlanned ?? 0) && r._bands.length > 1) {
+            const hw = Math.min(...r._bands.map(x => x.halfWidth ?? bandHalfWidthHz(x.hz)));
+            if (Math.abs(this.oscHz - (this._oscPlanned ?? 0)) > 0.25 * hw) r._replan = true;
+        }
         if (Math.abs(this.oscHz) > 200) hT = Math.min(hT, 1 / (ROTATION_STEPS * Math.abs(this.oscHz)));
         this.kMax = Math.max(0, Math.min(K_MAX, Math.floor(DMath.log2(hT / H_UNIT))));
         // The loop's time scale: the envelope's, 2Q/ω, but no faster than the
@@ -2639,7 +2722,7 @@ class RfBand {
             const saved = bias.map(b => b?.ic);
             bias.forEach(b => { if (b && b.ic !== undefined) b.ic *= 1.3; });
             try {
-                const m1 = r._modes(this.omega, this.integ.portVoltages(this.X), r._otherAmplitudes(this));
+                const m1 = this._own(r._modes(this.omega, this.integ.portVoltages(this.X), r._otherAmplitudes(this)));
                 this._dSigma = (Math.max(...m1.map(m => m[0])) - this._sigma0) / 0.3;
             } finally { bias.forEach((b, i) => { if (b && saved[i] !== undefined) b.ic = saved[i]; }); }
         }
@@ -2664,7 +2747,7 @@ class RfBand {
         let sigma;
         if (c && Math.abs(ic - c.ic) <= c.ic / 6 && amp <= 2 * c.amp && amp >= c.amp / 2) sigma = c.sigma;
         else {
-            const modes = r._modes(this.omega, this.integ.portVoltages(this.X), r._otherAmplitudes(this));
+            const modes = this._own(r._modes(this.omega, this.integ.portVoltages(this.X), r._otherAmplitudes(this)));
             sigma = Math.max(...modes.map(m => m[0]));
             this._sigmaCache = { ic, amp, sigma };
             if (sigma > 0) this._tUnstable = this.t;
@@ -2688,7 +2771,31 @@ class RfBand {
     _unstable(modes) {
         if (modes.some(m => m[0] > 0)) return true;
         const r = this.radio;
-        return r._modes(this.omega, this.integ.portVoltages(this.X).map(() => [0, 0]), r._otherAmplitudes(this)).some(m => m[0] > 0);
+        return this._own(r._modes(this.omega, this.integ.portVoltages(this.X).map(() => [0, 0]), r._otherAmplitudes(this))).some(m => m[0] > 0);
+    }
+
+    /**
+     * The modes that are this band's own: nearer its centre than any other
+     * resonance's (outside its half-width). Seen from a winding of ANOTHER tank, the nearest natural mode
+     * is that tank's, offset by the distance between the two: a VHF
+     * superhet's local oscillator 10 MHz above its aerial tank (10 % — close
+     * enough for the first-order estimate to be accurate) made the aerial
+     * band take the oscillator's growth and rotation for its own, bound its
+     * substep to resolve a 10 MHz rotation, and run away. That oscillation
+     * is the oscillator band's; this band's implicit steps damp it.
+     */
+    _own(modes) {
+        const res = this.radio._resonances ?? [];
+        const own = modes.filter(m => {
+            // Half the centre frequency away is no mode of this band: the
+            // first-order expansion around ω_b says nothing there (an IF
+            // band at 10.96 MHz "saw" one at 21.7 MHz and stepped at 4 ns).
+            if (Math.abs(m[1]) > Math.PI * this.hz) return false;
+            const f = this.hz + m[1] / (2 * Math.PI);
+            const d = Math.abs(f - this.hz);
+            return !res.some(x => Math.abs(f - x.hz) < d && Math.abs(x.hz - this.hz) > (this.halfWidth ?? 0));
+        });
+        return own.length ? own : [[0, 0]];
     }
 
 
@@ -2788,9 +2895,18 @@ class RfBand {
                     if (Math.max(m0, m1) < 1e-4) continue;
                     g = Math.max(g, Math.abs(DMath.log(Math.max(m1, 1e-12) / Math.max(m0, 1e-12))));
                 }
-                if (g > 0.7 && k > 0) { k--; this.calm = 0; continue; }
+                if ((g > 0.7 || res.inconsistent) && k > 0) { k--; this.calm = 0; continue; }
                 if (g > 0.35 && k > 0) { this.k = k - 1; this.calm = 0; }
-                else if (g < 0.05) { if (++this.calm >= 8 && k < this.kMax) { this.k = k + 1; this.calm = 0; } else this.k = k; }
+                else if (g < 0.05) {
+                    if (++this.calm >= 8 && k < this.kMax) {
+                        // Held below its ceiling by a growth rate the swing
+                        // does not show (estimated at a swing it has since
+                        // compressed from, within the cache's factor of
+                        // two): estimate it again.
+                        if (k >= kBias) this._sigmaCache = null;
+                        this.k = k + 1; this.calm = 0;
+                    } else this.k = k;
+                }
                 else this.k = k;
                 this.X = { re: res.re, im: res.im };
                 this.t = res.t;
@@ -2851,6 +2967,41 @@ class RfBand {
         const e0 = h[i - 1].vp[a], e1 = h[i].vp[a];
         const w = (t - h[i - 1].t) / (h[i].t - h[i - 1].t);
         return [e0[0] + (e1[0] - e0[0]) * w, e0[1] + (e1[1] - e0[1]) * w];
+    }
+
+    /**
+     * The phase velocity (rad/s) of port a's envelope at t, from the
+     * integrator's substeps around t. (Was the phase over the last 1 µs
+     * read from the history — which the accepted transient steps prune: a
+     * look-back before its first point read that point instead, and the
+     * frequency an FM IF chip saw jumped wherever it did.)
+     */
+    phaseRateAt(a, t) {
+        const h = this.hist;
+        if (h.length < 2 || this.dead) return 0;
+        // Each substep's rate belongs to its midpoint; between midpoints it
+        // is interpolated, so the detector's output is continuous (a
+        // staircase at every substep held the transient solve to steps of
+        // a fifth of a microsecond).
+        const rate = (i) => {
+            const e0 = h[i - 1].vp[a], e1 = h[i].vp[a], dt = h[i].t - h[i - 1].t;
+            if (!(dt > 0)) return [h[i].t, 0];
+            return [(h[i].t + h[i - 1].t) / 2, DMath.atan2(e1[1] * e0[0] - e1[0] * e0[1], e1[0] * e0[0] + e1[1] * e0[1]) / dt];
+        };
+        let i = h.length - 1;
+        while (i > 1 && (h[i - 1].t + h[i].t) / 2 > t) i--;
+        const [ta, ra] = rate(i);
+        if (t <= ta || i === h.length - 1) return ra;
+        const [tb, rb] = rate(i + 1);
+        return ra + (rb - ra) * Math.min(1, (t - ta) / (tb - ta));
+    }
+
+    /** The rotation (Hz) of the band's strongest port in its frame now. */
+    rotationHz() {
+        const vp = this.portVoltages();
+        let a = -1, m = 0;
+        vp.forEach((p, i) => { const x = Math.hypot(p[0], p[1]); if (x > m) { m = x; a = i; } });
+        return a < 0 ? 0 : this.phaseRateAt(a, this.t) / (2 * Math.PI);
     }
 
     /** Stop this band: silent from here, the reason on the front end (radio.error, a board warning). */
