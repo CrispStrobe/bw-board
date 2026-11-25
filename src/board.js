@@ -921,6 +921,63 @@ export class BoardImpl {
   }
 
   /**
+   * A 555's comparator and reset inputs are CLAMPED TO ITS RAILS, as on the
+   * die: in the bipolar NE555 the input transistors' junctions and the
+   * substrate junction conduct as soon as a pin is driven a diode drop below
+   * GND or above VCC, and a CMOS 555 has ESD diodes to both rails. Per wired
+   * input (trigger, threshold, reset; the control pin has its divider), one
+   * solver diode from the input up to the VCC net and one from the GND net up
+   * to the input -- the L293D clamp pattern above: no new nets, solver view
+   * only, so DRC and the drawn netlist keep seeing one 555.
+   *
+   * The card is a small junction (Is 10 fA, 50 Ohm bulk): about 0.4 V at a
+   * microamp and 0.65 V at half a milliamp, nothing at all inside the rails.
+   * Why: the inputs drew nothing at any voltage, so an unguarded trigger lead
+   * on 22 MOhm beside a mains cable swung from -8 V to +26 V on a 9 V supply
+   * (r12, 2026-11-25). An input whose net holds nothing but this timer's own
+   * pins gets no clamps: there is nothing to clamp, and the free-running
+   * fallback reads such a pin as an island. `params.inputClamps: false`
+   * leaves the bare inputs.
+   */
+  static _expandTimerInputClamps(parts, nets) {
+    const PINS = {
+      '555': [['vcc', 'gnd', ['trigger', 'threshold', 'reset']]],
+      timer_555: [['vcc', 'gnd', ['trigger', 'threshold', 'reset']]],
+      '556': [['vcc', 'gnd', ['1trg', '1thr', '1rst', '2trg', '2thr', '2rst']]],
+      timer_556: [['vcc', 'gnd', ['1_trigger', '1_threshold', '1_reset', '2_trigger', '2_threshold', '2_reset']]],
+    };
+    const timers = parts.filter((p) => PINS[p.kind] && p.params?.inputClamps !== false);
+    if (!timers.length) return { parts, nets };
+    const netOf = new Map();
+    for (const n of nets) for (const t of n.terminals) netOf.set(`${t.part}\0${t.terminal}`, n);
+    const outParts = [...parts];
+    const outNets = nets.map((n) => ({ ...n, terminals: [...n.terminals] }));
+    const byId = new Map(outNets.map((n) => [n.id, n]));
+    const card = { is: 1e-14, n: 1, rs: 50 };
+    for (const u of timers) {
+      for (const [vccPin, gndPin, inputs] of PINS[u.kind]) {
+        const vccNet = netOf.get(`${u.id}\0${vccPin}`);
+        const gndNet = netOf.get(`${u.id}\0${gndPin}`);
+        if (!vccNet || !gndNet || vccNet === gndNet) continue;
+        for (const pin of inputs) {
+          const inNet = netOf.get(`${u.id}\0${pin}`);
+          if (!inNet || inNet.terminals.every((t) => t.part === u.id)) continue;
+          const add = (suffix, anodeNet, cathodeNet) => {
+            if (anodeNet === cathodeNet) return;
+            const id = `${u.id}_clamp_${pin}_${suffix}`;
+            outParts.push({ id, kind: 'diode', params: { ...card }, terminals: ['anode', 'cathode'] });
+            byId.get(anodeNet.id).terminals.push({ part: id, terminal: 'anode' });
+            byId.get(cathodeNet.id).terminals.push({ part: id, terminal: 'cathode' });
+          };
+          add('hi', inNet, vccNet);
+          add('lo', gndNet, inNet);
+        }
+      }
+    }
+    return { parts: outParts, nets: outNets };
+  }
+
+  /**
    * Merge nets that share any (part, terminal) — electrically they are
    * one node, whatever the wire-derivation upstream produced. Union-find
    * keyed on terminal membership; the surviving net keeps the FIRST
@@ -1285,7 +1342,8 @@ export class BoardImpl {
     const piezoView = BoardImpl._expandPiezoCapacitance(opticView.parts, opticView.nets);
     const windingView = BoardImpl._expandMotorWindings(piezoView.parts, piezoView.nets);
     const capView = BoardImpl._expandPolarizedCaps(windingView.parts, windingView.nets);
-    const solveView = BoardImpl._expandBridgeClampDiodes(capView.parts, capView.nets);
+    const bridgeView = BoardImpl._expandBridgeClampDiodes(capView.parts, capView.nets);
+    const solveView = BoardImpl._expandTimerInputClamps(bridgeView.parts, bridgeView.nets);
     const lm741View = expandLm741LinearPoles(solveView.parts, solveView.nets);
     // LM358/LM324 macromodel (src/ground-sensing-opamp.js); only when its
     // solver stage is registered, i.e. registerAnalogAmps() has run.
