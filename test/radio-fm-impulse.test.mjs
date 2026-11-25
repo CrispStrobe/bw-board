@@ -271,3 +271,29 @@ describe('impulse radiation: only a driven coil radiates', () => {
         assert.ok(peak(b, 't') < 1e-3, `the passive tank stays at noise: ${peak(b, 't')} V`);
     });
 });
+
+describe('a MOSFET\'s rectified RF current in triode', () => {
+    it('Newton sees the channel fade\'s slope in vds: a depletion stage driven into triode by a strong station solves in tens of steps', () => {
+        // Gap (2026-11-25, a dual-gate MOSFET modulator died at 0.36 ms,
+        // "transient solve not converged"): the rectified drain current fades
+        // with vds (mosChannelFade), and its Jacobian left that slope out.
+        // Harmless while depletion devices were cut off at RF (#754); once
+        // they conducted, a drain a few tens of mV above its source made
+        // Newton chase it — 40 006 solves for these 2 ms, against 78.
+        const b = new BoardImpl(9);
+        b.setNetlist([P('G', 'gnd', {}, ['gnd']), P('VS', 'vsource', { volts: 9 }, ['pos', 'neg']),
+            P('L', 'ferrite_coil', { rodHeightM: 0.05 }, ['a', 'tap', 'b', 'c1', 'c2']), P('TC', 'tuning_cap', { position: 0.5 }, ['a', 'b']),
+            P('CG', 'capacitor', { farads: 1e-9 }, ['a', 'b']), P('RG', 'resistor', { ohms: 1e6 }, ['a', 'b']),
+            P('M', 'nmos', { vth: -1.2, k: 5e-3 }, ['gate', 'drain', 'source']), P('RD', 'resistor', { ohms: 1150 }, ['a', 'b'])],
+        [net('g', ['G', 'gnd'], ['VS', 'neg'], ['L', 'a'], ['TC', 'b'], ['RG', 'b'], ['M', 'source']),
+            net('v', ['VS', 'pos'], ['RD', 'a']), net('t', ['L', 'b'], ['TC', 'a'], ['CG', 'a']),
+            net('gate', ['CG', 'b'], ['RG', 'a'], ['M', 'gate']), net('d', ['M', 'drain'], ['RD', 'b'])]);
+        b.setBroadcast([{ id: 's', hz: 1 / (2 * Math.PI * Math.sqrt(250e-6 * 255e-12)), fieldVPerM: 2, depth: 0.8, audio: { type: 'tone', hz: 1000 } }]);
+        b.setPower(true);
+        ms(b, 2);
+        const solves = b.transientAnalysisStatus().work.solves;
+        // MEASURED 2026-11-25: 78 solves (40 006 without the slope).
+        assert.ok(solves < 1000, `2 ms in ${solves} solves`);
+        assert.ok(b.nodeVoltages.get('d') < 0.1, `the drain sits in triode: ${b.nodeVoltages.get('d')} V`);
+    });
+});

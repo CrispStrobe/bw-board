@@ -10,7 +10,7 @@
 import { registerDevice } from '../devices.js';
 import { transducerCard, coneSignal, initToneTracker, trackTone } from '../transducers.js';
 import { acousticsOf } from '../acoustics.js';
-import { RF_DETECT_KIND, rectificationCurrentL, junctionCard, mosRectification, mosChannelFade } from '../radio.js';
+import { RF_DETECT_KIND, rectificationCurrentL, junctionCard, mosRectification, mosChannelFade, mosChannelFadeSlope } from '../radio.js';
 
 export function registerRadioParts() {
     // ─── Dynamic loudspeaker and earphone ───────────────────────────────
@@ -106,13 +106,19 @@ export function registerRadioParts() {
                     const vds = s * (read('drain') - read('source'));
                     const fd = mosChannelFade(vds);
                     const i = i0 * fd, g = g0 * fd;
+                    // The fade's own slope in vds belongs in the Jacobian too:
+                    // a depletion device (a dual-gate MOSFET's halves) carries
+                    // its rectified current with its drain a few tenths of a
+                    // volt above its source, where the fade is steep, and
+                    // Newton without it did not converge.
+                    const gd = i0 * mosChannelFadeSlope(vds);
                     // Extra drain current D → S (nmos); S → D (pmos).
                     return {
                         region: 'smooth',
                         currents: new Map([['drain', -s * i], ['source', s * i]]),
                         jacobian: new Map([
-                            ['drain', new Map([['gate', -g], ['source', g]])],
-                            ['source', new Map([['gate', g], ['source', -g]])],
+                            ['drain', new Map([['gate', -g], ['source', g + gd], ['drain', -gd]])],
+                            ['source', new Map([['gate', g], ['source', -g - gd], ['drain', gd]])],
                         ]),
                         residualOhms: 1e5,
                     };
