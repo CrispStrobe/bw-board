@@ -167,6 +167,8 @@ const LOCAL_ONLY = {
   bending_ruler:     { chip_mA: 1, supply_mA: 6 },
   // A spark gap carries whatever the discharge drives through it.
   spark_gap:         { chip_mA: "circuit", supply_mA: 0 },
+  induction_loop:    { chip_mA: "circuit", supply_mA: 0 },
+  coil_pendulum:     { chip_mA: "circuit", supply_mA: 0 },
   vhf_coil:          { chip_mA: 0, supply_mA: 0 },
   varicap:           { chip_mA: 0, supply_mA: 0 },
   bargraph:          { chip_mA: "circuit", supply_mA: "circuit" },

@@ -76,6 +76,7 @@
  *   | 'thermocouple' | 'air_coil' | 'electrolysis_cell' | 'humidity_comb'
  *   | 'dual_gate_mosfet'
  *   | 'ptc_sensor' | 'cd4046' | 'bending_ruler' | 'spark_gap'
+ *   | 'induction_loop' | 'coil_pendulum'
  *   | 'light_path' | 'laser_diode'} PartKind
  */
 

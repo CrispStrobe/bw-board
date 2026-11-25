@@ -74,6 +74,7 @@
 import { JUNCTION_THERMAL_VOLTAGE } from './mna.js';
 import { DMath } from './det-math.js';
 import { ambient } from './world.js';
+import { inductionLoopCard, pendulumCard, bobCoupling } from './magnetic-coupling.js';
 
 export const MU0 = 4e-7 * Math.PI;
 const RHO_CU = 1.72e-8;
@@ -265,14 +266,39 @@ export function combOhms(part, rhPct) {
 // ─── Solver view ────────────────────────────────────────────────────────
 
 export const INNER_PIN = 'm';
-const KINDS = new Set(['air_coil', 'electrolysis_cell']);
+const KINDS = new Set(['air_coil', 'electrolysis_cell', 'induction_loop', 'coil_pendulum']);
+
+/**
+ * The solver transformer (its live params) coupling an `induction_loop` to
+ * its pickup section, and the pickup's card: the device sets `k` from the
+ * distance knob (src/magnetic-coupling.js).
+ */
+const LOOP_LINK = new WeakMap();
+export function loopLink(part) { return LOOP_LINK.get(part) ?? null; }
+
+/** A coil pendulum's mechanical state, beside the drawn part (the step bound reads it). */
+const PENDULUM_RUN = new WeakMap();
+export function pendulumRun(part) {
+    let s = PENDULUM_RUN.get(part);
+    if (!s) {
+        const c = pendulumCard(part);
+        s = { theta: c.startRad, omega: 0, lastT: null, lastCross: null, maxAbs: Math.abs(c.startRad), amplitude: Math.abs(c.startRad), period: 0 };
+        PENDULUM_RUN.set(part, s);
+    }
+    return s;
+}
+export function resetPendulumRun(part) { PENDULUM_RUN.delete(part); return pendulumRun(part); }
 
 /**
  * Solver-only expansion: the coil's inductance and the electrolysis cell's
  * interface on a hidden inner node `m` (the drawn part's own terminal in the
  * solver view, so its model stamps the series branch a–m and reads both
- * ends). The thermocouple needs no expansion. The caller's parts/nets are not
- * mutated. `stimulus` is the step/time authority for magnets in flight.
+ * ends). The thermocouple needs no expansion. A magnetic field source
+ * (`induction_loop`) and a `coil_pendulum` take the same shape (src/magnetic-coupling.js):
+ * a source that names a pickup coil is coupled to a series section of the
+ * pickup's inductance by a solver transformer. The caller's parts/nets are not
+ * mutated. `stimulus` is the step/time authority for magnets in flight and
+ * swinging pendulums.
  */
 export function expandSensingTransducers(parts, nets) {
     const selected = parts.filter(p => KINDS.has(p.kind));
@@ -281,6 +307,8 @@ export function expandSensingTransducers(parts, nets) {
     const outNets = nets.map(n => ({ ...n, terminals: [...n.terminals] }));
     const netOf = (id, t) => outNets.find(n => n.terminals.some(x => x.part === id && x.terminal === t));
     const coils = [];
+    const sources = [];
+    const pendulums = [];
     for (const p of selected) {
         const a = netOf(p.id, 'a');
         const b = netOf(p.id, 'b');
@@ -298,6 +326,18 @@ export function expandSensingTransducers(parts, nets) {
             COIL_INDUCTOR.set(p, lp);
             add(`${p.id}_l`, 'inductor', lp, m, b);
             coils.push(p);
+        } else if (p.kind === 'induction_loop') {
+            const card = inductionLoopCard(p);
+            const target = selected.find(q => q.kind === 'air_coil' && q.id === p.params?.pickup);
+            if (target) sources.push({ p, card, m, b, target });
+            else add(`${p.id}_l`, 'inductor', { henrys: card.henrys }, m, b);
+        } else if (p.kind === 'coil_pendulum') {
+            const card = pendulumCard(p);
+            const run = resetPendulumRun(p);
+            const lp = { henrys: card.henrys + (card.bob === 'iron' ? bobCoupling(card, run.theta) : 0) };
+            COIL_INDUCTOR.set(p, lp);
+            add(`${p.id}_l`, 'inductor', lp, m, b);
+            pendulums.push(p);
         } else {
             const card = electrolysisCard(p);
             add(`${p.id}_cdl`, 'capacitor', { farads: card.farads }, m, b);
@@ -306,8 +346,53 @@ export function expandSensingTransducers(parts, nets) {
             add(`${p.id}_fc`, 'diode', { ...dp }, b, m, 'anode', 'cathode');
         }
     }
-    const stimulus = coils.length ? {
-        /** A magnet armed or in flight through any coil. */
+    // Magnetic field sources and their pickups: each source couples to its
+    // own series section of the pickup's inductance (a transformer whose k
+    // the source's distance knob sets live).
+    const byPickup = new Map();
+    for (const s of sources) {
+        if (!byPickup.has(s.target)) byPickup.set(s.target, []);
+        byPickup.get(s.target).push(s);
+    }
+    for (const [coil, list] of byPickup) {
+        const lId = `${coil.id}_l`;
+        const li = outParts.findIndex(q => q.id === lId);
+        const ln = outNets.filter(n => n.terminals.some(t => t.part === lId));
+        const top = ln.find(n => n.terminals.some(t => t.part === lId && t.terminal === 'a'));
+        const bottom = ln.find(n => n.terminals.some(t => t.part === lId && t.terminal === 'b'));
+        if (li < 0 || !top || !bottom) continue;
+        outParts.splice(li, 1);
+        for (const n of ln) n.terminals = n.terminals.filter(t => t.part !== lId);
+        const coilCard = airCoilCard(coil);
+        const l2 = coilCard.henrys / list.length;
+        let upper = top;
+        list.forEach((s, j) => {
+            const lower = j === list.length - 1 ? bottom : { id: `n_${coil.id}_s${j + 1}`, terminals: [] };
+            if (lower !== bottom) outNets.push(lower);
+            const params = { l1: s.card.henrys, l2, k: 1e-6 };
+            LOOP_LINK.set(s.p, { params, pickup: coilCard, l2 });
+            const id = `${s.p.id}_x`;
+            outParts.push({ id, kind: 'transformer', params, terminals: ['p1', 'p2', 's1', 's2'] });
+            s.m.terminals.push({ part: id, terminal: 'p1' });
+            s.b.terminals.push({ part: id, terminal: 'p2' });
+            upper.terminals.push({ part: id, terminal: 's1' });
+            lower.terminals.push({ part: id, terminal: 's2' });
+            upper = lower;
+        });
+    }
+    // Field sources without a pickup that found one later: plain inductors.
+    for (const s of sources) {
+        if (LOOP_LINK.has(s.p) && outParts.some(q => q.id === `${s.p.id}_x`)) continue;
+        add(`${s.p.id}_l`, 'inductor', { henrys: s.card.henrys }, s.m, s.b);
+    }
+    const stimulus = coils.length || pendulums.length ? {
+        /**
+         * A magnet armed or in flight through any coil. (A swinging pendulum
+         * is not a waveform source: its coil is reactive, so the board
+         * integrates anyway, and its step is bounded below — it must not
+         * pull the whole bench down to the waveform profile's 100 µs cap
+         * for every second it swings.)
+         */
         timeVarying() { return coils.some(p => inFlight(p)); },
         maxStepSec() {
             let h = Infinity;
@@ -317,11 +402,21 @@ export function expandSensingTransducers(parts, nets) {
                 const vPass = Math.sqrt(2 * G * Math.max(c.dropHeightM, 0.005));
                 h = Math.min(h, Math.min(c.r, c.l) / vPass / 40);
             }
+            // A swinging pendulum's induced EMF: 100 points a period.
+            for (const p of pendulums) if (swinging(p)) h = Math.min(h, 2 * Math.PI / pendulumCard(p).omega0 / 100);
             return Number.isFinite(h) ? Math.max(h, 1e-6) : null;
         },
-        reset() { for (const p of coils) { const s = coilRun(p); s.t0 = null; s.armed = false; s.lastT = 0; } },
+        reset() {
+            for (const p of coils) { const s = coilRun(p); s.t0 = null; s.armed = false; s.lastT = 0; }
+            for (const p of pendulums) resetPendulumRun(p);
+        },
     } : null;
     return { parts: outParts, nets: outNets, stimulus };
+}
+
+function swinging(p) {
+    const s = pendulumRun(p);
+    return Math.abs(s.theta) > 1e-6 || Math.abs(s.omega) > 1e-6;
 }
 
 function inFlight(p) {
