@@ -339,10 +339,14 @@ describe('radio bands: the same answer on every platform', () => {
         // The state moved with the engine on 2026-11-24 (the transistor's
         // large-signal input capacitance, the band's bias-loop step bound;
         // was 2149 solves, 2596 substeps, 0.8028 V), checked identical on
-        // both platforms again.
-        assert.equal(b.transientAnalysisStatus().work.solves, 3136);
-        assert.equal(b._radio.substeps, 2533);
-        assert.equal(tankAmp(b, 'col'), 7.826070933483422);
+        // both platforms again. Moved again 2026-11-25: the junction stamps
+        // are made consistent with each band step's end (the collector's
+        // swing no longer collapses where it reaches the base–collector
+        // junction); was 3136 solves, 2533 substeps, 7.826 V. Checked
+        // identical on macOS arm64 and Linux x64.
+        assert.equal(b.transientAnalysisStatus().work.solves, 832);
+        assert.equal(b._radio.substeps, 470);
+        assert.equal(tankAmp(b, 'col'), 8.670223968015401);
     });
 
     it('1-ulp changes of the coil do not move the oscillator\'s outcome', () => {
@@ -695,5 +699,60 @@ describe('radio bands: a MOSFET regenerative receiver past its threshold', () =>
         assert.equal(x.b._radio.error, null);
         assert.ok(Math.max(0, ...x.b._radio._bands.map(q => Math.max(...q.portVoltages().map(p => Math.hypot(p[0], p[1]))))) > 1, 'oscillating');
         assert.ok(perMs < 7000, `${perMs} solves per simulated ms`);
+    });
+});
+
+describe('radio bands: a VHF Colpitts oscillator holds its swing', () => {
+    // A BF199 in common base: tank 0.15 µH ‖ 8 pF from the collector to 9 V
+    // (~120 MHz), 6.8 pF collector→emitter, 6.8 pF emitter→ground, 1 kΩ
+    // emitter resistor, base on 10 kΩ / 10 kΩ held by 1 nF.
+    const colpitts = () => {
+        const b = new BoardImpl(9);
+        b.setNetlist([P('G', 'gnd', {}, ['gnd']), P('VS', 'vsource', { volts: 9 }, ['pos', 'neg']),
+            P('Q1', 'npn', { part: 'BF199' }, ['base', 'collector', 'emitter']), P('L', 'vhf_coil', {}, ['a', 'b']), P('C2', 'capacitor', { farads: 8e-12 }, ['a', 'b']),
+            P('CF', 'capacitor', { farads: 6.8e-12 }, ['a', 'b']), P('CE', 'capacitor', { farads: 6.8e-12 }, ['a', 'b']), P('RE', 'resistor', { ohms: 1000 }, ['a', 'b']),
+            P('R1', 'resistor', { ohms: 10e3 }, ['a', 'b']), P('R2', 'resistor', { ohms: 10e3 }, ['a', 'b']), P('CB', 'capacitor', { farads: 1e-9 }, ['a', 'b'])],
+        [net('g', ['G', 'gnd'], ['VS', 'neg'], ['CE', 'b'], ['RE', 'b'], ['R2', 'b'], ['CB', 'b']),
+            net('v', ['VS', 'pos'], ['L', 'a'], ['C2', 'a'], ['R1', 'a']), net('c', ['Q1', 'collector'], ['L', 'b'], ['C2', 'b'], ['CF', 'a']),
+            net('e', ['Q1', 'emitter'], ['CF', 'b'], ['CE', 'a'], ['RE', 'a']), net('bb', ['Q1', 'base'], ['R1', 'b'], ['R2', 'a'], ['CB', 'a'])]);
+        b.setBroadcast([]);
+        b.setPower(true);
+        return b;
+    };
+    const us = (b, t) => b.advanceTo(BigInt(Math.round(t * 1e3)));
+
+    it('limits smoothly where its collector swings into the base–collector junction, at a few thousand substeps per simulated ms', () => {
+        // Gap (2026-11-25): the band stepped with the junctions' describing
+        // functions taken at the swing each substep started from. Its
+        // collector limits where the swing forward-biases the base–collector
+        // junction, whose conductance grows as e^{A/VT}: a substep that
+        // ended a few tens of millivolts past that edge carried a conductance
+        // ~e^{30} too small, the next one a conductance its own end did not
+        // have, and the swing fell by volts within one substep (5.9 → 2.9 V,
+        // against the tank's ~0.1 µs envelope time constant), then grew back
+        // over ~30 substeps of 1–8 ns: ~860 000 substeps per simulated ms,
+        // ~40 s of wall time per ms. The junction stamps are now made
+        // consistent with the step's end (BandIntegrator.step). MEASURED: a
+        // steady 8.29 V, ~7 800 substeps per ms.
+        const b = colpitts();
+        for (let t = 10; t <= 100; t += 10) us(b, t);
+        const s0 = b._radio.substeps;
+        let lo = Infinity, hi = 0, worst = 0, prev = null;
+        for (let k = 1; k <= 400; k++) {
+            us(b, 100 + k * 0.25);
+            const a = tankAmp(b, 'c');
+            lo = Math.min(lo, a); hi = Math.max(hi, a);
+            if (prev !== null) worst = Math.max(worst, Math.abs(a / prev - 1));
+            prev = a;
+        }
+        assert.equal(b.transientAnalysisStatus().failure, null);
+        assert.equal(b._radio.error, null);
+        const f0 = b.radioReport().bands[0].hz;
+        assert.ok(f0 > 100e6 && f0 < 140e6, `oscillating near the tank: ${(f0 / 1e6).toFixed(2)} MHz`);
+        assert.ok(lo > 5, `the collector swings volts: ${lo.toFixed(3)} V`);
+        assert.ok(hi / lo < 1.02, `a steady swing, ${lo.toFixed(3)}–${hi.toFixed(3)} V`);
+        assert.ok(worst < 0.005, `no jumps between 0.25 µs samples: worst ${(worst * 100).toFixed(2)} %`);
+        const perMs = (b._radio.substeps - s0) / 0.1;
+        assert.ok(perMs < 20000, `${perMs} band substeps per simulated ms`);
     });
 });

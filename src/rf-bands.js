@@ -231,6 +231,20 @@ export const thermalCurrentPsd = (G) => 4 * KT * Math.max(0, G);
 // ─── One band ───────────────────────────────────────────────────────────
 
 export const H_UNIT = 1e-9;
+/** Port swing (V) below which a step's junction stamps are not re-checked at its end. */
+const CONSISTENCY_VOLTS = VT;
+/** Relative move of a step's end, stamps at its start vs at its end, that is solved for. */
+const CONSISTENCY_TOL = 0.01;
+/**
+ * The check runs on a step that moves some port's swing by more than this:
+ * a describing function steep in the swing changes by e per VT there (a
+ * junction swung into forward conduction); a step that moves every swing by
+ * less leaves its stamps where they were, and is not checked (no extra
+ * cost: a steady oscillator, the slow part of a burst).
+ */
+const CONSISTENCY_DV = VT / 4;
+const portNorm = (p) => { let s = 0; for (const [r, i] of p) s += r * r + i * i; return Math.sqrt(s); };
+const portDist = (p, q) => { let s = 0; for (let a = 0; a < p.length; a++) { const r = p[a][0] - q[a][0], i = p[a][1] - q[a][1]; s += r * r + i * i; } return Math.sqrt(s); };
 export const K_MAX = 15;          // 32.8 µs
 
 /**
@@ -315,6 +329,92 @@ export class BandIntegrator {
         return out;
     }
 
+    /** (S1·H_ports)_q: junction capacitive history of port pattern q (before /h). */
+    _capHistory(S, hp, q) {
+        const K = this.K;
+        let ur = 0, ui = 0;
+        for (let c = 0; c < K; c++) {
+            const m = q * K + c;
+            const mr = S.S1r[m], mi = S.S1i[m];
+            if (mr === 0 && mi === 0) continue;
+            ur += mr * hp[c][0] - mi * hp[c][1];
+            ui += mr * hp[c][1] + mi * hp[c][0];
+        }
+        return [ur, ui];
+    }
+
+    /** Change of the capacitive history injection from stamps S to S2: Δc per port, and its port voltages C0·Δc. */
+    _capDelta(S, S2, hp, h, f) {
+        const K = this.K;
+        const c = [];
+        for (let q = 0; q < K; q++) {
+            const [a, b] = this._capHistory(S2, hp, q);
+            const [x, y] = this._capHistory(S, hp, q);
+            c.push([(a - x) / h, (b - y) / h]);
+        }
+        const z = [];
+        for (let q = 0; q < K; q++) {
+            let r = 0, i = 0;
+            for (let e = 0; e < K; e++) {
+                const cr = f.C0r[q * K + e], ci = f.C0i[q * K + e];
+                r += cr * c[e][0] - ci * c[e][1];
+                i += cr * c[e][1] + ci * c[e][0];
+            }
+            z.push([r, i]);
+        }
+        return { c, z };
+    }
+
+    /** Woodbury port solve: u = (I + Ŝ·C0)⁻¹·Ŝ·z, Ŝ = S0 + a·S1/h; null when Ŝ is zero. */
+    _woodbury(f, a, h, S, z) {
+        const K = this.K;
+        const Sr = new Float64Array(K * K), Si = new Float64Array(K * K);
+        let any = false;
+        for (let m = 0; m < K * K; m++) {
+            Sr[m] = S.S0r[m] + a * S.S1r[m] / h;
+            Si[m] = S.S0i[m] + a * S.S1i[m] / h;
+            if (Sr[m] !== 0 || Si[m] !== 0) any = true;
+        }
+        if (!any) return null;
+        const Mr = new Float64Array(K * K), Mi = new Float64Array(K * K);
+        const br = new Float64Array(K), bi = new Float64Array(K);
+        for (let q = 0; q < K; q++) {
+            for (let c = 0; c < K; c++) {
+                let sr = q === c ? 1 : 0, si = 0;
+                for (let e = 0; e < K; e++) {
+                    const s1r = Sr[q * K + e], s1i = Si[q * K + e];
+                    if (s1r === 0 && s1i === 0) continue;
+                    const cr = f.C0r[e * K + c], ci = f.C0i[e * K + c];
+                    sr += s1r * cr - s1i * ci;
+                    si += s1r * ci + s1i * cr;
+                }
+                Mr[q * K + c] = sr; Mi[q * K + c] = si;
+            }
+            let vr = 0, vi = 0;
+            for (let e = 0; e < K; e++) {
+                const s1r = Sr[q * K + e], s1i = Si[q * K + e];
+                vr += s1r * z[e][0] - s1i * z[e][1];
+                vi += s1r * z[e][1] + s1i * z[e][0];
+            }
+            br[q] = vr; bi[q] = vi;
+        }
+        const [ur, ui] = csolveSmall(Mr, Mi, br, bi, K);
+        return { ur, ui };
+    }
+
+    /** Port voltages after the Woodbury correction: z − C0·u. */
+    _portsOut(z, w, f) {
+        const K = this.K;
+        return z.map(([r, i], q) => {
+            for (let c = 0; c < K; c++) {
+                const cr = f.C0r[q * K + c], ci = f.C0i[q * K + c];
+                r -= cr * w.ur[c] - ci * w.ui[c];
+                i -= cr * w.ui[c] + ci * w.ur[c];
+            }
+            return [r, i];
+        });
+    }
+
     /**
      * One substep of size H_UNIT·2^k from the present state: BDF2 when the
      * previous state `Xprev` was one substep of the same size earlier,
@@ -355,18 +455,12 @@ export class BandIntegrator {
         }
         if (noise) noise(rr, ri, h);
         // Junction capacitive history: + P·S1·Qᵀ·H / h
+        let inconsistent = false;
+        const hp = [];
         if (K) {
-            const hp = [];
             for (let q = 0; q < K; q++) hp.push(this._sel(q, Hr, Hi));
             for (let q = 0; q < K; q++) {
-                let ur = 0, ui = 0;
-                for (let c = 0; c < K; c++) {
-                    const m = q * K + c;
-                    const mr = S.S1r[m], mi = S.S1i[m];
-                    if (mr === 0 && mi === 0) continue;
-                    ur += mr * hp[c][0] - mi * hp[c][1];
-                    ui += mr * hp[c][1] + mi * hp[c][0];
-                }
+                const [ur, ui] = this._capHistory(S, hp, q);
                 const p = this.inj[q];
                 if (p.pos !== undefined) { rr[p.pos] += ur / h; ri[p.pos] += ui / h; }
                 if (p.neg !== undefined) { rr[p.neg] -= ur / h; ri[p.neg] -= ui / h; }
@@ -375,40 +469,81 @@ export class BandIntegrator {
         // y = A⁻¹·rhs
         cluSolve(f.lu, rr, ri);
         if (K) {
-            // S = θ·S0 + S1/h; u = (I + S·C0)⁻¹·S·z, z = Qᵀy; x = y − W·u
-            const Sr = new Float64Array(K * K), Si = new Float64Array(K * K);
-            let any = false;
-            for (let m = 0; m < K * K; m++) {
-                Sr[m] = S.S0r[m] + a * S.S1r[m] / h;
-                Si[m] = S.S0i[m] + a * S.S1i[m] / h;
-                if (Sr[m] !== 0 || Si[m] !== 0) any = true;
-            }
-            if (any) {
-                const z = [];
-                for (let a = 0; a < K; a++) z.push(this._sel(a, rr, ri));
-                const Mr = new Float64Array(K * K), Mi = new Float64Array(K * K);
-                const br = new Float64Array(K), bi = new Float64Array(K);
-                for (let a = 0; a < K; a++) {
-                    for (let c = 0; c < K; c++) {
-                        let sr = a === c ? 1 : 0, si = 0;
-                        for (let e = 0; e < K; e++) {
-                            const s1r = Sr[a * K + e], s1i = Si[a * K + e];
-                            if (s1r === 0 && s1i === 0) continue;
-                            const cr = f.C0r[e * K + c], ci = f.C0i[e * K + c];
-                            sr += s1r * cr - s1i * ci;
-                            si += s1r * ci + s1i * cr;
+            const z = [];
+            for (let q = 0; q < K; q++) z.push(this._sel(q, rr, ri));
+            let dc = null;
+            const w = this._woodbury(f, a, h, S, z);
+            let u = w;
+            // The junction stamps were taken at the swing the step starts
+            // from. Where a describing function is steep in the swing (a
+            // collector swinging into its base–collector junction's forward
+            // conduction: e^{A/VT}), the step's end then carries a
+            // conductance its own swing does not have, and a step that
+            // reached the limit by a few tens of millivolts collapsed the
+            // swing by volts. Checked on a step that moves a swing by more
+            // than CONSISTENCY_DV: the stamps at the step's end, if they
+            // move its end by more than CONSISTENCY_TOL, are solved for
+            // (backward Euler in the junctions too), on the port space only.
+            if (w && this.implicit !== false) {
+                const p1 = this._portsOut(z, w, f);
+                const n1 = portNorm(p1), n0 = portNorm(vp);
+                let dA = 0;
+                for (let q = 0; q < K; q++) dA = Math.max(dA, Math.abs(Math.hypot(p1[q][0], p1[q][1]) - Math.hypot(vp[q][0], vp[q][1])));
+                if (Math.max(n1, n0) > CONSISTENCY_VOLTS && dA > CONSISTENCY_DV) {
+                    const at = (s) => {
+                        const Ss = stamps(p1.map(([x, y]) => [x * s, y * s]));
+                        const d = this._capDelta(S, Ss, hp, h, f);
+                        const zs = z.map(([x, y], q) => [x + d.z[q][0], y + d.z[q][1]]);
+                        const ws = this._woodbury(f, a, h, Ss, zs);
+                        return { S: Ss, z: zs, d, w: ws, p: ws ? this._portsOut(zs, ws, f) : zs };
+                    };
+                    const r1 = at(1);
+                    if (portDist(r1.p, p1) > CONSISTENCY_TOL * n1) {
+                        // F(s) = |ports out (stamps at s·p1)| / (s·|p1|) − 1,
+                        // falling in s (more swing, more compression): bisect.
+                        const F = (r, s) => portNorm(r.p) / (s * n1) - 1;
+                        let lo = 1, hi = 1, rLo = r1, rHi = r1;
+                        if (F(r1, 1) < 0) {
+                            for (let i = 0; i < 20; i++) { lo /= 2; rLo = at(lo); if (F(rLo, lo) >= 0) break; }
+                        } else {
+                            // No further than twice the larger of the start's and
+                            // the explicit end's swing: a "consistent" end far
+                            // beyond both is a pole of the port solve, not a swing
+                            // (a medium-wave oscillator ran away on one).
+                            const sMax = 2 * Math.max(1, n0 / n1);
+                            for (let i = 0; i < 20 && hi * 2 <= sMax; i++) { hi *= 2; rHi = at(hi); if (F(rHi, hi) <= 0) break; }
                         }
-                        Mr[a * K + c] = sr; Mi[a * K + c] = si;
+                        let best = Math.abs(F(rLo, lo)) < Math.abs(F(rHi, hi)) ? rLo : rHi;
+                        let bestF = Math.min(Math.abs(F(rLo, lo)), Math.abs(F(rHi, hi)));
+                        for (let i = 0; i < 40 && hi > lo * (1 + 1e-6); i++) {
+                            const s = Math.sqrt(lo * hi);
+                            const r = at(s);
+                            const v = F(r, s);
+                            best = r; bestF = Math.abs(v);
+                            if (Math.abs(v) < 1e-6) break;
+                            if (v > 0) lo = s; else hi = s;
+                        }
+                        if (bestF < 0.05) { u = best.w; dc = best.d; }
+                        // No consistent swing found (the bracket closed on a pole
+                        // of a step too long for the junctions' gain, or there is
+                        // none within 2^±20 of the explicit end): the step keeps
+                        // its explicit end, and the caller retries it shorter.
+                        else inconsistent = true;
+                        this.implicitSteps = (this.implicitSteps ?? 0) + 1;
                     }
-                    let vr = 0, vi = 0;
-                    for (let e = 0; e < K; e++) {
-                        const s1r = Sr[a * K + e], s1i = Si[a * K + e];
-                        vr += s1r * z[e][0] - s1i * z[e][1];
-                        vi += s1r * z[e][1] + s1i * z[e][0];
-                    }
-                    br[a] = vr; bi[a] = vi;
                 }
-                const [ur, ui] = csolveSmall(Mr, Mi, br, bi, K);
+            }
+            if (dc) {
+                // y += W·Δc (the junction capacitances' history at the new stamps)
+                for (let c = 0; c < K; c++) {
+                    const [wr, wi] = f.W[c];
+                    const [x, y] = dc.c[c];
+                    if (x === 0 && y === 0) continue;
+                    for (let i = 0; i < N; i++) { rr[i] += wr[i] * x - wi[i] * y; ri[i] += wr[i] * y + wi[i] * x; }
+                }
+            }
+            if (u) {
+                const { ur, ui } = u;
                 for (let c = 0; c < K; c++) {
                     const [wr, wi] = f.W[c];
                     const a = ur[c], b = ui[c];
@@ -420,6 +555,6 @@ export class BandIntegrator {
                 }
             }
         }
-        return { t: t1, re: rr, im: ri, k };
+        return { t: t1, re: rr, im: ri, k, inconsistent };
     }
 }

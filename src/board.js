@@ -5738,7 +5738,9 @@ export class BoardImpl {
       // quadrature tank (0.5 = on quadHz) (src/radio.js, src/fm-if-ic.js).
       'dipole', 'fm_if'];
     return this.parts
-      .filter(p => controllable.includes(p.kind) || lightControlDefault(p) !== null)
+      // An antenna with a clock carries the hour of the day on its dial
+      // (0..1 = 00:00..24:00): the sky wave by night (src/radio.js stationField).
+      .filter(p => controllable.includes(p.kind) || lightControlDefault(p) !== null || (p.kind === 'antenna' && p.params?.clock))
       .map(p => lightControlDefault(p) !== null ? {
         // Light-sensing parts take the LDR's control path (world.js
         // lightLevel): the value is the light they see now -- a set control,
@@ -5760,6 +5762,7 @@ export class BoardImpl {
                     : p.kind === 'ferrite_coil' ? (p.params?.slideWinding ? Number(p.params?.slide ?? 0) : Number(p.params?.angleDeg ?? 0) / 360)
                       : p.kind === 'dipole' ? (Number(p.params?.angleDeg ?? 0) / 360)
                       : p.kind === 'fm_if' ? 0.5
+                      : p.kind === 'antenna' ? Math.min(24, Math.max(0, Number(p.params?.hourOfDay ?? 12))) / 24
                       : p.kind === 'humidity_comb' ? combHumidityPct(p, undefined) / 100
                         : p.kind === 'induction_loop' ? inductionLoopCard(p).position : 0),
       }));
