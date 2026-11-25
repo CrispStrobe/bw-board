@@ -3261,7 +3261,14 @@ export class BoardImpl {
     this._assertDeterminateCurrent(this._mnaCache, partId, terminal);
     const partCurrents = this._mnaCache.branchCurrents.get(partId);
     if (!partCurrents) return 0;
-    const i = partCurrents.get(terminal) ?? 0;
+    let i = partCurrents.get(terminal) ?? 0;
+    // A light-path receiver's optical photocurrent is solved in a hidden part
+    // beside it (src/optics.js expandOptics); it flows through the receiver's
+    // own leads, so it is part of the receiver's current.
+    const twin = this._solveParts?.find(p => p.id === `${partId}_optical`);
+    const twinTerminal = twin?.hostTerminals
+      && Object.keys(twin.hostTerminals).find(k => twin.hostTerminals[k] === terminal);
+    if (twinTerminal) i += this._mnaCache.branchCurrents.get(twin.id)?.get(twinTerminal) ?? 0;
     return Number.isFinite(i) ? i : 0;
   }
 

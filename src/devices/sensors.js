@@ -13,7 +13,7 @@
  */
 
 import { registerDevice, DMath } from '../devices.js';
-import { ambient, lightLevel, surfaceDistanceCm } from '../world.js';
+import { ambient, lightLevel, opticalAmps, surfaceDistanceCm } from '../world.js';
 import { vceShape } from '../photo-junctions.js';
 import { controlledResistance } from '../mna.js';
 
@@ -215,14 +215,22 @@ export function registerSensors() {
   // Light-driven collector current with VCE compliance (photo-junctions.js):
   // light × iMax in the active region, saturating at VCE(sat) ≈ 0.2 V, and
   // never driving a node beyond the rails as the old ideal source did.
+  //
+  // STATE. `_ambientAmps` is the room-light photocurrent this stamp drives.
+  // `_current` is what the part REPORTS: the collector current the accepted
+  // solution carries, room light plus every optical link (whose share is
+  // solved in a hidden `<id>_optical` part beside it, src/optics.js), after
+  // the VCE compliance. Until 2026-11-25 `_current` was the stamp's room-light
+  // value: 0 for a part lit only through a light path, however hard it
+  // conducted, and the full light × iMax for a saturated one.
   registerDevice('phototransistor', {
     terminals: ['collector', 'emitter'],
 
-    init() { return { drives: {}, _current: 0 }; },
+    init() { return { drives: {}, _ambientAmps: 0, _current: 0 }; },
 
     stamp(ctx, part, state) {
       if (!ctx.netFor('collector') || !ctx.netFor('emitter')) return;
-      const iL = state._current;
+      const iL = state._ambientAmps;
       ctx.nonlinearCurrents('photo-collector', (read, scale) => {
         const [s, ds] = vceShape(read('collector') - read('emitter'));
         const i = iL * scale * s;           // collector → emitter inside the part
@@ -239,13 +247,18 @@ export function registerSensors() {
       });
     },
 
-    update(part, state) {
+    update(part, state, read, tNs) {
       const light = lightLevel(part, 0);
       const iMax = part.params?.iMax ?? 0.005; // 5mA at full light
-      const newCurrent = light * iMax;
-      if (Math.abs(newCurrent - state._current) < 1e-6) return false;
-      state._current = newCurrent;
-      return true;
+      const ambientAmps = light * iMax;
+      const changed = Math.abs(ambientAmps - state._ambientAmps) >= 1e-6;
+      if (changed) state._ambientAmps = ambientAmps;
+      const wired = typeof read?.connected !== 'function'
+        || (read.connected('collector') && read.connected('emitter'));
+      const iL = state._ambientAmps + opticalAmps(part, Number(tNs ?? 0) / 1e9);
+      state._current = wired && read && iL > 0
+        ? iL * vceShape(read('collector') - read('emitter'))[0] : 0;
+      return changed;
     },
   });
 }
