@@ -638,10 +638,22 @@ export function expandRadio(parts, nets, opts) {
         // across it (the coil's own losses and stray capacitance, which in a
         // real coil take up the flyback when the current is broken). A tuned
         // coil keeps the copper-only view: its tank and any feedback loop
-        // live in the RF bands alone.
+        // live in the RF bands alone. (A coil is a radiator only with no
+        // capacitor on any of its windings' nets: driven straight from a
+        // battery, a button, a transistor.)
         const linked = !!p.params?.linkTo || parts.some(o => o.params?.linkTo === p.id);
-        const tuned = outParts.some(o => (o.kind === 'capacitor' || o.kind === 'tuning_cap')
-            && wn.some(w => { const [x, y] = [netOf(o.id, 'a'), netOf(o.id, 'b')]; const [na, nb] = ends(w); return (x === na && y === nb) || (x === nb && y === na); }));
+        // Any capacitor on a winding's net makes an LC with it that the RF
+        // bands already carry (a tank across it, a bypass from one end to
+        // ground, a coupling capacitor): giving that winding its inductance
+        // in the time domain too would put the same resonance in both views,
+        // and the time-domain copy, ringing, radiated into the band that
+        // holds the original — a passive tank grew from noise.
+        // (Not the reference nets: a bypass to ground elsewhere on the bench
+        // shares the ground, not the winding.)
+        const acGround = (n) => n.terminals.some(t => { const k = outParts.find(o => o.id === t.part)?.kind; return k === 'gnd' || k === 'vcc' || k === 'vsource' || k === 'battery'; });
+        const windingNets = new Set(wn.flatMap(w => ends(w)).filter(n => !acGround(n)));
+        const tuned = outParts.some(o => (o.kind === 'capacitor' || o.kind === 'tuning_cap' || o.kind === 'polarized_cap')
+            && (windingNets.has(netOf(o.id, 'a')) || windingNets.has(netOf(o.id, 'b'))));
         const radiator = linked && !tuned;
         const currentIds = [];
         wn.forEach((w, i) => {
