@@ -75,39 +75,51 @@ function readPcm(input) {
   return {view, start: samples.start, count, stride, rate};
 }
 
-function classifyTone(pcm, begin, end, mark, space) {
-  let markBefore = 0, markNow = 0, spaceBefore = 0, spaceNow = 0;
+// A recorder changes carrier frequency as well as bit length. A small bank
+// of probes keeps the 4 ms filter responsive while covering speed drift.
+const TONE_SPEEDS = [0.84, 0.92, 1, 1.08, 1.16];
+
+function classifyTone(pcm, begin, end, probes, previous, current) {
   let energy = 0;
   let offset = pcm.start + begin * pcm.stride;
+  previous.fill(0);
+  current.fill(0);
   for (let index = begin; index < end; index++, offset += pcm.stride) {
     const value = pcm.view.getInt16(offset, true);
     energy += value * value;
-    const markNext = value + mark * markNow - markBefore;
-    markBefore = markNow;
-    markNow = markNext;
-    const spaceNext = value + space * spaceNow - spaceBefore;
-    spaceBefore = spaceNow;
-    spaceNow = spaceNext;
+    for (let tone = 0; tone < probes.length; tone++) {
+      const next = value + probes[tone] * current[tone] - previous[tone];
+      previous[tone] = current[tone];
+      current[tone] = next;
+    }
   }
-  const markPower = markNow ** 2 + markBefore ** 2 - mark * markNow * markBefore;
-  const spacePower = spaceNow ** 2 + spaceBefore ** 2 - space * spaceNow * spaceBefore;
+  let markPower = 0;
+  let spacePower = 0;
+  for (let tone = 0; tone < probes.length; tone++) {
+    const power = current[tone] ** 2 + previous[tone] ** 2 -
+      probes[tone] * current[tone] * previous[tone];
+    if (tone < TONE_SPEEDS.length) markPower = Math.max(markPower, power);
+    else spacePower = Math.max(spacePower, power);
+  }
   if (energy < (end - begin) * 25 || Math.max(markPower, spacePower) < energy * (end - begin) / 12) return null;
   return markPower > spacePower;
 }
 
-/** Recover the data line from a clean tape recording. Stereo uses its left channel. */
+/** Recover the data line from a PCM tape recording. Stereo uses its left channel. */
 export function decodeCp2Wave(input) {
   const pcm = readPcm(input);
   const block = Math.round(pcm.rate * BLOCK_MS / 1000);
-  const mark = 2 * Math.cos(2 * Math.PI * MARK_HZ / pcm.rate);
-  const space = 2 * Math.cos(2 * Math.PI * SPACE_HZ / pcm.rate);
+  const probes = [MARK_HZ, SPACE_HZ].flatMap(hz =>
+    TONE_SPEEDS.map(speed => 2 * Math.cos(2 * Math.PI * hz * speed / pcm.rate)));
+  const previous = new Float64Array(probes.length);
+  const current = new Float64Array(probes.length);
   const transitions = [];
   let leader = null;
   let level = true;
   let count = 0;
   let first = 0;
   for (let begin = 0; begin + block <= pcm.count; begin += block) {
-    const observed = classifyTone(pcm, begin, begin + block, mark, space);
+    const observed = classifyTone(pcm, begin, begin + block, probes, previous, current);
     if (leader === null) {
       if (observed !== true) { count = 0; continue; }
       if (count++ === 0) first = begin;

@@ -49,3 +49,38 @@ test('a generated CP2 WAV recovers both RAM blocks and accepts a byte value of 2
   assert.throws(() => decodeCp2Wave(wave.slice(0, 48)), /Truncated/);
   assert.throws(() => encodeCp2Wave([2, 1]), /increase/);
 });
+
+function varyRecording(wave, speed) {
+  const changed = wave.slice();
+  const view = new DataView(changed.buffer);
+  const rate = Math.round(view.getUint32(24, true) * speed);
+  view.setUint32(24, rate, true);
+  view.setUint32(28, rate * 2, true);
+  let noise = 7;
+  for (let offset = 44; offset < view.byteLength; offset += 2) {
+    noise = (Math.imul(noise, 1664525) + 1013904223) >>> 0;
+    const gain = 0.2 + 0.1 * Math.sin(offset / (rate * 1.71));
+    const sample = view.getInt16(offset, true);
+    view.setInt16(offset, Math.round(sample * gain + (noise >>> 16) / 32 - 1024), true);
+  }
+  return changed;
+}
+
+test('CP2 WAV recovers both memory sizes with speed drift, varying level and noise', () => {
+  for (const [length, speed] of [[256, 0.84], [512, 1.16]]) {
+    const image = Uint8Array.from({length}, (_, i) => i * 113 + (i >>> 8));
+    const wave = varyRecording(encodeCp2Wave(encodeCp2Memory(image)), speed);
+    assert.deepEqual(decodeCp2Memory(decodeCp2Wave(wave)), image);
+  }
+});
+
+test('CP2 audio ending in the payload leaves an incomplete image even in a well-formed WAV', () => {
+  const wave = encodeCp2Wave(encodeCp2Memory(new Uint8Array(256)));
+  const cut = wave.slice(0, wave.length - 32_000);
+  const view = new DataView(cut.buffer);
+  view.setUint32(4, cut.length - 8, true);
+  view.setUint32(40, cut.length - 44, true);
+  const edges = decodeCp2Wave(cut);
+  assert.ok(edges.length > 16, 'partial audio still reaches the simulated monitor');
+  assert.throws(() => decodeCp2Memory(edges), /Incomplete/);
+});
