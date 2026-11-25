@@ -344,11 +344,12 @@ describe('radio bands: the same answer on every platform', () => {
         // swing no longer collapses where it reaches the base–collector
         // junction); was 3136 solves, 2533 substeps, 7.826 V. Then 832
         // solves, 8.670 V until a step's upward correction was capped at
-        // the swing it started from (same day). Checked identical on macOS
-        // arm64 and Linux x64.
-        assert.equal(b.transientAnalysisStatus().work.solves, 892);
+        // the swing it started from (same day), then 892 solves, 8.6714 V
+        // until the correction was bounded by the step's own change (same
+        // day). Checked identical on macOS arm64 and Linux x64.
+        assert.equal(b.transientAnalysisStatus().work.solves, 949);
         assert.equal(b._radio.substeps, 470);
-        assert.equal(tankAmp(b, 'col'), 8.671373858807078);
+        assert.equal(tankAmp(b, 'col'), 8.672414893353801);
     });
 
     it('1-ulp changes of the coil do not move the oscillator\'s outcome', () => {

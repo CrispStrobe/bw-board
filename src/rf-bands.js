@@ -498,39 +498,49 @@ export class BandIntegrator {
                         return { S: Ss, z: zs, d, w: ws, p: ws ? this._portsOut(zs, ws, f) : zs };
                     };
                     const r1 = at(1);
-                    if (portDist(r1.p, p1) > CONSISTENCY_TOL * n1) {
+                    // The correction may only shorten or undo the explicit
+                    // step's own change of swing — never carry the end past the
+                    // explicit end, nor back past the swing the step started
+                    // from: s within [min(1, n0/n1), max(1, n0/n1)]. That is
+                    // what the collapse needs (a step that overshot into a
+                    // steep stamp is pulled back toward its start; one that
+                    // collapsed is lifted back toward it), and it leaves alone a
+                    // step whose end stamps only say "more of the same": a
+                    // MOSFET stage whose square law gains with its swing, or a
+                    // Meissner limited by its bias (pushing those ends further
+                    // made the one squeg and kept the other from squegging),
+                    // and a medium-wave oscillator that followed such pushes
+                    // step after step ran away to 10 kV.
+                    const sA = Math.min(1, n0 / n1), sB = Math.max(1, n0 / n1);
+                    const F = (r, s) => portNorm(r.p) / (s * n1) - 1;
+                    const f1 = F(r1, 1);
+                    const room = f1 < 0 ? sA < 1 : sB > 1;
+                    if (room && portDist(r1.p, p1) > CONSISTENCY_TOL * n1) {
                         // F(s) = |ports out (stamps at s·p1)| / (s·|p1|) − 1,
-                        // falling in s (more swing, more compression): bisect.
-                        const F = (r, s) => portNorm(r.p) / (s * n1) - 1;
+                        // falling in s (more swing, more compression): bisect
+                        // within the step's own change.
                         let lo = 1, hi = 1, rLo = r1, rHi = r1;
-                        if (F(r1, 1) < 0) {
-                            for (let i = 0; i < 20; i++) { lo /= 2; rLo = at(lo); if (F(rLo, lo) >= 0) break; }
-                        } else {
-                            // Up to the swing the step started from (5 % over):
-                            // this undoes a collapse the stamps at the start
-                            // made. Past it, describing functions far beyond
-                            // the swing a step reached have "consistent" ends
-                            // that are no swing at all (a medium-wave
-                            // oscillator, following one step after step, ran
-                            // away to 10 kV); a step's own growth is left to
-                            // its growth control.
-                            hi = 1.05 * Math.max(1, n0 / n1); rHi = at(hi);
-                        }
-                        let best = Math.abs(F(rLo, lo)) < Math.abs(F(rHi, hi)) ? rLo : rHi;
-                        let bestF = Math.min(Math.abs(F(rLo, lo)), Math.abs(F(rHi, hi)));
-                        for (let i = 0; i < 40 && hi > lo * (1 + 1e-6); i++) {
-                            const s = Math.sqrt(lo * hi);
-                            const r = at(s);
-                            const v = F(r, s);
-                            best = r; bestF = Math.abs(v);
-                            if (Math.abs(v) < 1e-6) break;
-                            if (v > 0) lo = s; else hi = s;
+                        let best, bestF;
+                        if (f1 < 0) { lo = sA; rLo = at(lo); } else { hi = sB; rHi = at(hi); }
+                        const fLo = F(rLo, lo), fHi = F(rHi, hi);
+                        if (f1 < 0 && fLo < 0) { best = rLo; bestF = 0; }        // consistent end beyond the start: stop at it
+                        else if (f1 >= 0 && fHi > 0) { best = rHi; bestF = 0; }  // …or beyond the start the other way
+                        else {
+                            best = Math.abs(fLo) < Math.abs(fHi) ? rLo : rHi;
+                            bestF = Math.min(Math.abs(fLo), Math.abs(fHi));
+                            for (let i = 0; i < 40 && hi > lo * (1 + 1e-6); i++) {
+                                const s = Math.sqrt(lo * hi);
+                                const r = at(s);
+                                const v = F(r, s);
+                                best = r; bestF = Math.abs(v);
+                                if (Math.abs(v) < 1e-6) break;
+                                if (v > 0) lo = s; else hi = s;
+                            }
                         }
                         if (bestF < 0.05) { u = best.w; dc = best.d; }
-                        // No consistent swing found (the bracket closed on a pole
-                        // of a step too long for the junctions' gain, or there is
-                        // none within 2^±20 of the explicit end): the step keeps
-                        // its explicit end, and the caller retries it shorter.
+                        // No consistent swing found within the step's change (the
+                        // bracket closed on a pole of a step too long for the
+                        // junctions' gain): the explicit end stands, retried shorter.
                         else inconsistent = true;
                         this.implicitSteps = (this.implicitSteps ?? 0) + 1;
                     }
