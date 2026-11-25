@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-// Independent architectural-state/cycle-count qualification. No bus-waveform claim.
+// Independent NMOS architectural-state and ordered bus-transaction qualification.
 // Dataset: SingleStepTests/65x02, MIT, Copyright (c) 2024 Thomas Harte et al.
 // Exact source revision and its LICENSE are printed with every result.
 import {execFile} from 'node:child_process';
@@ -22,9 +22,10 @@ async function check(opcode) {
   for (const vector of vectors) {
     epoch++;
     for (const [address, value] of vector.initial.ram) { memory[address] = value; marked[address] = epoch; }
+    const trace = [];
     const cpu = new NMOS6502({
-      read(address) { if (marked[address] !== epoch) throw new Error(`unlisted read ${address.toString(16)}`); return memory[address]; },
-      write(address, value) { memory[address] = value; marked[address] = epoch; }
+      read(address) { if (marked[address] !== epoch) throw new Error(`unlisted read ${address.toString(16)}`); trace.push([address, memory[address], 'read']); return memory[address]; },
+      write(address, value) { trace.push([address, value, 'write']); memory[address] = value; marked[address] = epoch; }
     });
     for (const key of ['pc', 'a', 'x', 'y', 'p']) cpu[key] = vector.initial[key];
     cpu.s = vector.initial.s;
@@ -35,6 +36,10 @@ async function check(opcode) {
         if (cpu[key] !== vector.final[key]) mismatches.push(`${key}: ${cpu[key]} expected ${vector.final[key]}`);
       }
       if (cycles !== vector.cycles.length) mismatches.push(`cycles: ${cycles} expected ${vector.cycles.length}`);
+      if (trace.length !== vector.cycles.length || trace.some((access, i) =>
+        access.some((field, j) => field !== vector.cycles[i]?.[j]))) {
+        mismatches.push(`bus: ${JSON.stringify(trace)} expected ${JSON.stringify(vector.cycles)}`);
+      }
       for (const [address, value] of vector.final.ram) {
         if (memory[address] !== value) mismatches.push(`RAM ${address.toString(16)}: ${memory[address]} expected ${value}`);
       }
@@ -47,7 +52,7 @@ async function check(opcode) {
   results.push(result); console.log(JSON.stringify(result));
 }
 for (let start = 0; start < opcodes.length; start += 4) await Promise.all(opcodes.slice(start, start + 4).map(check));
-const report = {source: `${root}/6502/v1`, revision, license: `${root}/LICENSE`, scope: 'architectural registers, RAM and instruction cycle totals; no per-cycle bus or asynchronous interrupt grade', opcodes: results.length, vectors: results.reduce((n, r) => n + r.vectors, 0), passed: results.reduce((n, r) => n + r.passed, 0), failed: results.reduce((n, r) => n + r.failed, 0)};
+const report = {source: `${root}/6502/v1`, revision, license: `${root}/LICENSE`, scope: 'architectural registers, RAM, instruction cycle totals and ordered bus transactions for documented opcodes', opcodes: results.length, vectors: results.reduce((n, r) => n + r.vectors, 0), passed: results.reduce((n, r) => n + r.passed, 0), failed: results.reduce((n, r) => n + r.failed, 0)};
 console.log(JSON.stringify({summary: report}));
 if (report.failed) process.exitCode = 1;
 

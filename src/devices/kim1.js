@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
-/** KIM-1 system device: one shared Board clock, solver-visible GPIO, no ROM. */
+/** KIM-1 system device: one shared Board clock, solver-visible GPIO and optional user ROMs. */
 import {registerDevice} from '../devices.js';
 import {
   createKim1Machine, resetKim1Machine, controlKim1Machine, stepKim1Machine,
-  observeKim1Inputs, advanceKim1Cycles, kim1TimerDeadlineCycles,
+  clockKim1Hardware, observeKim1Inputs, advanceKim1Cycles, kim1TimerDeadlineCycles,
   parseKim1Program, formatKim1Program, KIM1_DEFAULT_PROGRAM
 } from '../kim1-machine.js';
 
@@ -30,7 +30,7 @@ function cycleDelay(state, cycles, includePhase = false) {
 
 function schedule(state) {
   if (!state.running || state.error) state._nextInstructionNs = null;
-  else if (state._nextInstructionNs === null) state._nextInstructionNs = state._timeNs + cycleDelay(state, 1);
+  else if (state._nextInstructionNs === null) state._nextInstructionNs = state._timeNs + cycleDelay(state, 1, !!state.roms);
   const timerCycles = kim1TimerDeadlineCycles(state);
   const timer = timerCycles === null ? null : state._timeNs + cycleDelay(state, timerCycles, true);
   const instruction = state._nextInstructionNs;
@@ -38,14 +38,18 @@ function schedule(state) {
 }
 
 function driveOutputs(state) {
-  const desired = {'5v': {vTh: 5, rTh: 0.1}, gnd: {vTh: 0, rTh: 0.1}};
   const riot = state.riots[0];
+  const timerPinLow = riot.timer.irqEnabled && riot.timer.expired;
+  const pins = (riot.ddra << 24) | (riot.ddrb << 16) | ((riot.pa & riot.ddra) << 8) | (riot.pb & riot.ddrb);
+  if (state._pinState === pins && state._timerPinLow === timerPinLow) return false;
+  state._pinState = pins; state._timerPinLow = timerPinLow;
+  const desired = {'5v': {vTh: 5, rTh: 0.1}, gnd: {vTh: 0, rTh: 0.1}};
   for (const prefix of ['PA', 'PB']) {
     const ddr = prefix === 'PA' ? riot.ddra : riot.ddrb;
     const value = prefix === 'PA' ? riot.pa : riot.pb;
     for (let bit = 0; bit < 8; bit++) {
       if (prefix === 'PB' && bit === 6) continue;
-      const timerPin = prefix === 'PB' && bit === 7 && riot.timer.irqEnabled && riot.timer.expired;
+      const timerPin = prefix === 'PB' && bit === 7 && timerPinLow;
       const output = timerPin || !!(ddr & (1 << bit));
       const high = !timerPin && !!(value & (1 << bit));
       desired[`${prefix}${bit}`] = output ? {vTh: high ? 5 : 0, rTh: high ? 220 : 10} : null;
@@ -82,7 +86,7 @@ export function registerKim1Device() {
     reset(part, state) {
       resetKim1Machine(state);
       state._timeNs = 0n; state._cyclePhase = 0n; state._nextInstructionNs = null;
-      state._clockHz = kim1ClockHz(part);
+      state._clockHz = state.roms ? 1_000_000 : kim1ClockHz(part);
       driveOutputs(state); schedule(state);
     },
     stamp(ctx) {
@@ -107,7 +111,7 @@ export function registerKim1Device() {
       }
       if (part.params?.clockHz !== state._paramsClockHz) {
         try {
-          state._clockHz = kim1ClockHz(part);
+          state._clockHz = state.roms ? 1_000_000 : kim1ClockHz(part);
           state._paramsClockHz = part.params?.clockHz;
           state._nextInstructionNs = null;
         } catch (error) { state.error = String(error.message); state.running = false; }
@@ -120,8 +124,13 @@ export function registerKim1Device() {
       }
       observeKim1Inputs(state, a, b);
       if (state.running && !state.error && state._nextInstructionNs !== null && tNs >= state._nextInstructionNs) {
-        const cycles = stepKim1Machine(state, {singleStep: false, advanceTimers: false});
-        state._nextInstructionNs = state.running && cycles > 0 ? tNs + cycleDelay(state, cycles) : null;
+        if (state.roms) {
+          clockKim1Hardware(state);
+          state._nextInstructionNs = state.running ? tNs + cycleDelay(state, 1, true) : null;
+        } else {
+          const cycles = stepKim1Machine(state, {singleStep: false, advanceTimers: false});
+          state._nextInstructionNs = state.running && cycles > 0 ? tNs + cycleDelay(state, cycles) : null;
+        }
       }
       schedule(state);
       return driveOutputs(state);
@@ -130,6 +139,10 @@ export function registerKim1Device() {
       kim1ClockHz(part);
       const handled = controlKim1Machine(state, verb, value, {advanceTimers: false});
       if (!handled) return false;
+      if (verb === 'loadRoms' || verb === 'useTeachingMonitor') {
+        state._clockHz = state.roms ? 1_000_000 : kim1ClockHz(part);
+        state._cyclePhase = 0n;
+      }
       state._nextInstructionNs = null;
       schedule(state); driveOutputs(state);
       return true;

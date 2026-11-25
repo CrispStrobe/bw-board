@@ -1,10 +1,10 @@
 # KIM-1 circuit trainer
 
 The `kim-1` device executes documented NMOS 6502 machine code and connects the
-user I/O ports to the circuit solver. Its six-digit panel is an **independent
-teaching monitor**, not MOS Technology's original firmware. No original KIM ROM,
-monitor listing, KIM Uno source, or other KIM replica implementation is bundled
-or translated into this implementation. All new implementation files are MIT.
+user I/O ports to the circuit solver. It starts in the independent teaching
+monitor. An optional hardware mode boots two user-supplied 6530 ROMs and drives
+the panel and TTY through their port registers. All new implementation files
+are MIT. Historical firmware stays in the active simulation session.
 
 The default program is a NOP/JMP loop at `$0200`. The device starts stopped.
 `KIM1_DEMOS.counter` and `.echo` contain short programs authored for this project:
@@ -54,7 +54,7 @@ and reset for consumers that supply their own complete bus and vectors.
 
 ## Program text and persistence
 
-Every nonempty data line contains an exact four-digit hexadecimal address,
+In addressed hex, every nonempty data line contains a four-digit hexadecimal address,
 a colon, and one or more exact two-digit bytes. `;` and `#` introduce comments.
 
 ```text
@@ -62,6 +62,10 @@ a colon, and one or more exact two-digit bytes. `;` and `#` introduce comments.
 0210: 00 17 4C 0A 02
 ```
 
+The loader also accepts MOS paper tape (.pap/.ptp) and Intel HEX, checking
+record lengths, checksums and end records. Tape and Intel HEX addresses in
+expansion RAM enable the expanded profile. The addressed-hex export records
+that profile and the entry address when it differs from the lowest loaded byte.
 Loading validates the entire source before changing any live state. Duplicate
 addresses (including hardware aliases), writes outside RAM, malformed bytes,
 and overflow are rejected. A successful load clears RAM, applies the image,
@@ -92,12 +96,35 @@ is mapped with `address & 0x1FFF`, so `$2200` aliases `$0200`.
 | `$1740–177F` | Monitor 6530-002 port/timer registers |
 | `$1780–17BF` | User RRIOT RAM, 64 bytes |
 | `$17C0–17FF` | Monitor RRIOT RAM, 64 bytes |
-| `$1800–1BFF`, `$1C00–1FFF` | Original ROM regions, unavailable here |
+| `$1800–1BFF`, `$1C00–1FFF` | 6530-003 and 6530-002 ROM windows in hardware mode |
 
-CPU reads from absent memory and writes outside RAM/I/O stop with an explicit
-error. ROM calls do not become invented successful routines. Use standalone
-programs that perform their own port access; historical programs requiring
-monitor services, cassette, serial terminal, or ROM data are outside this model.
+Expanded RAM occupies `$0400–16FF` and `$2000–FFF9`. Hardware vectors
+`$FFFA–FFFF` are sourced from `$1FFA–1FFF` even with expansion. The teaching
+monitor reports absent memory accesses. Hardware mode retains the last bus
+byte for open-bus reads and ignores writes to ROM and unpopulated addresses.
+
+## Hardware mode
+
+In Circuits, open **Firmware and TTY** and choose two 1,024-byte images named
+for 6530-003 and 6530-002, or one 2,048-byte image with 003 first. The Board
+executes each memory access on the shared 1 MHz clock, including dummy reads
+and the two NMOS read-modify-write cycles. The 74145 selects seven-column keypad
+rows and the six display digits. ST requests NMI and SST requests it after
+each user instruction. Original firmware uses the RAM soft vector at
+`$17FA–17FB`; programs should set it before using ST or SST.
+
+TTY is a virtual 300-baud terminal with the monitor's line gating and echo.
+Mounting files and switching monitor modes are session controls. An imported
+program in hardware mode writes to RAM without resetting the running monitor.
+Use the hardware keypad to select the program entry address. In the teaching
+monitor, loading selects the entry address automatically.
+
+For an optional check with local ROM and tape files:
+
+```sh
+node scripts/qualify-kim1-rom.mjs 6530-003.bin 6530-002.bin program.ptp
+```
+
 
 User registers are PA `$1700`, DDRA `$1701`, PB `$1702`, DDRB `$1703`; monitor
 registers have an offset of `$40`. A DDR bit of one selects output, zero selects
@@ -169,33 +196,20 @@ pinned MIT SingleStepTests NMOS dataset into memory, with four concurrent
 downloads and no saved ROM or vector artifacts. Optional hex opcode arguments
 limit the run, for example `node scripts/grind-nmos6502.mjs 69 e9 20 6c`.
 
-On 2026-11-25 all **1,510,000 of 1,510,000** vectors (151 documented opcodes ×
-10,000) passed final registers, final RAM and instruction cycle totals. The
-first run caught a JSR operand/stack alias edge case; the override and focused
-regression now cover it. This result does not validate bus waveforms, interrupt
-polling races, the complete KIM monitor, or original-board peripheral timing.
-The independently run qualification used these SHA-256 digests:
-
-```text
-nmos6502.js 3dbd76aab58dac3e87e7d6e3dc9bdb7d56c0828e82a912317d6238eeac2c13ee
-w65c02.js   623f95c63d9764a98e7eada4676cd4f355aa6bee7abed98f5819914411e688ae
-run harness a3a200a714b4203056ecd078003a302ca4232594bce1afaf3af4dbf0e965a2a1
-```
-
-The committed grader has the same logic with its import path adjusted to the
-repository layout. The qualification's extracted W65C02 copy had one extra
-trailing newline; its code is unchanged from the repository's existing blob
-`0da494fce5ea5d8e7e4be42418e4e6e78fe0629b`. The unchanged repository file's SHA-256
-is `6a4582af2bcc7feb7a3807a1061d387d2216f113b726c5020788232a076b5340`.
-Focused tests additionally cover the panel, map aliases,
-atomic loading, persistence, timers, DDR/input/output behavior and Board-solved
-switch → machine-code program → resistor/LED circuits.
+On 2026-11-25 all **1,510,000 of 1,510,000** vectors (151 documented
+opcodes × 10,000) passed final registers, final RAM, cycle totals and every
+ordered bus address, direction, and value. The Board regression also verifies
+a page-crossing dummy read acknowledges the 6530 timer on its own cycle.
+A separate original-ROM test verified keypad entry, GO, ST, SST, the TTY
+prompt and an interactive memory write. Electrical waveforms, asynchronous
+interrupt polling races, cassette and optional storage peripherals require
+separate qualification.
 
 ## Provenance
 
-Behavior was specified independently from factual documentation; the implementer
-did not inspect KIM Uno/KIM replica code, ROM binaries or monitor listings.
-The existing project W65C02 source is the only reused implementation. Sources:
+The teaching monitor was specified from hardware documentation. The project
+W65C02 code is the only reused implementation. Historical ROM images are
+external test inputs for the hardware model. Sources:
 
 - MOS Technology, [KIM-1 User Manual, August 1976](https://bitsavers.org/components/mosTechnology/kim-1/6500-15B_KIM-1_Users_Manual_197608.pdf): board architecture, controls, memory map and I/O.
 - [KIM-1 manual text transcription](https://www.kim-1.com/docs/usrman.htm): factual cross-check; no monitor assembly listing translated or copied.
@@ -231,3 +245,7 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
+
+- [Ruud Baltissen’s archived KIM-1 hardware notes](https://web.archive.org/web/20141129191318id_/http://6502.org/trainers/buildkim/buildkim.htm)
+- [Patric Sokoll’s KIM-1 hardware collection](https://patric-sokoll.de/Computermuseum/MOS%20KIM-1/MOS%20KIM-1.html)
+- [Hans Otten’s KIM-1 manuals and MOS documents](http://retro.hansotten.nl/6502-sbc/kim-1-manuals-and-software/kim-1-manuals-and-software/)

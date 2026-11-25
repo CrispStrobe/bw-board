@@ -137,3 +137,27 @@ test('count acknowledgement preserves the continuously running prescaler phase',
   advanceKim1Cycles(s, 4); assert.equal(peek(s, 0x1706), 252);
   advanceKim1Cycles(s, 1); assert.equal(peek(s, 0x1706), 251);
 });
+
+test('MOS paper tape validates checksums and data-record totals and round-trips expanded RAM', () => {
+  const tape = '\x7F;032000A94200010E\r\n\0\0;0000010001\r\n\x13';
+  const parsed = parseKim1Program(tape);
+  assert.deepEqual(parsed, {image: {8192: 0xa9, 8193: 0x42, 8194: 0}, start: 0x2000, expanded: true});
+  const saved = formatKim1Program(parsed);
+  assert.deepEqual(parseKim1Program(saved), parsed);
+  const machine = createKim1Machine(saved);
+  assert.equal(peek(machine, 0x2000), 0xa9);
+  assert.equal(peek(machine, 0), 0);
+  assert.throws(() => control(machine, 'loadProgram', tape.replace('010E', '010F')), /checksum/);
+  assert.throws(() => parseKim1Program(tape.replace('00010001', '00020002')), /record count/);
+  assert.throws(() => parseKim1Program(tape.split('\r\n')[0]), /end record/);
+  assert.equal(peek(machine, 0x2000), 0xa9);
+});
+
+test('Intel HEX preserves its checked entry and expansion bytes through addressed hex export', () => {
+  const source = ':02200000EA00F4\n:0400000500002001D6\n:00000001FF';
+  const parsed = parseKim1Program(source);
+  assert.equal(parsed.start, 0x2001);
+  assert.match(formatKim1Program(parsed), /; KIM-1 entry 2001/);
+  assert.deepEqual(parseKim1Program(formatKim1Program(parsed)), parsed);
+  assert.throws(() => parseKim1Program(source.replace('EA00F4','EA00F5')), /checksum/);
+});

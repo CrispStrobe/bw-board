@@ -79,3 +79,33 @@ test('persisting canonical keypad edits does not reload or reset running state',
   model.reset(f.part, f.state); assert.equal(f.state.ram[0x300], 0xab); assert.equal(f.state.drives.PA0, null);
   assert.equal(f.state._timeNs, 0n);
 });
+
+test('mounted ROM boots from the hardware vector and clocks RIOT writes on individual Board cycles', () => {
+  const f = fixture();
+  const applicationRom = new Uint8Array(1024);
+  const keypadRom = new Uint8Array(1024);
+  // SEI; LDA #$01; STA $170D; LDX #$05; LDA $17FF,X; JMP $1C0B.
+  keypadRom.set([0x78, 0xa9, 1, 0x8d, 0x0d, 0x17, 0xa2, 5, 0xbd, 0xff, 0x17, 0x4c, 0x0b, 0x1c]);
+  keypadRom.set([0x00, 0x1c], 0x3fc);
+  assert.throws(() => model.control(f.part, f.state, 'loadRoms', [applicationRom]), /1,024-byte/);
+  model.control(f.part, f.state, 'loadRoms', [applicationRom, keypadRom]);
+  f.advance(7_000n);
+  assert.equal(f.state.cpu.pc, 0x1c00);
+  assert.equal(f.state.cpu.cycles, 7);
+  f.advance(14_000n);
+  assert.equal(f.state.riots[0].timer.active, false);
+  f.advance(15_000n);
+  assert.equal(f.state.riots[0].timer.active, true);
+  assert.equal(f.state.riots[0].timer.count, 1);
+  assert.equal(f.state.riots[0].timer.irqEnabled, true);
+  f.advance(20_000n);
+  assert.equal(f.state.riots[0].timer.irqEnabled, true);
+  f.advance(21_000n);
+  assert.equal(f.state.riots[0].timer.irqEnabled, false, 'indexed dummy read acknowledged the timer at $1704');
+  f.advance(22_000n);
+  assert.equal(f.state.cpu.pc, 0x1c0b);
+  assert.equal(f.state.error, null);
+  model.control(f.part, f.state, 'useTeachingMonitor');
+  assert.equal(f.state.roms, null);
+  assert.equal(f.state._wakeNs, null);
+});
