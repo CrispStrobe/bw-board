@@ -1550,6 +1550,167 @@ const PASSIVE_KINDS = new Set(['resistor', 'capacitor', 'diode', 'led',
   'vsource', 'isource']);
 const WINDING_TERMINALS = { inductor: ['a', 'b'], transformer: ['p1', 'p2', 's1', 's2'] };
 
+// Only the Board's solver-owned netlists use this cache. Netlist and scope
+// changes replace the arrays. Resistive reference selection and a fallback
+// supply ground remain per-solve decisions.
+const LIVE_MNA_TOPOLOGY = new WeakMap();
+
+function prepareMnaTopology(parts, nets, powerOff, testNodeB) {
+  // Build node list. Ground is implicit (node index -1 → not in matrix).
+  // For resistance measurement, use testNodeB as the reference so that
+  // the test nodes are always relative to each other, even if the GND
+  // part is on a disconnected net.
+  let groundNetId = null;
+  let explicitGround = false;
+
+  // One part lookup for the whole solve. The election / merge / node-index
+  // passes below each ran `parts.find` per terminal — O(parts × terminals)
+  // scans repeated up to 50× by the NR loop on imported boards.
+  /** @type {Map<string, Part>} */
+  const partMap = new Map();
+  for (const part of parts) partMap.set(part.id, part);
+
+  if (powerOff && testNodeB) {
+    groundNetId = testNodeB;
+  } else {
+    for (const net of nets) {
+      for (const t of net.terminals) {
+        const part = partMap.get(t.part);
+        if (part && part.kind === 'gnd') {
+          groundNetId = net.id;
+          break;
+        }
+      }
+      if (groundNetId) break;
+    }
+    explicitGround = Boolean(groundNetId);
+    // No gnd symbol on the bench: the battery's negative pole is the
+    // reference — exactly where a scope ground clip goes on a real
+    // single-supply build. Without this, MCU pin Thevenin sources stamp
+    // against a node no net maps to, pin current has no return path, and
+    // a battery-fed board with pin-driven LEDs reads brightness 0 forever.
+    // (spec-updates/ground-fallback-vsource-neg.md, 2026-08-10)
+    if (!groundNetId) groundNetId = chooseGroundReference(parts, nets)?.netId ?? null;
+  }
+
+  // EVERY net bearing a gnd symbol IS the reference — EXCEPT in the
+  // power-off resistance measurement, where testNodeB is the reference
+  // and gnd symbols are deliberately inactive (the T-network test's
+  // contract: a dangling gnd must not become a shunt path). The election above
+  // picks one net as node 0 — but a circuit can have DISJOINT ground
+  // islands (the .dig-translated PC module: the clock's local gnd
+  // symbol vs the chips' gnd net), and leaving the others as ordinary
+  // nets lets them float: the clock's "ground" rode up to 4.97 V and
+  // the oscillator sat dead. Hand-wired boards never showed it because
+  // their grounds share rails. Merge all gnd-bearing nets into the
+  // elected one — physically they are the same node.
+  // The merge is a SOLVER-LOCAL VIEW. It used to splice the caller's `nets`
+  // array and push into the elected net's own terminals — the board's
+  // netlist was permanently rewritten by the first solve, and any caller
+  // holding the array saw its topology change under it. The caller's arrays
+  // and net objects are never touched now; merged-away gnd net ids still
+  // answer nodeVoltage as 0 via `mergedGndIds` at extraction.
+  /** @type {Set<string>} */
+  const mergedGndIds = new Set();
+  if (groundNetId && !(powerOff && testNodeB)) {
+    const isGndNet = (net) => net.id !== groundNetId && net.terminals.some((t) => {
+      const p = partMap.get(t.part);
+      return p && p.kind === 'gnd';
+    });
+    for (const net of nets) if (isGndNet(net)) mergedGndIds.add(net.id);
+  }
+  const callerNets = nets;
+  if (mergedGndIds.size) {
+    const view = [];
+    let mergedMain = null;
+    for (const net of nets) {
+      if (net.id === groundNetId) {
+        mergedMain = { id: net.id, terminals: net.terminals.slice() };
+        view.push(mergedMain);
+      } else if (!mergedGndIds.has(net.id)) {
+        view.push(net);
+      }
+    }
+    for (const net of nets) {
+      if (mergedGndIds.has(net.id)) mergedMain.terminals.push(...net.terminals);
+    }
+    nets = view;
+  } else {
+    // Fresh wrapper either way, so the terminal map below attaches to an
+    // solver-owned array — never to the caller's.
+    nets = nets.slice();
+  }
+
+  // A WINDING END ON NO NET IS IN THE AIR, NOT ON GROUND.
+  //
+  // Ground has no matrix row, so a terminal on no net and a terminal on the
+  // reference both index as `undefined`, and the winding stamps cannot tell
+  // them apart: an inductor's companion injects its history current into the
+  // other end and the transformer's port coupling keeps the missing column as
+  // 0 V. An inductor with one end loose therefore integrated a current
+  // through a short to ground that no circuit had (the step controller ran
+  // into its attempt cap at 63 us), and a transformer secondary with one lead
+  // unconnected lit an LED on the other lead as if that lead were grounded.
+  // Resistors and two-terminal stamps refuse a missing net outright, but a
+  // winding is a coupled element: skipping it would also drop the coupling.
+  // So each such end gets a node of its own, in this solve's private view
+  // only. It floats: the winding's own conductance (or the 1 mOhm DC short)
+  // determines it, and a winding with BOTH ends loose is held by the node
+  // shunt (gmin) like any other island.
+  if (parts.some(p => WINDING_TERMINALS[p.kind])) {
+    const onNet = new Set();
+    for (const net of nets) for (const t of net.terminals) onNet.add(`${t.part}\u0000${t.terminal}`);
+    for (const part of parts) {
+      for (const terminal of WINDING_TERMINALS[part.kind] ?? []) {
+        if (onNet.has(`${part.id}\u0000${terminal}`)) continue;
+        nets.push({ id: `${OPEN_END_PREFIX}${part.id}:${terminal}`, terminals: [{ part: part.id, terminal }] });
+      }
+    }
+  }
+
+  // terminal → net id. `findNet` was a linear scan of all nets × all
+  // terminals, called several times per element per stamp per NR
+  // iteration — the dominant cost on imported boards before the O(n³)
+  // solve even starts (ROADMAP E1.1; spec-updates/sparse-lu-factor-reuse.md).
+  // Memoized ON THE ARRAY, not per call: the board hands the same nets
+  // array to every solve until setNetlist builds a new one, so the map
+  // is a pure function of the array's identity. Measured on the
+  // perf-budget LED bench: ~19K → ~22K setPin/sec — the rebuild was
+  // ~8% self time, real but not the bench's dominant cost.
+  // The view above is a fresh array on every solve, so memoizing on IT never
+  // hit: the map was rebuilt per solve. Memoize on the CALLER'S array (the
+  // identity the note above relies on), keyed by the ground merge that shaped
+  // the view, and attach the shared map to the solver's private view.
+  const termMapKey = `${groundNetId ?? ''}\u0000${[...mergedGndIds].join('\u0000')}`;
+  const termMemo = TERM_MAP_MEMO.get(callerNets);
+  if (termMemo && termMemo.key === termMapKey) {
+    nets[NETS_TERM_MAP] = termMemo.map;
+  } else {
+    nets[NETS_TERM_MAP] = buildTermMap(nets);
+    TERM_MAP_MEMO.set(callerNets, { key: termMapKey, map: nets[NETS_TERM_MAP] });
+  }
+
+  /** @type {Map<string, number>} net id → node index */
+  const nodeIndex = new Map();
+  let nodeCount = 0;
+  for (const net of nets) {
+    if (net.id === groundNetId) continue;
+
+    if (powerOff) {
+      // Only include nets that have at least one passive element terminal
+      const hasPassive = net.terminals.some(t => {
+        const p = partMap.get(t.part);
+        return p && PASSIVE_KINDS.has(p.kind);
+      });
+      if (!hasPassive) continue;
+    }
+
+    nodeIndex.set(net.id, nodeCount++);
+  }
+
+  return { nets, groundNetId, mergedGndIds, partMap, nodeIndex, nodeCount, explicitGround };
+}
+
 export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
   const powerOff = opts.powerOff ?? false;
   const testNodeA = opts.testNodeA;
@@ -1610,155 +1771,18 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
   // a plausible, wrong all-zeros solution.
   const GMIN = 1e-12;
 
-  // Build node list. Ground is implicit (node index -1 → not in matrix).
-  // For resistance measurement, use testNodeB as the reference so that
-  // the test nodes are always relative to each other, even if the GND
-  // part is on a disconnected net.
-  let groundNetId = null;
-
-  // One part lookup for the whole solve. The election / merge / node-index
-  // passes below each ran `parts.find` per terminal — O(parts × terminals)
-  // scans repeated up to 50× by the NR loop on imported boards.
-  /** @type {Map<string, Part>} */
-  const partMap = new Map();
-  for (const part of parts) partMap.set(part.id, part);
-
-  if (powerOff && testNodeB) {
-    groundNetId = testNodeB;
+  const reuseTopology = opts.reuseBoardTopology === true && !powerOff && !testNodeA && !testNodeB;
+  const cached = reuseTopology ? LIVE_MNA_TOPOLOGY.get(nets) : undefined;
+  let preparedTopology;
+  if (cached?.parts === parts) {
+    preparedTopology = cached.topology;
   } else {
-    for (const net of nets) {
-      for (const t of net.terminals) {
-        const part = partMap.get(t.part);
-        if (part && part.kind === 'gnd') {
-          groundNetId = net.id;
-          break;
-        }
-      }
-      if (groundNetId) break;
-    }
-    // No gnd symbol on the bench: the battery's negative pole is the
-    // reference — exactly where a scope ground clip goes on a real
-    // single-supply build. Without this, MCU pin Thevenin sources stamp
-    // against a node no net maps to, pin current has no return path, and
-    // a battery-fed board with pin-driven LEDs reads brightness 0 forever.
-    // (spec-updates/ground-fallback-vsource-neg.md, 2026-08-10)
-    if (!groundNetId) groundNetId = chooseGroundReference(parts, nets)?.netId ?? null;
+    preparedTopology = prepareMnaTopology(parts, nets, powerOff, testNodeB);
+    if (reuseTopology && preparedTopology.explicitGround) LIVE_MNA_TOPOLOGY.set(nets, { parts, topology: preparedTopology });
   }
-
-  // EVERY net bearing a gnd symbol IS the reference — EXCEPT in the
-  // power-off resistance measurement, where testNodeB is the reference
-  // and gnd symbols are deliberately inactive (the T-network test's
-  // contract: a dangling gnd must not become a shunt path). The election above
-  // picks one net as node 0 — but a circuit can have DISJOINT ground
-  // islands (the .dig-translated PC module: the clock's local gnd
-  // symbol vs the chips' gnd net), and leaving the others as ordinary
-  // nets lets them float: the clock's "ground" rode up to 4.97 V and
-  // the oscillator sat dead. Hand-wired boards never showed it because
-  // their grounds share rails. Merge all gnd-bearing nets into the
-  // elected one — physically they are the same node.
-  // The merge is a SOLVER-LOCAL VIEW. It used to splice the caller's `nets`
-  // array and push into the elected net's own terminals — the board's
-  // netlist was permanently rewritten by the first solve, and any caller
-  // holding the array saw its topology change under it. The caller's arrays
-  // and net objects are never touched now; merged-away gnd net ids still
-  // answer nodeVoltage as 0 via `mergedGndIds` at extraction.
-  /** @type {Set<string>} */
-  const mergedGndIds = new Set();
-  if (groundNetId && !(powerOff && testNodeB)) {
-    const isGndNet = (net) => net.id !== groundNetId && net.terminals.some((t) => {
-      const p = partMap.get(t.part);
-      return p && p.kind === 'gnd';
-    });
-    for (const net of nets) if (isGndNet(net)) mergedGndIds.add(net.id);
-  }
-  const callerNets = nets;
-  if (mergedGndIds.size) {
-    const view = [];
-    let mergedMain = null;
-    for (const net of nets) {
-      if (net.id === groundNetId) {
-        mergedMain = { id: net.id, terminals: net.terminals.slice() };
-        view.push(mergedMain);
-      } else if (!mergedGndIds.has(net.id)) {
-        view.push(net);
-      }
-    }
-    for (const net of nets) {
-      if (mergedGndIds.has(net.id)) mergedMain.terminals.push(...net.terminals);
-    }
-    nets = view;
-  } else {
-    // Fresh wrapper either way, so the terminal map below attaches to an
-    // array only this solve can see — never to the caller's.
-    nets = nets.slice();
-  }
-
-  // A WINDING END ON NO NET IS IN THE AIR, NOT ON GROUND.
-  //
-  // Ground has no matrix row, so a terminal on no net and a terminal on the
-  // reference both index as `undefined`, and the winding stamps cannot tell
-  // them apart: an inductor's companion injects its history current into the
-  // other end and the transformer's port coupling keeps the missing column as
-  // 0 V. An inductor with one end loose therefore integrated a current
-  // through a short to ground that no circuit had (the step controller ran
-  // into its attempt cap at 63 us), and a transformer secondary with one lead
-  // unconnected lit an LED on the other lead as if that lead were grounded.
-  // Resistors and two-terminal stamps refuse a missing net outright, but a
-  // winding is a coupled element: skipping it would also drop the coupling.
-  // So each such end gets a node of its own, in this solve's private view
-  // only. It floats: the winding's own conductance (or the 1 mOhm DC short)
-  // determines it, and a winding with BOTH ends loose is held by the node
-  // shunt (gmin) like any other island.
-  if (parts.some(p => WINDING_TERMINALS[p.kind])) {
-    const onNet = new Set();
-    for (const net of nets) for (const t of net.terminals) onNet.add(`${t.part}\u0000${t.terminal}`);
-    for (const part of parts) {
-      for (const terminal of WINDING_TERMINALS[part.kind] ?? []) {
-        if (onNet.has(`${part.id}\u0000${terminal}`)) continue;
-        nets.push({ id: `${OPEN_END_PREFIX}${part.id}:${terminal}`, terminals: [{ part: part.id, terminal }] });
-      }
-    }
-  }
-
-  // terminal → net id. `findNet` was a linear scan of all nets × all
-  // terminals, called several times per element per stamp per NR
-  // iteration — the dominant cost on imported boards before the O(n³)
-  // solve even starts (ROADMAP E1.1; spec-updates/sparse-lu-factor-reuse.md).
-  // Memoized ON THE ARRAY, not per call: the board hands the same nets
-  // array to every solve until setNetlist builds a new one, so the map
-  // is a pure function of the array's identity. Measured on the
-  // perf-budget LED bench: ~19K → ~22K setPin/sec — the rebuild was
-  // ~8% self time, real but not the bench's dominant cost.
-  // The view above is a fresh array on every solve, so memoizing on IT never
-  // hit: the map was rebuilt per solve. Memoize on the CALLER'S array (the
-  // identity the note above relies on), keyed by the ground merge that shaped
-  // the view, and attach the shared map to this solve's private view.
-  const termMapKey = `${groundNetId ?? ''}\u0000${[...mergedGndIds].join('\u0000')}`;
-  const termMemo = TERM_MAP_MEMO.get(callerNets);
-  if (termMemo && termMemo.key === termMapKey) {
-    nets[NETS_TERM_MAP] = termMemo.map;
-  } else {
-    nets[NETS_TERM_MAP] = buildTermMap(nets);
-    TERM_MAP_MEMO.set(callerNets, { key: termMapKey, map: nets[NETS_TERM_MAP] });
-  }
-
-  /** @type {Map<string, number>} net id → node index */
-  const nodeIndex = new Map();
-  let nodeCount = 0;
-  for (const net of nets) {
-    if (net.id === groundNetId) continue;
-
-    if (powerOff) {
-      // Only include nets that have at least one passive element terminal
-      const hasPassive = net.terminals.some(t => {
-        const p = partMap.get(t.part);
-        return p && PASSIVE_KINDS.has(p.kind);
-      });
-      if (!hasPassive) continue;
-    }
-
-    nodeIndex.set(net.id, nodeCount++);
-  }
+  nets = preparedTopology.nets;
+  const { groundNetId, mergedGndIds, partMap } = preparedTopology;
+  let { nodeIndex, nodeCount } = preparedTopology;
 
   // A same-node ideal source says 0 = volts, even when that node is the
   // reference and therefore has no matrix index. Check before the zero-node
@@ -1803,6 +1827,10 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
   for (const part of parts) {
     const em = (part.kind === 'npn' || part.kind === 'pnp') ? ebersMollParams(part) : null;
     if (!em) continue;
+    // Intrinsic transistor nodes depend on current component parameters.
+    if (reuseTopology && preparedTopology.explicitGround && (em.rb > 0 || em.rc > 0) && nodeIndex === preparedTopology.nodeIndex) {
+      nodeIndex = new Map(nodeIndex);
+    }
     if (em.rb > 0) {
       const key = `\u0000intrinsic-base:${part.id}`;
       bjtBaseIndex.set(part.id, nodeCount);
@@ -4631,7 +4659,7 @@ function dropOpenEnds(nodeVoltages) {
   for (const id of nodeVoltages.keys()) if (id.startsWith(OPEN_END_PREFIX)) nodeVoltages.delete(id);
 }
 const NETS_TERM_MAP = Symbol('bw-term-map');
-/** caller nets array -> {key, map}; see the memo note in solveMNA. */
+/** caller nets array -> {key, map}; see the memo note in prepareMnaTopology. */
 const TERM_MAP_MEMO = new WeakMap();
 const termKey = (partId, terminal) => partId + String.fromCharCode(0) + terminal;
 

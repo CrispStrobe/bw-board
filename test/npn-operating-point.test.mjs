@@ -2,7 +2,7 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import { BoardImpl } from '../src/board.js';
-import { JUNCTION_GMIN } from '../src/mna.js';
+import { JUNCTION_GMIN, solveMNA } from '../src/mna.js';
 import { withJunctionEdgeOmitted } from './helpers/junction-dc-source-mutation.mjs';
 
 // Measured against ngspice 42 itself.  Its internal k/q is not the modern
@@ -46,6 +46,22 @@ function activeBench(params = PARAMS, { disconnect = null, kind = 'npn', BoardTy
   ], nets);
   return board;
 }
+
+it('reuses grounded live topology without retaining obsolete intrinsic transistor rows', () => {
+  const board = activeBench();
+  const { _solveParts: parts, _solveNets: nets } = board;
+  const junction = parts.find(part => part.id === 'Q1');
+  const initialNets = structuredClone(nets);
+  for (const [rb, rc] of [[0, 0], [10, 0], [10, 4], [0, 0]]) {
+    Object.assign(junction.params, { rb, rc });
+    const fresh = solveMNA(parts, nets, new Map(), board.controls, board.vcc);
+    const cached = solveMNA(parts, nets, new Map(), board.controls, board.vcc, { reuseBoardTopology: true });
+    assert.equal(cached.converged, true);
+    assert.deepEqual([...cached.nodeVoltages], [...fresh.nodeVoltages]);
+    assert.deepEqual([...cached.branchCurrents], [...fresh.branchCurrents]);
+  }
+  assert.deepEqual(nets, initialNets);
+});
 
 function highCurrentBench(params) {
   const board = new BoardImpl(5);

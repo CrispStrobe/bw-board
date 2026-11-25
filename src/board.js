@@ -6739,6 +6739,7 @@ export class BoardImpl {
   _solveLiveMNA(pinSources, options) {
     try {
       this._chargeBoundedAdvanceWork('solves');
+      options.reuseBoardTopology = true;
       const result = solveMNA(this._solveParts, this._solveNets, pinSources, this.controls, this.vcc, options);
       this._liveSolveError = null;
       return result;
