@@ -1505,6 +1505,12 @@ export function chooseGroundReference(parts, nets) {
   return { netId: best.neg, partId: best.part.id, stacked: bestH.count, choices };
 }
 
+const PASSIVE_KINDS = new Set(['resistor', 'capacitor', 'diode', 'led',
+  'potentiometer', 'button', 'switch', 'buzzer', 'ldr', 'ntc',
+  'npn', 'pnp', 'zener', 'inductor', 'transformer', 'nmos', 'pmos', 'opamp',
+  'vsource', 'isource']);
+const WINDING_TERMINALS = { inductor: ['a', 'b'], transformer: ['p1', 'p2', 's1', 's2'] };
+
 export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
   const powerOff = opts.powerOff ?? false;
   const testNodeA = opts.testNodeA;
@@ -1575,7 +1581,8 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
   // passes below each ran `parts.find` per terminal — O(parts × terminals)
   // scans repeated up to 50× by the NR loop on imported boards.
   /** @type {Map<string, Part>} */
-  const partMap = new Map(parts.map(p => [p.id, p]));
+  const partMap = new Map();
+  for (const part of parts) partMap.set(part.id, part);
 
   if (powerOff && testNodeB) {
     groundNetId = testNodeB;
@@ -1598,13 +1605,6 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
     // (spec-updates/ground-fallback-vsource-neg.md, 2026-08-10)
     if (!groundNetId) groundNetId = chooseGroundReference(parts, nets)?.netId ?? null;
   }
-
-  // Assign node indices (skip ground and, when power is off, skip nets that
-  // only connect to active sources and have no passive element terminals).
-  const passiveKinds = new Set(['resistor', 'capacitor', 'diode', 'led',
-    'potentiometer', 'button', 'switch', 'buzzer', 'ldr', 'ntc',
-    'npn', 'pnp', 'zener', 'inductor', 'transformer', 'nmos', 'pmos', 'opamp',
-    'vsource', 'isource']);
 
   // EVERY net bearing a gnd symbol IS the reference — EXCEPT in the
   // power-off resistance measurement, where testNodeB is the reference
@@ -1670,7 +1670,6 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
   // only. It floats: the winding's own conductance (or the 1 mOhm DC short)
   // determines it, and a winding with BOTH ends loose is held by the node
   // shunt (gmin) like any other island.
-  const WINDING_TERMINALS = { inductor: ['a', 'b'], transformer: ['p1', 'p2', 's1', 's2'] };
   if (parts.some(p => WINDING_TERMINALS[p.kind])) {
     const onNet = new Set();
     for (const net of nets) for (const t of net.terminals) onNet.add(`${t.part}\u0000${t.terminal}`);
@@ -1714,7 +1713,7 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
       // Only include nets that have at least one passive element terminal
       const hasPassive = net.terminals.some(t => {
         const p = partMap.get(t.part);
-        return p && passiveKinds.has(p.kind);
+        return p && PASSIVE_KINDS.has(p.kind);
       });
       if (!hasPassive) continue;
     }
@@ -2739,20 +2738,19 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
             // voltage-source row, but it is rail-clamped and nonlinear, so
             // "cannot move that node" is not true of it in the same way; no
             // corpus circuit needed it.
-            if (railOwner.size && state.drives) {
-              const fallbackNames = model.automaticSupplyFallbackTerminals;
-              const kept = {};
-              let dropped = false;
-              for (const [term, drive] of Object.entries(state.drives)) {
-                const fallback = fallbackNames?.has(term) === true;
-                const net = drive && fallback ? findNet(nets, part.id, term) : null;
+            // Visit only opted-in terminals, and copy only when a drive is suppressed.
+            const fallbackNames = model.automaticSupplyFallbackTerminals;
+            if (railOwner.size && fallbackNames?.size && state.drives) {
+              let kept;
+              for (const term of fallbackNames) {
+                if (!Object.prototype.propertyIsEnumerable.call(state.drives, term) || !state.drives[term]) continue;
+                const net = findNet(nets, part.id, term);
                 if (net && railOwner.has(net) && railOwner.get(net) !== part.id) {
-                  dropped = true;
-                  continue;
+                  kept ??= { ...state.drives };
+                  delete kept[term];
                 }
-                kept[term] = drive;
               }
-              if (dropped) state = { ...state, drives: kept };
+              if (kept) state = { ...state, drives: kept };
             }
             const rec = [];
             const previouslyStamped = deviceStamps.has(part.id);
@@ -4840,6 +4838,8 @@ function stampDevice(A, b, part, nets, nodeIndex, model, state, controls, vcc, t
   // through the reference — those records are kept (guarded on the net
   // being ground, not merely unindexed, so a floating net fabricates
   // nothing).
+  const terminalNets = nets[NETS_TERM_MAP].get(String(part.id));
+  const netFor = (terminal) => terminalNets?.get(String(terminal));
   const rowOrGround = (net) => nodeIndex.has(net) || net === groundNetId;
   // E2.2: the bench temperature reaches device stamps through ctx (the
   // TMP36 defaults to it; an explicit params.tempC wins).
@@ -4852,11 +4852,11 @@ function stampDevice(A, b, part, nets, nodeIndex, model, state, controls, vcc, t
   // companion (spec-updates/referenced-device-drives.md).
   for (const [terminal, drive] of Object.entries(state.drives ?? {})) {
     if (!drive) continue;
-    const net = findNet(nets, part.id, terminal);
+    const net = netFor(terminal);
     if (!net) continue;
     const g = 1 / Math.max(drive.rTh, 1e-3);
     if (drive.ref) {
-      const refNet = findNet(nets, part.id, drive.ref);
+      const refNet = netFor(drive.ref);
       if (!refNet) continue; // return pin in the air: no current path at all
       stampTwoTerminal(A, net, refNet, g, nodeIndex);
       const idx = nodeIndex.get(net);
@@ -4881,10 +4881,10 @@ function stampDevice(A, b, part, nets, nodeIndex, model, state, controls, vcc, t
   let nonlinearKeys = null;
   const ctx = {
     get topology() { return getTopology(); },
-    netFor: (terminal) => findNet(nets, part.id, terminal),
+    netFor,
     conductance: (tA, tB, g) => {
-      const netA = findNet(nets, part.id, tA);
-      const netB = tB ? findNet(nets, part.id, tB) : undefined;
+      const netA = netFor(tA);
+      const netB = tB ? netFor(tB) : undefined;
       // Record mirrors the stamp condition (stampTwoTerminal no-ops unless
       // BOTH legs are netted), so the derived current can never claim a
       // path the solve did not have.
@@ -4892,7 +4892,7 @@ function stampDevice(A, b, part, nets, nodeIndex, model, state, controls, vcc, t
       stampTwoTerminal(A, netA, netB, g, nodeIndex);
     },
     thevenin: (terminal, vTh, rTh) => {
-      const net = findNet(nets, part.id, terminal);
+      const net = netFor(terminal);
       if (!net || !rowOrGround(net)) return;
       const g = 1 / Math.max(rTh, 1e-3);
       if (rec) rec.push({ kind: 'norton', t: terminal, g, vth: vTh * srcScale });
@@ -4907,8 +4907,8 @@ function stampDevice(A, b, part, nets, nodeIndex, model, state, controls, vcc, t
     // before this existed — a battery whose neg is off-ground stamped its
     // EMF against ground instead (spec-updates/referenced-device-drives.md).
     theveninBetween: (termPlus, termMinus, vTh, rTh) => {
-      const netP = findNet(nets, part.id, termPlus);
-      const netN = findNet(nets, part.id, termMinus);
+      const netP = netFor(termPlus);
+      const netN = netFor(termMinus);
       if (!netP || !netN) return; // a leg in the air carries no current
       const g = 1 / Math.max(rTh, 1e-3);
       if (rec) rec.push({ kind: 'between', tP: termPlus, tN: termMinus, g, vth: vTh * srcScale });
@@ -4919,7 +4919,7 @@ function stampDevice(A, b, part, nets, nodeIndex, model, state, controls, vcc, t
       if (idxN !== undefined) b[idxN] -= vTh * srcScale * g;
     },
     current: (terminal, amps) => {
-      const net = findNet(nets, part.id, terminal);
+      const net = netFor(terminal);
       if (!net || !rowOrGround(net)) return;
       if (rec) rec.push({ kind: 'inject', t: terminal, amps: amps * srcScale });
       const idx = nodeIndex.get(net);
@@ -4946,7 +4946,7 @@ function stampDevice(A, b, part, nets, nodeIndex, model, state, controls, vcc, t
         const hit = resolved.get(terminal);
         if (hit !== undefined) return hit;
         if (typeof terminal !== 'string' || !model.terminals.includes(terminal)) fail(`undeclared terminal ${String(terminal)}`);
-        const net = findNet(nets, part.id, terminal);
+        const net = netFor(terminal);
         if (!net || !rowOrGround(net)) fail(`terminal ${terminal} must be connected to a node or reference`);
         resolved.set(terminal, net);
         return net;
