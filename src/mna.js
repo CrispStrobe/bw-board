@@ -1177,6 +1177,11 @@ function junctionOpts(part) {
     // Moving it is still coupled to the piecewise knee (kneeFromVf subtracts
     // 0.020*rd), so change classDefaults, not this line.
     rs: part.params?.rs ?? classDefaults(part.kind).rs ?? 0,
+    // The junction's temperature shift (V): what effVf adds to a forward
+    // drop at this part's temperature. A calibrated Is (no `is`) already
+    // carries it through vf; a STATED Is (a part card's 25 C value) takes it
+    // in shockleyParams.
+    vShift: effVf(0, part),
   };
 }
 
@@ -1194,6 +1199,13 @@ function shockleyParams(opts, vf) {
     const vJrated = vf - 0.020 * rs;
     const expVf = DMath.exp(Math.min(vJrated / nVt, 80));
     is = 0.020 / Math.max(expVf - 1, 1e-30);
+  } else if (opts.vShift) {
+    // A STATED saturation current is the card's 25 C value. At another
+    // temperature Is(T) moves the drop at a held current by the same shift
+    // effVf gives every other junction (JUNCTION_TEMPCO_V_PER_K per kelvin),
+    // as ebersMollParams does for a BJT card. A 1N4148 (`part: '1N4148'`,
+    // is 2.52 nA) kept its 25 C drop at any temperature.
+    is *= DMath.exp(-opts.vShift / nVt);
   }
   return { nVt, is, rs };
 }
@@ -2039,7 +2051,19 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
   const newtonSeed = transient?.newtonSeed ?? opts.newtonSeed;
   /** part id -> its parasitic capacitors, resolved once per solve. */
   const parasiticsOf = new Map();
-  if (transient) for (const part of parts) {
+  // AN EVENT SOLVE HOLDS THE DEVICE CHARGE. A discrete event inside a running
+  // transient (a knob turned, a light switched) is solved as an operating
+  // point, and a device's own capacitances (`parasiticCaps`) are open there,
+  // so a two-transistor latch kept no memory but Newton's starting guess: the
+  // solve after a light change put an OFF thyristor ON (sb3 lab-scr-flash
+  // carried a 10 nF gate capacitor so that a pinned drawn capacitor would hold
+  // it). Across an instantaneous event every capacitor keeps its voltage, the
+  // pF of a junction as much as a drawn one: with `holdDeviceCharge` each
+  // parasitic that has a stored voltage is stamped as a backward-Euler
+  // companion of a 1 ps step, i.e. held where the transient left it.
+  const parasiticHold = !transient && opts.holdDeviceCharge && capVoltagesIn
+    ? { dtSec: 1e-12, method: 'be', capVoltages: capVoltagesIn, holdStoredOnly: true } : null;
+  if (transient || parasiticHold) for (const part of parts) {
     const caps = parasiticCaps(part);
     if (caps.length) parasiticsOf.set(part.id, caps);
   }
@@ -2616,7 +2640,7 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
             bjtBaseIndex, bjtCollectorIndex, bjtVce);
           stampBjtTransientCharge(A, b, part, nets, nodeIndex, bjtBaseIndex, bjtCollectorIndex,
             diodeVoltages, bjtVbc, transient);
-          stampParasitics(A, b, part, nets, nodeIndex, transient, parasiticsOf.get(part.id));
+          stampParasitics(A, b, part, nets, nodeIndex, transient ?? parasiticHold, parasiticsOf.get(part.id));
           break;
 
         case 'pnp':
@@ -2624,17 +2648,17 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
             bjtRegions.get(part.id), bjtVceSat.get(part.id), bjtVbc, bjtBaseIndex, bjtCollectorIndex, bjtVce);
           stampBjtTransientCharge(A, b, part, nets, nodeIndex, bjtBaseIndex, bjtCollectorIndex,
             diodeVoltages, bjtVbc, transient);
-          stampParasitics(A, b, part, nets, nodeIndex, transient, parasiticsOf.get(part.id));
+          stampParasitics(A, b, part, nets, nodeIndex, transient ?? parasiticHold, parasiticsOf.get(part.id));
           break;
 
         case 'nmos':
           stampNMOS(A, b, part, nets, nodeIndex, groundNetId, diodeVoltages, mosRegions.get(part.id), mosVds, mosVsb, mosVdb);
-          stampParasitics(A, b, part, nets, nodeIndex, transient, parasiticsOf.get(part.id));
+          stampParasitics(A, b, part, nets, nodeIndex, transient ?? parasiticHold, parasiticsOf.get(part.id));
           break;
 
         case 'pmos':
           stampPMOS(A, b, part, nets, nodeIndex, groundNetId, diodeVoltages, mosRegions.get(part.id), mosVds, mosVsb, mosVdb);
-          stampParasitics(A, b, part, nets, nodeIndex, transient, parasiticsOf.get(part.id));
+          stampParasitics(A, b, part, nets, nodeIndex, transient ?? parasiticHold, parasiticsOf.get(part.id));
           break;
 
         case 'opamp':
@@ -5367,6 +5391,7 @@ export function bjtSmoothOutput(part) {
 function stampParasitics(A, b, part, nets, nodeIndex, transient, caps) {
   if (!transient || !caps) return;
   for (const cap of caps) {
+    if (transient.holdStoredOnly && !transient.capVoltages?.has(cap.key)) continue;
     const c = parasiticCompanion(cap, transient);
     if (!c) continue;
     const netA = findNet(nets, part.id, cap.a);

@@ -101,6 +101,7 @@ export function registerMiscParts() {
       state.omega = Math.abs(v1);
       state.direction = motorDirectionOf(v1);
       state.angle += v1 * dtSec;
+      state._angleAtSec = Number(tNs) / 1e9;
 
       // Quadrature encoder: divide rotation into slots. The edge index is
       // signed (floor of a negative angle), its slot wraps into 0..n-1.

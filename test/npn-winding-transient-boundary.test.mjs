@@ -241,8 +241,13 @@ test('default startup crosses the saturation boundary without a floor-scale disa
   // accuracy scale (the 5 ps clamp/RC mode) and the controller had to walk the
   // step down to the floor. Its output is now the smooth forced-beta law, and
   // the same trial steps agree within the unchanged scale.
+  // The window sits where Vce leaves saturation (0.30 -> 0.31 V), ~15 ns
+  // before the collector flies up. Since the transient starts from the
+  // power-on point with the base's input capacitance charged (it used to
+  // charge through RB for the first nanoseconds), that is 15 ns earlier than
+  // it was (19853-19863 ns before; power-on-junction-state.test.mjs).
   const b = winding({vceSat:null});
-  b.advanceToLive(19853n,{maxSteps:16});
+  b.advanceToLive(19838n,{maxSteps:16});
   assert.equal(b.transientAnalysisStatus().accuracyMet,true);
   const solve = (endNs,stepSec,previous={}) => solveMNA(b._solveParts,b._solveNets,
     b._pinSources(),b.controls,5,{inspectBjtRegions:true,tSeconds:endNs*1e-9,
@@ -251,7 +256,7 @@ test('default startup crosses the saturation boundary without a floor-scale disa
         capCurrents:previous.capCurrentsNext ?? b.capCurrents,
         inductorCurrents:previous.inductorCurrentsNext ?? b.inductorCurrents,
         inductorVoltages:previous.inductorVoltagesNext ?? b.inductorVoltages}});
-  const full = solve(19863,1e-8),first = solve(19858,5e-9),half = solve(19863,5e-9,first);
+  const full = solve(19848,1e-8),first = solve(19843,5e-9),half = solve(19848,5e-9,first);
   for (const result of [full,first,half]) assert.equal(result.converged,true);
   const vf = full.nodeVoltages.get('collector'),vh = half.nodeVoltages.get('collector');
   const scale = 1e-6+1e-4*Math.max(Math.abs(vf),Math.abs(vh));

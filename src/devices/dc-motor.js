@@ -74,6 +74,32 @@ export function motorDirectionOf(v) {
 }
 
 /**
+ * THE SHAFT ANGLE, for anything mounted on the shaft (a slotted disc
+ * chopping a light path, src/optics.js). Integrated with the trapezoidal rule
+ * over each mechanical step, as a signed cumulative angle in radians, and
+ * stamped with the time it holds at (`_angleAtSec`).
+ */
+export function advanceShaftAngle(state, v0, v1, dtSec, atSec) {
+  state.angle = (Number.isFinite(state.angle) ? state.angle : 0) + 0.5 * (v0 + v1) * dtSec;
+  state._angleAtSec = atSec;
+}
+
+/**
+ * The shaft angle (rad) of a motor's device state at time `tSec`: the last
+ * integrated angle carried forward at the present velocity. A gearmotor's
+ * `gearRatio` turns it into its OUTPUT shaft's angle when `output` is set.
+ */
+export function motorShaftAngle(state, tSec, part = null, output = false) {
+  if (!state) return 0;
+  const base = Number.isFinite(state.angle) ? state.angle : 0;
+  const at = Number.isFinite(state._angleAtSec) ? state._angleAtSec : tSec;
+  const v = state.velocity ?? state.omega ?? 0;
+  const angle = base + v * Math.max(0, tSec - at);
+  const ratio = output && part?.kind === 'gearmotor' ? Number(part.params?.gearRatio ?? 48) || 1 : 1;
+  return angle / ratio;
+}
+
+/**
  * THE BACK-EMF IS A RAMP, NOT A STAIRCASE.
  *
  * The speed is stepped in `update()`, once per accepted solve or device
@@ -124,6 +150,10 @@ export function registerDCMotor() {
         velocity: 0,
         omega: 0,
         direction: 'stopped',
+        // Cumulative SIGNED shaft angle (rad) at `_angleAtSec`: what a
+        // slotted disc on the shaft reads (motorShaftAngle).
+        angle: 0,
+        _angleAtSec: 0,
         current: 0,  // winding current for inductance model
         _lastTNs: 0n,
       };
@@ -135,6 +165,8 @@ export function registerDCMotor() {
       state.velocity = 0;
       state.omega = 0;
       state.direction = 'stopped';
+      state.angle = 0;
+      state._angleAtSec = 0;
       state.current = 0;
       state._lastTNs = 0n;
       state._emfAccel = 0;
@@ -216,6 +248,7 @@ export function registerDCMotor() {
       state.velocity = v1;
       state.omega = Math.abs(v1);
       state.direction = motorDirectionOf(v1);
+      advanceShaftAngle(state, v0, v1, dtSec, Number(tNs) / 1e9);
       state._emfAccel = (v1 - v0) / dtSec;
       state._emfAtSec = Number(tNs) / 1e9;
 

@@ -72,6 +72,15 @@ import { DMath } from './det-math.js';
  *   string  air path half-shaded by a plucked string: the shading swings at
  *           stringHz, decaying with decayS, re-plucked every pluckPeriodS —
  *           a light-modulated "electric guitar".
+ *   chopper (any medium) params.chopper names a motor (dc_motor, gearmotor,
+ *           dc_motor_encoder) whose shaft carries a slotted disc or a bladed
+ *           rotor across the beam: `slots` openings per turn, `openFraction`
+ *           of each pitch open (0.5), the beam `beamFraction` of a pitch wide
+ *           (0.2: how gradually each opening uncovers it), `phaseDeg`, and
+ *           `shaft: 'output'` for a gearmotor's output shaft. The light is
+ *           multiplied by the open share of the beam at the shaft's angle,
+ *           from the motor's own mechanical model, so the pulse rate is the
+ *           motor's speed times the slots (chopperTransmission).
  *   jet     air path crossed by a thin stream of tap water that a charged
  *           comb or ruler pulls sideways (waterJetDeflectionMm): the jet's
  *           shadow on the beam shrinks as it bends out of it, so the
@@ -589,6 +598,33 @@ export function lensLaunch(P, em, a, thNA, f) {
     return caught * core * cone * 0.92;                 // two lens surfaces
 }
 
+/**
+ * The share (0..1) of a beam a slotted disc passes at shaft angle `angleRad`:
+ * the beam (beamFraction of a slot pitch wide) against the periodic openings
+ * (openFraction of each pitch, the first centred on phaseDeg). The overlap of
+ * the beam's width with the openings, so each opening uncovers and covers the
+ * beam over beamFraction of a pitch rather than with a jump.
+ */
+export function chopperTransmission(P, angleRad) {
+    const slots = Math.max(1, Math.round(num(P.slots, 8)));
+    const open = Math.min(1, Math.max(0, num(P.openFraction, 0.5)));
+    const beam = Math.min(1, Math.max(1e-4, num(P.beamFraction, 0.2)));
+    if (open >= 1) return 1;
+    if (open <= 0) return 0;
+    // Position along the slot pattern, in pitches; the opening is [−open/2, open/2).
+    const x = slots * (angleRad / (2 * Math.PI) - num(P.phaseDeg, 0) / 360);
+    const lo = x - beam / 2, hi = x + beam / 2;
+    // Open length of the periodic pattern up to position y (one opening per pitch).
+    const cum = (y) => {
+        const k = Math.floor(y + 0.5);          // whole pitches below y (pattern starts at −0.5)
+        const f = y + 0.5 - k;                  // 0..1 within the pitch
+        return k * open + Math.min(f, open);
+    };
+    // The pattern [−0.5, −0.5 + open) per pitch, shifted so the opening is centred on 0.
+    const shift = (open - 1) / 2;
+    return Math.min(1, Math.max(0, (cum(hi + shift) - cum(lo + shift)) / beam));
+}
+
 /** The geometry params a `light_path` exposes as its knob, by medium. */
 export const DEFAULT_KNOB = Object.freeze({
     air: ['distanceCm', 1, 30], string: ['stringHz', 80, 330], reflect: ['distanceCm', 0.3, 5],
@@ -679,6 +715,10 @@ export class OpticsModel {
     constructor(links, opts = {}) {
         this.links = links;
         this.controls = opts.controls ?? (() => new Map());
+        /** (motorId, tSec, output) -> shaft angle in rad, from the board. */
+        this.shaftAngle = opts.shaftAngle ?? null;
+        /** (motorId) -> |shaft speed| in rad/s, from the board. */
+        this.shaftSpeed = opts.shaftSpeed ?? null;
         /** mW per emitter id from the last observed solution. */
         this.emitPower = new Map();
         this._lastAmps = new Map();
@@ -697,12 +737,30 @@ export class OpticsModel {
         for (const l of this.links) {
             const tr = pathTransfer(pathParams(l.path, this.controls().get(l.path.id)), l.em, l.rx);
             if (tr.maxStepSec) s = Math.min(s, tr.maxStepSec);
+            // A turning chopper: each opening uncovers the beam over
+            // beamFraction of a pitch; a fifth of that, and no more than a
+            // twentieth of a pitch, keeps the pulses' edges and widths.
+            const P = l.path.params ?? {};
+            if (P.chopper && this.shaftSpeed) {
+                const w = this.shaftSpeed(P.chopper, P.shaft === 'output');
+                const slots = Math.max(1, Math.round(num(P.slots, 8)));
+                const pitchSec = w > 1e-9 ? 2 * Math.PI / (w * slots) : Infinity;
+                const beam = Math.min(1, Math.max(1e-4, num(P.beamFraction, 0.2)));
+                s = Math.min(s, pitchSec * Math.min(beam / 5, 1 / 20));
+            }
         }
         return Number.isFinite(s) ? s : null;
     }
 
     hasModulation() {
-        return this.links.some(l => String(l.path.params?.medium) === 'string');
+        return this.links.some(l => String(l.path.params?.medium) === 'string' || Boolean(l.path.params?.chopper));
+    }
+
+    /** The share of light a link's chopper passes at time t (1 without one). */
+    _chop(l, tSec) {
+        const P = l.path.params ?? {};
+        if (!P.chopper || !this.shaftAngle) return 1;
+        return chopperTransmission(P, this.shaftAngle(P.chopper, tSec, P.shaft === 'output'));
     }
 
     /**
@@ -797,7 +855,7 @@ export class OpticsModel {
                 const dt = Math.min(Math.max(0, tSec - l.t1), 4 * l.h);
                 v = Math.max(0, v + l.slope * dt);
             }
-            a += l.mod ? v * l.mod(tSec) : v;
+            a += (l.mod ? v * l.mod(tSec) : v) * this._chop(l, tSec);
         }
         return a;
     }
