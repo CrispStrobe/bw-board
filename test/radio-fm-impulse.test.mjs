@@ -249,3 +249,25 @@ describe('a depletion-mode MOSFET at RF', () => {
         assert.ok(enh.drain < dep.drain / 100, `an enhancement nmos at vgs = 0 stays cut off at RF (${enh.drain} V)`);
     });
 });
+
+describe('impulse radiation: only a driven coil radiates', () => {
+    it('a pickup rod with a capacitor on its winding is no radiator: a passive tank linked to it stays at noise', () => {
+        // Gap (2026-11-25, found building a mixer metal detector): the pickup
+        // rod's coupling winding with a 100 nF bypass got its inductance in
+        // the time domain as an "untuned" radiator; that LC rang there and
+        // radiated into the band that already held the same resonance, and a
+        // passive 92 kHz tank grew from noise to half a volt.
+        const b = new BoardImpl(6);
+        b.setNetlist([P('G', 'gnd', {}, ['gnd']), P('VS', 'vsource', { volts: 6 }, ['pos', 'neg']),
+            P('LS', 'air_coil', { turns: 30, radiusM: 0.05, lengthM: 0.02, wireMm: 0.5 }, ['a', 'b']), P('C', 'capacitor', { farads: 22e-9 }, ['a', 'b']),
+            P('LR', 'ferrite_coil', { rodHeightM: 0, couplingRatio: 0.3, linkTo: 'LS', distanceM: 0.1 }, ['a', 'tap', 'b', 'c1', 'c2']),
+            P('U', 'sa612', {}, ['in_a', 'in_b', 'gnd', 'out_a', 'out_b', 'osc_b', 'osc_e', 'vcc']), P('CIN', 'capacitor', { farads: 100e-9 }, ['a', 'b'])],
+        [net('g', ['G', 'gnd'], ['VS', 'neg'], ['LS', 'a'], ['C', 'b'], ['LR', 'a'], ['U', 'gnd'], ['CIN', 'b']), net('t', ['LS', 'b'], ['C', 'a']),
+            net('v', ['VS', 'pos'], ['U', 'vcc']), net('ia', ['LR', 'c1'], ['U', 'in_a']), net('ib', ['LR', 'c2'], ['U', 'in_b'], ['CIN', 'a'])]);
+        b.setBroadcast([]);
+        b.setPower(true);
+        ms(b, 0.3);
+        // MEASURED 2026-11-25: 2.6e-5 V (was 0.50 V before the fix).
+        assert.ok(peak(b, 't') < 1e-3, `the passive tank stays at noise: ${peak(b, 't')} V`);
+    });
+});
