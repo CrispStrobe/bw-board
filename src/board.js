@@ -5723,7 +5723,10 @@ export class BoardImpl {
       // Relative humidity at a salt-film comb, 0..1 = 0..100 % RH (src/sensing-transducers.js).
       'humidity_comb',
       // A magnetic field source's distance to its pickup, 0 far .. 1 near (src/magnetic-coupling.js).
-      'induction_loop'];
+      'induction_loop',
+      // A dipole turns (0..1 = 0..360°); the FM IF IC's knob tunes its
+      // quadrature tank (0.5 = on quadHz) (src/radio.js, src/fm-if-ic.js).
+      'dipole', 'fm_if'];
     return this.parts
       .filter(p => controllable.includes(p.kind) || lightControlDefault(p) !== null)
       .map(p => lightControlDefault(p) !== null ? {
@@ -5744,7 +5747,9 @@ export class BoardImpl {
               : p.kind === 'tuning_cap' ? (p.params?.position ?? 0.5)
                 : p.kind === 'field_probe' ? (p.params?.position ?? 0)
                   : p.kind === LIGHT_PATH_KIND ? pathKnobRest(p)
-                    : p.kind === 'ferrite_coil' ? (Number(p.params?.angleDeg ?? 0) / 360)
+                    : p.kind === 'ferrite_coil' ? (p.params?.slideWinding ? Number(p.params?.slide ?? 0) : Number(p.params?.angleDeg ?? 0) / 360)
+                      : p.kind === 'dipole' ? (Number(p.params?.angleDeg ?? 0) / 360)
+                      : p.kind === 'fm_if' ? 0.5
                       : p.kind === 'humidity_comb' ? combHumidityPct(p, undefined) / 100
                         : p.kind === 'induction_loop' ? inductionLoopCard(p).position : 0),
       }));
