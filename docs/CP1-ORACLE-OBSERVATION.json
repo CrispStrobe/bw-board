@@ -1,0 +1,221 @@
+{
+  "format": "brickwright.cp1-oracle-observation",
+  "version": 1,
+  "romSha1": "ff4befcf82a664950186d3af1843fdef70d2209f",
+  "oracleSha256": "ed7d1e81c5dc368f658eb84de4343c94a95335f4b1058413429f8fe908e61a8d",
+  "clockHz": 6000000,
+  "cases": [
+    {
+      "name": "display-42",
+      "expansion": false,
+      "matched": true,
+      "displaySegments": [
+        119,
+        63,
+        191,
+        63,
+        102,
+        91
+      ],
+      "comparedCells": 128,
+      "edges": 0,
+      "intervalsMs": [],
+      "edgeTimestampOffsetsUs": []
+    },
+    {
+      "name": "display-73",
+      "expansion": false,
+      "matched": true,
+      "displaySegments": [
+        119,
+        63,
+        191,
+        63,
+        39,
+        79
+      ],
+      "comparedCells": 128,
+      "edges": 0,
+      "intervalsMs": [],
+      "edgeTimestampOffsetsUs": []
+    },
+    {
+      "name": "switch-input-low",
+      "expansion": false,
+      "matched": true,
+      "displaySegments": [
+        115,
+        0,
+        128,
+        63,
+        63,
+        79
+      ],
+      "comparedCells": 128,
+      "edges": 1,
+      "intervalsMs": [],
+      "edgeTimestampOffsetsUs": [
+        -4.999999999654392
+      ]
+    },
+    {
+      "name": "switch-input-high",
+      "expansion": false,
+      "matched": true,
+      "displaySegments": [
+        115,
+        0,
+        128,
+        63,
+        63,
+        79
+      ],
+      "comparedCells": 128,
+      "edges": 0,
+      "intervalsMs": [],
+      "edgeTimestampOffsetsUs": []
+    },
+    {
+      "name": "overflow-error",
+      "expansion": false,
+      "matched": true,
+      "displaySegments": [
+        113,
+        0,
+        128,
+        63,
+        63,
+        125
+      ],
+      "comparedCells": 128,
+      "edges": 0,
+      "intervalsMs": [],
+      "edgeTimestampOffsetsUs": []
+    },
+    {
+      "name": "underflow-error",
+      "expansion": false,
+      "matched": true,
+      "displaySegments": [
+        113,
+        0,
+        128,
+        63,
+        63,
+        125
+      ],
+      "comparedCells": 128,
+      "edges": 0,
+      "intervalsMs": [],
+      "edgeTimestampOffsetsUs": []
+    },
+    {
+      "name": "equal-branch",
+      "expansion": false,
+      "matched": true,
+      "displaySegments": [
+        115,
+        0,
+        128,
+        63,
+        63,
+        111
+      ],
+      "comparedCells": 128,
+      "edges": 1,
+      "intervalsMs": [],
+      "edgeTimestampOffsetsUs": [
+        -5.000000000109139
+      ]
+    },
+    {
+      "name": "original-blink",
+      "expansion": false,
+      "matched": true,
+      "displaySegments": [
+        0,
+        0,
+        128,
+        0,
+        0,
+        0
+      ],
+      "comparedCells": 128,
+      "edges": 14,
+      "intervalsMs": [
+        225.78499999999985,
+        225.61000000000013,
+        225.9949999999999,
+        225.59000000000015,
+        225.7850000000003,
+        225.60999999999967,
+        225.76500000000033,
+        225.60999999999967,
+        225.9949999999999,
+        225.59000000000015,
+        225.78499999999985,
+        225.60999999999967,
+        225.76500000000033
+      ],
+      "edgeTimestampOffsetsUs": [
+        -5.000000000109139,
+        -5.000000000109139,
+        -5.000000000109139,
+        -5.000000000109139,
+        -5.000000000109139,
+        -4.999999999199645,
+        -5.000000000109139,
+        -4.999999999199645,
+        -5.000000000109139,
+        -5.000000000109139,
+        -5.000000000109139,
+        -5.000000000109139,
+        -5.000000000109139,
+        -5.000000000109139
+      ]
+    },
+    {
+      "name": "cp3-ports",
+      "expansion": true,
+      "matched": true,
+      "displaySegments": [
+        115,
+        0,
+        128,
+        63,
+        63,
+        39
+      ],
+      "comparedCells": 256,
+      "edges": 1,
+      "intervalsMs": [],
+      "edgeTimestampOffsetsUs": [
+        -5.000000000109139
+      ]
+    },
+    {
+      "name": "cp3-upper-memory",
+      "expansion": true,
+      "matched": true,
+      "displaySegments": [
+        115,
+        0,
+        128,
+        6,
+        79,
+        6
+      ],
+      "comparedCells": 256,
+      "edges": 1,
+      "intervalsMs": [],
+      "edgeTimestampOffsetsUs": [
+        -5.000000000109139
+      ]
+    }
+  ],
+  "limits": [
+    "External reference is an oracle, not a proof of hardware fidelity.",
+    "I/O callbacks use instruction-start timestamps; no oscillator-edge timing is claimed.",
+    "The test does not redistribute or derive implementation from reference source."
+  ]
+}

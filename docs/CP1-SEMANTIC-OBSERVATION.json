@@ -1,0 +1,2406 @@
+{
+  "format": "brickwright.cp1-semantic-observation",
+  "version": 1,
+  "romSha1": "ff4befcf82a664950186d3af1843fdef70d2209f",
+  "node": "v24.22.3",
+  "clockHz": 6000000,
+  "sourceSha256": {
+    "src/cp1-machine.js": "79fd54067507818f4cc051e14e8574b6dd959cf9696e0cd9a51f333795c305e7",
+    "src/cp1-adapter.js": "e0274b0c60a406be7816380a1c18b9f848aef3fe9cdde3c7d6bc1c3667bf6352",
+    "src/cp1-debug.js": "33ea7a5263bd7dd540f64c225ebfa23f09dfd85eb8d59ee740895aa22bfa1600",
+    "src/cp1-semantics.js": "3a1008efc936a86656f09c847ce11ea5889cd2964e08fe8feaf5b365812fabe9",
+    "src/cp1-semantic-profiles.js": "157d2cfba3bac562d23e1f2a3a8f6125bd6107120c4c477681e20bcc5dfcc3e8",
+    "src/cp1-rom-profiles.js": "5dc62bc0ac6f3bb967cf58693ac10e99a23d819fef4284ceab5f5b5302805c4a",
+    "src/mcs48.js": "5e56813d2f50be97ecb9fa03839b2b4b1a324719b5b3d22b562a39fbf642fc75",
+    "src/i8155.js": "2be790d0ad521181b0e5902e3a45f41cf92e822a1a7c0921c226c4b08b7d52d8",
+    "scripts/check-cp1-semantic-rom.mjs": "c231a359c11d08a15a43144e2df5155b17716fe65ad606d9cca49ba92a87f467"
+  },
+  "cases": [
+    {
+      "name": "loads-stores-full-accumulator",
+      "matched": true,
+      "expansion": false,
+      "program": [
+        [
+          5,
+          90
+        ],
+        [
+          6,
+          91
+        ],
+        [
+          4,
+          73
+        ],
+        [
+          1,
+          0
+        ]
+      ],
+      "data": [
+        [
+          90,
+          17,
+          231
+        ]
+      ],
+      "start": 0,
+      "observations": [
+        {
+          "pc": 1,
+          "accumulator": {
+            "opcode": 17,
+            "operand": 231
+          },
+          "comparison": false,
+          "execution": "ready",
+          "step": {
+            "status": "complete",
+            "reason": "complete",
+            "requested": 1,
+            "completed": 1,
+            "instructions": 80,
+            "cpuSteps": 80,
+            "interrupts": 0,
+            "maxInstructions": 1000000,
+            "startCycles": 1122963,
+            "endCycles": 1123093,
+            "epoch": 1,
+            "cycles": 130
+          }
+        },
+        {
+          "pc": 2,
+          "accumulator": {
+            "opcode": 17,
+            "operand": 231
+          },
+          "comparison": false,
+          "execution": "ready",
+          "step": {
+            "status": "complete",
+            "reason": "complete",
+            "requested": 1,
+            "completed": 1,
+            "instructions": 80,
+            "cpuSteps": 80,
+            "interrupts": 0,
+            "maxInstructions": 1000000,
+            "startCycles": 1123093,
+            "endCycles": 1123223,
+            "epoch": 1,
+            "cycles": 130
+          }
+        },
+        {
+          "pc": 3,
+          "accumulator": {
+            "opcode": 0,
+            "operand": 73
+          },
+          "comparison": false,
+          "execution": "ready",
+          "step": {
+            "status": "complete",
+            "reason": "complete",
+            "requested": 1,
+            "completed": 1,
+            "instructions": 52,
+            "cpuSteps": 52,
+            "interrupts": 0,
+            "maxInstructions": 1000000,
+            "startCycles": 1123223,
+            "endCycles": 1123308,
+            "epoch": 1,
+            "cycles": 85
+          }
+        },
+        {
+          "pc": 4,
+          "accumulator": {
+            "opcode": 0,
+            "operand": 73
+          },
+          "comparison": false,
+          "execution": "halted",
+          "step": {
+            "status": "stopped",
+            "reason": "halt",
+            "requested": 1,
+            "completed": 1,
+            "instructions": 135,
+            "cpuSteps": 135,
+            "interrupts": 0,
+            "maxInstructions": 1000000,
+            "startCycles": 1123308,
+            "endCycles": 1123520,
+            "epoch": 1,
+            "cycles": 212
+          }
+        }
+      ],
+      "events": [
+        {
+          "type": "cp1.command",
+          "sequence": 1,
+          "rawPc": 1575,
+          "cycles": 1123093,
+          "tNs": "2807732500",
+          "pc": 1,
+          "accumulator": {
+            "opcode": 17,
+            "operand": 231
+          },
+          "command": {
+            "address": 0,
+            "opcode": 5,
+            "operand": 90
+          },
+          "outcome": "completed"
+        },
+        {
+          "type": "cp1.command",
+          "sequence": 2,
+          "rawPc": 1575,
+          "cycles": 1123223,
+          "tNs": "2808057500",
+          "pc": 2,
+          "accumulator": {
+            "opcode": 17,
+            "operand": 231
+          },
+          "command": {
+            "address": 1,
+            "opcode": 6,
+            "operand": 91
+          },
+          "outcome": "completed"
+        },
+        {
+          "type": "cp1.command",
+          "sequence": 3,
+          "rawPc": 1575,
+          "cycles": 1123308,
+          "tNs": "2808270000",
+          "pc": 3,
+          "accumulator": {
+            "opcode": 0,
+            "operand": 73
+          },
+          "command": {
+            "address": 2,
+            "opcode": 4,
+            "operand": 73
+          },
+          "outcome": "completed"
+        },
+        {
+          "type": "cp1.command",
+          "sequence": 4,
+          "rawPc": 134,
+          "cycles": 1123520,
+          "tNs": "2808800000",
+          "pc": 4,
+          "accumulator": {
+            "opcode": 0,
+            "operand": 73
+          },
+          "command": {
+            "address": 3,
+            "opcode": 1,
+            "operand": 0
+          },
+          "outcome": "halted"
+        },
+        {
+          "type": "cp1.halt",
+          "sequence": 5,
+          "rawPc": 134,
+          "cycles": 1123520,
+          "tNs": "2808800000",
+          "pc": 4,
+          "accumulator": {
+            "opcode": 0,
+            "operand": 73
+          },
+          "command": {
+            "address": 3,
+            "opcode": 1,
+            "operand": 0
+          },
+          "reason": "hlt"
+        }
+      ],
+      "halts": [
+        {
+          "cause": "breakpoint",
+          "bpKind": "cp1",
+          "cp1Pc": 0
+        },
+        {
+          "cause": "step"
+        },
+        {
+          "cause": "step"
+        },
+        {
+          "cause": "step"
+        },
+        {
+          "cause": "cp1-halt"
+        }
+      ]
+    },
+    {
+      "name": "compare-and-branch",
+      "matched": true,
+      "expansion": false,
+      "program": [
+        [
+          4,
+          7
+        ],
+        [
+          10,
+          90
+        ],
+        [
+          11,
+          6
+        ],
+        [
+          4,
+          99
+        ],
+        [
+          18,
+          0
+        ],
+        [
+          1,
+          0
+        ],
+        [
+          4,
+          85
+        ],
+        [
+          18,
+          0
+        ],
+        [
+          1,
+          0
+        ]
+      ],
+      "data": [
+        [
+          90,
+          0,
+          7
+        ]
+      ],
+      "start": 0,
+      "observations": [
+        {
+          "pc": 1,
+          "accumulator": {
+            "opcode": 0,
+            "operand": 7
+          },
+          "comparison": false,
+          "execution": "ready",
+          "step": {
+            "status": "complete",
+            "reason": "complete",
+            "requested": 1,
+            "completed": 1,
+            "instructions": 52,
+            "cpuSteps": 52,
+            "interrupts": 0,
+            "maxInstructions": 1000000,
+            "startCycles": 1122963,
+            "endCycles": 1123048,
+            "epoch": 1,
+            "cycles": 85
+          }
+        },
+        {
+          "pc": 2,
+          "accumulator": {
+            "opcode": 0,
+            "operand": 7
+          },
+          "comparison": true,
+          "execution": "ready",
+          "step": {
+            "status": "complete",
+            "reason": "complete",
+            "requested": 1,
+            "completed": 1,
+            "instructions": 103,
+            "cpuSteps": 103,
+            "interrupts": 0,
+            "maxInstructions": 1000000,
+            "startCycles": 1123048,
+            "endCycles": 1123219,
+            "epoch": 1,
+            "cycles": 171
+          }
+        },
+        {
+          "pc": 6,
+          "accumulator": {
+            "opcode": 0,
+            "operand": 7
+          },
+          "comparison": true,
+          "execution": "ready",
+          "step": {
+            "status": "complete",
+            "reason": "complete",
+            "requested": 1,
+            "completed": 1,
+            "instructions": 48,
+            "cpuSteps": 48,
+            "interrupts": 0,
+            "maxInstructions": 1000000,
+            "startCycles": 1123219,
+            "endCycles": 1123299,
+            "epoch": 1,
+            "cycles": 80
+          }
+        },
+        {
+          "pc": 7,
+          "accumulator": {
+            "opcode": 0,
+            "operand": 85
+          },
+          "comparison": true,
+          "execution": "ready",
+          "step": {
+            "status": "complete",
+            "reason": "complete",
+            "requested": 1,
+            "completed": 1,
+            "instructions": 52,
+            "cpuSteps": 52,
+            "interrupts": 0,
+            "maxInstructions": 1000000,
+            "startCycles": 1123299,
+            "endCycles": 1123384,
+            "epoch": 1,
+            "cycles": 85
+          }
+        },
+        {
+          "pc": 8,
+          "accumulator": {
+            "opcode": 0,
+            "operand": 85
+          },
+          "comparison": true,
+          "execution": "ready",
+          "step": {
+            "status": "complete",
+            "reason": "complete",
+            "requested": 1,
+            "completed": 1,
+            "instructions": 84,
+            "cpuSteps": 84,
+            "interrupts": 0,
+            "maxInstructions": 1000000,
+            "startCycles": 1123384,
+            "endCycles": 1123522,
+            "epoch": 1,
+            "cycles": 138
+          }
+        },
+        {
+          "pc": 9,
+          "accumulator": {
+            "opcode": 0,
+            "operand": 85
+          },
+          "comparison": false,
+          "execution": "halted",
+          "step": {
+            "status": "stopped",
+            "reason": "halt",
+            "requested": 1,
+            "completed": 1,
+            "instructions": 135,
+            "cpuSteps": 135,
+            "interrupts": 0,
+            "maxInstructions": 1000000,
+            "startCycles": 1123522,
+            "endCycles": 1123734,
+            "epoch": 1,
+            "cycles": 212
+          }
+        }
+      ],
+      "events": [
+        {
+          "type": "cp1.command",
+          "sequence": 1,
+          "rawPc": 1575,
+          "cycles": 1123048,
+          "tNs": "2807620000",
+          "pc": 1,
+          "accumulator": {
+            "opcode": 0,
+            "operand": 7
+          },
+          "command": {
+            "address": 0,
+            "opcode": 4,
+            "operand": 7
+          },
+          "outcome": "completed"
+        },
+        {
+          "type": "cp1.command",
+          "sequence": 2,
+          "rawPc": 1575,
+          "cycles": 1123219,
+          "tNs": "2808047500",
+          "pc": 2,
+          "accumulator": {
+            "opcode": 0,
+            "operand": 7
+          },
+          "command": {
+            "address": 1,
+            "opcode": 10,
+            "operand": 90
+          },
+          "outcome": "completed"
+        },
+        {
+          "type": "cp1.command",
+          "sequence": 3,
+          "rawPc": 1575,
+          "cycles": 1123299,
+          "tNs": "2808247500",
+          "pc": 6,
+          "accumulator": {
+            "opcode": 0,
+            "operand": 7
+          },
+          "command": {
+            "address": 2,
+            "opcode": 11,
+            "operand": 6
+          },
+          "outcome": "completed"
+        },
+        {
+          "type": "cp1.command",
+          "sequence": 4,
+          "rawPc": 1575,
+          "cycles": 1123384,
+          "tNs": "2808460000",
+          "pc": 7,
+          "accumulator": {
+            "opcode": 0,
+            "operand": 85
+          },
+          "command": {
+            "address": 6,
+            "opcode": 4,
+            "operand": 85
+          },
+          "outcome": "completed"
+        },
+        {
+          "type": "cp1.command",
+          "sequence": 5,
+          "rawPc": 1575,
+          "cycles": 1123522,
+          "tNs": "2808805000",
+          "pc": 8,
+          "accumulator": {
+            "opcode": 0,
+            "operand": 85
+          },
+          "command": {
+            "address": 7,
+            "opcode": 18,
+            "operand": 0
+          },
+          "outcome": "completed"
+        },
+        {
+          "type": "cp1.command",
+          "sequence": 6,
+          "rawPc": 134,
+          "cycles": 1123734,
+          "tNs": "2809335000",
+          "pc": 9,
+          "accumulator": {
+            "opcode": 0,
+            "operand": 85
+          },
+          "command": {
+            "address": 8,
+            "opcode": 1,
+            "operand": 0
+          },
+          "outcome": "halted"
+        },
+        {
+          "type": "cp1.halt",
+          "sequence": 7,
+          "rawPc": 134,
+          "cycles": 1123734,
+          "tNs": "2809335000",
+          "pc": 9,
+          "accumulator": {
+            "opcode": 0,
+            "operand": 85
+          },
+          "command": {
+            "address": 8,
+            "opcode": 1,
+            "operand": 0
+          },
+          "reason": "hlt"
+        }
+      ],
+      "halts": [
+        {
+          "cause": "breakpoint",
+          "bpKind": "cp1",
+          "cp1Pc": 0
+        },
+        {
+          "cause": "step"
+        },
+        {
+          "cause": "step"
+        },
+        {
+          "cause": "step"
+        },
+        {
+          "cause": "step"
+        },
+        {
+          "cause": "step"
+        },
+        {
+          "cause": "cp1-halt"
+        }
+      ]
+    },
+    {
+      "name": "greater-comparison",
+      "matched": true,
+      "expansion": false,
+      "program": [
+        [
+          4,
+          8
+        ],
+        [
+          12,
+          90
+        ],
+        [
+          11,
+          5
+        ],
+        [
+          4,
+          99
+        ],
+        [
+          1,
+          0
+        ],
+        [
+          4,
+          85
+        ],
+        [
+          1,
+          0
+        ]
+      ],
+      "data": [
+        [
+          90,
+          0,
+          7
+        ]
+      ],
+      "start": 0,
+      "observations": [
+        {
+          "pc": 1,
+          "accumulator": {
+            "opcode": 0,
+            "operand": 8
+          },
+          "comparison": false,
+          "execution": "ready",
+          "step": {
+            "status": "complete",
+            "reason": "complete",
+            "requested": 1,
+            "completed": 1,
+            "instructions": 52,
+            "cpuSteps": 52,
+            "interrupts": 0,
+            "maxInstructions": 1000000,
+            "startCycles": 1122963,
+            "endCycles": 1123048,
+            "epoch": 1,
+            "cycles": 85
+          }
+        },
+        {
+          "pc": 2,
+          "accumulator": {
+            "opcode": 0,
+            "operand": 8
+          },
+          "comparison": true,
+          "execution": "ready",
+          "step": {
+            "status": "complete",
+            "reason": "complete",
+            "requested": 1,
+            "completed": 1,
+            "instructions": 109,
+            "cpuSteps": 109,
+            "interrupts": 0,
+            "maxInstructions": 1000000,
+            "startCycles": 1123048,
+            "endCycles": 1123227,
+            "epoch": 1,
+            "cycles": 179
+          }
+        },
+        {
+          "pc": 5,
+          "accumulator": {
+            "opcode": 0,
+            "operand": 8
+          },
+          "comparison": true,
+          "execution": "ready",
+          "step": {
+            "status": "complete",
+            "reason": "complete",
+            "requested": 1,
+            "completed": 1,
+            "instructions": 48,
+            "cpuSteps": 48,
+            "interrupts": 0,
+            "maxInstructions": 1000000,
+            "startCycles": 1123227,
+            "endCycles": 1123307,
+            "epoch": 1,
+            "cycles": 80
+          }
+        },
+        {
+          "pc": 6,
+          "accumulator": {
+            "opcode": 0,
+            "operand": 85
+          },
+          "comparison": true,
+          "execution": "ready",
+          "step": {
+            "status": "complete",
+            "reason": "complete",
+            "requested": 1,
+            "completed": 1,
+            "instructions": 52,
+            "cpuSteps": 52,
+            "interrupts": 0,
+            "maxInstructions": 1000000,
+            "startCycles": 1123307,
+            "endCycles": 1123392,
+            "epoch": 1,
+            "cycles": 85
+          }
+        },
+        {
+          "pc": 7,
+          "accumulator": {
+            "opcode": 0,
+            "operand": 85
+          },
+          "comparison": false,
+          "execution": "halted",
+          "step": {
+            "status": "stopped",
+            "reason": "halt",
+            "requested": 1,
+            "completed": 1,
+            "instructions": 135,
+            "cpuSteps": 135,
+            "interrupts": 0,
+            "maxInstructions": 1000000,
+            "startCycles": 1123392,
+            "endCycles": 1123604,
+            "epoch": 1,
+            "cycles": 212
+          }
+        }
+      ],
+      "events": [
+        {
+          "type": "cp1.command",
+          "sequence": 1,
+          "rawPc": 1575,
+          "cycles": 1123048,
+          "tNs": "2807620000",
+          "pc": 1,
+          "accumulator": {
+            "opcode": 0,
+            "operand": 8
+          },
+          "command": {
+            "address": 0,
+            "opcode": 4,
+            "operand": 8
+          },
+          "outcome": "completed"
+        },
+        {
+          "type": "cp1.command",
+          "sequence": 2,
+          "rawPc": 1575,
+          "cycles": 1123227,
+          "tNs": "2808067500",
+          "pc": 2,
+          "accumulator": {
+            "opcode": 0,
+            "operand": 8
+          },
+          "command": {
+            "address": 1,
+            "opcode": 12,
+            "operand": 90
+          },
+          "outcome": "completed"
+        },
+        {
+          "type": "cp1.command",
+          "sequence": 3,
+          "rawPc": 1575,
+          "cycles": 1123307,
+          "tNs": "2808267500",
+          "pc": 5,
+          "accumulator": {
+            "opcode": 0,
+            "operand": 8
+          },
+          "command": {
+            "address": 2,
+            "opcode": 11,
+            "operand": 5
+          },
+          "outcome": "completed"
+        },
+        {
+          "type": "cp1.command",
+          "sequence": 4,
+          "rawPc": 1575,
+          "cycles": 1123392,
+          "tNs": "2808480000",
+          "pc": 6,
+          "accumulator": {
+            "opcode": 0,
+            "operand": 85
+          },
+          "command": {
+            "address": 5,
+            "opcode": 4,
+            "operand": 85
+          },
+          "outcome": "completed"
+        },
+        {
+          "type": "cp1.command",
+          "sequence": 5,
+          "rawPc": 134,
+          "cycles": 1123604,
+          "tNs": "2809010000",
+          "pc": 7,
+          "accumulator": {
+            "opcode": 0,
+            "operand": 85
+          },
+          "command": {
+            "address": 6,
+            "opcode": 1,
+            "operand": 0
+          },
+          "outcome": "halted"
+        },
+        {
+          "type": "cp1.halt",
+          "sequence": 6,
+          "rawPc": 134,
+          "cycles": 1123604,
+          "tNs": "2809010000",
+          "pc": 7,
+          "accumulator": {
+            "opcode": 0,
+            "operand": 85
+          },
+          "command": {
+            "address": 6,
+            "opcode": 1,
+            "operand": 0
+          },
+          "reason": "hlt"
+        }
+      ],
+      "halts": [
+        {
+          "cause": "breakpoint",
+          "bpKind": "cp1",
+          "cp1Pc": 0
+        },
+        {
+          "cause": "step"
+        },
+        {
+          "cause": "step"
+        },
+        {
+          "cause": "step"
+        },
+        {
+          "cause": "step"
+        },
+        {
+          "cause": "cp1-halt"
+        }
+      ]
+    },
+    {
+      "name": "less-comparison",
+      "matched": true,
+      "expansion": false,
+      "program": [
+        [
+          4,
+          6
+        ],
+        [
+          13,
+          90
+        ],
+        [
+          11,
+          5
+        ],
+        [
+          4,
+          99
+        ],
+        [
+          1,
+          0
+        ],
+        [
+          4,
+          85
+        ],
+        [
+          1,
+          0
+        ]
+      ],
+      "data": [
+        [
+          90,
+          0,
+          7
+        ]
+      ],
+      "start": 0,
+      "observations": [
+        {
+          "pc": 1,
+          "accumulator": {
+            "opcode": 0,
+            "operand": 6
+          },
+          "comparison": false,
+          "execution": "ready",
+          "step": {
+            "status": "complete",
+            "reason": "complete",
+            "requested": 1,
+            "completed": 1,
+            "instructions": 52,
+            "cpuSteps": 52,
+            "interrupts": 0,
+            "maxInstructions": 1000000,
+            "startCycles": 1122963,
+            "endCycles": 1123048,
+            "epoch": 1,
+            "cycles": 85
+          }
+        },
+        {
+          "pc": 2,
+          "accumulator": {
+            "opcode": 0,
+            "operand": 6
+          },
+          "comparison": true,
+          "execution": "ready",
+          "step": {
+            "status": "complete",
+            "reason": "complete",
+            "requested": 1,
+            "completed": 1,
+            "instructions": 107,
+            "cpuSteps": 107,
+            "interrupts": 0,
+            "maxInstructions": 1000000,
+            "startCycles": 1123048,
+            "endCycles": 1123225,
+            "epoch": 1,
+            "cycles": 177
+          }
+        },
+        {
+          "pc": 5,
+          "accumulator": {
+            "opcode": 0,
+            "operand": 6
+          },
+          "comparison": true,
+          "execution": "ready",
+          "step": {
+            "status": "complete",
+            "reason": "complete",
+            "requested": 1,
+            "completed": 1,
+            "instructions": 48,
+            "cpuSteps": 48,
+            "interrupts": 0,
+            "maxInstructions": 1000000,
+            "startCycles": 1123225,
+            "endCycles": 1123305,
+            "epoch": 1,
+            "cycles": 80
+          }
+        },
+        {
+          "pc": 6,
+          "accumulator": {
+            "opcode": 0,
+            "operand": 85
+          },
+          "comparison": true,
+          "execution": "ready",
+          "step": {
+            "status": "complete",
+            "reason": "complete",
+            "requested": 1,
+            "completed": 1,
+            "instructions": 52,
+            "cpuSteps": 52,
+            "interrupts": 0,
+            "maxInstructions": 1000000,
+            "startCycles": 1123305,
+            "endCycles": 1123390,
+            "epoch": 1,
+            "cycles": 85
+          }
+        },
+        {
+          "pc": 7,
+          "accumulator": {
+            "opcode": 0,
+            "operand": 85
+          },
+          "comparison": false,
+          "execution": "halted",
+          "step": {
+            "status": "stopped",
+            "reason": "halt",
+            "requested": 1,
+            "completed": 1,
+            "instructions": 135,
+            "cpuSteps": 135,
+            "interrupts": 0,
+            "maxInstructions": 1000000,
+            "startCycles": 1123390,
+            "endCycles": 1123602,
+            "epoch": 1,
+            "cycles": 212
+          }
+        }
+      ],
+      "events": [
+        {
+          "type": "cp1.command",
+          "sequence": 1,
+          "rawPc": 1575,
+          "cycles": 1123048,
+          "tNs": "2807620000",
+          "pc": 1,
+          "accumulator": {
+            "opcode": 0,
+            "operand": 6
+          },
+          "command": {
+            "address": 0,
+            "opcode": 4,
+            "operand": 6
+          },
+          "outcome": "completed"
+        },
+        {
+          "type": "cp1.command",
+          "sequence": 2,
+          "rawPc": 1575,
+          "cycles": 1123225,
+          "tNs": "2808062500",
+          "pc": 2,
+          "accumulator": {
+            "opcode": 0,
+            "operand": 6
+          },
+          "command": {
+            "address": 1,
+            "opcode": 13,
+            "operand": 90
+          },
+          "outcome": "completed"
+        },
+        {
+          "type": "cp1.command",
+          "sequence": 3,
+          "rawPc": 1575,
+          "cycles": 1123305,
+          "tNs": "2808262500",
+          "pc": 5,
+          "accumulator": {
+            "opcode": 0,
+            "operand": 6
+          },
+          "command": {
+            "address": 2,
+            "opcode": 11,
+            "operand": 5
+          },
+          "outcome": "completed"
+        },
+        {
+          "type": "cp1.command",
+          "sequence": 4,
+          "rawPc": 1575,
+          "cycles": 1123390,
+          "tNs": "2808475000",
+          "pc": 6,
+          "accumulator": {
+            "opcode": 0,
+            "operand": 85
+          },
+          "command": {
+            "address": 5,
+            "opcode": 4,
+            "operand": 85
+          },
+          "outcome": "completed"
+        },
+        {
+          "type": "cp1.command",
+          "sequence": 5,
+          "rawPc": 134,
+          "cycles": 1123602,
+          "tNs": "2809005000",
+          "pc": 7,
+          "accumulator": {
+            "opcode": 0,
+            "operand": 85
+          },
+          "command": {
+            "address": 6,
+            "opcode": 1,
+            "operand": 0
+          },
+          "outcome": "halted"
+        },
+        {
+          "type": "cp1.halt",
+          "sequence": 6,
+          "rawPc": 134,
+          "cycles": 1123602,
+          "tNs": "2809005000",
+          "pc": 7,
+          "accumulator": {
+            "opcode": 0,
+            "operand": 85
+          },
+          "command": {
+            "address": 6,
+            "opcode": 1,
+            "operand": 0
+          },
+          "reason": "hlt"
+        }
+      ],
+      "halts": [
+        {
+          "cause": "breakpoint",
+          "bpKind": "cp1",
+          "cp1Pc": 0
+        },
+        {
+          "cause": "step"
+        },
+        {
+          "cause": "step"
+        },
+        {
+          "cause": "step"
+        },
+        {
+          "cause": "step"
+        },
+        {
+          "cause": "cp1-halt"
+        }
+      ]
+    },
+    {
+      "name": "comparison-clears",
+      "matched": true,
+      "expansion": false,
+      "program": [
+        [
+          4,
+          7
+        ],
+        [
+          10,
+          90
+        ],
+        [
+          4,
+          8
+        ],
+        [
+          10,
+          90
+        ],
+        [
+          1,
+          0
+        ]
+      ],
+      "data": [
+        [
+          90,
+          0,
+          7
+        ]
+      ],
+      "start": 0,
+      "observations": [
+        {
+          "pc": 1,
+          "accumulator": {
+            "opcode": 0,
+            "operand": 7
+          },
+          "comparison": false,
+          "execution": "ready",
+          "step": {
+            "status": "complete",
+            "reason": "complete",
+            "requested": 1,
+            "completed": 1,
+            "instructions": 52,
+            "cpuSteps": 52,
+            "interrupts": 0,
+            "maxInstructions": 1000000,
+            "startCycles": 1122963,
+            "endCycles": 1123048,
+            "epoch": 1,
+            "cycles": 85
+          }
+        },
+        {
+          "pc": 2,
+          "accumulator": {
+            "opcode": 0,
+            "operand": 7
+          },
+          "comparison": true,
+          "execution": "ready",
+          "step": {
+            "status": "complete",
+            "reason": "complete",
+            "requested": 1,
+            "completed": 1,
+            "instructions": 103,
+            "cpuSteps": 103,
+            "interrupts": 0,
+            "maxInstructions": 1000000,
+            "startCycles": 1123048,
+            "endCycles": 1123219,
+            "epoch": 1,
+            "cycles": 171
+          }
+        },
+        {
+          "pc": 3,
+          "accumulator": {
+            "opcode": 0,
+            "operand": 8
+          },
+          "comparison": true,
+          "execution": "ready",
+          "step": {
+            "status": "complete",
+            "reason": "complete",
+            "requested": 1,
+            "completed": 1,
+            "instructions": 52,
+            "cpuSteps": 52,
+            "interrupts": 0,
+            "maxInstructions": 1000000,
+            "startCycles": 1123219,
+            "endCycles": 1123304,
+            "epoch": 1,
+            "cycles": 85
+          }
+        },
+        {
+          "pc": 4,
+          "accumulator": {
+            "opcode": 0,
+            "operand": 8
+          },
+          "comparison": false,
+          "execution": "ready",
+          "step": {
+            "status": "complete",
+            "reason": "complete",
+            "requested": 1,
+            "completed": 1,
+            "instructions": 94,
+            "cpuSteps": 94,
+            "interrupts": 0,
+            "maxInstructions": 1000000,
+            "startCycles": 1123304,
+            "endCycles": 1123459,
+            "epoch": 1,
+            "cycles": 155
+          }
+        },
+        {
+          "pc": 5,
+          "accumulator": {
+            "opcode": 0,
+            "operand": 8
+          },
+          "comparison": false,
+          "execution": "halted",
+          "step": {
+            "status": "stopped",
+            "reason": "halt",
+            "requested": 1,
+            "completed": 1,
+            "instructions": 135,
+            "cpuSteps": 135,
+            "interrupts": 0,
+            "maxInstructions": 1000000,
+            "startCycles": 1123459,
+            "endCycles": 1123671,
+            "epoch": 1,
+            "cycles": 212
+          }
+        }
+      ],
+      "events": [
+        {
+          "type": "cp1.command",
+          "sequence": 1,
+          "rawPc": 1575,
+          "cycles": 1123048,
+          "tNs": "2807620000",
+          "pc": 1,
+          "accumulator": {
+            "opcode": 0,
+            "operand": 7
+          },
+          "command": {
+            "address": 0,
+            "opcode": 4,
+            "operand": 7
+          },
+          "outcome": "completed"
+        },
+        {
+          "type": "cp1.command",
+          "sequence": 2,
+          "rawPc": 1575,
+          "cycles": 1123219,
+          "tNs": "2808047500",
+          "pc": 2,
+          "accumulator": {
+            "opcode": 0,
+            "operand": 7
+          },
+          "command": {
+            "address": 1,
+            "opcode": 10,
+            "operand": 90
+          },
+          "outcome": "completed"
+        },
+        {
+          "type": "cp1.command",
+          "sequence": 3,
+          "rawPc": 1575,
+          "cycles": 1123304,
+          "tNs": "2808260000",
+          "pc": 3,
+          "accumulator": {
+            "opcode": 0,
+            "operand": 8
+          },
+          "command": {
+            "address": 2,
+            "opcode": 4,
+            "operand": 8
+          },
+          "outcome": "completed"
+        },
+        {
+          "type": "cp1.command",
+          "sequence": 4,
+          "rawPc": 1575,
+          "cycles": 1123459,
+          "tNs": "2808647500",
+          "pc": 4,
+          "accumulator": {
+            "opcode": 0,
+            "operand": 8
+          },
+          "command": {
+            "address": 3,
+            "opcode": 10,
+            "operand": 90
+          },
+          "outcome": "completed"
+        },
+        {
+          "type": "cp1.command",
+          "sequence": 5,
+          "rawPc": 134,
+          "cycles": 1123671,
+          "tNs": "2809177500",
+          "pc": 5,
+          "accumulator": {
+            "opcode": 0,
+            "operand": 8
+          },
+          "command": {
+            "address": 4,
+            "opcode": 1,
+            "operand": 0
+          },
+          "outcome": "halted"
+        },
+        {
+          "type": "cp1.halt",
+          "sequence": 6,
+          "rawPc": 134,
+          "cycles": 1123671,
+          "tNs": "2809177500",
+          "pc": 5,
+          "accumulator": {
+            "opcode": 0,
+            "operand": 8
+          },
+          "command": {
+            "address": 4,
+            "opcode": 1,
+            "operand": 0
+          },
+          "reason": "hlt"
+        }
+      ],
+      "halts": [
+        {
+          "cause": "breakpoint",
+          "bpKind": "cp1",
+          "cp1Pc": 0
+        },
+        {
+          "cause": "step"
+        },
+        {
+          "cause": "step"
+        },
+        {
+          "cause": "step"
+        },
+        {
+          "cause": "step"
+        },
+        {
+          "cause": "cp1-halt"
+        }
+      ]
+    },
+    {
+      "name": "nonzero-start",
+      "matched": true,
+      "expansion": false,
+      "program": [
+        [
+          4,
+          91
+        ],
+        [
+          1,
+          0
+        ]
+      ],
+      "data": [],
+      "start": 37,
+      "observations": [
+        {
+          "pc": 38,
+          "accumulator": {
+            "opcode": 0,
+            "operand": 91
+          },
+          "comparison": false,
+          "execution": "ready",
+          "step": {
+            "status": "complete",
+            "reason": "complete",
+            "requested": 1,
+            "completed": 1,
+            "instructions": 52,
+            "cpuSteps": 52,
+            "interrupts": 0,
+            "maxInstructions": 1000000,
+            "startCycles": 1122963,
+            "endCycles": 1123048,
+            "epoch": 1,
+            "cycles": 85
+          }
+        },
+        {
+          "pc": 39,
+          "accumulator": {
+            "opcode": 0,
+            "operand": 91
+          },
+          "comparison": false,
+          "execution": "halted",
+          "step": {
+            "status": "stopped",
+            "reason": "halt",
+            "requested": 1,
+            "completed": 1,
+            "instructions": 150,
+            "cpuSteps": 150,
+            "interrupts": 0,
+            "maxInstructions": 1000000,
+            "startCycles": 1123048,
+            "endCycles": 1123284,
+            "epoch": 1,
+            "cycles": 236
+          }
+        }
+      ],
+      "events": [
+        {
+          "type": "cp1.command",
+          "sequence": 1,
+          "rawPc": 1575,
+          "cycles": 1123048,
+          "tNs": "2807620000",
+          "pc": 38,
+          "accumulator": {
+            "opcode": 0,
+            "operand": 91
+          },
+          "command": {
+            "address": 37,
+            "opcode": 4,
+            "operand": 91
+          },
+          "outcome": "completed"
+        },
+        {
+          "type": "cp1.command",
+          "sequence": 2,
+          "rawPc": 134,
+          "cycles": 1123284,
+          "tNs": "2808210000",
+          "pc": 39,
+          "accumulator": {
+            "opcode": 0,
+            "operand": 91
+          },
+          "command": {
+            "address": 38,
+            "opcode": 1,
+            "operand": 0
+          },
+          "outcome": "halted"
+        },
+        {
+          "type": "cp1.halt",
+          "sequence": 3,
+          "rawPc": 134,
+          "cycles": 1123284,
+          "tNs": "2808210000",
+          "pc": 39,
+          "accumulator": {
+            "opcode": 0,
+            "operand": 91
+          },
+          "command": {
+            "address": 38,
+            "opcode": 1,
+            "operand": 0
+          },
+          "reason": "hlt"
+        }
+      ],
+      "halts": [
+        {
+          "cause": "breakpoint",
+          "bpKind": "cp1",
+          "cp1Pc": 37
+        },
+        {
+          "cause": "step"
+        },
+        {
+          "cause": "cp1-halt"
+        }
+      ]
+    },
+    {
+      "name": "cp3-branch",
+      "matched": true,
+      "expansion": true,
+      "program": [
+        [
+          9,
+          128
+        ]
+      ],
+      "data": [
+        [
+          128,
+          4,
+          231
+        ],
+        [
+          129,
+          1,
+          0
+        ]
+      ],
+      "start": 0,
+      "observations": [
+        {
+          "pc": 128,
+          "accumulator": {
+            "opcode": 0,
+            "operand": 0
+          },
+          "comparison": false,
+          "execution": "ready",
+          "step": {
+            "status": "complete",
+            "reason": "complete",
+            "requested": 1,
+            "completed": 1,
+            "instructions": 45,
+            "cpuSteps": 45,
+            "interrupts": 0,
+            "maxInstructions": 1000000,
+            "startCycles": 1122965,
+            "endCycles": 1123040,
+            "epoch": 1,
+            "cycles": 75
+          }
+        },
+        {
+          "pc": 129,
+          "accumulator": {
+            "opcode": 0,
+            "operand": 231
+          },
+          "comparison": false,
+          "execution": "ready",
+          "step": {
+            "status": "complete",
+            "reason": "complete",
+            "requested": 1,
+            "completed": 1,
+            "instructions": 53,
+            "cpuSteps": 53,
+            "interrupts": 0,
+            "maxInstructions": 1000000,
+            "startCycles": 1123040,
+            "endCycles": 1123127,
+            "epoch": 1,
+            "cycles": 87
+          }
+        },
+        {
+          "pc": 130,
+          "accumulator": {
+            "opcode": 0,
+            "operand": 231
+          },
+          "comparison": false,
+          "execution": "halted",
+          "step": {
+            "status": "stopped",
+            "reason": "halt",
+            "requested": 1,
+            "completed": 1,
+            "instructions": 203,
+            "cpuSteps": 203,
+            "interrupts": 0,
+            "maxInstructions": 1000000,
+            "startCycles": 1123127,
+            "endCycles": 1123448,
+            "epoch": 1,
+            "cycles": 321
+          }
+        }
+      ],
+      "events": [
+        {
+          "type": "cp1.command",
+          "sequence": 1,
+          "rawPc": 1575,
+          "cycles": 1123040,
+          "tNs": "2807600000",
+          "pc": 128,
+          "accumulator": {
+            "opcode": 0,
+            "operand": 0
+          },
+          "command": {
+            "address": 0,
+            "opcode": 9,
+            "operand": 128
+          },
+          "outcome": "completed"
+        },
+        {
+          "type": "cp1.command",
+          "sequence": 2,
+          "rawPc": 1575,
+          "cycles": 1123127,
+          "tNs": "2807817500",
+          "pc": 129,
+          "accumulator": {
+            "opcode": 0,
+            "operand": 231
+          },
+          "command": {
+            "address": 128,
+            "opcode": 4,
+            "operand": 231
+          },
+          "outcome": "completed"
+        },
+        {
+          "type": "cp1.command",
+          "sequence": 3,
+          "rawPc": 134,
+          "cycles": 1123448,
+          "tNs": "2808620000",
+          "pc": 130,
+          "accumulator": {
+            "opcode": 0,
+            "operand": 231
+          },
+          "command": {
+            "address": 129,
+            "opcode": 1,
+            "operand": 0
+          },
+          "outcome": "halted"
+        },
+        {
+          "type": "cp1.halt",
+          "sequence": 4,
+          "rawPc": 134,
+          "cycles": 1123448,
+          "tNs": "2808620000",
+          "pc": 130,
+          "accumulator": {
+            "opcode": 0,
+            "operand": 231
+          },
+          "command": {
+            "address": 129,
+            "opcode": 1,
+            "operand": 0
+          },
+          "reason": "hlt"
+        }
+      ],
+      "halts": [
+        {
+          "cause": "breakpoint",
+          "bpKind": "cp1",
+          "cp1Pc": 0
+        },
+        {
+          "cause": "step"
+        },
+        {
+          "cause": "step"
+        },
+        {
+          "cause": "cp1-halt"
+        }
+      ]
+    },
+    {
+      "name": "delay-budget-and-resume",
+      "matched": true,
+      "expansion": false,
+      "program": [
+        [
+          4,
+          73
+        ],
+        [
+          3,
+          200
+        ],
+        [
+          4,
+          17
+        ],
+        [
+          1,
+          0
+        ]
+      ],
+      "data": [],
+      "start": 0,
+      "observations": [
+        {
+          "pc": 1,
+          "accumulator": {
+            "opcode": 0,
+            "operand": 73
+          },
+          "comparison": false,
+          "execution": "ready",
+          "step": {
+            "status": "complete",
+            "reason": "complete",
+            "requested": 1,
+            "completed": 1,
+            "instructions": 52,
+            "cpuSteps": 52,
+            "interrupts": 0,
+            "maxInstructions": 1000000,
+            "startCycles": 1122963,
+            "endCycles": 1123048,
+            "epoch": 1,
+            "cycles": 85
+          }
+        },
+        {
+          "limited": {
+            "status": "limit",
+            "reason": "instruction-budget",
+            "requested": 1,
+            "completed": 0,
+            "instructions": 100,
+            "cpuSteps": 100,
+            "interrupts": 0,
+            "maxInstructions": 100,
+            "startCycles": 1123048,
+            "endCycles": 1123245,
+            "epoch": 1,
+            "cycles": 197
+          }
+        },
+        {
+          "pc": 2,
+          "accumulator": {
+            "opcode": 0,
+            "operand": 73
+          },
+          "comparison": false,
+          "execution": "ready",
+          "step": {
+            "status": "complete",
+            "reason": "complete",
+            "requested": 1,
+            "completed": 1,
+            "instructions": 45782,
+            "cpuSteps": 45870,
+            "interrupts": 88,
+            "maxInstructions": 1000000,
+            "startCycles": 1123245,
+            "endCycles": 1213034,
+            "epoch": 1,
+            "cycles": 89789
+          }
+        },
+        {
+          "pc": 3,
+          "accumulator": {
+            "opcode": 0,
+            "operand": 17
+          },
+          "comparison": false,
+          "execution": "ready",
+          "step": {
+            "status": "complete",
+            "reason": "complete",
+            "requested": 1,
+            "completed": 1,
+            "instructions": 52,
+            "cpuSteps": 52,
+            "interrupts": 0,
+            "maxInstructions": 1000000,
+            "startCycles": 1213034,
+            "endCycles": 1213119,
+            "epoch": 1,
+            "cycles": 85
+          }
+        },
+        {
+          "pc": 4,
+          "accumulator": {
+            "opcode": 0,
+            "operand": 17
+          },
+          "comparison": false,
+          "execution": "halted",
+          "step": {
+            "status": "stopped",
+            "reason": "halt",
+            "requested": 1,
+            "completed": 1,
+            "instructions": 135,
+            "cpuSteps": 135,
+            "interrupts": 0,
+            "maxInstructions": 1000000,
+            "startCycles": 1213119,
+            "endCycles": 1213331,
+            "epoch": 1,
+            "cycles": 212
+          }
+        }
+      ],
+      "events": [
+        {
+          "type": "cp1.command",
+          "sequence": 1,
+          "rawPc": 1575,
+          "cycles": 1123048,
+          "tNs": "2807620000",
+          "pc": 1,
+          "accumulator": {
+            "opcode": 0,
+            "operand": 73
+          },
+          "command": {
+            "address": 0,
+            "opcode": 4,
+            "operand": 73
+          },
+          "outcome": "completed"
+        },
+        {
+          "type": "cp1.command",
+          "sequence": 2,
+          "rawPc": 1575,
+          "cycles": 1213034,
+          "tNs": "3032585000",
+          "pc": 2,
+          "accumulator": {
+            "opcode": 0,
+            "operand": 73
+          },
+          "command": {
+            "address": 1,
+            "opcode": 3,
+            "operand": 200
+          },
+          "outcome": "completed"
+        },
+        {
+          "type": "cp1.command",
+          "sequence": 3,
+          "rawPc": 1575,
+          "cycles": 1213119,
+          "tNs": "3032797500",
+          "pc": 3,
+          "accumulator": {
+            "opcode": 0,
+            "operand": 17
+          },
+          "command": {
+            "address": 2,
+            "opcode": 4,
+            "operand": 17
+          },
+          "outcome": "completed"
+        },
+        {
+          "type": "cp1.command",
+          "sequence": 4,
+          "rawPc": 134,
+          "cycles": 1213331,
+          "tNs": "3033327500",
+          "pc": 4,
+          "accumulator": {
+            "opcode": 0,
+            "operand": 17
+          },
+          "command": {
+            "address": 3,
+            "opcode": 1,
+            "operand": 0
+          },
+          "outcome": "halted"
+        },
+        {
+          "type": "cp1.halt",
+          "sequence": 5,
+          "rawPc": 134,
+          "cycles": 1213331,
+          "tNs": "3033327500",
+          "pc": 4,
+          "accumulator": {
+            "opcode": 0,
+            "operand": 17
+          },
+          "command": {
+            "address": 3,
+            "opcode": 1,
+            "operand": 0
+          },
+          "reason": "hlt"
+        }
+      ],
+      "halts": [
+        {
+          "cause": "breakpoint",
+          "bpKind": "cp1",
+          "cp1Pc": 0
+        },
+        {
+          "cause": "step"
+        },
+        {
+          "cause": "step-limit"
+        },
+        {
+          "cause": "step"
+        },
+        {
+          "cause": "step"
+        },
+        {
+          "cause": "cp1-halt"
+        }
+      ]
+    },
+    {
+      "name": "overflow",
+      "matched": true,
+      "expansion": false,
+      "program": [
+        [
+          4,
+          255
+        ],
+        [
+          7,
+          90
+        ],
+        [
+          1,
+          0
+        ]
+      ],
+      "data": [
+        [
+          90,
+          0,
+          1
+        ]
+      ],
+      "start": 0,
+      "observations": [
+        {
+          "pc": 1,
+          "accumulator": {
+            "opcode": 0,
+            "operand": 255
+          },
+          "comparison": false,
+          "execution": "ready",
+          "step": {
+            "status": "complete",
+            "reason": "complete",
+            "requested": 1,
+            "completed": 1,
+            "instructions": 52,
+            "cpuSteps": 52,
+            "interrupts": 0,
+            "maxInstructions": 1000000,
+            "startCycles": 1122963,
+            "endCycles": 1123048,
+            "epoch": 1,
+            "cycles": 85
+          }
+        },
+        {
+          "pc": 1,
+          "accumulator": {
+            "opcode": 0,
+            "operand": 255
+          },
+          "comparison": false,
+          "execution": "error",
+          "step": {
+            "status": "stopped",
+            "reason": "error",
+            "requested": 1,
+            "completed": 0,
+            "instructions": 146,
+            "cpuSteps": 146,
+            "interrupts": 0,
+            "maxInstructions": 1000000,
+            "startCycles": 1123048,
+            "endCycles": 1123279,
+            "epoch": 1,
+            "cycles": 231
+          }
+        }
+      ],
+      "events": [
+        {
+          "type": "cp1.command",
+          "sequence": 1,
+          "rawPc": 1575,
+          "cycles": 1123048,
+          "tNs": "2807620000",
+          "pc": 1,
+          "accumulator": {
+            "opcode": 0,
+            "operand": 255
+          },
+          "command": {
+            "address": 0,
+            "opcode": 4,
+            "operand": 255
+          },
+          "outcome": "completed"
+        },
+        {
+          "type": "cp1.error",
+          "sequence": 2,
+          "rawPc": 134,
+          "cycles": 1123279,
+          "tNs": "2808197500",
+          "pc": 1,
+          "accumulator": {
+            "opcode": 0,
+            "operand": 255
+          },
+          "command": {
+            "address": 1,
+            "opcode": 7,
+            "operand": 90
+          },
+          "error": {
+            "code": 6,
+            "digits": [
+              63,
+              63,
+              125
+            ]
+          }
+        }
+      ],
+      "halts": [
+        {
+          "cause": "breakpoint",
+          "bpKind": "cp1",
+          "cp1Pc": 0
+        },
+        {
+          "cause": "step"
+        },
+        {
+          "cause": "cp1-error"
+        }
+      ]
+    },
+    {
+      "name": "invalid-opcode",
+      "matched": true,
+      "expansion": false,
+      "program": [
+        [
+          25,
+          0
+        ]
+      ],
+      "data": [],
+      "start": 0,
+      "observations": [
+        {
+          "pc": 0,
+          "accumulator": {
+            "opcode": 0,
+            "operand": 0
+          },
+          "comparison": false,
+          "execution": "error",
+          "step": {
+            "status": "stopped",
+            "reason": "error",
+            "requested": 1,
+            "completed": 0,
+            "instructions": 101,
+            "cpuSteps": 101,
+            "interrupts": 0,
+            "maxInstructions": 1000000,
+            "startCycles": 1122963,
+            "endCycles": 1123119,
+            "epoch": 1,
+            "cycles": 156
+          }
+        }
+      ],
+      "events": [
+        {
+          "type": "cp1.error",
+          "sequence": 1,
+          "rawPc": 134,
+          "cycles": 1123119,
+          "tNs": "2807797500",
+          "pc": 0,
+          "accumulator": {
+            "opcode": 0,
+            "operand": 0
+          },
+          "command": {
+            "address": 0,
+            "opcode": 25,
+            "operand": 0
+          },
+          "error": {
+            "code": 2,
+            "digits": [
+              63,
+              63,
+              91
+            ]
+          }
+        }
+      ],
+      "halts": [
+        {
+          "cause": "breakpoint",
+          "bpKind": "cp1",
+          "cp1Pc": 0
+        },
+        {
+          "cause": "cp1-error"
+        }
+      ]
+    },
+    {
+      "name": "loop-breakpoint-reentry",
+      "matched": true,
+      "expansion": false,
+      "program": [
+        [
+          4,
+          42
+        ],
+        [
+          9,
+          0
+        ]
+      ],
+      "data": [],
+      "start": 0,
+      "observations": [
+        {
+          "pc": 1,
+          "accumulator": {
+            "opcode": 0,
+            "operand": 42
+          },
+          "comparison": false,
+          "execution": "ready",
+          "step": {
+            "status": "complete",
+            "reason": "complete",
+            "requested": 1,
+            "completed": 1,
+            "instructions": 52,
+            "cpuSteps": 52,
+            "interrupts": 0,
+            "maxInstructions": 1000000,
+            "startCycles": 1122963,
+            "endCycles": 1123048,
+            "epoch": 1,
+            "cycles": 85
+          }
+        },
+        {
+          "pc": 0,
+          "accumulator": {
+            "opcode": 0,
+            "operand": 42
+          },
+          "comparison": false,
+          "execution": "ready",
+          "step": {
+            "status": "complete",
+            "reason": "complete",
+            "requested": 1,
+            "completed": 1,
+            "instructions": 44,
+            "cpuSteps": 44,
+            "interrupts": 0,
+            "maxInstructions": 1000000,
+            "startCycles": 1123048,
+            "endCycles": 1123121,
+            "epoch": 1,
+            "cycles": 73
+          }
+        }
+      ],
+      "events": [
+        {
+          "type": "cp1.command",
+          "sequence": 1,
+          "rawPc": 1575,
+          "cycles": 1123048,
+          "tNs": "2807620000",
+          "pc": 1,
+          "accumulator": {
+            "opcode": 0,
+            "operand": 42
+          },
+          "command": {
+            "address": 0,
+            "opcode": 4,
+            "operand": 42
+          },
+          "outcome": "completed"
+        },
+        {
+          "type": "cp1.command",
+          "sequence": 2,
+          "rawPc": 1575,
+          "cycles": 1123121,
+          "tNs": "2807802500",
+          "pc": 0,
+          "accumulator": {
+            "opcode": 0,
+            "operand": 42
+          },
+          "command": {
+            "address": 1,
+            "opcode": 9,
+            "operand": 0
+          },
+          "outcome": "completed"
+        },
+        {
+          "type": "cp1.command",
+          "sequence": 3,
+          "rawPc": 1575,
+          "cycles": 1123206,
+          "tNs": "2808015000",
+          "pc": 1,
+          "accumulator": {
+            "opcode": 0,
+            "operand": 42
+          },
+          "command": {
+            "address": 0,
+            "opcode": 4,
+            "operand": 42
+          },
+          "outcome": "completed"
+        },
+        {
+          "type": "cp1.command",
+          "sequence": 4,
+          "rawPc": 1575,
+          "cycles": 1123279,
+          "tNs": "2808197500",
+          "pc": 0,
+          "accumulator": {
+            "opcode": 0,
+            "operand": 42
+          },
+          "command": {
+            "address": 1,
+            "opcode": 9,
+            "operand": 0
+          },
+          "outcome": "completed"
+        }
+      ],
+      "halts": [
+        {
+          "cause": "breakpoint",
+          "bpKind": "cp1",
+          "cp1Pc": 0
+        },
+        {
+          "cause": "step"
+        },
+        {
+          "cause": "step"
+        },
+        {
+          "cause": "breakpoint",
+          "bpKind": "cp1",
+          "cp1Pc": 0
+        }
+      ]
+    }
+  ],
+  "limits": [
+    "Original programs executed on the independent machine, not physical-hardware qualification.",
+    "No GPL reference emulator, annotated source, firmware bytes, or downloads are included.",
+    "Only the named 2716 image is qualified; mask ROM B remains raw-only."
+  ]
+}

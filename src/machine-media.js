@@ -33,6 +33,12 @@ const BIN_EXT = ['.bin', '.rom'];
 
 /** @type {Record<string, MediaSlot[]>} */
 const SLOTS = {
+    cp1: [
+        {id: 'rom', label: 'CP1 firmware (2 KB)', accept: BIN_EXT, required: true,
+          hint: 'Supply your own 2048-byte firmware image. No historical ROM is bundled.'},
+        {id: 'program', label: 'CP1 program memory', accept: ['.bin'],
+          hint: '256 bytes (base) or 512 bytes (CP3); opcode byte then operand byte per cell.'},
+    ],
     eater6502: [
         { id: 'rom', label: 'ROM image', accept: [...BIN_EXT, ...HEX_EXT], at: 0x8000,
           hint: '32 KB at $8000, vectors included — what cc65/ca65 emit' },
@@ -181,6 +187,16 @@ export function applyMedia(target, entries, opts = {}) {
                 bytes = parsed.bytes; at = parsed.origin;
             }
             switch (slotId) {
+                case 'program': {
+                    if (kind !== 'cp1' || !machine?.loadProgram) throw new Error('target has no CP1 program loader');
+                    if (target.state?.() === 'running') throw new Error('pause the emulator before loading a CP1 program');
+                    const capacity = machine.expansion ? 512 : 256;
+                    if (bytes.length !== capacity) throw new Error(`CP1 program image must contain ${capacity} bytes`);
+                    const cells = Array.from({length: capacity / 2}, (_, index) =>
+                        ({opcode: bytes[index * 2], operand: bytes[index * 2 + 1]}));
+                    machine.loadProgram(cells);
+                    break;
+                }
                 case 'rom':
                 case 'com': {
                     const load = adapter.loadRom || adapter.load

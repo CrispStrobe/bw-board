@@ -47,6 +47,11 @@ export const LABWIRED_KIND = {
 export function getTargetKinds() {
   return [
     {
+      kind: 'cp1',
+      label: 'Experimental (Kosmos CP1 / 8049)',
+      description: 'CP1 firmware machine with 8155 RAM/I/O and optional CP3. Requires a user-supplied 2 KB ROM.',
+    },
+    {
       kind: 'emulator',
       label: 'Simulated (STC12 / 8051)',
       description: 'Full instruction-level 8051 emulation. All debug features available.',

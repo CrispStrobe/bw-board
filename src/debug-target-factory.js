@@ -76,6 +76,14 @@ export { LABWIRED_KIND, getTargetKinds } from './target-kinds.js';
  *   adapter: the boundary-A adapter (emulator/avr8js only)
  */
 export async function createDebugTarget(kind, opts) {
+  if (kind === 'cp1') {
+    const [{createCp1Adapter}, {createCp1DebugTarget}] = await Promise.all([
+      import('./cp1-adapter.js'), import('./cp1-debug.js')
+    ]);
+    const adapter = createCp1Adapter(opts);
+    if (opts?.board) adapter.attachBoard(opts.board);
+    return {target: createCp1DebugTarget(adapter, opts), adapter};
+  }
   if (kind === 'emulator') {
     return createEmulatorTarget(opts);
   }
