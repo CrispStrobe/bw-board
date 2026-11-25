@@ -1249,6 +1249,8 @@ const IS_TAU_SEC = 2e-3;
 const REBOUND_SEC = 0.1e-3;
 const CURRENT_TAU_SEC = 5e-6;
 const LOAD_TAU_SEC = 1e-3;
+/** A base–collector RF conductance above this (S) marks the stamps steep in the swing. */
+const STEEP_SIEMENS = 1e-4;
 const RETUNE_SEC = 1e-3;
 const DEFAULT_LOAD_OHMS = 47e3;
 
@@ -1448,6 +1450,11 @@ export class RadioFrontEnd {
         const S1r = new Float64Array(K * K), S1i = new Float64Array(K * K);
         const bias = this._bias;
         if (!bias) return { S0r, S0i, S1r, S1i };
+        // `steep`: a collector swung into its base–collector junction's
+        // forward conduction, whose conductance grows as e^{A/VT}: the one
+        // stamp a band step must take consistently with its end
+        // (BandIntegrator.step).
+        let steep = false;
         const amp = (a) => Math.hypot(vp[a][0], vp[a][1]);
         const put = (a, c, g, cap) => {
             const m = a * K + c;
@@ -1484,6 +1491,7 @@ export class RadioFrontEnd {
                     const xbc = amp(pbc) / VT;
                     const [ibc] = expCapped(b.vbc / VT + lnI0(xbc) + other.L[pbc], b.card.is);
                     gbc = ibc * besselGain(xbc) / VT;
+                    if (gbc > STEEP_SIEMENS) steep = true;
                 }
                 // rows: base current (B−E pattern), collector current (C−E pattern);
                 // cols: v_be, v_bc.
@@ -1536,7 +1544,7 @@ export class RadioFrontEnd {
                 }
             }
         }
-        return { S0r, S0i, S1r, S1i };
+        return { S0r, S0i, S1r, S1i, steep };
     }
 
     // ── The RF system ────────────────────────────────────────────────

@@ -498,7 +498,20 @@ export class BandIntegrator {
                         return { S: Ss, z: zs, d, w: ws, p: ws ? this._portsOut(zs, ws, f) : zs };
                     };
                     const r1 = at(1);
-                    if (portDist(r1.p, p1) > CONSISTENCY_TOL * n1) {
+                    // Only where a stamp is steep in the swing (the caller marks
+                    // it: a collector in its base–collector junction's forward
+                    // conduction). Elsewhere the stamps move gently and the
+                    // explicit end stands: a MOSFET regenerative stage's growth
+                    // and a Meissner's squegging cycle are left as they were.
+                    const steepHere = S.steep !== false || r1.S.steep !== false;
+                    // A step whose explicit end GREW and whose end stamps give
+                    // still more gain is left alone: its growth is the growth
+                    // control's business (flagging it as inconsistent halved the
+                    // substep of every hard-driven oscillator's growing steps,
+                    // and a medium-wave Meissner's transient solve stopped
+                    // converging under the rectified current that followed).
+                    const grows = n1 >= n0 && portNorm(r1.p) >= n1;
+                    if (steepHere && !grows && portDist(r1.p, p1) > CONSISTENCY_TOL * n1) {
                         // F(s) = |ports out (stamps at s·p1)| / (s·|p1|) − 1,
                         // falling in s (more swing, more compression): bisect.
                         const F = (r, s) => portNorm(r.p) / (s * n1) - 1;
