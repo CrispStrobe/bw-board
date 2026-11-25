@@ -25,4 +25,6 @@ The firmware uses the 8049 timer interrupt to select one digit and sample one ke
 
 ## Cassette keys
 
-CAS and CAL clear the panel and return to keypad monitoring. CP2 tape transfer and F007 require the separate cassette milestone.
+CAS writes a 16.5-second leader and streams installed teaching RAM on P1 terminal 8. CAL receives on the same terminal and writes each raw byte once all eight symbols have arrived. P1 terminal 7 selects the direction. With CP3 fitted, both RAM blocks transfer in one operation, base first. STP cancels either operation. CLR clears the cassette status display.
+
+CAL waits for the first transition with the data line released. After data starts, it checks the low and high durations of each symbol and reports F007 for a malformed or missing edge. Complete bytes received before interruption stay in RAM. The cassette stream carries no checksum.

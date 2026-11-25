@@ -1,12 +1,14 @@
 // SPDX-License-Identifier: MIT
 /** ROM identification metadata only. No historical firmware bytes are distributed. */
 import {CP1_INDEPENDENT_MONITOR_ROM} from './cp1-monitor-profile.generated.js';
+import {CP1_INDEPENDENT_MONITOR_ROM as CP1_CP2_MONITOR_ROM} from './cp1-monitor-cp2-profile.generated.js';
 
 export const CP1_ROM_BYTES = 2048;
 export const CP1_ROM_PROFILES = Object.freeze([
   Object.freeze({ id: 'cp1-mask-b', name: 'Kosmos CP1 mask ROM B', bytes: 2048, sha1: 'c987b79a7b90fcbd58b66a69e95913f2655a1f0d' }),
   Object.freeze({ id: 'cp1-2716', name: 'Kosmos CP1 2716 firmware', bytes: 2048, sha1: 'ff4befcf82a664950186d3af1843fdef70d2209f' }),
   CP1_INDEPENDENT_MONITOR_ROM,
+  CP1_CP2_MONITOR_ROM,
 ]);
 
 /** Synchronous browser-compatible SHA-1 for identity, never for authentication. */

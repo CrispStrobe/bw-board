@@ -5,6 +5,7 @@
  * See docs/CP1-SEMANTIC-DEBUG.md for the observations and their limits.
  */
 import {CP1_INDEPENDENT_MONITOR_SEMANTICS} from './cp1-monitor-profile.generated.js';
+import {CP1_INDEPENDENT_MONITOR_SEMANTICS as CP1_CP2_MONITOR_SEMANTICS} from './cp1-monitor-cp2-profile.generated.js';
 const freeze = value => {
   if (value && typeof value === 'object') {
     for (const item of Object.values(value)) freeze(item);
@@ -33,4 +34,5 @@ export const CP1_SEMANTIC_PROFILES = freeze([
     },
   },
   CP1_INDEPENDENT_MONITOR_SEMANTICS,
+  CP1_CP2_MONITOR_SEMANTICS,
 ]);

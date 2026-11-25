@@ -5,6 +5,8 @@
 import { MCS48 } from './mcs48.js';
 import { Intel8155 } from './i8155.js';
 import { identifyCp1Rom } from './cp1-rom-profiles.js';
+import { CP2_DATA, CP2_SAVE, copyCp2Transitions, decodeCp2Memory, recordCp2Signal } from './cp2-tape.js';
+import { decodeCp2Wave, encodeCp2Wave } from './cp2-wave.js';
 
 export const CP1_CLOCK_HZ = 6000000;
 export const CP1_OSCILLATORS_PER_CYCLE = 15;
@@ -70,6 +72,7 @@ export class Cp1Machine {
     this._inputs[5].value = 0x3f;
     this._p1 = 0xff;
     this._p2 = 0xff;
+    this._cassette = null;
     this.bus = 0xff;
     this.busContentionMask = 0;
     this.busContentionCount = 0;
@@ -106,7 +109,7 @@ export class Cp1Machine {
       cp3: this.expansion,
       keypad: '20 logical contacts; ten numeric contacts have physical duplicates',
       display: 'six multiplexed digits; simulated-time segment duty',
-      cassetteTransport: false,
+      cassetteTransport: 'CP2 recovered digital signal',
       analogEffects: false,
       strobed8155Ports: false,
       timer8155Connected: false,
@@ -120,6 +123,43 @@ export class Cp1Machine {
   get tMs() { return this._cycles * 1000 / this.machineHz; }
   get capacity() { return this.expansion ? 256 : 128; }
   get rom() { return this._rom.slice(); }
+
+  /** The tape advances with the same simulation clock as the CP1 machine. */
+  playCassette(transitions) {
+    this._assertIdle('start cassette playback');
+    this._cassette = {startCycles: this._cycles, transitions: copyCp2Transitions(transitions), next: 0};
+  }
+
+  stopCassette() {
+    this._assertIdle('stop cassette playback');
+    this._cassette = null;
+  }
+
+  playCassetteWave(bytes) {
+    this.playCassette(decodeCp2Wave(bytes));
+  }
+
+  recordCassetteWave() {
+    this._assertIdle('start cassette recording');
+    const record = recordCp2Signal(this);
+    const size = this.capacity * 2;
+    return {
+      get finished() { return record.finished; },
+      cancel() { record.cancel(); },
+      save() {
+        const tape = record.stop();
+        if (decodeCp2Memory(tape).length !== size) throw new RangeError('Incomplete CP2 recording');
+        return encodeCp2Wave(tape);
+      },
+    };
+  }
+
+  _cassetteData() {
+    const tape = this._cassette;
+    const elapsed = (this._cycles - tape.startCycles) * 1_000_000 / this.machineHz;
+    while (tape.next < tape.transitions.length && tape.transitions[tape.next] <= elapsed) tape.next++;
+    return (tape.next & 1) === 0 ? CP2_DATA : 0;
+  }
 
   addPortListener(callback) {
     if (typeof callback !== 'function') throw new TypeError('Port listener must be a function');
@@ -307,7 +347,11 @@ export class Cp1Machine {
   _inputValue(port) {
     const mask = port === 5 ? 0x3f : 0xff;
     const input = this._inputs[port];
-    return ((input.value & input.drivenMask) | (~input.drivenMask & mask)) & mask;
+    const value = ((input.value & input.drivenMask) | (~input.drivenMask & mask)) & mask;
+    if (port === 1 && this._cassette && !(this._p1 & CP2_SAVE)) {
+      return (value & ~CP2_DATA) | this._cassetteData();
+    }
+    return value;
   }
 
   setPortInput(port, value, drivenMask) {
@@ -505,6 +549,7 @@ export class Cp1Machine {
       cpu: { pc: cpu.pc, a: cpu.a, psw: cpu.psw, cycles: cpu.cycles, p1: cpu.p1, p2: cpu.p2, timer: cpu.timer, f1: cpu.f1 },
       bus: { value: this.bus, contentionMask: this.busContentionMask, contentionCount: this.busContentionCount },
       capabilities: { ...this.capabilities },
+      cassettePlaying: !!this._cassette,
     };
     if (includeMemory) result.cells = Array.from({ length: this.capacity }, (_, index) => this.readCell(index));
     return result;
@@ -517,6 +562,9 @@ export class Cp1Machine {
       expansion: this.expansion, cycles: this._cycles, cpu: this.cpu.saveState(),
       base: this.base.saveState(), expansionChip: this.expansionChip?.saveState() ?? null,
       inputs: this._inputs.map(input => ({ ...input })), keys: [...this._keys],
+      ...(this._cassette && { cassette: {
+        startCycles: this._cassette.startCycles, transitions: Array.from(this._cassette.transitions),
+      } }),
       bus: this.bus, busContentionMask: this.busContentionMask, busContentionCount: this.busContentionCount,
       display: {
         windowMs: this.displayWindowMs, epoch: this._displayEpoch, since: this._displaySince,
@@ -558,6 +606,11 @@ export class Cp1Machine {
     }));
     if (keys.size !== state.keys.length) throw new TypeError('Duplicate CP1 key state');
     const bus = integer(state.bus, 0, 255, 'CP1 state bus');
+    const cassette = state.cassette === undefined ? null : {
+      startCycles: integer(state.cassette?.startCycles, 0, cycles, 'CP2 playback start'),
+      transitions: copyCp2Transitions(state.cassette?.transitions),
+      next: 0,
+    };
     const busContentionMask = integer(state.busContentionMask, 0, 255, 'CP1 bus contention mask');
     const busContentionCount = integer(state.busContentionCount, 0, Number.MAX_SAFE_INTEGER, 'CP1 bus contention count');
     const display = state.display;
@@ -583,6 +636,7 @@ export class Cp1Machine {
     this._cycles = cycles;
     this._p1 = cpu.p1; this._p2 = cpu.p2;
     this._inputs = inputs; this._keys = keys;
+    this._cassette = cassette;
     this.bus = bus; this.busContentionMask = busContentionMask; this.busContentionCount = busContentionCount;
     this._displayEpoch = epoch; this._displaySince = since;
     this._displayDrive = drive; this._displayIntervals = intervals;

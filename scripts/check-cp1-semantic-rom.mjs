@@ -7,6 +7,7 @@ import {parseArgs} from 'node:util';
 import {createCp1Adapter} from '../src/cp1-adapter.js';
 import {createCp1DebugTarget} from '../src/cp1-debug.js';
 import {identifyCp1Rom} from '../src/cp1-rom-profiles.js';
+import {CP1_SEMANTIC_PROFILES} from '../src/cp1-semantic-profiles.js';
 
 const {positionals: [romPath, reportPath], values: {profile: profilePath}} = parseArgs({
   allowPositionals: true, options: {profile: {type: 'string'}},
@@ -16,7 +17,7 @@ const rom = new Uint8Array(readFileSync(romPath));
 const identity = identifyCp1Rom(rom);
 const profile = profilePath ? JSON.parse(readFileSync(profilePath, 'utf8')) : null;
 if (profile) assert.equal(identity.sha1, profile.romSha1, 'the observation profile must identify the exact supplied ROM');
-else assert.ok(['cp1-2716', 'cp1-independent-monitor-v1'].includes(identity.id),
+else assert.ok(CP1_SEMANTIC_PROFILES.some(entry => entry.romSha1 === identity.sha1),
   'supply a matching explicit profile for unknown firmware');
 const cases = [
   {name: 'loads-stores-full-accumulator', words: [[5, 90], [6, 91], [4, 73], [1, 0]], data: [[90, 17, 231]],

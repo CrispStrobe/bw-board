@@ -29,6 +29,13 @@ GLYPH_E = 0x79
 GLYPH_F = 0x71
 GLYPH_P = 0x73
 KEY_STP = 16
+TAPE_DIRECTION = 0x40
+TAPE_DATA = 0x80
+TAPE_SHORT = 29
+TAPE_LONG = 59
+TAPE_MAX = 100
+TAPE_MIN = 12
+TAPE_SKEW = 8
 
 .org 0
 JMP reset
@@ -215,10 +222,13 @@ ADD A,#panel_keys & 255
 JMPP @A
 ; Special keys 10–19 follow electrical row and column order.
 panel_keys:
-.targets panel_cassette,panel_clr,panel_pc,panel_acc,panel_cassette
+.targets panel_save,panel_clr,panel_pc,panel_acc,panel_load
 .targets panel_step,panel_stp,panel_run,panel_out,panel_inp
 
-panel_cassette:
+panel_save:
+JMP cassette_save
+panel_load:
+JMP cassette_load
 panel_clr:
 CALL clear_frame
 JMP panel_stp
@@ -963,6 +973,81 @@ RET
 invalid_port:
 JMP teaching_value
 
+; Cassette foreground register allocation: R1 offset, R3 bit count, R4
+; byte shift register, and R5 selected 8155. The timer still scans the panel.
+cassette_begin:
+CALL clear_frame
+MOV A,R6
+ST FRAME
+MOV R1,#0
+MOV A,#BASE_RAM
+MOV R5,A
+OUTL P2,A
+RET
+
+cassette_next_byte:
+; Wire order is 0, 255, 254, ..., 1 in each selected block.
+DEC R1
+MOV A,R1
+JNZ cassette_more
+LD CAPACITY
+JB7 cassette_select_expansion
+cassette_end:
+CLR A
+RET
+cassette_select_expansion:
+MOV A,R5
+XRL A,#BASE_RAM
+JNZ cassette_end
+MOV A,#EXT_RAM
+MOV R5,A
+OUTL P2,A
+cassette_more:
+MOV A,#1
+RET
+
+cassette_latch:
+ST P1_LATCH
+OUTL P1,A
+RET
+
+cassette_status:
+ST FRAME
+JMP monitor_idle
+
+cassette_stop_requested:
+CALL take_key
+MOV A,R7
+XRL A,#KEY_STP
+RET
+
+; Elapsed whole ticks since the last receive edge, modulo 256, and current
+; tick in R7. Individual waits time out before the elapsed byte can wrap.
+cassette_elapsed:
+LD TICK
+MOV R7,A
+MOV A,R6
+CPL A
+INC A
+ADD A,R7
+RET
+
+cassette_edge:
+CALL cassette_elapsed
+XCH A,R7
+MOV R6,A
+MOV A,R7
+ADD A,#-TAPE_MAX
+JC cassette_edge_invalid
+ADD A,#TAPE_MAX-TAPE_MIN
+JNC cassette_edge_short
+ADD A,#TAPE_MIN
+RET
+cassette_edge_short:
+CPL C
+cassette_edge_invalid:
+RET
+
 .org 0x600
 finish_reset:
 ST CAPACITY
@@ -1042,3 +1127,155 @@ RET
 
 diagnostics_done:
 JMP monitor_idle
+
+; CAS sends the 16.5-second leader and low/high symbols on the actual latch.
+cassette_save:
+MOV R6,#0x23
+CALL cassette_begin
+LD P1_LATCH
+ORL A,#TAPE_DIRECTION+TAPE_DATA
+CALL cassette_latch
+MOV R3,#64
+save_leader:
+MOV A,#230
+CALL cassette_wait
+JZ save_done
+DJNZ R3,save_leader
+
+save_byte:
+MOVX A,@R1
+MOV R4,A
+MOV R3,#8
+save_bit:
+MOV A,R4
+RRC A
+MOV R4,A
+MOV R6,#TAPE_SHORT
+JC save_low
+MOV R6,#TAPE_LONG
+save_low:
+LD P1_LATCH
+ANL A,#0x7F
+CALL cassette_latch
+MOV A,R6
+CALL cassette_wait
+JZ save_done
+LD P1_LATCH
+ORL A,#TAPE_DATA
+CALL cassette_latch
+MOV A,R6
+CPL A
+ADD A,#TAPE_SHORT+TAPE_LONG+1
+CALL cassette_wait
+JZ save_done
+DJNZ R3,save_bit
+CALL cassette_next_byte
+JNZ save_byte
+
+save_done:
+LD P1_LATCH
+ANL A,#0x7F
+CALL cassette_latch
+MOV A,#0x63
+JMP cassette_status
+
+; A is the interval in display ticks. Return zero if STP was accepted.
+cassette_wait:
+MOV R0,#TICK
+ADD A,@R0
+MOV R2,A
+cassette_wait_poll:
+CALL cassette_stop_requested
+JZ cassette_wait_return
+LD TICK
+XRL A,R2
+JNZ cassette_wait_poll
+INC A
+cassette_wait_return:
+RET
+
+.org 0x700
+; CAL samples the physical pin with the data latch released.
+cassette_load:
+MOV R6,#0x1C
+CALL cassette_begin
+LD P1_LATCH
+ANL A,#0xBF
+ORL A,#TAPE_DATA
+CALL cassette_latch
+load_wait_high:
+CALL cassette_stop_requested
+JZ load_done
+IN A,P1
+ANL A,#TAPE_DATA
+JZ load_wait_high
+load_wait_start:
+CALL cassette_stop_requested
+JZ load_done
+IN A,P1
+JB7 load_wait_start
+LD TICK
+MOV R6,A
+
+load_byte:
+MOV R3,#8
+MOV R4,#0
+load_low:
+CALL cassette_stop_requested
+JZ load_done
+IN A,P1
+JB7 load_rise
+CALL cassette_elapsed
+ADD A,#-TAPE_MAX
+JC load_error
+JMP load_low
+
+load_rise:
+CALL cassette_edge
+JC load_error
+MOV R2,A
+load_high:
+CALL cassette_stop_requested
+JZ load_done
+IN A,P1
+JB7 load_high_wait
+CALL cassette_edge
+JC load_error
+
+; A holds the high duration. Compute high minus low, with carry for a
+; nonnegative result, then reject nearly equal halves.
+MOV R7,A
+MOV A,R2
+CPL A
+INC A
+ADD A,R7
+JC load_one
+ADD A,#TAPE_SKEW-1
+JC load_error
+JMP load_shift
+load_one:
+ADD A,#-TAPE_SKEW
+JNC load_error
+load_shift:
+MOV A,R4
+RRC A
+MOV R4,A
+DJNZ R3,load_low
+
+; Commit the raw byte only after all eight falling-edge closures.
+MOV A,R4
+MOVX @R1,A
+CALL cassette_next_byte
+JNZ load_byte
+
+load_done:
+MOV A,#0x5C
+JMP cassette_status
+load_high_wait:
+CALL cassette_elapsed
+ADD A,#-TAPE_MAX
+JC load_error
+JMP load_high
+load_error:
+MOV A,#7
+JMP raise_error

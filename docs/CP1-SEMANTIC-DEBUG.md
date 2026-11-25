@@ -14,11 +14,14 @@ of original programs running on it. Its observer and synthetic test ROM were
 written independently. Discovery and acceptance did not load a GPL reference
 emulator. Earlier optional oracle work is separate: [CP1-ORACLE.md](CP1-ORACLE.md).
 
-The built-in profile is `cp1-2716-observed-v1`, for SHA-1
+The historical profile is `cp1-2716-observed-v1`, for SHA-1
 `ff4befcf82a664950186d3af1843fdef70d2209f`. SHA-1 is an exact-byte identity key,
 not authentication or a license grant. Mask ROM B is identified by the machine
 but has no qualified semantic mapping. It and every unknown ROM retain raw
 8049 inspection, instruction steps and code breakpoints.
+
+The two independent ROMs have separate built-in profiles generated from their
+own symbol manifests. See [Independent monitor](CP1-INDEPENDENT-MONITOR.md).
 
 These facts were supplied by the separate runtime qualification agent. Addresses
 are hexadecimal unless labeled as a CP1 cell.
