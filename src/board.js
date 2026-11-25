@@ -978,6 +978,53 @@ export class BoardImpl {
   }
 
   /**
+   * A TRANSISTOR LEAD THAT LEADS NOWHERE IS AN OPEN LEAD. A net whose only
+   * member able to carry current is one BJT terminal carries no current
+   * (Kirchhoff: there is nowhere for it to flow), so the solver sees that
+   * terminal as unconnected -- exactly the open lead the stamps already
+   * handle when a terminal is on no net at all. "Able to carry current"
+   * excludes a two-terminal passive (resistor, capacitor, diode, LED, zener,
+   * inductor) whose other lead is itself on no net or on such a dead net:
+   * a collector wired to an empty breadboard strip, or to a resistor or LED
+   * whose far end hangs in the air, is still an open collector.
+   *
+   * Why: kept as a node, such a lead is a row held by nothing but the
+   * collector-base junction. The default BJT carries no base-collector
+   * charge, so at a base edge that node must jump by volts within one time
+   * point, further than Newton's per-iteration junction limit takes it, and
+   * no smaller step helps: a 555 astable driving a transistor whose collector
+   * connects to nothing failed `transient-solve-not-converged` within
+   * milliseconds (r12, 2026-11-25), while the same transistor with its lead
+   * on no net at all solved. The drawn net keeps its id; only the solver
+   * view drops it, so the node reads 0 V like any other unconnected terminal.
+   */
+  static _openLoneTransistorLeads(nets, parts) {
+    const byId = new Map(parts.map((p) => [p.id, p]));
+    if (!parts.some((p) => p.kind === 'npn' || p.kind === 'pnp')) return nets;
+    const PASSIVE = new Set(['resistor', 'capacitor', 'diode', 'led', 'zener', 'inductor']);
+    const netOf = new Map();
+    for (const n of nets) for (const t of n.terminals) netOf.set(`${t.part}\0${t.terminal}`, n);
+    const dead = new Set();
+    const live = (t) => {
+      const p = byId.get(t.part);
+      if (!p || !PASSIVE.has(p.kind) || (p.terminals?.length ?? 0) !== 2) return true;
+      const other = p.terminals.find((x) => x !== t.terminal);
+      const on = netOf.get(`${t.part}\0${other}`);
+      return Boolean(on) && !dead.has(on);
+    };
+    const isBjt = (t) => ['npn', 'pnp'].includes(byId.get(t.part)?.kind);
+    for (let changed = true; changed;) {
+      changed = false;
+      for (const n of nets) {
+        if (dead.has(n) || !n.terminals.some(isBjt)) continue;
+        const carriers = n.terminals.filter(live);
+        if (carriers.length <= 1 && carriers.every(isBjt)) { dead.add(n); changed = true; }
+      }
+    }
+    return dead.size ? nets.filter((n) => !dead.has(n)) : nets;
+  }
+
+  /**
    * Merge nets that share any (part, terminal) — electrically they are
    * one node, whatever the wire-derivation upstream produced. Union-find
    * keyed on terminal membership; the surviving net keeps the FIRST
@@ -1365,7 +1412,7 @@ export class BoardImpl {
         ? Object.defineProperty({ ...p, kind: 'led', params: { color: 'red', vf: 2.2, ...p.params } },
           'opticalKind', { value: 'laser_diode', enumerable: false })
         : p);
-    this._solveNets = macroView.nets;
+    this._solveNets = BoardImpl._openLoneTransistorLeads(macroView.nets, this._solveParts);
     this._macroFallbacks = macroView.notes;
 
     // RESOLVE EACH JUNCTION'S MODEL ONCE, HERE, FOR THE WHOLE SOLVE.
