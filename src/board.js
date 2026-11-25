@@ -1226,6 +1226,7 @@ export class BoardImpl {
     this.nets = nets;
     this.partMap = new Map(parts.map(p => [p.id, p]));
     this.netMap = new Map(nets.map(n => [n.id, n]));
+    this._capacitorTopology = null;
     // SOLVER-INTERNAL view: motor winding inductances become first-class
     // solver inductors on hidden series nets (_expandMotorWindings — the
     // why lives there). The PUBLIC parts/nets above stay exactly what the
@@ -8435,6 +8436,20 @@ export class BoardImpl {
 
   // ─── Internal: capacitor RC integration ───────────────────────────────────
 
+  /** Collect the drawn capacitors and rail terminals in netlist order. */
+  _indexCapacitorTopology() {
+    const railsByNet = new Map();
+    for (const net of this.nets) {
+      for (const terminal of net.terminals) {
+        const part = this.partMap.get(terminal.part);
+        if (part?.kind !== 'vcc' && part?.kind !== 'gnd') continue;
+        if (!railsByNet.has(net.id)) railsByNet.set(net.id, []);
+        railsByNet.get(net.id).push(part);
+      }
+    }
+    return { railsByNet, capacitors: this.parts.filter(part => part.kind === 'capacitor') };
+  }
+
   /**
    * Integrate capacitor voltages using closed-form RC step.
    * V += (Vt − V) · (1 − e^(−dt/RC))
@@ -8449,39 +8464,34 @@ export class BoardImpl {
     // accumulates the real source impedance. Without this, a net like
     // "MCU quasi-high → 10kΩ pull-up net" gets cached as V=5V (correct)
     // but with implied R=0 (wrong — the quasi pin has 21.7kΩ behind it).
-    const savedVoltages = new Map(this.nodeVoltages);
-    const idealNets = new Set();
-    for (const net of this.nets) {
-      for (const t of net.terminals) {
-        const p = this.partMap.get(t.part);
-        if (p && (p.kind === 'vcc' || p.kind === 'gnd')) {
-          idealNets.add(net.id);
+    const { railsByNet, capacitors } = this._capacitorTopology ??= this._indexCapacitorTopology();
+    let savedVoltages;
+    // Without capacitors, only the rail refresh and the voltage map's order
+    // are observable. If all rails already lead the map, leave other entries
+    // in place instead of deleting and restoring their unchanged voltages.
+    let leadingRails = 0;
+    if (capacitors.length === 0) {
+      for (const netId of this.nodeVoltages.keys()) {
+        if (!railsByNet.has(netId)) break;
+        leadingRails++;
+      }
+    }
+    if (capacitors.length > 0 || leadingRails !== railsByNet.size) {
+      savedVoltages = new Map();
+      for (const [netId, voltage] of this.nodeVoltages) {
+        if (!railsByNet.has(netId)) {
+          savedVoltages.set(netId, voltage);
+          this.nodeVoltages.delete(netId);
         }
       }
     }
-    // Keep only VCC/GND net voltages — and ensure they hold the correct
-    // source voltage so _gatherSources returns the right vTh when it
-    // short-circuits on a known-voltage net (rail-parallel cap path).
-    for (const [netId] of this.nodeVoltages) {
-      if (!idealNets.has(netId)) {
-        this.nodeVoltages.delete(netId);
-      }
-    }
-    for (const net of this.nets) {
-      if (!idealNets.has(net.id)) continue;
-      for (const t of net.terminals) {
-        const p = this.partMap.get(t.part);
-        if (p && p.kind === 'vcc') {
-          this.nodeVoltages.set(net.id, this._railVolts(p));
-        } else if (p && p.kind === 'gnd') {
-          this.nodeVoltages.set(net.id, 0);
-        }
+    for (const [netId, rails] of railsByNet) {
+      for (const part of rails) {
+        this.nodeVoltages.set(netId, part.kind === 'vcc' ? this._railVolts(part) : 0);
       }
     }
 
-    for (const part of this.parts) {
-      if (part.kind !== 'capacitor') continue;
-
+    for (const part of capacitors) {
       const farads = /** @type {number} */ (part.params.farads ?? 0.0001);
       const netA = this._netForTerminal(part.id, 'a');
       const netB = this._netForTerminal(part.id, 'b');
@@ -8534,10 +8544,10 @@ export class BoardImpl {
       this.nodeVoltages.set(netA, vB + vNew);
     }
 
-    // Restore cached voltages for non-cap nets
-    for (const [netId, v] of savedVoltages) {
-      if (!this.nodeVoltages.has(netId)) {
-        this.nodeVoltages.set(netId, v);
+    // Restore cached voltages for non-cap nets.
+    if (savedVoltages) {
+      for (const [netId, voltage] of savedVoltages) {
+        if (!this.nodeVoltages.has(netId)) this.nodeVoltages.set(netId, voltage);
       }
     }
   }

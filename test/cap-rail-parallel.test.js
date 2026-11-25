@@ -68,6 +68,51 @@ describe('cap-across-rails: walker path', () => {
   });
 });
 
+it('uses live rail settings and refreshes capacitor rail wiring after a netlist replacement', () => {
+  const board = new BoardImpl(5);
+  const install = (railNet, groundNet) => board.setNetlist([
+    { id: 'VCC', kind: 'vcc', params: {}, terminals: ['vcc'] },
+    { id: 'GND', kind: 'gnd', params: {}, terminals: ['gnd'] },
+    { id: 'C1', kind: 'capacitor', params: { farads: 10e-6 }, terminals: ['a', 'b'] },
+  ], [
+    { id: railNet, terminals: [{ part: 'VCC', terminal: 'vcc' }, { part: 'C1', terminal: 'a' }] },
+    { id: groundNet, terminals: [{ part: 'GND', terminal: 'gnd' }, { part: 'C1', terminal: 'b' }] },
+  ]);
+
+  install('first-supply', 'first-return');
+  board.advanceTo(1_000_000n);
+  assert.equal(board.capVoltages.get('C1'), 5);
+  board.setControl('VCC', 3.3);
+  board.advanceTo(2_000_000n);
+  assert.equal(board.capVoltages.get('C1'), 3.3);
+
+  install('second-supply', 'second-return');
+  board.setControl('VCC', 2.5);
+  board.advanceTo(board.getTime() + 1_000_000n);
+  assert.equal(board.nodeVoltage('second-supply'), 2.5);
+  assert.equal(board.capVoltages.get('C1'), 2.5);
+  assert.equal(board.nodeVoltages.has('first-supply'), false);
+});
+
+it('preserves rail refresh and voltage order with no capacitors', () => {
+  const board = new BoardImpl(5);
+  board.setNetlist([
+    { id: 'VCC', kind: 'vcc', params: {}, terminals: ['vcc'] },
+    { id: 'GND', kind: 'gnd', params: {}, terminals: ['gnd'] },
+    { id: 'R', kind: 'resistor', params: { ohms: 1000 }, terminals: ['a', 'b'] },
+  ], [
+    { id: 'supply', terminals: [{ part: 'VCC', terminal: 'vcc' }, { part: 'R', terminal: 'a' }] },
+    { id: 'return', terminals: [{ part: 'GND', terminal: 'gnd' }, { part: 'R', terminal: 'b' }] },
+  ]);
+  const voltages = new Map([['stored', 1.2], ['return', -.1]]);
+  board.nodeVoltages = voltages;
+  board._integrateCapacitors(.001);
+  assert.equal(board.nodeVoltages, voltages);
+  assert.deepEqual([...voltages], [['return', 0], ['supply', 5], ['stored', 1.2]]);
+  board._integrateCapacitors(.001);
+  assert.deepEqual([...voltages], [['return', 0], ['supply', 5], ['stored', 1.2]]);
+});
+
 describe('series RC: exponential still exact (timing guard)', () => {
 
   it('series RC charges to 63% at 1 time constant (validates walker path)', () => {
