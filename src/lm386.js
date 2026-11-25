@@ -46,6 +46,16 @@ import { DMath } from './det-math.js';
  * 8 Ω at 9 V. NOT modelled: distortion, noise, supply rejection beyond what
  * the BYPASS network gives, thermal shutdown.
  *
+ * POLE INTEGRATION. While the pole rests on its swing clamp it is a 0.1 ns
+ * mode (G_CLAMP on cInt), which the trapezoidal rule does not damp: the pole
+ * alternated about the clamp for as long as the amplifier stayed saturated,
+ * the alternation reached the output and the speaker coil, and the step
+ * controller chased it at 40-800 ns for the whole half period after every
+ * switching edge (300+ attempts per edge of an LM386 horn). As for the LM358
+ * (src/ground-sensing-opamp.js), the hidden capacitor names the package
+ * (`dampedBy`) and the package publishes `poleClamped.out` after every
+ * accepted step; the solver integrates it with backward Euler while clamped.
+ *
  * Every element is a linear primitive (hidden resistors, the pole capacitor)
  * or a pure `nonlinearCurrents` law with an exact Jacobian, so the amplifier
  * is solved by Newton in one solve, the pole's history is the solver's own
@@ -87,6 +97,21 @@ export const LM386_TERMINALS = Object.freeze(['gain1', 'inn', 'inp', 'gnd', 'vou
 export const LM386_STAGE_KIND = 'lm386_stage';
 export const LM386_STAGE_TERMINALS = Object.freeze(['inp', 'inn', 'e1', 'x', 'pole', 'vout', 'vs', 'gnd']);
 export const LM386_POLE_PIN = 'pole';
+/** The package state's `poleClamped` key for the one amplifier channel. */
+export const LM386_POLE_CHANNEL = 'out';
+/** Volts inside the swing window within which the pole counts as clamped. */
+export const LM386_POLE_CLAMP_BAND = 1e-3;
+
+/**
+ * Whether the pole rests on its swing clamp (a 0.1 ns mode: G_CLAMP on cInt).
+ * `pole` 0 means the stage is not expanded (no supply).
+ */
+export function lm386PoleClamped(pole, vs, gnd) {
+    if (!pole || !Number.isFinite(pole)) return false;
+    const lo = gnd + C.outLowHeadroom;
+    const hi = Math.max(lo, vs - C.outHighHeadroom);
+    return pole > hi - LM386_POLE_CLAMP_BAND || pole < lo + LM386_POLE_CLAMP_BAND;
+}
 export const LM386_RESIDUAL_OHMS = 1e6;
 
 function knee(d) {
@@ -241,7 +266,10 @@ export function expandLm386(parts, nets) {
         R('rbx', C.rF, byp, x);
         R('rp', R_POLE, pole, gnd);
         const capId = `${pre}cap`;
-        outParts.push({ id: capId, kind: 'capacitor', params: { farads: C.cInt }, terminals: ['a', 'b'] });
+        // Backward Euler while the pole rests on its swing clamp (POLE
+        // INTEGRATION in the module note), as for the LM358 macromodel.
+        outParts.push({ id: capId, kind: 'capacitor',
+            params: { farads: C.cInt, dampedBy: { part: part.id, channel: LM386_POLE_CHANNEL, nodesTrapezoidal: true } }, terminals: ['a', 'b'] });
         pole.terminals.push(TT(capId, 'a'));
         gnd.terminals.push(TT(capId, 'b'));
         const stageId = `${pre}stage`;

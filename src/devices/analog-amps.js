@@ -25,7 +25,7 @@ import { registerDevice, DMath } from '../devices.js';
 import { GROUND_SENSING_OPAMP_CARD, STAGE_KIND, STAGE_TERMINALS, STAGE_RESIDUAL_OHMS,
     evaluateStage, polePin, GROUND_SENSING_OPAMPS } from '../ground-sensing-opamp.js';
 import { LM386_CARD, LM386_TERMINALS, LM386_STAGE_KIND, LM386_STAGE_TERMINALS, LM386_RESIDUAL_OHMS,
-    LM386_POLE_PIN, evaluateLm386Stage } from '../lm386.js';
+    LM386_POLE_PIN, LM386_POLE_CHANNEL, lm386PoleClamped, evaluateLm386Stage } from '../lm386.js';
 import {LM741_CARD, lm741LinearParameters, assertLm741LinearTopology, assertLm741LinearSolution,
     lm741BiasSupply, lm741BiasSupplyTerminalCurrents, assertLm741BiasSupplyConditions} from '../lm741-linear-pole.js';
 
@@ -430,10 +430,18 @@ function registerLm386() {
     const C = LM386_CARD;
     registerDevice('lm386', {
         terminals: [...LM386_TERMINALS],
-        init() { return { drives: {}, powered: false }; },
+        // update() publishes status only (supply, pole on its clamp) and never
+        // changes the circuit: nothing inside a step to localize.
+        eventLocalization: false,
+        init() { return { drives: {}, powered: false, poleClamped: { [LM386_POLE_CHANNEL]: false } }; },
         update(part, state, read) {
-            const supply = read('vs') - (read('gnd') || 0);
+            const vg = read('gnd') || 0;
+            const supply = read('vs') - vg;
             state.powered = Number.isFinite(supply) && supply >= C.minSupply;
+            // The solver integrates the hidden pole capacitor with backward
+            // Euler while the pole rests on its clamp (src/lm386.js).
+            if (!state.poleClamped) state.poleClamped = {};
+            state.poleClamped[LM386_POLE_CHANNEL] = lm386PoleClamped(read(LM386_POLE_PIN), read('vs'), vg);
             return false;
         },
         branchCurrents(part, _state, read) {

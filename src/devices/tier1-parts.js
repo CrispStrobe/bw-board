@@ -7,7 +7,7 @@ import {shaftElectricalStep} from '../mechanical-shaft.js';
 
 import { registerDevice } from '../devices.js';
 import { rose } from './edge-detect.js';
-import { stepMotorVelocity, motorDirectionOf } from './dc-motor.js';
+import { stepMotorVelocity, motorDirectionOf, advanceShaftAngle } from './dc-motor.js';
 import { lightLevel } from '../world.js';
 import { ambientSpectralShare } from '../optics.js';
 import { photodiodeCurrent, solarCellParams, solarCellCurrent } from '../photo-junctions.js';
@@ -205,7 +205,7 @@ export function registerTier1Parts() {
   registerDevice('gearmotor', {
     terminals: ['a', 'b'],
     init() {
-      return { drives: {}, velocity: 0, omega: 0, outputRpm: 0, direction: 'stopped', _lastTNs: 0n };
+      return { drives: {}, velocity: 0, omega: 0, outputRpm: 0, direction: 'stopped', angle: 0, _angleAtSec: 0, _lastTNs: 0n };
     },
     stamp(ctx, part, state) {
       const R = part.params?.windingR ?? 10;
@@ -234,6 +234,7 @@ export function registerTier1Parts() {
       state.velocity = v1;
       state.omega = Math.abs(v1);
       state.direction = motorDirectionOf(v1);
+      advanceShaftAngle(state, v0, v1, dtSec, Number(tNs) / 1e9);
       state.outputRpm = (state.omega * 60 / (2 * Math.PI)) / ratio;
       return Math.abs(v1 - v0) > 0.1;
     },

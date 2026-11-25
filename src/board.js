@@ -61,6 +61,7 @@ import {
   spiceSineDerivative, spiceSineIntegral,
 } from './source-waveforms.js';
 import { DMath } from './det-math.js';
+import { motorShaftAngle } from './devices/dc-motor.js';
 
 /**
  * Internal pin state.
@@ -83,6 +84,8 @@ const LED_RD = 10;         // dynamic resistance above threshold
 const DEVICE_EVENT_BURST = 200;
 const DEVICE_EVENT_SPACING_NS = 5;
 const LED_I_RATED = 0.020; // 20 mA rated current (for brightness normalization)
+/** Whether an LED's current moved enough to start its brightness window. */
+const ledStepped = (was, now) => Math.abs(now - was) > 1e-3 * LED_I_RATED + 1e-3 * Math.abs(was);
 
 /**
  * Part kinds the closed-form walker cannot represent. Their presence routes
@@ -215,6 +218,8 @@ function currentsIntoTerminals(branchCurrents) {
  * Brightness integrator window.
  */
 const BRIGHTNESS_WINDOW_NS = 20_000_000n; // 20 ms
+/** How soon after a user action an LED's step still counts as caused by it. */
+const LED_ACTION_GRACE_SEC = 10e-6;
 
 /**
  * Carrier of a driven PWM (setPwm) when the caller names none: 500 Hz.
@@ -310,6 +315,8 @@ const TRANSIENT_ANALYSIS_PROFILES = Object.freeze({
  * @returns {*} the copy, or NOT_PLAIN
  */
 const NOT_PLAIN = Symbol('not-plain');
+/** How far before a square/pulse jump a step ending on it evaluates the source. */
+const JUMP_EDGE_LEFT_SEC = 1e-12;
 function plainStateCopy(value, budget) {
   if (--budget.left < 0) return NOT_PLAIN;
   if (value === null || typeof value !== 'object') {
@@ -1263,7 +1270,16 @@ export class BoardImpl {
     const photoView = BoardImpl._expandLedPhotocurrents(genView.parts, genView.nets);
     // Optical links (src/optics.js): a receiver a light_path points at gets a
     // hidden photocurrent fed by its emitter's solved current.
-    const opticView = expandOptics(photoView.parts, photoView.nets, { controls: () => this.controls });
+    const opticView = expandOptics(photoView.parts, photoView.nets, { controls: () => this.controls,
+      // A chopper on a motor's shaft (optics.js chopperTransmission) reads
+      // the motor's own mechanical state.
+      shaftAngle: (id, tSec, output) => motorShaftAngle(this._deviceStates.get(id), tSec,
+        this.parts.find(p => p.id === id), output),
+      shaftSpeed: (id, output) => {
+        const part = this.parts.find(p => p.id === id);
+        const w = Math.abs(this._deviceStates.get(id)?.velocity ?? this._deviceStates.get(id)?.omega ?? 0);
+        return output && part?.kind === 'gearmotor' ? w / (Number(part.params?.gearRatio ?? 48) || 1) : w;
+      } });
     this._optics = opticView.optics;
     const piezoView = BoardImpl._expandPiezoCapacitance(opticView.parts, opticView.nets);
     const windingView = BoardImpl._expandMotorWindings(piezoView.parts, piezoView.nets);
@@ -3914,13 +3930,48 @@ export class BoardImpl {
   _solveForUserAction() {
     const before = new Map(this.ledCurrents);
     this._solve();
+    const untouched = new Map();
     for (const [id, i] of this.ledCurrents) {
       const was = before.get(id) ?? 0;
-      if (Math.abs(i - was) > 1e-3 * LED_I_RATED + 1e-3 * Math.abs(was)) {
+      if (ledStepped(was, i)) {
         (this._ledWindowFloor ??= new Map()).set(id, this.timeNs);
+      } else {
+        untouched.set(id, was);
       }
     }
+    // The event solve holds the devices' own charge (mna.js, parasiticHold),
+    // so a transistor the action switches moves its LED nanoseconds into the
+    // transient rather than at the event itself. An LED that steps within
+    // LED_ACTION_GRACE_SEC of the action counts as stepped BY it (see accept
+    // in _integrateTransientMNA), as it did when the event solve moved it.
+    this._ledActionWatch = untouched.size ? { tNs: this.timeNs, before: untouched } : null;
     this._recordLedSamples();
+  }
+
+  /**
+   * An accepted transient step at `atSec`, while a user action is being
+   * watched: an LED whose current stepped since the action, within
+   * LED_ACTION_GRACE_SEC of it, takes the action's instant as its window
+   * start and its new current from that instant on (ledBrightness).
+   */
+  _watchLedsAfterAction(atSec, res) {
+    const watch = this._ledActionWatch;
+    if (!watch) return;
+    const t0 = Number(watch.tNs) / 1e9;
+    if (atSec > t0 + LED_ACTION_GRACE_SEC) { this._ledActionWatch = null; return; }
+    for (const [id, was] of watch.before) {
+      const c = res?.branchCurrents?.get(id);
+      const i = Math.max(0, c ? -(c.get('anode') ?? 0) : 0);
+      if (!ledStepped(was, i)) continue;
+      watch.before.delete(id);
+      (this._ledWindowFloor ??= new Map()).set(id, watch.tNs);
+      const history = this.ledHistory.get(id);
+      if (!history) continue;
+      const last = history[history.length - 1];
+      if (last && last.tNs === watch.tNs) last.current = i;
+      else if (!last || last.tNs < watch.tNs) history.push({ tNs: watch.tNs, current: i });
+    }
+    if (!watch.before.size) this._ledActionWatch = null;
   }
 
   /**
@@ -6656,6 +6707,9 @@ export class BoardImpl {
       // pins its nets at its stored voltage, and a waveform source is at its
       // value for the current simulation time.
       capVoltages: this.capVoltages,
+      // An event that continues the present state holds the devices' own
+      // capacitances where the transient left them (mna.js, parasiticHold).
+      ...(warmFrom && !powerOff && !testNodeA && !testNodeB ? { holdDeviceCharge: true } : {}),
       tSeconds: Number(this.timeNs) / 1e9,
       deviceStates: this._deviceStates,
       qualifiedSources: this._qualifiedSources(),
@@ -7507,6 +7561,50 @@ export class BoardImpl {
    * @param {boolean} [acceptedTransient] Accepted adaptive substep provenance;
    *   exposed only to models opting into transientUpdateContext.
    */
+  /**
+   * Whether a device update that reported a change is a DISCONTINUITY for the
+   * transient integrator (deviceUpdateIsEdge): its discrete state changed
+   * (discreteStateChange), or a drive appeared, vanished, changed its
+   * resistance or reference, or moved its level by more than the analysis
+   * tolerance. A gate drives its output to the voltage it reads on its own
+   * supply pin, so on a rail that moves (a battery's internal resistance
+   * under a changing load) its drive level changed on every accepted step,
+   * often only in the last bit (9 vs 9.000000000000002), and every one of
+   * those restarted the trapezoidal history with a backward-Euler seed and a
+   * quarter step: a CD4093 window beside an LM386 blinker spent ~1,000
+   * attempts per 100 us in which nothing switched. Such a drive is restamped
+   * at the next solve all the same; only the restart is skipped.
+   */
+  _deviceUpdateIsEdge(before, after) {
+    // A state too large (or not plain enough) to snapshot: every reported
+    // change stays an edge, as before.
+    if (before === null) return true;
+    const profile = this._transientAnalysisProfile;
+    const tolOf = (a, b) => profile.absoluteVoltage + profile.relativeTolerance * Math.max(Math.abs(a), Math.abs(b));
+    const da = before.drives ?? {};
+    const db = after.drives ?? {};
+    for (const k of new Set([...Object.keys(da), ...Object.keys(db)])) {
+      const x = da[k] ?? null;
+      const y = db[k] ?? null;
+      if ((x === null) !== (y === null)) return true;
+      if (x === null) continue;
+      if (typeof x !== 'object' || typeof y !== 'object') return true;
+      for (const key of new Set([...Object.keys(x), ...Object.keys(y)])) {
+        if (key === 'vTh') {
+          if (!(Number.isFinite(x.vTh) && Number.isFinite(y.vTh)) || Math.abs(x.vTh - y.vTh) > tolOf(x.vTh, y.vTh)) return true;
+        } else if (x[key] !== y[key]) return true;
+      }
+    }
+    const rest = (s) => { const o = { ...s }; delete o.drives; return o; };
+    return discreteStateChange(rest(before), rest(after), { left: EVENT_STATE_BUDGET });
+  }
+
+  /** A device state's snapshot for _deviceUpdateIsEdge, or null when it cannot be taken. */
+  _deviceEdgeSnapshot(state) {
+    const copy = plainStateCopy(state, { left: EVENT_STATE_BUDGET });
+    return copy === NOT_PLAIN ? null : copy;
+  }
+
   _updateDevices(atNs = this.timeNs, solution = this._mnaCache, measurementOnly = false, acceptedTransient = false) {
     if (solution?.deferredBjtChargeIds?.length) return false;
     let changed = false;
@@ -7548,8 +7646,13 @@ export class BoardImpl {
       this._attachMeasurementValidity(model, read, solution);
       if (model.transientUpdateContext === true) read.transient = acceptedTransient;
       if (priming) read.priming = true;
+      // On an accepted transient step, `changed` means a discontinuity: the
+      // trapezoidal history restarts and the step shrinks. A drive that only
+      // tracks its own moving supply is not one (deviceUpdateIsEdge).
+      const before = acceptedTransient && state ? this._deviceEdgeSnapshot(state) : undefined;
       try {
-        if (model.update(part, state, read, atNs)) changed = true;
+        if (model.update(part, state, read, atNs)
+          && (before === undefined || this._deviceUpdateIsEdge(before, state))) changed = true;
       } catch (error) {
         // A rejected accepted-step model invalidates the whole analog capture,
         // including earlier partial samples. Preserve ordinary callback and
@@ -7712,6 +7815,17 @@ export class BoardImpl {
       const em = (p.kind === 'npn' || p.kind === 'pnp') ? ebersMollParams(p) : null;
       return em && !(em.cje || em.cjc || em.tf);
     });
+    // THE LEFT LIMIT AT A SOURCE JUMP. A trapezoidal step truncated to end
+    // exactly on a square or pulse edge evaluated the source at its end time
+    // three ways (full step: t + h; second half: (t + h/2) + h/2), and the
+    // rounding put the edge on either side: the full and half results then
+    // disagreed by the whole jump (normalized error ~3,000), the step was
+    // rejected, and the controller crept up to every edge of a function
+    // generator by repeated fifths (a 4046 loop on a 300 Hz square: ten
+    // rejected trials per input edge). A step that ends on the jump takes the
+    // value before it -- the edge is a solve point, never straddled -- and
+    // the backward-Euler seed that starts there sees the new level.
+    let jumpEdgeEnd = null;
     const solveStep = (tStart, hs, method, cvS, ilS, ccS, lvS, seedS = seed, rescue = false) => {
       nSolves++;
       const r = this._solveLiveMNA(pinSources, {
@@ -7719,7 +7833,11 @@ export class BoardImpl {
         // through pseudo-time (`transientRescue`) before the step is lost.
         ...(rescue && rescueAllowed ? { transientRescue: true } : {}),
         ...warmOf(res ?? entrySolution ?? coldEntry),
-        tSeconds: tStart + hs,
+        // A step that ends ON a source's jump (square/pulse edge) sees the
+        // source's value just before it: the jump belongs to the seed step
+        // on the far side (see `jumpEdgeEnd` below).
+        tSeconds: jumpEdgeEnd !== null && Math.abs(tStart + hs - jumpEdgeEnd) <= 1e-12
+          ? jumpEdgeEnd - JUMP_EDGE_LEFT_SEC : tStart + hs,
         temperatureC: this.temperatureC,
         partTemperatures: this._thermal?.temps,
         transient: { dtSec: hs, method, capVoltages: cvS, inductorCurrents: ilS,
@@ -7820,6 +7938,7 @@ export class BoardImpl {
           h = Math.max(H_MIN, h / 4);
         }
       }
+      if (this._ledActionWatch) this._watchLedsAfterAction(atSec, r);
       // The radio's carrier phasors follow the accepted operating point
       // (src/radio.js: refreshed every few ms, or when a control moved).
       if (this._radio && r?.converged !== false) this._radio.onAccepted(this, atSec, r);
@@ -7920,6 +8039,7 @@ export class BoardImpl {
       const barrier = this._transientStepBarrier(t, requestedEnd);
       if (barrier) hEff = barrier.atSec - t;
       const atEdge = barrier?.discontinuity === true;
+      jumpEdgeEnd = atEdge && trapReady && this._sourceJumpsAt(barrier.atSec) ? barrier.atSec : null;
 
       // Only a genuine discontinuity takes the uncontrolled BE seed. A
       // floor-sized step goes through the trapezoidal controller like any
@@ -8054,20 +8174,29 @@ export class BoardImpl {
       //
       // A BE capacitor inside the step is first order, so its own state takes
       // the factor 1 and the step-size exponent of a first-order error,
-      // -1/2. The node voltages mix every state, so while any capacitor is on
-      // BE in this attempt they take the conservative first-order estimate
-      // too. The flag changes only on accepted steps, so the full step and
-      // both half steps integrated the same way.
+      // -1/2. The node voltages mix every state, so while a capacitor on BE
+      // asks for it they take the conservative first-order estimate too (the
+      // LM358 pole: its gallery benches were measured that way, and a
+      // transistor divider clocked by one toggled at another instant without
+      // it). A capacitor whose `dampedBy` says `nodesTrapezoidal` (the LM386
+      // pole) leaves the nodes on the trapezoidal estimate: it is on BE only
+      // while a stiff clamp pins its 0.1 ns mode, so its own truncation error
+      // is nil, and judging every node first order cost an LM386 horn 30 %
+      // more steps for the whole half period it rested on the clamp. The
+      // flags change only on accepted steps, so the full step and both half
+      // steps integrated the same way.
       let firstOrder = null;
+      let nodesFirstOrder = false;
       if (profile.richardsonLte) for (const cap of dampedCaps) {
         const damp = cap.params.dampedBy;
         if (this._deviceStates.get(damp.part)?.poleClamped?.[damp.channel] === true) {
           (firstOrder ??= new Set()).add(cap.id);
+          if (!damp.nodesTrapezoidal) nodesFirstOrder = true;
         }
       }
       const TRAP_RICHARDSON = profile.richardsonLte ? 3 : 1; // 2^2 - 1
       const BE_RICHARDSON = 1;                                // 2^1 - 1
-      const nodeFactor = firstOrder ? BE_RICHARDSON : TRAP_RICHARDSON;
+      const nodeFactor = nodesFirstOrder ? BE_RICHARDSON : TRAP_RICHARDSON;
       let errTrap = 0;
       let errBe = 0;
       const note = (e, beState) => {
@@ -8082,7 +8211,7 @@ export class BoardImpl {
       for (const [id, vH] of h2.nodeVoltages ?? []) {
         const vF = full.nodeVoltages?.get(id) ?? 0;
         const sc = ABSTOL_V + RELTOL * Math.max(Math.abs(vH), Math.abs(vF));
-        note(Math.abs(vF - vH) / (nodeFactor * sc), firstOrder !== null);
+        note(Math.abs(vF - vH) / (nodeFactor * sc), nodesFirstOrder);
       }
       for (const [id, vH] of h2.capVoltagesNext ?? []) {
         const vF = full.capVoltagesNext?.get(id) ?? 0;
@@ -8383,6 +8512,24 @@ export class BoardImpl {
       discontinuity: candidates.some(candidate => candidate.discontinuity
         && Math.abs(candidate.atSec - atSec) <= 1e-15),
     };
+  }
+
+  /**
+   * Whether a native square or pulse source jumps at `atSec` (an edge
+   * _nextSourceEdgeSec found). SPICE PULSE/PWL corners are continuous and
+   * keep their exact endpoint evaluation.
+   */
+  _sourceJumpsAt(atSec) {
+    for (const part of (this._solveParts ?? this.parts)) {
+      if (part.kind !== 'vsource' && part.kind !== 'isource') continue;
+      const p = part.params ?? {};
+      if (p.wave !== 'square' && p.wave !== 'pulse') continue;
+      const freq = p.freq ?? 1000;
+      if (!(freq > 0)) continue;
+      const edge = this._nextSourceEdgeSec.call({ _solveParts: [part] }, atSec - 1e-12);
+      if (edge !== null && Math.abs(edge - atSec) <= 1e-12) return true;
+    }
+    return false;
   }
 
   _nextSourceEdgeSec(tSec) {

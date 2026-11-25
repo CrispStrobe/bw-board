@@ -51,6 +51,9 @@ export function applyShaftSample(part, state, sample, supplyV, edge) {
     state.drives.enc_b = {vTh: phase === 1 || phase === 2 ? supplyV : 0, rTh: 50};
   }
   shaft.angleRad = sample.angleRad;
+  // A disc on the shaft reads the owner's angle (motorShaftAngle).
+  state.angle = sample.angleRad;
+  state._angleAtSec = Number(shaft.lastNs ?? 0n) / 1e9;
   state.velocity = sample.velocityRadS;
   state.omega = Math.abs(sample.velocityRadS);
   state.direction = sample.velocityRadS > 0.01 ? 'forward' : sample.velocityRadS < -0.01 ? 'reverse' : 'stopped';
