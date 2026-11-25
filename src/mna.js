@@ -1555,6 +1555,19 @@ const WINDING_TERMINALS = { inductor: ['a', 'b'], transformer: ['p1', 'p2', 's1'
 // supply ground remain per-solve decisions.
 const LIVE_MNA_TOPOLOGY = new WeakMap();
 
+const VOLTAGE_ROW_KINDS = new Set(['vcc', 'opamp', 'vcvs', 'vsource', 'capacitor']);
+
+function indexMnaParts(parts) {
+  const bipolars = [], voltageSources = [], voltageRows = [], capacitors = [];
+  for (const part of parts) {
+    if (part.kind === 'npn' || part.kind === 'pnp') bipolars.push(part);
+    if (part.kind === 'vsource') voltageSources.push(part);
+    if (VOLTAGE_ROW_KINDS.has(part.kind)) voltageRows.push(part);
+    if (part.kind === 'capacitor') capacitors.push(part);
+  }
+  return { bipolars, voltageSources, voltageRows, capacitors };
+}
+
 function prepareMnaTopology(parts, nets, powerOff, testNodeB) {
   // Build node list. Ground is implicit (node index -1 → not in matrix).
   // For resistance measurement, use testNodeB as the reference so that
@@ -1725,8 +1738,11 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
   tempVfShiftV = (benchTemperatureC - 25) * JUNCTION_TEMPCO_V_PER_K;
   partTemperatures = opts.partTemperatures && opts.partTemperatures.size ? opts.partTemperatures : null;
   const transient = opts.transient ?? null;
+  const reuseTopology = opts.reuseBoardTopology === true && !powerOff && !testNodeA && !testNodeB;
+  const cached = reuseTopology ? LIVE_MNA_TOPOLOGY.get(nets) : undefined;
+  const cachedTopology = cached?.parts === parts ? cached.topology : undefined;
   const chargedBjtIds = [];
-  for (const part of parts) {
+  for (const part of cachedTopology?.partLists.bipolars ?? parts) {
     if (part.kind !== 'npn' && part.kind !== 'pnp') continue;
     const fields = ['cje', 'cjc', 'tf'];
     for (const field of fields) if (transient && part.params?.[field] !== undefined
@@ -1771,17 +1787,16 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
   // a plausible, wrong all-zeros solution.
   const GMIN = 1e-12;
 
-  const reuseTopology = opts.reuseBoardTopology === true && !powerOff && !testNodeA && !testNodeB;
-  const cached = reuseTopology ? LIVE_MNA_TOPOLOGY.get(nets) : undefined;
-  let preparedTopology;
-  if (cached?.parts === parts) {
-    preparedTopology = cached.topology;
-  } else {
+  let preparedTopology = cachedTopology;
+  if (!preparedTopology) {
     preparedTopology = prepareMnaTopology(parts, nets, powerOff, testNodeB);
-    if (reuseTopology && preparedTopology.explicitGround) LIVE_MNA_TOPOLOGY.set(nets, { parts, topology: preparedTopology });
+    if (reuseTopology && preparedTopology.explicitGround) {
+      preparedTopology.partLists = indexMnaParts(parts);
+      LIVE_MNA_TOPOLOGY.set(nets, { parts, topology: preparedTopology });
+    }
   }
   nets = preparedTopology.nets;
-  const { groundNetId, mergedGndIds, partMap } = preparedTopology;
+  const { groundNetId, mergedGndIds, partMap, partLists } = preparedTopology;
   let { nodeIndex, nodeCount } = preparedTopology;
 
   // A same-node ideal source says 0 = volts, even when that node is the
@@ -1790,7 +1805,7 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
   const redundantIdealSources = new Set();
   const resistiveSelfSources = new Set();
   if (!powerOff) {
-    for (const part of parts) {
+    for (const part of partLists?.voltageSources ?? parts) {
       if (part.kind !== 'vsource') continue;
       const posNet = findNet(nets, part.id, 'pos');
       const negNet = findNet(nets, part.id, 'neg');
@@ -1824,7 +1839,7 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
   const bjtBaseIndex = new Map();
   /** @type {Map<string, number>} part id → intrinsic collector node index */
   const bjtCollectorIndex = new Map();
-  for (const part of parts) {
+  for (const part of partLists?.bipolars ?? parts) {
     const em = (part.kind === 'npn' || part.kind === 'pnp') ? ebersMollParams(part) : null;
     if (!em) continue;
     // Intrinsic transistor nodes depend on current component parameters.
@@ -1853,7 +1868,7 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
   const capPairSeen = new Set();
 
   if (!powerOff) {
-    for (const part of parts) {
+    for (const part of partLists?.voltageRows ?? parts) {
       if (part.kind === 'vcc') {
         const vccNet = findNet(nets, part.id, 'vcc');
         // ONE constraint row per rail. A schematic draws one power symbol per
@@ -1942,7 +1957,7 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
   // capacitor constraints, each transient row has a non-zero series term, so
   // parallel capacitors remain independent and need no pair deduplication.
   if (transient) {
-    for (const part of parts) {
+    for (const part of partLists?.capacitors ?? parts) {
       if (part.kind !== 'capacitor') continue;
       const C = /** @type {number} */ (part.params.farads ?? 0.0001);
       if (!Number.isFinite(C) || C <= 0) continue;
