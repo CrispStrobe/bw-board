@@ -12,12 +12,12 @@ passed. The full upstream suite reports8456 passes, zero failures and302
 unchanged skips; all four enabled CI jobs passed, with optional `vectors-full`
 skipped by workflow policy.
 
-[Lite PR753](https://github.com/CrispStrobe/brickwright-lite/pull/753) adopted
+[Lite PR753](https://github.com/CrispStrobe/brickwright/pull/753) adopted
 that exact Board source and CUI5f336b24447351ce80742c0e71078cdd23e7912b,
 landing at `8e8c4deb219ce0050c35f3f1c4ca3767297fc118`. Its tested candidate
 was `5b0c46373b2b4ef169db0206416a614c7db43b30`; the merge differs only by
 an intervening lane-ledger update, not executable or package bytes.
-[Build37939576073](https://github.com/CrispStrobe/brickwright-lite/actions/runs/37939576073)
+[Build37939576073](https://github.com/CrispStrobe/brickwright/actions/runs/37939576073)
 passed:6396 unit passes, zero failures,21 skips, both browser shards, corpus
 and FPGA. All12 enabled PR checks passed. The installed motor continuation
 test ran successfully. Actual browser scope reset retained the channel,
@@ -108,7 +108,7 @@ voltage-accuracy refusal.
 
 ## Observed consumer failure
 
-Lite Build [37833383585](https://github.com/CrispStrobe/brickwright-lite/actions/runs/37833383585)
+Lite Build [37833383585](https://github.com/CrispStrobe/brickwright/actions/runs/37833383585)
 at `1aa59e51681a721689e63c3be9b3362421168b4a` passes its build,
 corpus, heavy-browser and FPGA jobs. The actual scope-reset journey retains
 the handle, clears the old ring, and captures all 5000 first-epoch envelopes.
