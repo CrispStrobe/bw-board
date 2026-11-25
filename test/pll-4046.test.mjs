@@ -105,10 +105,16 @@ describe('cd4046: the loop', () => {
     assert.ok(high >= 34, `pcp_out HIGH in ${high} of 40 samples (expected nearly all)`);
   });
 
-  it('it follows the input to 200 Hz', () => {
+  it('the locked VCO averages 200 Hz over multiple input cycles', () => {
     const x = bench({ vin: 'loop', sigHz: 200 });
     x.run(250);
-    close(x.state().vcoHz, 200, 3, 'VCO follows the input');
+    const firstEdges = x.state().edges;
+    // The loop corrects phase with short pulses. A single completed VCO
+    // period can land inside a correction even after lock. Count output
+    // transitions over half a second (two edges per cycle) instead.
+    x.run(500);
+    const frequencyHz = (x.state().edges - firstEdges) / (2 * 0.5);
+    close(frequencyHz, 200, 3, 'VCO follows the input');
   });
 
   it('above the VCO span (600 Hz > 500 Hz) it cannot lock: vco_in pinned at the rail', () => {
