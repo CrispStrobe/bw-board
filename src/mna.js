@@ -143,9 +143,11 @@ function solve(A, b) {
  * @returns {Float64Array}
  */
 let _luCache = null; // { lu: SparseLU, values: Float64Array }
+// factor() copies the pattern. Only the synchronous solve reads these buffers.
+const cscWorkspace = {};
 
 function solveAssembled(A, b) {
-  const csc = toCSC(A);
+  const csc = toCSC(A, cscWorkspace);
   const c = _luCache;
   if (c && c.lu.samePattern(csc)) {
     const vals = csc.values;
@@ -158,7 +160,7 @@ function solveAssembled(A, b) {
     }
     if (same) return c.lu.solve(b);
     if (c.lu.refactor(csc)) {
-      c.values = vals.slice();
+      c.values.set(vals);
       return c.lu.solve(b);
     }
     // Refactor bailed: its partial writes invalidated the stored factors.

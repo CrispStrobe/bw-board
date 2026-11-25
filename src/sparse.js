@@ -373,17 +373,29 @@ export class SparseLU {
  * (the slot map guarantees one entry per cell).
  *
  * @param {CooMatrix} A
+ * @param {{colPtr?: Int32Array, rowIdx?: Int32Array, values?: Float64Array, fill?: Int32Array}} workspace
+ *   Optional buffers to reuse. Results backed by a workspace are valid until its next use.
  * @returns {{n: number, colPtr: Int32Array, rowIdx: Int32Array, values: Float64Array}}
  */
-export function toCSC(A) {
+export function toCSC(A, workspace = {}) {
   const n = A.n;
   const nnz = A.v.length;
-  const colPtr = new Int32Array(n + 1);
+  if (workspace.colPtr?.length === n + 1) {
+    workspace.colPtr.fill(0);
+  } else {
+    workspace.colPtr = new Int32Array(n + 1);
+    workspace.fill = new Int32Array(n);
+  }
+  if (workspace.rowIdx?.length !== nnz) {
+    workspace.rowIdx = new Int32Array(nnz);
+    workspace.values = new Float64Array(nnz);
+  }
+  const {colPtr, rowIdx, values, fill} = workspace;
   for (let i = 0; i < nnz; i++) colPtr[A.ci[i] + 1]++;
-  for (let c = 0; c < n; c++) colPtr[c + 1] += colPtr[c];
-  const rowIdx = new Int32Array(nnz);
-  const values = new Float64Array(nnz);
-  const fill = Int32Array.from(colPtr.subarray(0, n));
+  for (let c = 0; c < n; c++) {
+    fill[c] = colPtr[c];
+    colPtr[c + 1] += colPtr[c];
+  }
   for (let i = 0; i < nnz; i++) {
     const p = fill[A.ci[i]]++;
     rowIdx[p] = A.ri[i];
