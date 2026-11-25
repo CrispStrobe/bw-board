@@ -84,6 +84,28 @@ it('reuses CSC buffers without retaining previous columns or values', () => {
   assert.deepEqual(toCSC(resized, workspace), toCSC(resized));
 });
 
+it('reuses CSC layout only while coordinate insertion order matches', () => {
+  const workspace = {};
+  const first = new CooMatrix(3);
+  first.set(1, 0, 3);
+  first.set(0, 0, 4);
+  assert.deepEqual([...toCSC(first, workspace).rowIdx], [1, 0]);
+
+  first.reset();
+  first.set(0, 0, 7);
+  const reused = toCSC(first, workspace);
+  assert.deepEqual([...reused.rowIdx], [1, 0]);
+  assert.deepEqual([...reused.values], [0, 7]);
+
+  const reordered = new CooMatrix(3);
+  reordered.set(0, 0, 8);
+  reordered.set(1, 0, 9);
+  const regenerated = toCSC(reordered, workspace);
+  assert.deepEqual([...regenerated.rowIdx], [0, 1]);
+  assert.deepEqual([...regenerated.values], [8, 9]);
+  assert.deepEqual(toCSC(first, workspace), toCSC(first));
+});
+
 function denseSolve(A, b) {
   const dense = new Matrix(A.n, A.n);
   for (let i = 0; i < A.v.length; i++) dense.add(A.ri[i], A.ci[i], A.v[i]);
