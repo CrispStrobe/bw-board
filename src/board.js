@@ -32,6 +32,8 @@ import { expandTransducers, transducerCard } from './transducers.js';
 import { expandSensingTransducers, combHumidityPct } from './sensing-transducers.js';
 import { inductionLoopCard } from './magnetic-coupling.js';
 import { expandDualGateMosfets } from './dual-gate-mosfet.js';
+import { expandMixerIcs } from './mixer-ic.js';
+import { expandFmIfIcs } from './fm-if-ic.js';
 import { expandRadio, normalizeStations, DEFAULT_STATIONS } from './radio.js';
 import { expandFields } from './fields.js';
 import { expandOptics, pathKnobRest, LIGHT_PATH_KIND } from './optics.js';
@@ -1227,7 +1229,16 @@ export class BoardImpl {
     // `_stimuli`: sound and falling magnets that move with time on their own.
     const coilView = expandSensingTransducers(tdView.parts, tdView.nets);
     this._stimuli = [tdView.acoustics, coilView.stimulus].filter(Boolean);
-    const radioView = expandRadio(coilView.parts, coilView.nets, { controls: () => this.controls });
+    // Dual-gate MOSFETs are two solver `nmos` in series on a hidden middle
+    // node (src/dual-gate-mosfet.js), the mixer IC a Gilbert-cell core with
+    // hidden biases and an oscillator transistor (src/mixer-ic.js): both
+    // BEFORE the radio expansion, so the RF bands see their transistors; the
+    // FM IF IC's input termination likewise (src/fm-if-ic.js).
+    // A circuit without either passes through.
+    const tetrodeView = expandDualGateMosfets(coilView.parts, coilView.nets);
+    const mixerView0 = expandMixerIcs(tetrodeView.parts, tetrodeView.nets);
+    const mixerView = expandFmIfIcs(mixerView0.parts, mixerView0.nets);
+    const radioView = expandRadio(mixerView.parts, mixerView.nets, { controls: () => this.controls });
     this._radio = radioView.radio;
     if (this._radio && this._broadcast) this._radio.setStations(this._broadcast);
     // Field probes and junctions in reverse breakdown (src/fields.js): the
@@ -1253,10 +1264,7 @@ export class BoardImpl {
       ? expandGroundSensingOpAmps(lm741View.parts, lm741View.nets) : lm741View;
     // LM386 audio power amp macromodel (src/lm386.js), same pattern.
     const linearView = getDevice(LM386_STAGE_KIND) ? expandLm386(gsView.parts, gsView.nets) : gsView;
-    // Dual-gate MOSFETs are two solver `nmos` in series on a hidden middle
-    // node (src/dual-gate-mosfet.js); a circuit without one passes through.
-    const tetrodeView = expandDualGateMosfets(linearView.parts, linearView.nets);
-    const macroView = BoardImpl._expandOpampMacros(tetrodeView.parts, tetrodeView.nets, this.vcc);
+    const macroView = BoardImpl._expandOpampMacros(linearView.parts, linearView.nets, this.vcc);
     // An IR transmitter IS an IR LED electrically. The solver sees it as an
     // `led` of the same id (so its branch current and the LED junction model,
     // knee and limiting are the LED's) with the IR forward voltage unless the
@@ -5715,7 +5723,10 @@ export class BoardImpl {
       // Relative humidity at a salt-film comb, 0..1 = 0..100 % RH (src/sensing-transducers.js).
       'humidity_comb',
       // A magnetic field source's distance to its pickup, 0 far .. 1 near (src/magnetic-coupling.js).
-      'induction_loop'];
+      'induction_loop',
+      // A dipole turns (0..1 = 0..360°); the FM IF IC's knob tunes its
+      // quadrature tank (0.5 = on quadHz) (src/radio.js, src/fm-if-ic.js).
+      'dipole', 'fm_if'];
     return this.parts
       .filter(p => controllable.includes(p.kind) || lightControlDefault(p) !== null)
       .map(p => lightControlDefault(p) !== null ? {
@@ -5736,7 +5747,9 @@ export class BoardImpl {
               : p.kind === 'tuning_cap' ? (p.params?.position ?? 0.5)
                 : p.kind === 'field_probe' ? (p.params?.position ?? 0)
                   : p.kind === LIGHT_PATH_KIND ? pathKnobRest(p)
-                    : p.kind === 'ferrite_coil' ? (Number(p.params?.angleDeg ?? 0) / 360)
+                    : p.kind === 'ferrite_coil' ? (p.params?.slideWinding ? Number(p.params?.slide ?? 0) : Number(p.params?.angleDeg ?? 0) / 360)
+                      : p.kind === 'dipole' ? (Number(p.params?.angleDeg ?? 0) / 360)
+                      : p.kind === 'fm_if' ? 0.5
                       : p.kind === 'humidity_comb' ? combHumidityPct(p, undefined) / 100
                         : p.kind === 'induction_loop' ? inductionLoopCard(p).position : 0),
       }));

@@ -163,6 +163,10 @@ const LOCAL_ONLY = {
   ptc_sensor:        { chip_mA: "circuit", supply_mA: 0 },
   // 4046-type CMOS PLL: outputs carry what the circuit draws; ~1 mA quiescent at 9 V.
   cd4046:            { chip_mA: "circuit", supply_mA: 1 },
+  // Double-balanced mixer with oscillator (SA612 type): ~2.4 mA at 6 V.
+  sa612:             { chip_mA: "circuit", supply_mA: 3 },
+  // FM IF limiter / quadrature detector: a few mA at 6 V.
+  fm_if:             { chip_mA: "circuit", supply_mA: 3 },
   // Bending-ruler scale: a linear Hall sensor module, ~6 mA.
   bending_ruler:     { chip_mA: 1, supply_mA: 6 },
   // A spark gap carries whatever the discharge drives through it.
@@ -171,6 +175,8 @@ const LOCAL_ONLY = {
   coil_pendulum:     { chip_mA: "circuit", supply_mA: 0 },
   vhf_coil:          { chip_mA: 0, supply_mA: 0 },
   varicap:           { chip_mA: 0, supply_mA: 0 },
+  ceramic_filter:    { chip_mA: "circuit", supply_mA: 0 },
+  dipole:            { chip_mA: 0, supply_mA: 0 },
   bargraph:          { chip_mA: "circuit", supply_mA: "circuit" },
   ir_transmitter:    { chip_mA: "circuit", supply_mA: 20 },
   darlington_driver: { chip_mA: "circuit", supply_mA: "circuit" },

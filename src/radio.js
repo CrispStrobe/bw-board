@@ -63,11 +63,26 @@
  * the other in `linkTo`: k = cos(Δangle)·(rLink/distanceM)³, the near field
  * of a transmitter's rod a few metres from a receiver's.
  *
- * NOT MODELLED: harmonics of the carrier (a band per harmonic is possible
- * but nothing here needs one), intermodulation products between DIFFERENT
- * bands (only their mutual compression), junction capacitance except a
- * diode's `cjo` (varicaps) and a transistor's cje/cjc/fT, detector series
- * resistance, the field's far-zone geometry (stations are plane waves).
+ * PRODUCTS BETWEEN BANDS (_planProducts): a junction swinging in two bands
+ * makes their sum and difference, and a band's 2nd and 3rd harmonics; each
+ * one that lands near another band's centre is a current source there (a
+ * superhet's IF, a transmitter heard at twice its frequency, an image). The
+ * mixer IC (src/mixer-ic.js) is such a junction with a tanh·tanh law, and
+ * its RF and LO in ONE band beat straight to audio (direct conversion).
+ *
+ * IMPULSE RADIATION (_radiate): an untuned coil linked to another radiates
+ * the RF content of its switched current into the other's bands.
+ *
+ * ALSO: a half-wave dipole (`dipole`, its turn a knob), a ceramic IF filter
+ * (`ceramic_filter`, a two-pole band-pass in the RF view only), the FM IF IC's
+ * input (src/fm-if-ic.js, read by fmDemod), a coupling winding slid along
+ * its rod (`slideWinding`), links between any two RF coils.
+ *
+ * NOT MODELLED: products that land between bands (only those near a band's
+ * centre are kept), products acting back on the bands that make them,
+ * junction capacitance except a diode's `cjo` (varicaps) and a transistor's
+ * cje/cjc/fT, detector series resistance, the field's far-zone geometry
+ * (stations are plane waves).
  *
  * @module
  */
@@ -81,6 +96,9 @@ import {
 } from './rf-bands.js';
 import { DMath } from './det-math.js';
 import { coilInductorParams } from './sensing-transducers.js';
+import { MIXER_IC_KIND, LO_BIAS_RATIO, mixerCard, mixerTail, mixerOutputFade } from './mixer-ic.js';
+import { FM_IF_KIND, fmIfCard, fmQuadHz, fmDetector } from './fm-if-ic.js';
+import { i0e, i1e } from './rf-bands.js';
 
 export { lnI0, besselGain };
 
@@ -348,6 +366,17 @@ function mosLaw(P) {
 }
 
 /**
+ * A MOSFET's second-order coefficient (A/V²) under swings of total amplitude
+ * A: the law's second difference over ±A (K for a square law in conduction,
+ * less as the swing reaches cut-off), faded with its channel.
+ */
+function mosSecondOrder(b, A) {
+    const a = Math.max(1e-2, A);
+    const f = b.law;
+    return (f(b.vgs + a) - 2 * f(b.vgs) + f(b.vgs - a)) / (2 * a * a) * mosChannelFade(b.vds);
+}
+
+/**
  * How much of a MOSFET's square-law current its channel can still carry as
  * the drain runs down towards the source (triode): 1 well above, → 0 at
  * vds → 0. Shared by the rectified drain current (rf_detect) and the band's
@@ -379,11 +408,23 @@ export function mosRectification(part, vgs, A) {
 export const RF_DETECT_KIND = 'rf_detect';
 export const COUPLED_INDUCTORS_KIND = 'coupled_inductors';
 export const FERRITE_DEFAULTS = Object.freeze({ henrys: 250e-6, tap: 0.25, couplingRatio: 0.1, k: 0.98, couplingK: 0.9, q: 120,
-    rodHeightM: 0.01, angleDeg: 0, distanceM: 1, linkRadiusM: 0.1 });
+    rodHeightM: 0.01, angleDeg: 0, distanceM: 1, linkRadiusM: 0.1, slide: 0 });
+/** The near-field coupling radius of a link, by the naming coil's kind (a rod, a small VHF coil, a hand-wound search coil). */
+const LINK_RADIUS_M = Object.freeze({ ferrite_coil: 0.1, vhf_coil: 0.02, air_coil: 0.05 });
+/** Damping across an untuned radiating winding in the time domain (src/radio.js expandRadio). */
+const RADIATOR_DAMPING_OHMS = 2200;
 export const VHF_COIL_DEFAULTS = Object.freeze({ henrys: 0.15e-6, q: 80 });
 /** Q of a hand-wound air coil at RF when its part gives none (copper and proximity losses). */
 const AIR_COIL_RF_Q = 60;
 export const ANTENNA_DEFAULTS = Object.freeze({ heightM: 5, ohms: 50, farads: 200e-12 });
+export const CERAMIC_DEFAULTS = Object.freeze({ hz: 10.7e6, bandwidthHz: 280e3, ohms: 330, q: 1500, c0: 5e-12 });
+export const DIPOLE_DEFAULTS = Object.freeze({ heightM: 0.95, ohms: 300, angleDeg: 0 });
+
+/** A dipole's turn (degrees, its broadside direction) from its knob (0..1 = 0..360°) or its param. */
+export function dipoleAngleDeg(part, control) {
+    if (Number.isFinite(control)) return 360 * control;
+    return num(part.params?.angleDeg, DIPOLE_DEFAULTS.angleDeg);
+}
 export const TUNING_CAP_DEFAULTS = Object.freeze({ minFarads: 10e-12, maxFarads: 500e-12, position: 0.5 });
 export const VARICAP_DEFAULTS = Object.freeze({ cjo: 40e-12, vj: 0.7, m: 0.5, is: 1e-14, n: 1, vf: 0.7 });
 const EARTH_OHMS = 30;
@@ -399,14 +440,31 @@ export function tuningCapFarads(part, position) {
     return lo + (hi - lo) * x;
 }
 
+/**
+ * A rod with `slideWinding` set gives its knob to the coupling winding's
+ * position along the rod (src/radio.js ferriteWindings) instead of its angle.
+ */
+export function rodControlIsSlide(part) { return !!part?.params?.slideWinding; }
+
 /** A ferrite rod's angle (degrees) from its control (0..1 = 0..360°) or its param. */
 export function rodAngleDeg(part, control) {
     if (Number.isFinite(control)) return 360 * control;
     return num(part.params?.angleDeg, FERRITE_DEFAULTS.angleDeg);
 }
 
-/** Inductance matrix of a ferrite coil's connected windings. */
-function ferriteWindings(part, has) {
+/**
+ * A short winding slid from the middle of a rod (x = 0) to its end (x = 1)
+ * has less ferrite inside it: its inductance falls to 40 % and its coupling
+ * to the main winding to 30 % (the field of a rod is strongest at its middle
+ * and spreads out of its ends).
+ */
+export function slideFactors(x) {
+    const u = Math.min(1, Math.max(0, x));
+    return { self: 1 - 0.6 * u * u, coupling: 1 - 0.7 * u };
+}
+
+/** Inductance matrix of a ferrite coil's connected windings (`slide`: the coupling winding's position, 0 middle … 1 end). */
+function ferriteWindings(part, has, slide = 0) {
     const P = part.params ?? {};
     const L = num(P.henrys, FERRITE_DEFAULTS.henrys);
     const r = Math.min(0.95, Math.max(0.05, num(P.tap, FERRITE_DEFAULTS.tap)));
@@ -426,11 +484,13 @@ function ferriteWindings(part, has) {
         w.push({ a: 'tap', b: 'b', turns: 1 - r, main: true });
     }
     if (has('c1') && has('c2')) w.push({ a: 'c1', b: 'c2', turns: n, main: false });
+    const sf = slideFactors(slide);
+    const self = (x) => L * x.turns * x.turns * (x.main ? 1 : sf.self);
     const Lm = w.map((wi, i) => w.map((wj, j) => {
-        const li = L * wi.turns * wi.turns;
-        const lj = L * wj.turns * wj.turns;
+        const li = self(wi);
+        const lj = self(wj);
         if (i === j) return li;
-        return (wi.main && wj.main ? k : kc) * Math.sqrt(li * lj);
+        return (wi.main && wj.main ? k : kc * sf.coupling) * Math.sqrt(li * lj);
     }));
     return { windings: w, L: Lm, q: Math.max(0, num(P.q, FERRITE_DEFAULTS.q)) };
 }
@@ -446,7 +506,7 @@ function ferriteWindings(part, has) {
  * @param {{controls: () => Map<string, number>}} opts
  */
 export function expandRadio(parts, nets, opts) {
-    const kinds = new Set(['antenna', 'earth', 'tuning_cap', 'ferrite_coil', 'vhf_coil', 'varicap']);
+    const kinds = new Set(['antenna', 'earth', 'tuning_cap', 'ferrite_coil', 'vhf_coil', 'varicap', 'dipole', 'ceramic_filter']);
     if (!parts.some(p => kinds.has(p.kind))) return { parts, nets, radio: null };
     if (chooseFrontEnd(parts, nets) === 'phasor') return expandRadioPhasor(parts, nets, opts);
     let outParts = [...parts];
@@ -501,6 +561,43 @@ export function expandRadio(parts, nets, opts) {
         Object.defineProperty(c, 'L', { enumerable: true, get: () => [[lp.henrys]] });
         coils.push(c);
     }
+    // Ceramic IF filter (in, gnd, out): two piezo resonators coupled through
+    // a shunt capacitance — the two-pole band-pass a 10.7 MHz FM IF filter
+    // is. Designed as a Butterworth pair for its centre `hz`, bandwidth
+    // `bandwidthHz` and terminations `ohms` (series arms L = 1.414·R/(w·ω0),
+    // the inverter Cc = 1/(ω0·K), K = w·ω0·L/1.414, w = B/f0, its series
+    // −Cc absorbed into the arms' capacitors), each
+    // resonator's Q `q` (1500). In the RF view only: at audio and DC it is
+    // open (two 10 MΩ leaks keep its pins defined). Its motional inductors
+    // are RF windings, so the band scan finds its passband like a tank.
+    const ceramicRf = [];
+    const rfNets = [];
+    for (const p of parts.filter(q => q.kind === 'ceramic_filter')) {
+        const nIn = netOf(p.id, 'in'), nOut = netOf(p.id, 'out'), nG = netOf(p.id, 'gnd');
+        if (!nIn || !nOut || !nG || nIn === nOut) continue;
+        const P = p.params ?? {};
+        const f0 = Math.max(1e5, num(P.hz, CERAMIC_DEFAULTS.hz));
+        const bw = Math.min(f0 / 4, Math.max(f0 / 1000, num(P.bandwidthHz, CERAMIC_DEFAULTS.bandwidthHz)));
+        const R = Math.max(1, num(P.ohms, CERAMIC_DEFAULTS.ohms));
+        const w0 = 2 * Math.PI * f0, fr = bw / f0;
+        const Lm = Math.SQRT2 * R / (fr * w0);
+        const Kinv = fr * w0 * Lm / Math.SQRT2;
+        const Cc = 1 / (w0 * Kinv);
+        // The inverter's series −Cc on each side, absorbed into the arms.
+        const Cs = 1 / (w0 * w0 * Lm - 1 / Cc);
+        const n1 = { id: `@rf:${p.id}:n1`, terminals: [] }, n2 = { id: `@rf:${p.id}:n2`, terminals: [] }, m = { id: `@rf:${p.id}:m`, terminals: [] };
+        rfNets.push(n1.id, n2.id, m.id);
+        const cap = (sfx, farads, a, b) => ceramicRf.push({ part: { id: `@rf:${p.id}:${sfx}`, kind: 'capacitor', params: { farads }, terminals: ['a', 'b'] },
+            nets: [[a, 'a'], [b, 'b']] });
+        cap('cs1', Cs, n1.id, m.id); cap('cs2', Cs, m.id, n2.id); cap('cc', Cc, m.id, nG.id);
+        cap('c0i', CERAMIC_DEFAULTS.c0, nIn.id, nG.id); cap('c0o', CERAMIC_DEFAULTS.c0, nOut.id, nG.id);
+        for (const [sfx, n] of [['leaki', nIn], ['leako', nOut]]) {
+            add({ id: `${p.id}:${sfx}`, kind: 'resistor', params: { ohms: 10e6 }, terminals: ['a', 'b'] }, [[n, 'a'], [nG, 'b']]);
+        }
+        const q = Math.max(1, num(P.q, CERAMIC_DEFAULTS.q));
+        coils.push({ part: p, kind: 'ceramic_filter', windings: [{ a: 'in', b: 'n1', turns: 1, main: true }, { a: 'n2', b: 'out', turns: 1, main: true }],
+            L: [[Lm, 0], [0, Lm]], q, hidden: [], nets: [[nIn.id, n1.id], [n2.id, nOut.id]] });
+    }
     for (const p of parts.filter(q => q.kind === 'ferrite_coil' || q.kind === 'vhf_coil')) {
         const has = (t) => !!netOf(p.id, t);
         let fw;
@@ -509,7 +606,7 @@ export function expandRadio(parts, nets, opts) {
             const P = p.params ?? {};
             fw = { windings: [{ a: 'a', b: 'b', turns: 1, main: true }], L: [[num(P.henrys, VHF_COIL_DEFAULTS.henrys)]],
                 q: Math.max(0, num(P.q, VHF_COIL_DEFAULTS.q)) };
-        } else fw = ferriteWindings(p, has);
+        } else fw = ferriteWindings(p, has, num(p.params?.slide, 0));
         const wn = fw.windings.filter(w => netOf(p.id, w.a) !== netOf(p.id, w.b));
         if (wn.length !== fw.windings.length || !wn.length) continue;
         const hidden = [];
@@ -522,15 +619,47 @@ export function expandRadio(parts, nets, opts) {
         // broadband blocking oscillator). A capacitor straight across a
         // winding is the tank's and moves to the RF view below.
         const copper = p.kind === 'vhf_coil' ? 0.05 : 2;
+        // An UNTUNED coil linked to another one is a radiator (a button or a
+        // transistor switching its current): its current must rise and fall
+        // with its own L/R in the time domain, or a switched current would
+        // step in no time and radiate without limit. Such a winding keeps its
+        // self-inductance there, with its copper and a damping resistance
+        // across it (the coil's own losses and stray capacitance, which in a
+        // real coil take up the flyback when the current is broken). A tuned
+        // coil keeps the copper-only view: its tank and any feedback loop
+        // live in the RF bands alone.
+        const linked = !!p.params?.linkTo || parts.some(o => o.params?.linkTo === p.id);
+        const tuned = outParts.some(o => (o.kind === 'capacitor' || o.kind === 'tuning_cap')
+            && wn.some(w => { const [x, y] = [netOf(o.id, 'a'), netOf(o.id, 'b')]; const [na, nb] = ends(w); return (x === na && y === nb) || (x === nb && y === na); }));
+        const radiator = linked && !tuned;
+        const currentIds = [];
         wn.forEach((w, i) => {
             const id = `${p.id}_w${i}`;
             const [na, nb] = ends(w);
-            add({ id, kind: 'resistor', params: { ohms: Math.max(0.01, copper * w.turns) }, terminals: ['a', 'b'] },
-                [[na, 'a'], [nb, 'b']]);
-            hidden.push(id);
+            if (radiator) {
+                const mid = { id: `n_${id}_mid`, terminals: [] };
+                outNets.push(mid);
+                add({ id, kind: 'inductor', params: { henrys: fw.L[i][i] }, terminals: ['a', 'b'] }, [[na, 'a'], [mid, 'b']]);
+                add({ id: `${id}r`, kind: 'resistor', params: { ohms: Math.max(0.01, copper * w.turns) }, terminals: ['a', 'b'] }, [[mid, 'a'], [nb, 'b']]);
+                add({ id: `${id}d`, kind: 'resistor', params: { ohms: RADIATOR_DAMPING_OHMS }, terminals: ['a', 'b'] }, [[na, 'a'], [nb, 'b']]);
+                hidden.push(id, `${id}r`, `${id}d`);
+            } else {
+                add({ id, kind: 'resistor', params: { ohms: Math.max(0.01, copper * w.turns) }, terminals: ['a', 'b'] },
+                    [[na, 'a'], [nb, 'b']]);
+                hidden.push(id);
+            }
+            currentIds.push(id);
         });
-        coils.push({ part: p, kind: p.kind, windings: wn, L: fw.L, q: fw.q, hidden,
-            nets: wn.map(w => [netOf(p.id, w.a).id, netOf(p.id, w.b).id]) });
+        const entry = { part: p, kind: p.kind, windings: wn, L: fw.L, q: fw.q, hidden, currentIds,
+            nets: wn.map(w => [netOf(p.id, w.a).id, netOf(p.id, w.b).id]) };
+        // A sliding coupling winding: its position is the rod's knob (live).
+        if (p.kind === 'ferrite_coil' && rodControlIsSlide(p)) {
+            Object.defineProperty(entry, 'L', { enumerable: true, get: () => {
+                const c = control(p.id);
+                return ferriteWindings(p, has, Number.isFinite(c) ? c : num(p.params?.slide, 0)).L;
+            } });
+        }
+        coils.push(entry);
     }
 
     // Capacitors straight across a coil (a winding, or the whole main
@@ -569,21 +698,26 @@ export function expandRadio(parts, nets, opts) {
         });
     }
 
-    // Couple linked ferrite rods (near field) into one coupled set; every
-    // other coil is a set of its own.
+    rfOnly.push(...ceramicRf);
+
+    // Couple linked coils (near field) into one coupled set; every other
+    // coil is a set of its own. Any RF coil may name another in `linkTo`: two
+    // ferrite rods a few metres apart, a VHF transmitter's coil and a
+    // receiver's, a search coil and a rod.
     const coupled = [];
     const used = new Set();
+    const coilAngle = (g) => (g.kind === 'ferrite_coil' ? rodAngleDeg(g.part, rodControlIsSlide(g.part) ? undefined : control(g.part.id))
+        : num(g.part.params?.angleDeg, 0));
     for (const c of coils) {
         if (used.has(c)) continue;
         const group = [c];
         used.add(c);
         const linkTo = c.part.params?.linkTo;
-        // Either rod may name the other.
-        const partner = c.kind !== 'ferrite_coil' ? null
-            : coils.find(o => !used.has(o) && o.kind === 'ferrite_coil' && (o.part.id === linkTo || o.part.params?.linkTo === c.part.id)) ?? null;
-        // The link's distance is the naming rod's.
+        // Either coil may name the other.
+        const partner = coils.find(o => !used.has(o) && (o.part.id === linkTo || o.part.params?.linkTo === c.part.id)) ?? null;
+        // The link's distance is the naming coil's.
         const namer = partner && partner.part.params?.linkTo === c.part.id ? partner : c;
-        if (partner && c.kind === 'ferrite_coil') { group.push(partner); used.add(partner); }
+        if (partner) { group.push(partner); used.add(partner); }
         const offsets = [];
         let K = 0;
         for (const g of group) { offsets.push(K); K += g.windings.length; }
@@ -591,8 +725,8 @@ export function expandRadio(parts, nets, opts) {
             if (group.length < 2) return 0;
             const P = namer.part.params ?? {};
             const d = Math.max(1e-3, num(P.distanceM, FERRITE_DEFAULTS.distanceM));
-            const r0 = Math.max(1e-4, num(P.linkRadiusM, FERRITE_DEFAULTS.linkRadiusM));
-            const da = (rodAngleDeg(c.part, control(c.part.id)) - rodAngleDeg(partner.part, control(partner.part.id))) * Math.PI / 180;
+            const r0 = Math.max(1e-4, num(P.linkRadiusM, LINK_RADIUS_M[namer.kind] ?? FERRITE_DEFAULTS.linkRadiusM));
+            const da = (coilAngle(c) - coilAngle(partner)) * Math.PI / 180;
             return Math.min(0.5, DMath.pow(r0 / d, 3)) * DMath.cos(da);
         };
         const params = { q: c.q };
@@ -639,15 +773,36 @@ export function expandRadio(parts, nets, opts) {
             nets: cnets,
             rods,
             coilIds: group.map(g => g.part.id),
+            // Per winding: the time-domain part carrying its current, and
+            // which coil of the group it belongs to (impulse radiation).
+            windingIds: group.flatMap(g => g.currentIds ?? g.hidden),
+            owner: group.flatMap((g, gi) => g.windings.map(() => gi)),
         });
     }
 
     // Antennas and earth.
     const antennas = parts.filter(p => p.kind === 'antenna' && netOf(p.id, 'a'));
     const earths = parts.filter(p => p.kind === 'earth' && netOf(p.id, 'earth'));
+    const dipoles = parts.filter(p => p.kind === 'dipole' && netOf(p.id, 'a') && netOf(p.id, 'b') && netOf(p.id, 'a') !== netOf(p.id, 'b'));
     // Without an antenna or an RF coil nothing carries RF: the parts are plain passives.
-    if (!antennas.length && !coupled.length) return { parts: outParts, nets: outNets, radio: null };
+    if (!antennas.length && !coupled.length && !dipoles.length) return { parts: outParts, nets: outNets, radio: null };
     const antennaSpecs = [];
+    // A half-wave dipole (folded: 300 Ω; plain: 75 Ω): balanced, no earth.
+    // Its EMF is the field times its effective length (λ/π for a half-wave
+    // dipole, ~1 m on the VHF broadcast band) times cos(turn − bearing): the
+    // two-sided figure-eight a dipole turned on its mast shows. In the time
+    // domain its two leads are joined through the radiation resistance.
+    for (const d of dipoles) {
+        const P = d.params ?? {};
+        const emf = { id: `@rf:${d.id}:emf`, terminals: [] };
+        outNets.push(emf);
+        const srcId = `@rf:${d.id}:emf`;
+        add({ id: srcId, kind: 'vsource', params: { volts: 0 }, terminals: ['pos', 'neg'] }, [[emf, 'pos'], [netOf(d.id, 'b'), 'neg']]);
+        add({ id: `@rf:${d.id}:rrad`, kind: 'resistor', params: { ohms: Math.max(1, num(P.ohms, DIPOLE_DEFAULTS.ohms)) }, terminals: ['a', 'b'] },
+            [[emf, 'a'], [netOf(d.id, 'a'), 'b']]);
+        antennaSpecs.push({ id: d.id, sourceId: srcId, dipole: d, heightM: Math.max(0, num(P.heightM, DIPOLE_DEFAULTS.heightM)),
+            stations: Array.isArray(P.stations) ? normalizeStations(P.stations) : null });
+    }
     if (antennas.length) {
         const earthNet = { id: EARTH_NET, terminals: [] };
         outNets.push(earthNet);
@@ -697,6 +852,7 @@ export function expandRadio(parts, nets, opts) {
     // stamped into the RF bands by its describing function.
     const radio = new RadioFrontEnd({ antennas: antennaSpecs, detectors: [], coupled, controls: opts.controls });
     radio.rfOnly = rfOnly;
+    radio.rfNets = rfNets;
     for (const p of outParts) {
         let terms, j, k2 = null;
         if (p.kind === 'lm386') {
@@ -721,6 +877,32 @@ export function expandRadio(parts, nets, opts) {
                 inputs[t] = det;
             }
             Object.defineProperty(p, 'rfInputs', { value: inputs, enumerable: false, configurable: true, writable: true });
+            continue;
+        }
+        if (p.kind === MIXER_IC_KIND) {
+            // The mixer IC's Gilbert-cell core (src/mixer-ic.js): ports RF
+            // input, LO, output pair. Its oscillator transistor is a hidden
+            // npn and gets its own detector below.
+            const pin = (t) => netOf(p.id, t);
+            const ns = ['in_a', 'in_b', 'osc_b', 'gnd', 'out_a', 'out_b', 'vcc', 'gnd'].map(pin);
+            if (ns.some(n => !n) || ns[0] === ns[1] || ns[4] === ns[5]) continue;
+            const det = { id: `@rf:${p.id}:mix`, partId: p.id, kind: 'mixer', of: p, index: radio.detectors.length,
+                nets: [ns[0].id, ns[1].id], netsLo: [ns[2].id, ns[3].id], netsOut: [ns[4].id, ns[5].id],
+                netsSupply: [ns[6].id, ns[7].id], wired: [], nets2: null, generic: true };
+            Object.defineProperty(det, 'radio', { value: radio, enumerable: false });
+            Object.defineProperty(p, 'rfDetector', { value: det, enumerable: false, configurable: true, writable: true });
+            radio.detectors.push(det);
+            continue;
+        }
+        if (p.kind === FM_IF_KIND) {
+            // The FM IF IC's input: a sensing port of the bands (src/fm-if-ic.js).
+            const nIn = netOf(p.id, 'in'), nG = netOf(p.id, 'gnd');
+            if (!nIn || !nG || nIn === nG) continue;
+            const det = { id: `@rf:${p.id}:fmif`, partId: p.id, kind: 'fmif', of: p, index: radio.detectors.length,
+                nets: [nIn.id, nG.id], wired: [], nets2: null, generic: true };
+            Object.defineProperty(det, 'radio', { value: radio, enumerable: false });
+            Object.defineProperty(p, 'rfDetector', { value: det, enumerable: false, configurable: true, writable: true });
+            radio.detectors.push(det);
             continue;
         }
         if (p.kind === 'diode') { terms = ['anode', 'cathode']; j = ['anode', 'cathode']; }
@@ -764,8 +946,9 @@ export function chooseFrontEnd(parts, nets) {
     const coilT = (p, t) => (p.kind === 'ferrite_coil' && ['a', 'tap', 'b', 'c1', 'c2'].includes(t)) || (p.kind === 'vhf_coil');
     const outT = (p, t) => ((p.kind === 'npn' || p.kind === 'pnp') && (t === 'collector' || t === 'emitter'))
         || ((p.kind === 'nmos' || p.kind === 'pmos') && (t === 'drain' || t === 'source'));
-    if (parts.some(p => ['vhf_coil', 'varicap', 'nmos', 'pmos'].includes(p.kind))) return 'envelope';
-    if (parts.some(p => p.kind === 'ferrite_coil' && (p.params?.linkTo || Array.isArray(p.params?.stations)))) return 'envelope';
+    if (parts.some(p => ['vhf_coil', 'varicap', 'nmos', 'pmos', MIXER_IC_KIND].includes(p.kind))) return 'envelope';
+    if (parts.some(p => p.kind === 'ferrite_coil' && (p.params?.linkTo || p.params?.slideWinding || Array.isArray(p.params?.stations)))) return 'envelope';
+    if (parts.some(p => ['dipole', 'ceramic_filter', 'fm_if'].includes(p.kind) || (['air_coil', 'vhf_coil'].includes(p.kind) && p.params?.linkTo))) return 'envelope';
     const antennas = parts.filter(p => p.kind === 'antenna');
     if (!antennas.length) return 'envelope';
     // A wire straight on an audio amplifier's input: the amplifier's input
@@ -916,6 +1099,66 @@ function expandRadioPhasor(parts, nets, opts) {
     return { parts: outParts, nets: outNets, radio };
 }
 
+// ─── Products between bands: mixing and harmonics ───────────────────────
+
+/**
+ * I_k(x)/I0(x) for k = 1, 2, 3 (the k-th harmonic of e^{x·cos θ} is
+ * 2·I_k(x)·cos kθ, its mean I0(x)). Series for small x, where the
+ * recurrence I_{k+1} = I_{k−1} − (2k/x)·I_k cancels (below x = 3).
+ */
+export function besselRatio(k, x) {
+    if (x < 3) {
+        // Σ_m y^m/(m!(m+k)!), y = x²/4: sixteen terms reach 1e-15 below x = 3
+        // (the A&S fits behind i0e/i1e are good to 2e-7, which the recurrence
+        // amplifies for k = 3 at small x).
+        const y = (x / 2) * (x / 2);
+        let f = 1, p = 1;
+        for (let i = 1; i <= k; i++) { f *= i; p *= x / 2; }
+        let sk = 0, s0 = 0, tk = 1 / f, t0 = 1;
+        for (let m = 0; m < 16; m++) {
+            sk += tk; s0 += t0;
+            tk *= y / ((m + 1) * (m + 1 + k)); t0 *= y / ((m + 1) * (m + 1));
+        }
+        return p * sk / s0;
+    }
+    const r1 = i1e(x) / i0e(x);
+    if (k === 1) return r1;
+    const r2 = 1 - 2 * r1 / x;
+    if (k === 2) return r2;
+    return r1 - 4 * r2 / x;
+}
+
+const tanhLo = (v) => DMath.tanh(v / (2 * VT));
+
+/** The mixer core's RF transconductance under a swing A: fundamental/A of iT·tanh(gm·v/iT). */
+export function mixerRfGain(gm, iT, A) {
+    if (!(iT > 0)) return 0;
+    if (!(A * gm / iT > 1e-4)) return gm;
+    let f = 0;
+    for (const c of QUAD_COS) f += iT * DMath.tanh(gm * A * c / iT) * c;
+    return 2 * f / (QUAD_COS.length * A);
+}
+
+/** Mean of tanh(v_lo/2Vt) over an LO swing of amplitude A about v0. */
+export function mixerLoMean(v0, A) {
+    if (!(A > 1e-9)) return tanhLo(v0);
+    let f = 0;
+    for (const c of QUAD_COS) f += tanhLo(v0 + A * c);
+    return f / QUAD_COS.length;
+}
+
+/** Fundamental of tanh(v_lo/2Vt) per volt of LO swing (→ 4/(πA) for a large LO). */
+export function mixerLoGain(v0, A) {
+    if (!(A > 1e-6)) { const t = tanhLo(v0); return (1 - t * t) / (2 * VT); }
+    let f = 0;
+    for (const c of QUAD_COS) f += tanhLo(v0 + A * c) * c;
+    return 2 * f / (QUAD_COS.length * A);
+}
+
+const cmul = (a, b) => [a[0] * b[0] - a[1] * b[1], a[0] * b[1] + a[1] * b[0]];
+const conj = (a) => [a[0], -a[1]];
+const cabs = (a) => Math.hypot(a[0], a[1]);
+
 // ─── The RF bands ───────────────────────────────────────────────────────
 
 const REFRESH_SEC = 5e-3;
@@ -985,6 +1228,8 @@ export class RadioFrontEnd {
         this._portCache = { t: NaN, L: null, A2: null };
         this._lastBandAmp = null;
         this._rand = mulberry32(NOISE_SEED);
+        this._rad = null;
+        this._events = null;
         this.error = null;
         this.refreshes = 0;
         this.scans = 0;
@@ -1008,14 +1253,19 @@ export class RadioFrontEnd {
     /** EMF (V peak) station `s` induces in antenna `a`. */
     emf(a, s) {
         const own = a.stations ? a.stations.find(x => x.id === s.id) : s;
-        return own ? own.fieldVPerM * a.heightM : 0;
+        if (!own) return 0;
+        if (a.dipole) {
+            const turn = dipoleAngleDeg(a.dipole, this._controls?.()?.get(a.id));
+            return own.fieldVPerM * a.heightM * DMath.cos((turn - own.bearingDeg) * Math.PI / 180);
+        }
+        return own.fieldVPerM * a.heightM;
     }
 
     /** EMF (V peak, signed) station `s` induces in the whole main winding of rod `r`. */
     rodEmf(r, s) {
         const own = r.stations ? r.stations.find(x => x.id === s.id) : s;
         if (!own || !(r.heightM > 0)) return 0;
-        const angle = rodAngleDeg(r.part, this._controls?.()?.get(r.part.id));
+        const angle = rodAngleDeg(r.part, rodControlIsSlide(r.part) ? undefined : this._controls?.()?.get(r.part.id));
         return own.fieldVPerM * r.heightM * (own.hz / 1e6) * DMath.cos((angle - own.bearingDeg) * Math.PI / 180);
     }
 
@@ -1035,6 +1285,11 @@ export class RadioFrontEnd {
             const d = Math.abs(st[k]?.hz - b.hz);
             if (d > 200 && d <= SLOW_BEAT_HZ) f = Math.max(f, d);
         }
+        // A mixer IC turns an oscillation's offset from the band's station into audio.
+        if (this.detectors.some(d => d.kind === 'mixer')) for (const b of this._bands) {
+            const o = Math.abs(b.oscHz ?? 0);
+            if (o > 0 && o <= SLOW_BEAT_HZ) f = Math.max(f, o);
+        }
         return f > 0 ? 1 / (ENVELOPE_POINTS_PER_CYCLE * f) : null;
     }
 
@@ -1045,6 +1300,15 @@ export class RadioFrontEnd {
         return this.detectors.map(d => {
             const P = d.of.params ?? {};
             if (d.kind === 'amp-input') return { v: nv(d.nets[0]) - nv(d.nets[1]) };
+            if (d.kind === 'fmif') return { fmif: true };
+            if (d.kind === 'mixer') {
+                const card = mixerCard(d.of);
+                const g = nv(d.netsSupply[1]);
+                const iT = mixerTail(card, nv(d.netsSupply[0]) - g);
+                const fade = (mixerOutputFade(nv(d.netsOut[0]) - g) + mixerOutputFade(nv(d.netsOut[1]) - g)) / 2;
+                // ic: the tail the outputs can carry (a resonance scan zeroes it, as a transistor's).
+                return { mixer: true, card, iT, ic: iT * fade, fade, vlo: nv(d.netsLo[0]) - g - LO_BIAS_RATIO * (nv(d.netsSupply[0]) - g) };
+            }
             if (d.kind === 'diode') {
                 const v = nv(d.nets[0]) - nv(d.nets[1]);
                 // The DC current through it (rectification included): raw
@@ -1162,6 +1426,16 @@ export class RadioFrontEnd {
                     put(pbc, pbc, -gbc, -b.cjc);
                     if (b.saturated) { put(pbc, pbe, 10, 0); put(pbc, pbc, -10, 0); }
                 }
+            } else if (j.kind === 'mixer') {
+                // In-band: a differential amplifier whose gain is the mean
+                // of tanh(v_lo/2Vt) over the LO's swing (zero for a running
+                // LO, whose products go to other bands and to audio).
+                if (!(b.ic > 1e-9)) continue;
+                const [prf, plo, pout] = j.p;
+                const Arf = Math.sqrt(sq(vp[prf][0], vp[prf][1]) + other.A2[prf]);
+                const Alo = Math.sqrt(sq(vp[plo][0], vp[plo][1]) + other.A2[plo]);
+                const g = mixerRfGain(b.card.gm, b.ic, Arf) * mixerLoMean(b.vlo, Alo) / 2;
+                if (g !== 0) put(pout, prf, g, 0);
             } else if (j.kind === 'mos') {
                 const [pgs, pds] = j.p;
                 const A = Math.sqrt(sq(vp[pgs][0], vp[pgs][1]) + other.A2[pgs]);
@@ -1207,6 +1481,25 @@ export class RadioFrontEnd {
         const pair = (a, b) => ({ pos: idxOf(a), neg: idxOf(b) });
         const portOwner = [];
         for (const d of this.detectors) {
+            if (d.kind === 'fmif') {
+                const a = ports.length;
+                ports.push(pair(d.nets[0], d.nets[1])); inj.push({ pos: undefined, neg: undefined });
+                portOwner.push({ d, nVt: VT });
+                junctions.push({ d, kind: 'fmif', p: [a] });
+                continue;
+            }
+            if (d.kind === 'mixer') {
+                // RF input and LO: sensed only (the chip's own resistors are
+                // in the linear network); output pair: the core's current.
+                const a = ports.length;
+                const none = { pos: undefined, neg: undefined };
+                ports.push(pair(d.nets[0], d.nets[1])); inj.push(none);
+                ports.push(pair(d.netsLo[0], d.netsLo[1])); inj.push(none);
+                ports.push(pair(d.netsOut[0], d.netsOut[1])); inj.push(pair(d.netsOut[0], d.netsOut[1]));
+                for (let i = 0; i < 3; i++) portOwner.push({ d, nVt: VT, mixer: true });
+                junctions.push({ d, kind: 'mixer', p: [a, a + 1, a + 2] });
+                continue;
+            }
             if (!d.generic) {
                 // Linear in the AC assembly; its swing still rectifies.
                 const a = ports.length;
@@ -1263,6 +1556,8 @@ export class RadioFrontEnd {
         // Antenna source rows.
         const srcRows = this.antennas.map(a => builder.nodeCount + builder.rowIndex.get(a.sourceId));
         this._sys = { builder, N, idxOf, ports, inj, junctions, K: ports.length, portOwner, windings, srcRows };
+        this._mixerJ = new Map(junctions.filter(x => x.kind === 'mixer').map(x => [x.d.index, x]));
+        this._fmJ = new Map(junctions.filter(x => x.kind === 'fmif').map(x => [x.d.index, x]));
     }
 
     /** The solver view the RF bands run on: the coils fully coupled, no transient-only parts. */
@@ -1271,6 +1566,8 @@ export class RadioFrontEnd {
         const drop = new Set(this.coupled.flatMap(c => c.remove));
         const outParts = parts.filter(p => p.kind !== RF_DETECT_KIND && !drop.has(p.id));
         const outNets = nets.map(n => ({ ...n, terminals: n.terminals.filter(t => !drop.has(t.part) && !t.part.endsWith(':det')) }));
+        // Nets that exist only at RF (inside a ceramic filter).
+        for (const id of this.rfNets ?? []) outNets.push({ id, terminals: [] });
         const byId = new Map(outNets.map(n => [n.id, n]));
         for (const c of [...this.coupled, ...(this.rfOnly ?? [])]) {
             outParts.push(c.part);
@@ -1281,7 +1578,14 @@ export class RadioFrontEnd {
     }
 
     /** Linear RF matrix at ω (dense). */
-    _Y(omega) { return this._sys.builder.matrix(omega); }
+    _Y(omega) {
+        // Assembling the matrix stamps every registered device's small-signal
+        // view, and an LM386's reads its input's RF drive (junctionDrive): it
+        // gets the last drive, never a band advanced from inside a band's own
+        // step (that recursed: advanceTo → _modes → _Y → junctionDrive → advanceTo).
+        this._assembling = (this._assembling ?? 0) + 1;
+        try { return this._sys.builder.matrix(omega); } finally { this._assembling--; }
+    }
 
     /** Linear RF matrix plus the junction stamps at ω, factored. */
     _factorFull(omega, vp, other) {
@@ -1345,6 +1649,94 @@ export class RadioFrontEnd {
             }
         }
         return { re, im };
+    }
+
+    // ── Impulse radiation between linked coils ─────────────────────────
+
+    /**
+     * A coil's time-domain current radiates what it has at RF into the coil
+     * it is linked to (the near field, M = k·√(L1·L2)): a button dumping a
+     * capacitor through a rod, a transistor chopping its current. The EMF in
+     * each winding of the OTHER coil is M·di/dt. The transient solve knows the
+     * current as a piecewise-linear waveform; its Fourier content at a band's
+     * ω is, summed by parts, Σ_k Δs_k·e^{−jωt_k}/(jω)² · jω over its CORNERS
+     * (Δs_k the change of slope at t_k): a smooth audio current, whose slope
+     * changes by s″·dt per step, radiates nothing worth counting, a step does
+     * — and a step is broadband, so it rings every tuned band at once (the
+     * spark transmitter heard at every setting of the dial). Each corner is an
+     * impulse of envelope area 2·M·Δs·e^{−jωt_k}/(jω) on the receiving
+     * windings, given to the band at its next substep (one accepted step
+     * late at most, far inside a tank's envelope time 2Q/ω). A coil does not
+     * radiate into itself here: its own tank sees its own current through the
+     * network already.
+     */
+    _radiate(tSec, solution) {
+        const links = this.coupled.filter(c => c.owner && new Set(c.owner).size > 1);
+        if (!links.length) return;
+        this._rad ??= new Map();
+        for (const c of links) {
+            const i = c.windingIds.map(id => solution?.branchCurrents?.get(id)?.get('a') ?? 0);
+            const st = this._rad.get(c);
+            if (!st) { this._rad.set(c, { t: tSec, i, s: null }); continue; }
+            const dt = tSec - st.t;
+            if (!(dt > 0)) continue;
+            const sl = i.map((x, w) => (x - st.i[w]) / dt);
+            if (st.s) {
+                const ds = sl.map((x, w) => x - st.s[w]);
+                if (ds.some(x => x !== 0)) {
+                    // Kept on the front end, not on a band: a refresh may
+                    // replace the bands between now and their next substep,
+                    // and a corner lost from a pair that nearly cancels would
+                    // leave the other one ringing alone.
+                    (this._events ??= []).push({ c, ds, tc: st.t });
+                    if (this._events.length > 64) this._events = this._events.filter(e => e.tc > tSec - 2e-3);
+                }
+            }
+            st.t = tSec; st.i = i; st.s = sl;
+        }
+    }
+
+    /** A radiated corner's impulse area as a Norton vector of `band` (A·s), or null. */
+    _kickVector(band, e) {
+        const { c, ds, tc } = e;
+        if (!this._sys || !band.X) return null;
+        const wins = this._sys.windings.filter(x => x.c === c);
+        if (!wins.length) return null;
+        const L = c.part.params.L;
+        const K = L.length;
+        const w = band.omega;
+        // EMF area per winding: 2·Σ_m M·Δs_m/ω · (−j)·e^{−jωt_c}.
+        const ph = -w * tc;
+        const c0 = DMath.cos(ph), s0 = DMath.sin(ph);
+        const Er = new Float64Array(K), Ei = new Float64Array(K);
+        let any = false;
+        for (let k = 0; k < K; k++) {
+            let a = 0;
+            for (let m = 0; m < K; m++) if (c.owner[k] !== c.owner[m] && ds[m]) a += L[k][m] * ds[m];
+            if (!a) continue;
+            a *= 2 / w;
+            Er[k] = a * s0; Ei[k] = -a * c0;
+            any = true;
+        }
+        if (!any) return null;
+        const G = invertReal(L);
+        const q = c.part.params.q > 0 ? c.part.params.q : Infinity;
+        const den = w * (1 + (Number.isFinite(q) ? 1 / (q * q) : 0));
+        const N = band.X.re.length;
+        const out = { re: new Float64Array(N), im: new Float64Array(N) };
+        for (const x of wins) {
+            const r = x.w;
+            // Norton: Y_w·E, Y_w = Γ·(1/Q − j)/den.
+            let jr = 0, ji = 0;
+            for (let m = 0; m < K; m++) {
+                const yr = Number.isFinite(q) ? G[r][m] / (q * den) : 0, yi = -G[r][m] / den;
+                jr += yr * Er[m] - yi * Ei[m];
+                ji += yr * Ei[m] + yi * Er[m];
+            }
+            if (x.sel.pos !== undefined) { out.re[x.sel.pos] += jr; out.im[x.sel.pos] += ji; }
+            if (x.sel.neg !== undefined) { out.re[x.sel.neg] -= jr; out.im[x.sel.neg] -= ji; }
+        }
+        return out;
     }
 
     // ── Resonances ───────────────────────────────────────────────────
@@ -1484,6 +1876,7 @@ export class RadioFrontEnd {
 
     /** Called by the board after every accepted transient step. */
     onAccepted(board, tSec, solution) {
+        this._radiate(tSec, solution);
         const L = this._sys ? this.detectors.map((d, i) => (d.kind === 'npn' || d.kind === 'pnp') ? (this.junctionDrive(i, tSec)?.[0]?.L ?? 0) : 0) : null;
         this._bias = this._snapshot(solution);
         // The calibrated emitter Is is the device's own law: take the
@@ -1626,6 +2019,7 @@ export class RadioFrontEnd {
             this._biasAtBound = this._bias;
             this._tBound = tSec;
             this._solveStations(stations, tSec);
+            this._planProducts();
             this.error = this._bands.find(b => b.dead)?.dead ?? null;
         } catch (err) {
             this.error = String(err?.message ?? err);
@@ -1681,7 +2075,7 @@ export class RadioFrontEnd {
             // its own oscillation, if it has one, beats against it as it should.
             let hz = r.hz;
             if (members.length) hz = stations[members.reduce((a, k) => (stations[k].fieldVPerM > stations[a].fieldVPerM ? k : a), members[0])].hz;
-            bands.push({ hz, members, q: r.q });
+            bands.push({ hz, members, q: r.q, halfWidth: r.halfWidth ?? bandHalfWidthHz(r.hz) });
         }
         // Keep each surviving band's envelope (re-centred onto the new
         // centre: the physical signal is unchanged).
@@ -1694,6 +2088,7 @@ export class RadioFrontEnd {
             }
             const band = prev && !next.includes(prev) ? prev : new RfBand(this, nb.hz, tSec);
             band.tankQ = nb.q;
+            band.halfWidth = nb.halfWidth;
             band.configure(nb.hz, nb.members, stations, tSec);
             next.push(band);
         }
@@ -1749,17 +2144,216 @@ export class RadioFrontEnd {
         this._static = statics;
     }
 
+    // ── Products between bands ───────────────────────────────────────
+
+    /**
+     * Every product a junction makes of the swings it carries that lands in
+     * another band: the difference and sum frequencies of two bands (a
+     * superhet's station and local oscillator into its IF tank), a band and
+     * a quasi-static station (an image), and the 2nd and 3rd harmonics of a
+     * band (a transmitter heard at twice its frequency). The junction law
+     * fixes each one's size and phase:
+     *
+     *   exponential (diode, B–E): i = Is·e^{v/nVt} = Is·e^{v0/nVt}·Π_b e^{x_b cos θ_b}
+     *     and e^{x cos θ} = I0(x) + 2·Σ_k I_k(x)·cos kθ, so the current at
+     *     θ_p ± θ_q is I·(x_p g_p/2)(x_q g_q/2)·2 (g = 2I1/(x I0), I the DC
+     *     current), at kθ_p it is 2·I·I_k(x_p)/I0(x_p);
+     *   square law (MOSFET): K·V_p·V̄_q, K·V_p²/2 (no third harmonic);
+     *   mixer IC: (gm/2)·V_rf·T̄_lo with T the LO's fundamental through tanh.
+     *
+     * A product is a current source in the band it lands in, injected where
+     * the device delivers it (a transistor's collector, a MOSFET's drain, the
+     * mixer's outputs), rotating at its offset from that band's centre. It
+     * does not act back on the bands that make it (their own compression
+     * already holds the power they lose to it).
+     */
+    _planProducts() {
+        const bands = this._bands;
+        for (const b of bands) b.products = [];
+        if (!this._sys || bands.length < 1) return;
+        const rotOf = (b) => 1 / (ROTATION_STEPS * b.hRot) + Math.abs(b.oscHz ?? 0);
+        const sources = [
+            ...bands.map(b => ({ band: b, hz: b.hz, rot: rotOf(b) })),
+            ...this._static.map(x => ({ s: x.s, H: x.H, hz: x.s.hz,
+                rot: (x.s.mod === 'fm' ? x.s.deviationHz : 0) + audioMaxHz(x.s.audio) })),
+        ];
+        const juncs = this._sys.junctions.filter(j => ['bjt', 'diode', 'mos', 'mixer'].includes(j.kind));
+        for (const c of bands) {
+            const hw = c.halfWidth ?? bandHalfWidthHz(c.hz);
+            const near = (f) => f > 0 && Math.abs(f - c.hz) <= hw;
+            const terms = [];
+            const srcs = sources.filter(x => x.band !== c);
+            const add = (t, f, rot) => { t.off = 2 * Math.PI * (f - c.hz); t.rot = Math.abs(f - c.hz) + rot; terms.push(t); };
+            for (const j of juncs) {
+                if (j.kind === 'mixer') {
+                    const port = j.p[2];
+                    for (const p of srcs) for (const q of srcs) {
+                        if (!p.band && !q.band) continue;
+                        const rot = p.rot + q.rot;
+                        if (near(p.hz - q.hz)) add({ type: 'mix', j, port, p, q, sign: -1 }, p.hz - q.hz, rot);
+                        else if (near(q.hz - p.hz)) add({ type: 'mix', j, port, p, q, sign: -2 }, q.hz - p.hz, rot);
+                        if (near(p.hz + q.hz)) add({ type: 'mix', j, port, p, q, sign: 1 }, p.hz + q.hz, rot);
+                    }
+                    continue;
+                }
+                const port = j.kind === 'diode' ? j.p[0] : j.p[1];
+                if (port === undefined) continue;
+                for (let i = 0; i < srcs.length; i++) {
+                    const p = srcs[i];
+                    if (p.band) for (const k of [2, 3]) {
+                        if (j.kind === 'mos' && k === 3) continue;
+                        if (near(k * p.hz)) add({ type: 'harm', j, port, p, k }, k * p.hz, k * p.rot);
+                    }
+                    for (let m = i + 1; m < srcs.length; m++) {
+                        const q = srcs[m];
+                        if (!p.band && !q.band) continue;
+                        const [hi, lo] = p.hz >= q.hz ? [p, q] : [q, p];
+                        const rot = p.rot + q.rot;
+                        if (near(hi.hz - lo.hz)) add({ type: 'mix', j, port, p: hi, q: lo, sign: -1 }, hi.hz - lo.hz, rot);
+                        if (near(p.hz + q.hz)) add({ type: 'mix', j, port, p, q, sign: 1 }, p.hz + q.hz, rot);
+                    }
+                }
+            }
+            c.products = terms;
+            if (terms.length) {
+                const rot = Math.max(...terms.map(t => t.rot));
+                const h = Math.min(H_TARGET_MAX, 1 / (ROTATION_STEPS * Math.max(200, rot)));
+                if (h < c.hRot) { c.hRot = h; c._bound(); }
+            }
+        }
+    }
+
+    /** Complex port-a voltage of a product's source at time t. */
+    _sourcePhasor(src, a, t) {
+        if (src.band) return src.band.phasorAt(a, t);
+        const [mr, mi] = stationModulation(src.s, t);
+        const h = src.H[a];
+        return [h[0] * mr - h[1] * mi, h[0] * mi + h[1] * mr];
+    }
+
+    /** One product's current (complex; drawn from its port's injection pos, delivered at neg) at t, in its own frame. */
+    _productCurrent(term, t) {
+        const j = term.j;
+        const b = this._bias?.[j.d.index];
+        if (!b) return null;
+        if (j.kind === 'mixer') {
+            if (!(b.ic > 1e-9)) return null;
+            const R = this._sourcePhasor(term.p, j.p[0], t), L = this._sourcePhasor(term.q, j.p[1], t);
+            const tl = mixerLoGain(b.vlo, cabs(L));
+            const T = [L[0] * tl, L[1] * tl];
+            const prod = term.sign === -1 ? cmul(R, conj(T)) : term.sign === -2 ? cmul(conj(R), T) : cmul(R, T);
+            // (i_a − i_b) carries gRf·prod/2; the output pair carries half of that.
+            const g = mixerRfGain(b.card.gm, b.ic, cabs(R)) / 4;
+            return [g * prod[0], g * prod[1]];
+        }
+        const a = j.p[0];
+        const pnp = j.d.kind === 'pnp' || j.d.kind === 'pmos';
+        const nVt = j.kind === 'diode' ? b.card.nVt : VT;
+        if (term.type === 'harm') {
+            const V = this._sourcePhasor(term.p, a, t);
+            const A = cabs(V);
+            if (!(A > 1e-9)) return null;
+            const k = term.k;
+            let amp;
+            if (j.kind === 'bjt') amp = b.ic * 2 * besselRatio(k, A / VT) * (pnp && k % 2 === 0 ? -1 : 1);
+            else if (j.kind === 'diode') { const x = A / nVt; amp = this._diodeIavg(b, x, 0) * 2 * besselRatio(k, x); }
+            else amp = mosSecondOrder(b, A) * A * A / 2 * (pnp ? -1 : 1);
+            let u = [V[0] / A, V[1] / A];
+            const u1 = u;
+            for (let i = 1; i < k; i++) u = cmul(u, u1);
+            return [amp * u[0], amp * u[1]];
+        }
+        const Vp = this._sourcePhasor(term.p, a, t), Vq = this._sourcePhasor(term.q, a, t);
+        const Ap = cabs(Vp), Aq = cabs(Vq);
+        if (!(Ap > 1e-9) || !(Aq > 1e-9)) return null;
+        let coef;
+        if (j.kind === 'bjt') coef = (pnp ? -1 : 1) * b.ic * besselGain(Ap / VT) * besselGain(Aq / VT) / (2 * VT * VT);
+        else if (j.kind === 'diode') {
+            const xp = Ap / nVt, xq = Aq / nVt;
+            coef = this._diodeIavg(b, Math.hypot(xp, xq), 0) * besselGain(xp) * besselGain(xq) / (2 * nVt * nVt);
+        } else coef = mosSecondOrder(b, Ap + Aq) * (pnp ? -1 : 1);
+        const prod = term.sign === 1 ? cmul(Vp, Vq) : cmul(Vp, conj(Vq));
+        return [coef * prod[0], coef * prod[1]];
+    }
+
+    /** Add a band's products at time t to its source vector. */
+    _addProducts(band, t, re, im) {
+        const inj = this._sys.inj;
+        for (const term of band.products) {
+            const I = this._productCurrent(term, t);
+            if (!I) continue;
+            const c = DMath.cos(term.off * t), sn = DMath.sin(term.off * t);
+            const ir = I[0] * c - I[1] * sn, ii = I[0] * sn + I[1] * c;
+            const pat = inj[term.port];
+            if (pat.pos !== undefined) { re[pat.pos] -= ir; im[pat.pos] -= ii; }
+            if (pat.neg !== undefined) { re[pat.neg] += ir; im[pat.neg] += ii; }
+        }
+    }
+
+    /**
+     * The mixer IC's audio-rate output at t (half its difference current,
+     * A): RF and LO swings that share a band beat, (gm/2)·Re(V_rf·T̄_lo) —
+     * direct conversion, product detection, a synchronous detector.
+     */
+    mixerAudio(di, tSec) {
+        const j = this._mixerJ?.get(di);
+        const b = this._bias?.[di];
+        if (!j || !b || !(b.iT > 1e-9) || !this._bands.length) return 0;
+        this._advance(tSec);
+        const [prf, plo] = j.p;
+        let sum = 0;
+        for (const band of this._bands) {
+            const R = band.phasorAt(prf, tSec), L = band.phasorAt(plo, tSec);
+            const Ar = cabs(R), Al = cabs(L);
+            if (!(Ar > 1e-12) || !(Al > 1e-12)) continue;
+            sum += mixerRfGain(b.card.gm, b.iT, Ar) * mixerLoGain(b.vlo, Al) * (R[0] * L[0] + R[1] * L[1]);
+        }
+        return sum / 4;
+    }
+
+    /**
+     * The FM IF IC's detector output at t (V about mid-supply): the
+     * instantaneous frequency of the band that carries most at its input,
+     * from the envelope's phase over 1 µs, through the limiter and the
+     * quadrature tank (src/fm-if-ic.js fmDetector).
+     */
+    fmDemod(di, tSec) {
+        const j = this._fmJ?.get(di);
+        if (!j || !this._bands.length) return 0;
+        this._advance(tSec);
+        const a = j.p[0];
+        let best = null, A = 0;
+        for (const band of this._bands) {
+            const m = cabs(band.phasorAt(a, tSec));
+            if (m > A) { A = m; best = band; }
+        }
+        if (!best) return 0;
+        const dt = 1e-6;
+        const v1 = best.phasorAt(a, tSec), v0 = best.phasorAt(a, tSec - dt);
+        const dphi = DMath.atan2(v1[1] * v0[0] - v1[0] * v0[1], v1[0] * v0[0] + v1[1] * v0[1]);
+        const fi = best.hz + dphi / (2 * Math.PI * dt);
+        const card = fmIfCard(j.d.of);
+        return fmDetector(card, fmQuadHz(card, this._controls?.()?.get(j.d.partId)), fi, A);
+    }
+
     // ── Envelope at a time ───────────────────────────────────────────
 
     /** Bring every band to time t (lazily, on the integrator's own grid). */
     _advance(tSec) {
-        for (const b of this._bands) b.advanceTo(tSec);
+        // The bands products land in after the bands that make them.
+        for (const b of this._bands) if (!b.products?.length) b.advanceTo(tSec);
+        for (const b of this._bands) if (b.products?.length) b.advanceTo(tSec);
     }
 
     /** Per port at time t: Σ_b ln I0(A_b/nVt) and Σ_b A_b². */
     _ports(tSec) {
         const c = this._portCache;
         if (c.t === tSec) return c;
+        if (this._assembling > 0) {
+            if (c.L) return c;
+            const K0 = this._sys?.K ?? 0;
+            return { t: NaN, L: new Float64Array(K0), A2: new Float64Array(K0) };
+        }
         const K = this._sys?.K ?? 0;
         const L = new Float64Array(K), A2 = new Float64Array(K);
         if (K) {
@@ -1838,7 +2432,9 @@ export class RadioFrontEnd {
             substeps: this.substeps,
             error: this.error,
             resonances: (this._resonances ?? []).map(r => ({ hz: r.hz })),
-            bands: this._bands.map(b => ({ hz: b.hz, stations: b.members.map(k => st[k]?.id), substepSec: H_UNIT * DMath.pow(2, b.k) })),
+            bands: this._bands.map(b => ({ hz: b.hz, stations: b.members.map(k => st[k]?.id), substepSec: H_UNIT * DMath.pow(2, b.k),
+                products: (b.products ?? []).map(t => (t.type === 'harm' ? `${t.k}×${(t.p.hz / 1e3).toFixed(1)} kHz`
+                    : `${(t.p.hz / 1e3).toFixed(1)} ${t.sign === 1 ? '+' : '−'} ${(t.q.hz / 1e3).toFixed(1)} kHz`)) })),
             detectors: this.detectors.map((d, i) => {
                 const drive = this._sys ? this.junctionDrive(i, tSec) : null;
                 return {
@@ -1890,6 +2486,7 @@ class RfBand {
         this.calm = 0;
         this.hist = [];
         this._tUnstable = -Infinity;
+        this._born = tSec;
     }
 
     configure(hz, members, stations, tSec) {
@@ -2072,6 +2669,7 @@ class RfBand {
     _source(t) {
         const N = this.X.re.length;
         const re = new Float64Array(N), im = new Float64Array(N);
+        if (this.products?.length) this.radio._addProducts(this, t, re, im);
         for (const { s, u, off } of this.units) {
             const [mr, mi] = stationModulation(s, t);
             if (mr === 0 && mi === 0) continue;
@@ -2141,7 +2739,21 @@ class RfBand {
                 const last = this.hist[this.hist.length - 1];
                 const prev = this.hist[this.hist.length - 2];
                 const Xprev = prev?.X && last?.k === k && prev && Math.abs((last.t - prev.t) - H_UNIT * DMath.pow(2, k)) < 1e-15 ? prev.X : null;
-                res = this.integ.step(k, stamps, (t) => this._source(t), (rr, ri, h) => this._noise(rr, ri, h), Xprev);
+                // Radiated impulses (_kick) whose instant falls in this
+                // substep: their area spread over it.
+                const hNow = H_UNIT * DMath.pow(2, k);
+                this._applied ??= new WeakSet();
+                // (A band created after a corner takes it only if it was born
+                // within 20 µs of it: the refresh that the switching itself
+                // triggered.)
+                const due = (r._events ?? []).filter(e => e.tc <= this.t + hNow && e.tc >= this._born - 20e-6 && !this._applied.has(e));
+                const vecs = due.map(e => r._kickVector(this, e)).filter(Boolean);
+                const src = vecs.length ? (t) => {
+                    const J = this._source(t);
+                    for (const q of vecs) for (let i = 0; i < J.re.length; i++) { J.re[i] += q.re[i] / hNow; J.im[i] += q.im[i] / hNow; }
+                    return J;
+                } : (t) => this._source(t);
+                res = this.integ.step(k, stamps, src, (rr, ri, h) => this._noise(rr, ri, h), Xprev);
                 r.substeps++;
                 const v1 = this.integ.portVoltages({ re: res.re, im: res.im });
                 let g = 0;
@@ -2156,6 +2768,7 @@ class RfBand {
                 else this.k = k;
                 this.X = { re: res.re, im: res.im };
                 this.t = res.t;
+                for (const e of due) this._applied.add(e);
                 let peak = 0;
                 for (const p of v1) { const m = Math.hypot(p[0], p[1]); if (!(m <= peak)) peak = m; }
                 if (!(peak < RF_RUNAWAY_VOLTS)) { this._refuse(`its swing ran away (${peak.toExponential(2)} V at ${(this.t * 1e3).toFixed(4)} ms)`); return; }
@@ -2200,6 +2813,19 @@ class RfBand {
     }
 
     _stepOnce() { this.advanceTo(this.t + 1e-15); }
+
+    /** Complex voltage of port a at t, linear between the integrator's points (no stepping). */
+    phasorAt(a, t) {
+        const h = this.hist;
+        if (!h.length || this.dead) return [0, 0];
+        let i = h.length - 1;
+        if (t >= h[i].t) return h[i].vp[a];
+        while (i > 0 && h[i - 1].t > t) i--;
+        if (i === 0) return h[0].vp[a];
+        const e0 = h[i - 1].vp[a], e1 = h[i].vp[a];
+        const w = (t - h[i - 1].t) / (h[i].t - h[i - 1].t);
+        return [e0[0] + (e1[0] - e0[0]) * w, e0[1] + (e1[1] - e0[1]) * w];
+    }
 
     /** Stop this band: silent from here, the reason on the front end (radio.error, a board warning). */
     _refuse(why) {
