@@ -2832,9 +2832,11 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
             // voltage-source row, but it is rail-clamped and nonlinear, so
             // "cannot move that node" is not true of it in the same way; no
             // corpus circuit needed it.
-            // Visit only opted-in terminals, and copy only when a drive is suppressed.
             const fallbackNames = model.automaticSupplyFallbackTerminals;
-            if (railOwner.size && fallbackNames?.size && state.drives) {
+            // Stamp callbacks read the filtered state. Drive-only models can
+            // skip suppressed drives after their normal net lookup.
+            const fallbackRailOwners = railOwner.size && fallbackNames?.size ? railOwner : undefined;
+            if (fallbackRailOwners && model.stamp && state.drives) {
               let kept;
               for (const term of fallbackNames) {
                 if (!Object.prototype.propertyIsEnumerable.call(state.drives, term) || !state.drives[term]) continue;
@@ -2850,7 +2852,8 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
             const previouslyStamped = deviceStamps.has(part.id);
             deviceStamps.set(part.id, rec);
             stampDevice(A, b, part, nets, nodeIndex, model, state, controls, vcc, tSeconds,
-              transient ? transient.dtSec : undefined, srcScale, groundNetId, rec, nonlinearIterate, nonlinearDimensions, previouslyStamped, getTopology);
+              transient ? transient.dtSec : undefined, srcScale, groundNetId, rec, nonlinearIterate,
+              nonlinearDimensions, previouslyStamped, getTopology, model.stamp ? undefined : fallbackRailOwners);
           }
           break;
         }
@@ -4932,7 +4935,7 @@ function stampBuzzerResistance(A, b, part, nets, nodeIndex, groundNetId) {
  * Stamp a registered device: its `state.drives` as Norton sources, then the
  * model's own `stamp(ctx)` for input impedance / analog loading.
  */
-function stampDevice(A, b, part, nets, nodeIndex, model, state, controls, vcc, tSeconds, dtSec, srcScale = 1, groundNetId = undefined, rec = null, iterate = undefined, nonlinearDimensions = null, previouslyStamped = false, getTopology = undefined) {
+function stampDevice(A, b, part, nets, nodeIndex, model, state, controls, vcc, tSeconds, dtSec, srcScale = 1, groundNetId = undefined, rec = null, iterate = undefined, nonlinearDimensions = null, previouslyStamped = false, getTopology = undefined, fallbackRailOwners = undefined) {
   // KCL-visibility: `rec` collects one record per stamped companion so the
   // extraction can derive terminal currents from exactly what was stamped.
   // A terminal on the GROUND net has no matrix row (nodeIndex miss) and its
@@ -4956,6 +4959,10 @@ function stampDevice(A, b, part, nets, nodeIndex, model, state, controls, vcc, t
     if (!drive) continue;
     const net = netFor(terminal);
     if (!net) continue;
+    if (fallbackRailOwners && model.automaticSupplyFallbackTerminals.has(terminal)) {
+      const owner = fallbackRailOwners.get(net);
+      if (owner !== undefined && owner !== part.id) continue;
+    }
     const g = 1 / Math.max(drive.rTh, 1e-3);
     if (drive.ref) {
       const refNet = netFor(drive.ref);
