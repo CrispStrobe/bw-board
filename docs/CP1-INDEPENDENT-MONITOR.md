@@ -36,6 +36,8 @@ The four existing Brickwright examples, keypad and monitor probes, and CP5 circu
 
 The comparison with the museum's 2716 image passed all four gallery examples, 14 monitor scenarios, 13 CP5 electrical patterns and 11 semantic debugger scenarios. The five observed blink edges yielded half-periods of 224.713–225.532 ms on the new monitor and 225.590–225.995 ms on the 2716. The CP5 startup output-clear interval was 225.528 ms on the new monitor and 226.057 ms on the 2716. Display refresh was 148.86 frames/s on the new monitor and 65.08 frames/s on the 2716, with all six rows active in both.
 
+Both built-in diagnostic modes ran in a spot check. With identical keypad timing, the `9 RUN` display test settled at 000000 by 2.0 seconds after CPU start on the replacement and by 6.4 seconds on the 2716. The two `8 RUN` reaction tests began counting at different times and both stopped on STP.
+
 All 50 external files assembled or loaded and executed on both images. The first eight physical steps matched on all 50, for 400 checkpoints across the corpus. The fixed simulated-time screen, terminal, or changed-memory observations differed on 16 files. They were listings 001, 006–008, 019, 025, 027, 029, 031, 036, 038, 042, 045, 052, 093 and the bonus 100. The comparison consumed external transcriptions at revision `12615440aed49347b01e55769d652100a72e1369`. Matching these short step traces establishes the sampled behavior. Cycle timing, timing-sensitive exercises and complete historical workflows remain partially qualified.
 
 CP2 transfer and F007 need a separate cassette milestone. CAS and CAL clear the panel and return safely to the monitor. Physical hardware timing and mask ROM B are outside this qualification.
