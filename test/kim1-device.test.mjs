@@ -62,6 +62,13 @@ test('timers keep the shared clock while monitor is stopped and can pull PB7 low
   assert.equal(f.state.drives.PB7.vTh, 0); assert.equal(f.state.running, false); assert.equal(f.state.executed, 0);
 });
 
+test('front-panel port/DDR edits immediately change electrical output drivers', () => {
+  const f = fixture(), before = f.state.programSource;
+  for (const key of ['AD', '1', '7', '0', '1', 'DA', 'F', 'F', 'AD', '1', '7', '0', '0', 'DA', 'A', '5']) model.control(f.part, f.state, 'key', key);
+  assert.equal(f.state.drives.PA0.vTh, 5); assert.equal(f.state.drives.PA1.vTh, 0);
+  assert.equal(f.state.drives.PA7.vTh, 5); assert.equal(f.state.programSource, before);
+});
+
 test('persisting canonical keypad edits does not reload or reset running state', () => {
   const f = fixture();
   for (const key of ['AD', '0', '3', '0', '0', 'DA', 'A', 'B', 'PC']) model.control(f.part, f.state, 'key', key);

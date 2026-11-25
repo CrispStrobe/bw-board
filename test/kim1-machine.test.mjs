@@ -63,6 +63,14 @@ test('GO restores editable saved registers; BRK stops at the declared monitor bo
   assert.match(s.error, /Unsupported NMOS/); assert.equal(s.pc, 0x200);
 });
 
+test('front-panel DA can configure DDR and port I/O without persisting hardware registers', () => {
+  const s = createKim1Machine(), before = s.programSource;
+  for (const k of ['AD', '1', '7', '0', '1', 'DA', 'F', 'F', 'AD', '1', '7', '0', '0', 'DA', 'A', '5']) key(s, k);
+  assert.equal(s.ddrA, 255); assert.equal(s.portA, 0xa5);
+  assert.equal(s.display, '1700A5'); assert.equal(s.programSource, before);
+  assert.throws(() => control(s, 'loadProgram', '1700: A5'), /not writable KIM-1 RAM/);
+});
+
 test('real NMOS programs configure DDR, count outputs and read independent port inputs', () => {
   const count = createKim1Machine(KIM1_DEMOS.counter.program);
   control(count, 'run');

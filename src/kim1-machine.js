@@ -155,9 +155,9 @@ export function writeKim1Byte(state, address, value, {authored = false} = {}) {
   value &= 255;
   if (a < 0x400) state.ram[a] = value;
   else if (a >= 0x1780 && a < 0x1800) state.riotRam[a - 0x1780] = value;
-  else if (a >= 0x1700 && a < 0x1780 && !authored) writeRegister(state.riots[a >= 0x1740 ? 1 : 0], a & 15, value);
+  else if (a >= 0x1700 && a < 0x1780) writeRegister(state.riots[a >= 0x1740 ? 1 : 0], a & 15, value);
   else throw new Error(`$${hex(address & 65535, 4)} is not writable ${authored ? 'program RAM' : 'KIM-1 memory'}.`);
-  if (authored) {
+  if (authored && isRam(a)) {
     state.image[a] = value;
     state.programSource = formatKim1Program(state.image);
   }
@@ -284,7 +284,7 @@ export function keyKim1Machine(state, key, options = {}) {
     const digit = parseInt(key, 16);
     if (state.mode === 'data') {
       const old = peekKim1Byte(state, state.address);
-      if (old === null) throw new Error('Select writable RAM before entering data.');
+      if (old === null) throw new Error('Select writable RAM or an I/O register before entering data.');
       writeKim1Byte(state, state.address, ((old << 4) | digit) & 255, {authored: true});
     } else state.address = ((state.address << 4) | digit) & 65535;
     state.error = null;

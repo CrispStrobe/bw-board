@@ -20,7 +20,7 @@ PC are separate: browsing memory does not change the stopped CPU state.
 | Key | Action in this monitor |
 | --- | --- |
 | AD | Select address entry. Each hex key rolls one digit into the four-digit address. |
-| DA | Select data entry. Each hex key rolls one digit into the byte and stores it in writable RAM. |
+| DA | Select data entry. Each hex key rolls one digit into the byte and writes selected RAM or I/O. |
 | + | Advance one address while retaining AD or DA mode. |
 | GO | Restore saved user registers and start at the displayed address. |
 | SST | Toggle single-step mode. With SST enabled, GO executes one instruction and displays its next PC. |
@@ -74,6 +74,8 @@ Reset keeps RAM and these authored edits. CPU runtime RAM writes, timer state,
 and execution position are not serialized as a resumable checkpoint; saving a
 circuit saves its authored program. A fresh program load intentionally replaces
 the current RAM image. Runtime writes never silently expand the authored image.
+Panel edits to mapped ports, DDRs and timers take effect immediately, but are
+runtime I/O operations and are not added to the persisted RAM program image.
 
 ## Memory and ports
 
@@ -179,7 +181,11 @@ run harness a3a200a714b4203056ecd078003a302ca4232594bce1afaf3af4dbf0e965a2a1
 ```
 
 The committed grader has the same logic with its import path adjusted to the
-repository layout. Focused tests additionally cover the panel, map aliases,
+repository layout. The qualification's extracted W65C02 copy had one extra
+trailing newline; its code is unchanged from the repository's existing blob
+`0da494fce5ea5d8e7e4be42418e4e6e78fe0629b`. The unchanged repository file's SHA-256
+is `6a4582af2bcc7feb7a3807a1061d387d2216f113b726c5020788232a076b5340`.
+Focused tests additionally cover the panel, map aliases,
 atomic loading, persistence, timers, DDR/input/output behavior and Board-solved
 switch → machine-code program → resistor/LED circuits.
 
