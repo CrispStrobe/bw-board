@@ -14,6 +14,7 @@
 
 import { registerDevice } from '../devices.js';
 import { inputThresholds } from './logic-levels.js';
+import { rose, fell } from './edge-detect.js';
 
 const R_OUT = 50;
 // Input pins draw nothing here, on purpose. These models used to declare
@@ -243,7 +244,8 @@ function buildChipModel(def) {
       }
       return {
         drives,
-        _ffState: def.ffs ? def.ffs.map(() => ({ q: 0, lastClk: false })) : [],
+        // lastClk starts unknown: the first settled level primes it (edge-detect.js).
+        _ffState: def.ffs ? def.ffs.map(() => ({ q: 0 })) : [],
       };
     },
 
@@ -306,12 +308,14 @@ function buildChipModel(def) {
           // Active-LOW set/reset for 74HC series
           const setActive = ff.set ? readLogic(ff.set) === 0 : false;
           const rstActive = ff.rst ? readLogic(ff.rst) === 0 : false;
+          // Tracked on every pass, set/reset or not (edge-detect.js).
+          const clkRose = rose(fs, 'lastClk', clkHigh, read);
 
           let newQ = fs.q;
 
           if (rstActive) newQ = 0;
           else if (setActive) newQ = 1;
-          else if (clkHigh && !fs.lastClk) {
+          else if (clkRose) {
             // Rising edge
             if (ff.type === 'd') {
               newQ = readLogic(ff.d) === 1 ? 1 : 0;
@@ -323,7 +327,6 @@ function buildChipModel(def) {
               else if (k) newQ = 0;
             }
           }
-          fs.lastClk = clkHigh;
 
           if (newQ !== fs.q) {
             fs.q = newQ;
@@ -380,8 +383,8 @@ const CHIP_74HC93 = {
       drives: { qa: { vTh: 0, rTh: R_OUT }, qb: { vTh: 0, rTh: R_OUT },
                 qc: { vTh: 0, rTh: R_OUT }, qd: { vTh: 0, rTh: R_OUT } },
       count: 0,
-      _lastClkA: false,
-      _lastClkB: false,
+      // _lastClkA / _lastClkB start unknown: the first settled level primes
+      // them (edge-detect.js).
     };
   },
 
@@ -389,7 +392,17 @@ const CHIP_74HC93 = {
     const vcc = read('vcc') || 5.0;
     const threshold = vcc * 0.5;
 
-    // Reset: both R0 pins HIGH → counter resets
+    // Both clock inputs are tracked on EVERY pass, reset or not. The reset
+    // branch used to return before sampling them, so the remembered CKB level
+    // froze at QA's level when reset came; reset clears QA, which in the
+    // 4-bit chain IS CKB, and on release the stale "high" met the present
+    // "low": a falling edge that never happened (count 1, reset, release: 2).
+    const fallA = fell(state, '_lastClkA', read('clk_a') > threshold, read);
+    const fallB = fell(state, '_lastClkB', read('clk_b') > threshold, read);
+
+    // Master reset: both R0 pins HIGH clear all four flip-flops at once,
+    // asynchronously; while it is held no clock edge is counted, and
+    // releasing it clocks nothing.
     if (read('r0_1') > threshold && read('r0_2') > threshold) {
       if (state.count !== 0) {
         state.count = 0;
@@ -404,24 +417,20 @@ const CHIP_74HC93 = {
 
     let changed = false;
 
-    // CLK-A falling edge increments QA (divide-by-2)
-    const clkA = read('clk_a') > threshold;
-    if (!clkA && state._lastClkA) {
+    // CLK-A falling edge toggles QA (divide-by-2)
+    if (fallA) {
       state.count = (state.count ^ 1); // toggle bit 0
       changed = true;
     }
-    state._lastClkA = clkA;
 
     // CLK-B falling edge increments QB-QD (divide-by-8)
     // In normal wiring, QA feeds CLK-B externally
-    const clkB = read('clk_b') > threshold;
-    if (!clkB && state._lastClkB) {
+    if (fallB) {
       // Increment upper 3 bits
       const upper = (state.count >> 1) + 1;
       state.count = (state.count & 1) | ((upper & 7) << 1);
       changed = true;
     }
-    state._lastClkB = clkB;
 
     if (changed) {
       state.drives.qa = { vTh: (state.count & 1) ? vcc : 0, rTh: R_OUT };
@@ -511,8 +520,7 @@ const CHIP_74HC95 = {
     return {
       drives: { qa: { vTh: 0, rTh: R_OUT }, qb: { vTh: 0, rTh: R_OUT },
                 qc: { vTh: 0, rTh: R_OUT }, qd: { vTh: 0, rTh: R_OUT } },
-      reg: 0, // 4-bit register
-      _lastClk: false,
+      reg: 0, // 4-bit register (_lastClk: primed, edge-detect.js)
     };
   },
 
@@ -521,8 +529,7 @@ const CHIP_74HC95 = {
     const threshold = vcc * 0.5;
     const clkHigh = read('clk') > threshold;
 
-    if (!clkHigh || state._lastClk) { state._lastClk = clkHigh; return false; }
-    state._lastClk = clkHigh;
+    if (!rose(state, '_lastClk', clkHigh, read)) return false;
 
     const modeParallel = read('mode') > threshold;
     let newReg;
@@ -559,7 +566,7 @@ const CHIP_74HC374 = {
   init() {
     const drives = {};
     for (let i = 0; i < 8; i++) drives[`q${i}`] = { vTh: 0, rTh: R_OUT };
-    return { drives, reg: 0, _lastClk: false };
+    return { drives, reg: 0 }; // _lastClk: primed (edge-detect.js)
   },
 
   update(part, state, read) {
@@ -568,12 +575,11 @@ const CHIP_74HC374 = {
     const clkHigh = read('clk') > th;
 
     // Capture on rising edge
-    if (clkHigh && !state._lastClk) {
+    if (rose(state, '_lastClk', clkHigh, read)) {
       let newReg = 0;
       for (let i = 0; i < 8; i++) if (read(`d${i}`) > th) newReg |= 1 << i;
       state.reg = newReg;
     }
-    state._lastClk = clkHigh;
 
     // Output enable
     const oe = read('oeb') < th;

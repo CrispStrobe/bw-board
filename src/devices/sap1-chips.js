@@ -17,6 +17,7 @@
  */
 
 import { registerDevice } from '../devices.js';
+import { rose, fell } from './edge-detect.js';
 
 const R_OUT = 50;
 // Input pins draw nothing here, on purpose. These models used to declare
@@ -44,8 +45,7 @@ export function registerSAP1Chips() {
                     q0: { vTh: 0, rTh: R_OFF }, q1: { vTh: 0, rTh: R_OFF },
                     q2: { vTh: 0, rTh: R_OFF }, q3: { vTh: 0, rTh: R_OFF },
                 },
-                _reg: 0,
-                _lastClk: false,
+                _reg: 0, // _lastClk: primed (edge-detect.js)
             };
         },
 
@@ -55,11 +55,12 @@ export function registerSAP1Chips() {
             const clk = read('clk') > th;
             const mr = read('mr') > th;
             let changed = false;
+            const clkRose = rose(state, '_lastClk', clk, read);
 
             // Clear
             if (mr) { state._reg = 0; }
             // Rising edge: latch data when both /G low
-            else if (clk && !state._lastClk) {
+            else if (clkRose) {
                 const g1 = read('g1b') > th;
                 const g2 = read('g2b') > th;
                 if (!g1 && !g2) {
@@ -68,7 +69,6 @@ export function registerSAP1Chips() {
                     state._reg = d;
                 }
             }
-            state._lastClk = clk;
 
             // Output enable: both /OE low → drive, else high-Z
             const oeActive = !(read('oe1b') > th) && !(read('oe2b') > th);
@@ -101,8 +101,7 @@ export function registerSAP1Chips() {
                     q2: { vTh: 0, rTh: R_OUT }, q3: { vTh: 0, rTh: R_OUT },
                     rco: { vTh: 0, rTh: R_OUT },
                 },
-                _count: 0,
-                _lastClk: false,
+                _count: 0, // _lastClk: primed (edge-detect.js)
             };
         },
 
@@ -112,11 +111,12 @@ export function registerSAP1Chips() {
             const clk = read('clk') > th;
             const clr = !(read('clrb') > th); // active-low
             let changed = false;
+            const clkRose = rose(state, '_lastClk', clk, read);
 
             // Async clear
             if (clr) {
                 state._count = 0;
-            } else if (clk && !state._lastClk) {
+            } else if (clkRose) {
                 const load = !(read('loadb') > th); // active-low
                 if (load) {
                     let d = 0;
@@ -130,7 +130,6 @@ export function registerSAP1Chips() {
                     }
                 }
             }
-            state._lastClk = clk;
 
             // Outputs
             for (let i = 0; i < 4; i++) {
@@ -182,9 +181,7 @@ export function registerSAP1Chips() {
                     q2: { vTh: 0, rTh: R_OUT }, q3: { vTh: 0, rTh: R_OUT },
                     cob: { vTh: 0, rTh: R_OUT }, bob: { vTh: 0, rTh: R_OUT },
                 },
-                _count: 0,
-                _lastUp: false,
-                _lastDown: false,
+                _count: 0, // _lastUp / _lastDown: primed (edge-detect.js)
             };
         },
 
@@ -196,6 +193,8 @@ export function registerSAP1Chips() {
             const clr = read('clr') > th;          // active HIGH
             const load = !(read('loadb') > th);    // active LOW, asynchronous
             let changed = false;
+            const upRose = rose(state, '_lastUp', up, read);
+            const downRose = rose(state, '_lastDown', down, read);
 
             if (clr) {
                 state._count = 0;                  // clear beats load
@@ -208,14 +207,12 @@ export function registerSAP1Chips() {
                 // held high. Both clocks rising in the same pass is not a
                 // thing a real board does; taking UP first is arbitrary and
                 // the tests do not rely on it.
-                if (up && !state._lastUp && down) {
+                if (upRose && down) {
                     state._count = (state._count + 1) & 0x0f;
-                } else if (down && !state._lastDown && up) {
+                } else if (downRose && up) {
                     state._count = (state._count - 1) & 0x0f;
                 }
             }
-            state._lastUp = up;
-            state._lastDown = down;
 
             for (let i = 0; i < 4; i++) {
                 const bit = (state._count >> i) & 1;
@@ -358,7 +355,10 @@ export function registerSAP1Chips() {
                     '2q': { vTh: 0, rTh: R_OUT }, '2qb': { vTh: 5, rTh: R_OUT },
                 },
                 _q: [0, 0],
-                _lastClk: [true, true], // idle high (falling edge trigger)
+                // Previous clock levels start unknown (they were hard-coded
+                // idle-high, so a clock held low at power-on toggled once):
+                // the first settled level primes them (edge-detect.js).
+                _lastClk: [],
             };
         },
 
@@ -372,17 +372,17 @@ export function registerSAP1Chips() {
                 const clk = read(`${n}clk`) > th;
                 const clr = !(read(`${n}clrb`) > th); // active-low
                 let q = state._q[ff];
+                const clkFell = fell(state._lastClk, ff, clk, read);
 
                 if (clr) {
                     q = 0;
-                } else if (!clk && state._lastClk[ff]) { // FALLING edge
+                } else if (clkFell) { // FALLING edge
                     const j = read(`${n}j`) > th ? 1 : 0;
                     const k = read(`${n}k`) > th ? 1 : 0;
                     if (j && k) q = q ? 0 : 1; // toggle
                     else if (j) q = 1;
                     else if (k) q = 0;
                 }
-                state._lastClk[ff] = clk;
 
                 if (q !== state._q[ff]) {
                     state._q[ff] = q;

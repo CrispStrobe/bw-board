@@ -22,6 +22,7 @@ import {applyShaftSample, publishShaftState, validateShaftSample} from './mechan
 import {createScopeAperture, advanceScopeAperture, edgeScopeAperture} from './scope-aperture.js';
 import { pinThevenin } from './pin-model.js';
 import { buildPinAliasTable } from './pin-aliases.js';
+import { rose } from './devices/edge-detect.js';
 import {
   solveMNA, ebersMollParams, parasiticCaps, OPAMP_ISHORT_DEFAULT, JUNCTION_THERMAL_VOLTAGE, MOS_BULK_THERMAL_VOLTAGE, kneeFromVf,
   sourceDcValue, sourceVoltage, sourceCurrent,
@@ -595,6 +596,16 @@ export class BoardImpl {
      * @type {Map<string, object>}
      */
     this._deviceStates = new Map();
+
+    /**
+     * True only during the power-on settle (a new netlist solved while
+     * powered, or power switched on): the device passes of that fixpoint
+     * prime every edge detector with its first SETTLED input level instead
+     * of acting on edges (src/devices/edge-detect.js). Ends at the first
+     * pass that changes no device output, and at the latest with that solve.
+     * @type {boolean}
+     */
+    this._primingEdges = false;
 
     /**
      * LED cube state: part id → { selectPins, dataPins, polarity, voxelHistory }.
@@ -1357,8 +1368,7 @@ export class BoardImpl {
         this._shiftRegisters.set(p.id, {
           shiftReg: 0,    // 8-bit shift register
           latchReg: 0,    // 8-bit output latch
-          lastClock: false,
-          lastLatch: false,
+          // lastClock / lastLatch start unknown: primed (devices/edge-detect.js)
         });
       }
       if (p.kind === 'led_cube') {
@@ -1419,7 +1429,7 @@ export class BoardImpl {
 
     this._transientBlanketShunt = false;
     this._seedOpampPoles();
-    this._solve();
+    this._solvePowerOn();
     this._recordLedSamples();
     this._notifyChange('netlist');
   }
@@ -1701,16 +1711,14 @@ export class BoardImpl {
     const oeV = readV('oe');
     const oeActive = oeV < VIL;
 
-    if (clockHigh && !sr.lastClock) {
+    if (rose(sr, 'lastClock', clockHigh)) {
       const dataHigh = readV('data') > VIH;
       sr.shiftReg = ((sr.shiftReg << 1) | (dataHigh ? 1 : 0)) & 0xff;
     }
-    sr.lastClock = clockHigh;
 
-    if (latchHigh && !sr.lastLatch) {
+    if (rose(sr, 'lastLatch', latchHigh)) {
       sr.latchReg = sr.shiftReg;
     }
-    sr.lastLatch = latchHigh;
     sr.oeActive = oeActive;
   }
 
@@ -4435,8 +4443,10 @@ export class BoardImpl {
   }
 
   setPower(on) {
+    const switchedOn = on && !this.powered;
     this.powered = on;
-    this._solve();
+    if (switchedOn) this._solvePowerOn();
+    else this._solve();
     this._recordLedSamples();
     this._notifyChange('power', { on });
   }
@@ -7411,8 +7421,24 @@ export class BoardImpl {
    * Update 74HC595 shift register FSMs. Returns true if any output changed.
    * Called from the settle loop alongside _updateDevices.
    */
+  /**
+   * The power-on solve: the device fixpoint inside it primes edge detectors
+   * (`_primingEdges`) rather than clocking them. A counter powered up under
+   * a steady clock level counts nothing, also when its clock is driven by a
+   * gate that starts at its init level and settles at the other one.
+   */
+  _solvePowerOn() {
+    this._primingEdges = this.powered;
+    try {
+      this._solve();
+    } finally {
+      this._primingEdges = false;
+    }
+  }
+
   _updateShiftRegisters() {
     if (this._shiftRegisters.size === 0) return false;
+    const priming = { priming: this._primingEdges };
     let changed = false;
     const VCC = this.vcc;
     const VIH = 0.7 * VCC;
@@ -7445,19 +7471,17 @@ export class BoardImpl {
       const oeActive = oeV < VIL; // active LOW
 
       // Rising edge on clock: shift in data bit
-      if (clockHigh && !sr.lastClock) {
+      if (rose(sr, 'lastClock', clockHigh, priming)) {
         sr.shiftReg = ((sr.shiftReg << 1) | dataBit) & 0xFF;
       }
-      sr.lastClock = clockHigh;
 
       // Rising edge on latch: copy shift to output
-      if (latchHigh && !sr.lastLatch) {
+      if (rose(sr, 'lastLatch', latchHigh, priming)) {
         if (sr.latchReg !== sr.shiftReg) {
           sr.latchReg = sr.shiftReg;
           changed = true;
         }
       }
-      sr.lastLatch = latchHigh;
 
       // Update output drives based on OE and latch contents
       // (This is read by the MNA via the closed-form or MNA solver)
@@ -7481,12 +7505,18 @@ export class BoardImpl {
   _updateDevices(atNs = this.timeNs, solution = this._mnaCache, measurementOnly = false, acceptedTransient = false) {
     if (solution?.deferredBjtChargeIds?.length) return false;
     let changed = false;
+    // Power-on settle: edge detectors record, they do not clock. The first
+    // pass that changes nothing has seen the settled levels; priming ends.
+    const priming = this._primingEdges && !measurementOnly;
     // Built-in shift registers
     if (!measurementOnly && this._shiftRegisters.size > 0) {
       if (this._updateShiftRegisters()) changed = true;
     }
     // Registry devices
-    if (this._deviceStates.size === 0) return changed;
+    if (this._deviceStates.size === 0) {
+      if (priming && !changed) this._primingEdges = false;
+      return changed;
+    }
     for (const part of this.parts) {
       const model = getDevice(part.kind);
       if (!model || !model.update) continue;
@@ -7512,6 +7542,7 @@ export class BoardImpl {
       };
       this._attachMeasurementValidity(model, read, solution);
       if (model.transientUpdateContext === true) read.transient = acceptedTransient;
+      if (priming) read.priming = true;
       try {
         if (model.update(part, state, read, atNs)) changed = true;
       } catch (error) {
@@ -7528,6 +7559,7 @@ export class BoardImpl {
         throw error;
       }
     }
+    if (priming && !changed) this._primingEdges = false;
     return changed;
   }
 
