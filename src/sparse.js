@@ -380,33 +380,55 @@ export class SparseLU {
  * (the slot map guarantees one entry per cell).
  *
  * @param {CooMatrix} A
- * @param {{colPtr?: Int32Array, rowIdx?: Int32Array, values?: Float64Array, fill?: Int32Array}} workspace
- *   Optional buffers to reuse. Results backed by a workspace are valid until its next use.
+ * @param {object} [workspace] Optional scratch buffers and the last coordinate layout.
+ *   Results backed by a workspace are valid until its next use.
  * @returns {{n: number, colPtr: Int32Array, rowIdx: Int32Array, values: Float64Array}}
  */
-export function toCSC(A, workspace = {}) {
-  const n = A.n;
-  const nnz = A.v.length;
-  if (workspace.colPtr?.length === n + 1) {
-    workspace.colPtr.fill(0);
+export function toCSC(A, workspace) {
+  const {n, ri, ci, v} = A;
+  const nnz = v.length;
+  const buffers = workspace ?? {};
+  const layout = buffers.layout;
+  if (layout && layout.n === n && layout.slots.length === nnz) {
+    // Check insertion order as well as membership. A changed stamping order
+    // can change the CSC order within a column, including its pivot tie breaks.
+    let unchanged = true;
+    for (let i = 0; i < nnz; i++) {
+      if (ri[i] !== layout.rows[i] || ci[i] !== layout.cols[i]) {
+        unchanged = false;
+        break;
+      }
+    }
+    if (unchanged) {
+      const {colPtr, rowIdx, values} = buffers;
+      for (let i = 0; i < nnz; i++) values[layout.slots[i]] = v[i];
+      return {n, colPtr, rowIdx, values};
+    }
+  }
+
+  if (buffers.colPtr?.length === n + 1) {
+    buffers.colPtr.fill(0);
   } else {
-    workspace.colPtr = new Int32Array(n + 1);
-    workspace.fill = new Int32Array(n);
+    buffers.colPtr = new Int32Array(n + 1);
+    buffers.fill = new Int32Array(n);
   }
-  if (workspace.rowIdx?.length !== nnz) {
-    workspace.rowIdx = new Int32Array(nnz);
-    workspace.values = new Float64Array(nnz);
+  if (buffers.rowIdx?.length !== nnz) {
+    buffers.rowIdx = new Int32Array(nnz);
+    buffers.values = new Float64Array(nnz);
   }
-  const {colPtr, rowIdx, values, fill} = workspace;
-  for (let i = 0; i < nnz; i++) colPtr[A.ci[i] + 1]++;
+  const {colPtr, rowIdx, values, fill} = buffers;
+  const slots = layout?.slots.length === nnz ? layout.slots : workspace && new Int32Array(nnz);
+  for (let i = 0; i < nnz; i++) colPtr[ci[i] + 1]++;
   for (let c = 0; c < n; c++) {
     fill[c] = colPtr[c];
     colPtr[c + 1] += colPtr[c];
   }
   for (let i = 0; i < nnz; i++) {
-    const p = fill[A.ci[i]]++;
-    rowIdx[p] = A.ri[i];
-    values[p] = A.v[i];
+    const p = fill[ci[i]]++;
+    rowIdx[p] = ri[i];
+    values[p] = v[i];
+    if (slots) slots[i] = p;
   }
-  return { n, colPtr, rowIdx, values };
+  if (workspace) buffers.layout = {n, slots, rows: ri.slice(), cols: ci.slice()};
+  return {n, colPtr, rowIdx, values};
 }
