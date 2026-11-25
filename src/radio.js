@@ -358,9 +358,20 @@ export function junctionCapacitance(P, v) {
     return c0 * (1 + m * (v - fc * vj) / (vj * (1 - fc)));
 }
 
+/**
+ * A MOSFET's threshold in the sense its overdrive is taken, as the DC model
+ * (src/mna.js) takes it: an nmos's vth signed (a depletion device, vth < 0,
+ * conducts at vgs = 0), a pmos's |vth| against vsg. (Was |vth| for both: a
+ * depletion nmos — a dual-gate MOSFET's halves — was cut off at RF while its
+ * DC bias carried milliamps.)
+ */
+export function mosThreshold(kind, P) {
+    return kind === 'pmos' ? Math.abs(num(P?.vth, -2.0)) : num(P?.vth, 2.0);
+}
+
 /** Square law of a MOSFET in saturation (the engine's smoothed law). */
-function mosLaw(P) {
-    const vth = Math.abs(num(P.vth, 2.0));
+function mosLaw(P, kind = 'nmos') {
+    const vth = mosThreshold(kind, P);
     const k = mosK(P);
     return (vgs) => { const [vov] = smoothVov(vgs - vth); return k * vov * vov; };
 }
@@ -392,7 +403,7 @@ export function mosChannelFade(vds) { return vds > 0 ? Math.tanh(vds / 0.2) : 0;
 export function mosRectification(part, vgs, A) {
     if (!(A > 1e-9)) return [0, 0];
     const P = part.params ?? {};
-    const vth = Math.abs(num(P.vth, 2.0));
+    const vth = mosThreshold(part.kind, P);
     const k = mosK(P);
     let avg = 0, slope = 0;
     for (const c of QUAD_COS) {
@@ -1347,7 +1358,7 @@ export class RadioFrontEnd {
             const vgs = s * (nv(d.nets[0]) - nv(d.nets[1]));
             const vds = d.nets2 ? s * (nv(d.nets2[0]) - nv(d.nets2[1])) : 0;
             const id = Math.abs(solution?.branchCurrents?.get(d.partId)?.get('drain') ?? 0);
-            return { vgs, vds, id, law: mosLaw(P), vth: Math.abs(num(P.vth, 2.0)), lambda: num(P.lambda, 0), cgs: num(P.cgs, 0), cgd: num(P.cgd, 0) };
+            return { vgs, vds, id, law: mosLaw(P, d.kind), vth: mosThreshold(d.kind, P), lambda: num(P.lambda, 0), cgs: num(P.cgs, 0), cgd: num(P.cgd, 0) };
         });
     }
 

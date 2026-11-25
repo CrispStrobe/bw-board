@@ -219,3 +219,33 @@ describe('an LM386 on a bench with RF bands', () => {
         assert.equal(band.t, t, 'the band did not move while the matrix was assembled');
     });
 });
+
+describe('a depletion-mode MOSFET at RF', () => {
+    it('conducts at vgs = 0 and amplifies the station, as its DC bias says (its threshold is signed)', () => {
+        // Gap (2026-11-25, found building a differential RF amplifier on a
+        // dual-gate MOSFET): the RF law took |vth|, so a depletion nmos
+        // (vth = −1.2 V) was cut off at RF with milliamps of DC through it:
+        // no gain, its drain's RF exactly 0.
+        const build = (vth) => {
+            const b = new BoardImpl(9);
+            b.setNetlist([P('G', 'gnd', {}, ['gnd']), P('VS', 'vsource', { volts: 9 }, ['pos', 'neg']),
+                P('L', 'ferrite_coil', { rodHeightM: 0.05 }, ['a', 'tap', 'b', 'c1', 'c2']), P('TC', 'tuning_cap', { position: 0.5 }, ['a', 'b']),
+                P('CG', 'capacitor', { farads: 1e-9 }, ['a', 'b']), P('RG', 'resistor', { ohms: 1e6 }, ['a', 'b']),
+                P('M', 'nmos', { vth, k: 5e-3 }, ['gate', 'drain', 'source']), P('RD', 'resistor', { ohms: 1000 }, ['a', 'b'])],
+            [net('g', ['G', 'gnd'], ['VS', 'neg'], ['L', 'a'], ['TC', 'b'], ['RG', 'b'], ['M', 'source']),
+                net('v', ['VS', 'pos'], ['RD', 'a']), net('t', ['L', 'b'], ['TC', 'a'], ['CG', 'a']),
+                net('gate', ['CG', 'b'], ['RG', 'a'], ['M', 'gate']), net('d', ['M', 'drain'], ['RD', 'b'])]);
+            b.setBroadcast([{ id: 's', hz: 1 / (2 * Math.PI * Math.sqrt(250e-6 * 255e-12)), fieldVPerM: 0.01, depth: 0, audio: { type: 'none' } }]);
+            b.setPower(true);
+            ms(b, 0.2);
+            return { id: (9 - b.nodeVoltages.get('d')) / 1000, gate: b.rfVoltage('gate')[0].volts, drain: b.rfVoltage('d')[0].volts };
+        };
+        const dep = build(-1.2);
+        // Idss = K·Vp² = 5 mA/V² · 1.44 V² = 7.2 mA; gm = 2K·1.2 V = 12 mS, ×1 kΩ.
+        assert.ok(Math.abs(dep.id - 7.2e-3) < 0.5e-3, `DC: Idss at vgs = 0 (${dep.id} A)`);
+        assert.ok(dep.gate > 0, 'the station reaches the gate');
+        close(dep.drain / dep.gate, 12, 2.5, 'RF gain gm·RD at vgs = 0');
+        const enh = build(2);
+        assert.ok(enh.drain < dep.drain / 100, `an enhancement nmos at vgs = 0 stays cut off at RF (${enh.drain} V)`);
+    });
+});
