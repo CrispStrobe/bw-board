@@ -146,7 +146,10 @@ jobs:
           # 2026-10-05: 398c31ca -> 68ef757a (emu8051-stc #1 STC89 12T timers,
           # #2 UART1 receive FIFO; checkpoint layout 0x80510101 -> 0x80510102,
           # 443483 -> 443557 bytes, moved in src/emu8051-debug.js with it).
-          ref: 68ef757aab3adc606796df4602f4724b627a500b
+          # 2026-11-25: STC15 Timer0 buffered auto-reload and native W408AS;
+          # checkpoint build 0x80510103 / 443561 bytes. Both reset entry points
+          # preserve host callbacks; adapters must detach owned bindings on destroy.
+          ref: b3d28a7a45d5a49ca14e702f75f9f49d09b58e74
           # Actions refuses a path outside the workspace, so the sibling lands
           # INSIDE it and the test looks in both places.
           path: emu8051-stc
@@ -286,6 +289,7 @@ jobs:
           # Prevent an old/partial emulator pin from making checkpoint tests
           # pass through their intentional unsupported-build branch.
           EMU8051_CHECKPOINT_REQUIRED: '1'
+          BW8051_REQUIRE_EMULATOR: '1'
           BW_X86_FIXTURE_DIAGNOSTICS: ${{ runner.temp }}/bw-x86-fixture-failures
         # Serialize test files: the compressed native receipts expand to large
         # reports in separate Node processes. Recent runner shutdowns lacked

@@ -140,11 +140,11 @@ const NS_PER_S = 1_000_000_000n;
 /** PIN_HISTORY_SIZE in the pinned native ABI. */
 const PIN_HISTORY_CAPACITY = 4096;
 const CHECKPOINT_VERSION = 1;
-// 0x80510102 (2026-10-05): the UART1 receive FIFO joined the state
-// (emu8051-stc #2); 0x80510101 / 443483 before it.
-const CHECKPOINT_BUILD_ID = 0x80510102;
-/** Exact sizeof(emu_checkpoint_v1) for build 0x80510102. */
-const CHECKPOINT_SIZE = 443557;
+// 0x80510103 (2026-11-25): STC15 Timer0 mode-0 reload/counter state.
+// The old 0x80510102 / 443557 layout cannot reproduce a pending reload.
+const CHECKPOINT_BUILD_ID = 0x80510103;
+/** Exact sizeof(emu_checkpoint_v1) for build 0x80510103. */
+const CHECKPOINT_SIZE = 443561;
 const CHECKPOINT_NATIVE_ERRORS = Object.freeze({
     [-1]: 'not-initialized', [-2]: 'null-buffer', [-3]: 'wrong-length',
     [-4]: 'malformed', [-5]: 'unsupported-version', [-6]: 'incompatible-build',
@@ -1410,6 +1410,7 @@ export function createEmu8051DebugTarget(wasm, opts = {}) {
 
         /** Release the registered callback. */
         destroy() {
+            if (haltCbPtr !== null && wasm._emu_dbg_set_on_halt) wasm._emu_dbg_set_on_halt(0, 0);
             if (haltCbPtr !== null && wasm.removeFunction) {
                 try { wasm.removeFunction(haltCbPtr); } catch { /* already gone */ }
             }
