@@ -25,7 +25,7 @@
 import { junctionVf } from './led-color.js';
 import {
   findNet, junctionOpts, pwlKneeCurrent, smoothVov, MOS_GDS_FLOOR, MOS_SMOOTH_DELTA,
-  ebersMollChargeCompanion, ebersMollCompanion, ebersMollParams, mosGds, mosK, mosTriode, mosVth,
+  ebersMollChargeCompanion, ebersMollCompanion, ebersMollParams, mosGds, mosK, mosOverdrive, mosTriode, mosVth,
   shockleyParams, shockleyEval, shockleyJunctionFromTotal, kneeFromVf, JUNCTION_RD, junctionRd,
   chooseGroundReference } from './mna.js';
 import { CooMatrix, SparseLU, toCSC } from './sparse.js';
@@ -568,7 +568,7 @@ export function acSweep(args) {
             // behavior predates the strict Level-1 source-analysis contract.
             const vth = P.vth ?? (part.kind === 'nmos' ? 2.0 : -2.0);
             const k = P.k ?? 0.5;
-            const [vovS, dVovS] = smoothVov(vgs - Math.abs(vth));
+            const [vovS, dVovS] = smoothVov(mosOverdrive(part.kind, vgs, vth));
             gm = 2 * k * vovS * dVovS;
             const taper = vovS / (vovS + MOS_SMOOTH_DELTA);
             gds = 0.001 * taper * taper + 1e-9;

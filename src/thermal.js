@@ -18,6 +18,12 @@ import { DMath } from './det-math.js';
  *   thermalCoupling  0..1 (default 0.5): the fraction of the heater's
  *                temperature rise this part sees as its own surroundings --
  *                1 is glued to it, 0.2 is "a few millimetres away".
+ *   surroundC    the temperature of this part's OWN surroundings, degrees C:
+ *                a sensor on a lead held between the fingers, dipped in ice
+ *                water or a cup of hot water while the rest of the circuit
+ *                stays at the bench. It replaces the bench (and heatedBy) as
+ *                the temperature the part relaxes toward, and is read live,
+ *                so a slider moving it moves the part with its time constant.
  *
  * A part named only by heatedBy, or carrying only heatedBy, gets the defaults
  * of its kind (THERMAL_DEFAULTS). Kinds outside that table do not take part.
@@ -26,7 +32,8 @@ import { DMath } from './det-math.js';
  *
  * THE PHYSICS. Per part, a first-order RC to its surroundings:
  *
- *   T_surround = T_bench + coupling x (T_heater - T_bench)   (heatedBy)
+ *   T_surround = surroundC                                    (own surroundings)
+ *              = T_bench + coupling x (T_heater - T_bench)   (heatedBy)
  *              = T_bench                                      (otherwise)
  *   tau dT/dt  = T_surround + P x rth_eff - T
  *
@@ -47,6 +54,10 @@ import { DMath } from './det-math.js';
  *   - an NTC in the model follows the beta equation
  *       R = r25 exp(beta (1/T - 1/298.15 K)),  params r25 (10 kOhm), beta (3950)
  *     instead of its 0..1 control;
+ *   - a silicon PTC sensor (ptc_sensor) follows
+ *       R = r25 (1 + A (T - 25) + B (T - 25)^2),  r25 2 kOhm, A 7.88e-3 /K,
+ *       B 1.937e-5 /K^2 (the usual spreading-resistance sensor curve); it
+ *       reads the bench temperature when it is not in the model;
  *   - a resistor's value does not change (no TCR): it is the heater.
  *
  * @module
@@ -69,6 +80,8 @@ export const THERMAL_DEFAULTS = Object.freeze({
   // (src/optics.js); a 5 mm / TO-18 package, like the LED.
   phototransistor: Object.freeze({ rth: 300, tau: 10 }),
   photodiode: Object.freeze({ rth: 300, tau: 10 }),
+  // Silicon PTC sensor in a TO-92 / glass package: about 400 K/W in still air.
+  ptc_sensor: Object.freeze({ rth: 400, tau: 10 }),
 });
 
 /** Silicon junction forward-drop coefficient, V/K (E2.2). */
@@ -78,6 +91,18 @@ const finitePositive = (x) => {
   const n = Number(x);
   return Number.isFinite(n) && n > 0 ? n : null;
 };
+
+/**
+ * A part's own surroundings temperature (params.surroundC), or null.
+ * @param {{params?: Record<string, unknown>}} part
+ * @returns {number|null}
+ */
+export function surroundOf(part) {
+  const v = part?.params?.surroundC;
+  if (v === undefined || v === null || v === '') return null;
+  const n = Number(v);
+  return Number.isFinite(n) ? n : null;
+}
 
 /**
  * The thermal spec of `part`, or null when it does not take part.
@@ -91,7 +116,8 @@ export function thermalSpecOf(part, named = false) {
   if (!def) return null;
   const rthOwn = finitePositive(P.rth);
   const heatedBy = typeof P.heatedBy === 'string' && P.heatedBy !== '' ? P.heatedBy : null;
-  if (!rthOwn && !heatedBy && !named) return null;
+  const ownSurround = surroundOf(part) !== null;
+  if (!rthOwn && !heatedBy && !named && !ownSurround) return null;
   const c = Number(P.thermalCoupling ?? 0.5);
   return {
     rth: rthOwn ?? def.rth,
@@ -105,6 +131,7 @@ export function thermalSpecOf(part, named = false) {
  * Build the thermal entries for a (solver-view) parts list, or null when no
  * part opts in.
  * @param {Array<{id: string, kind: string, params?: Record<string, unknown>}>} parts
+ * Each entry keeps its part (non-enumerable) so stepThermal reads surroundC live.
  * @returns {Array<{id: string, rth: number, tau: number, heatedBy: string|null, coupling: number}>|null}
  */
 export function buildThermalEntries(parts) {
@@ -116,7 +143,7 @@ export function buildThermalEntries(parts) {
   const entries = [];
   for (const p of parts) {
     const spec = thermalSpecOf(p, named.has(p.id));
-    if (spec) entries.push({ id: p.id, ...spec });
+    if (spec) entries.push(Object.defineProperty({ id: p.id, ...spec }, 'part', { value: p, enumerable: false }));
   }
   if (!entries.length) return null;
   const ids = new Set(entries.map((e) => e.id));
@@ -148,10 +175,13 @@ export function stepThermal(entries, temps, powers, benchC, airflowMs, h) {
   const before = new Map(temps);
   let maxDelta = 0;
   for (const e of entries) {
-    const T = before.get(e.id) ?? benchC;
-    const surround = e.heatedBy
-      ? benchC + e.coupling * ((before.get(e.heatedBy) ?? benchC) - benchC)
-      : benchC;
+    const own = surroundOf(e.part);
+    const T = before.get(e.id) ?? own ?? benchC;
+    const surround = own !== null
+      ? own
+      : e.heatedBy
+        ? benchC + e.coupling * ((before.get(e.heatedBy) ?? benchC) - benchC)
+        : benchC;
     const P = powers.get(e.id) ?? 0;
     const target = surround + (Number.isFinite(P) ? P : 0) * e.rth / f;
     const next = T + (target - T) * (1 - DMath.exp(-h * f / e.tau));
@@ -178,4 +208,22 @@ export function ntcResistanceAt(part, celsius) {
   const beta = finitePositive(part.params?.beta) ?? 3950;
   const T = Math.max(celsius + 273.15, 1);
   return Math.max(0.001, r25 * DMath.exp(beta * (1 / T - 1 / 298.15)));
+}
+
+/** Default silicon PTC coefficients (spreading-resistance sensor). */
+export const PTC_DEFAULTS = Object.freeze({ r25: 2000, alpha: 7.88e-3, beta2: 1.937e-5 });
+
+/**
+ * A silicon PTC sensor's resistance at `celsius`:
+ * r25 (1 + alpha (T - 25) + beta2 (T - 25)^2).
+ * @param {{params?: Record<string, unknown>}} part
+ * @param {number} celsius
+ */
+export function ptcResistanceAt(part, celsius) {
+  const P = part.params ?? {};
+  const r25 = finitePositive(P.r25) ?? PTC_DEFAULTS.r25;
+  const a = Number.isFinite(Number(P.alpha)) ? Number(P.alpha) : PTC_DEFAULTS.alpha;
+  const b2 = Number.isFinite(Number(P.beta2)) ? Number(P.beta2) : PTC_DEFAULTS.beta2;
+  const d = celsius - 25;
+  return Math.max(1, r25 * (1 + a * d + b2 * d * d));
 }

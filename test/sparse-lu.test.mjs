@@ -47,6 +47,43 @@ function randomSystem(n, nSources, rnd) {
   return { A, b };
 }
 
+it('preserves first-touch sparse slots at either side of the small matrix limit', () => {
+  for (const size of [64, 65]) {
+    const a = new CooMatrix(size);
+    a.set(size - 1, size - 1, 4);
+    a.add(0, 0, 2);
+    a.add(size - 1, size - 1, 3);
+    assert.equal(a.get(size - 1, size - 1), 7);
+    assert.equal(a.get(1, 1), 0);
+    a.reset();
+    assert.equal(a.get(size - 1, size - 1), 0);
+    assert.equal(a.nnz, 2);
+    assert.deepEqual(a.ri, [size - 1, 0]);
+    assert.deepEqual(a.ci, [size - 1, 0]);
+  }
+});
+
+it('reuses CSC buffers without retaining previous columns or values', () => {
+  const workspace = {};
+  const first = new CooMatrix(3);
+  first.set(0, 0, 2);
+  first.set(2, 1, 3);
+  const initial = toCSC(first, workspace);
+
+  const next = new CooMatrix(3);
+  next.set(1, 0, 5);
+  next.set(0, 2, 7);
+  const reused = toCSC(next, workspace);
+  assert.equal(reused.colPtr, initial.colPtr);
+  assert.equal(reused.rowIdx, initial.rowIdx);
+  assert.equal(reused.values, initial.values);
+  assert.deepEqual(reused, toCSC(next));
+
+  const resized = new CooMatrix(2);
+  resized.set(1, 1, 11);
+  assert.deepEqual(toCSC(resized, workspace), toCSC(resized));
+});
+
 function denseSolve(A, b) {
   const dense = new Matrix(A.n, A.n);
   for (let i = 0; i < A.v.length; i++) dense.add(A.ri[i], A.ci[i], A.v[i]);

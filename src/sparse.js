@@ -29,8 +29,10 @@ export class CooMatrix {
     this.n = n;
     this.rows = n;
     this.cols = n;
-    /** @type {Map<number, number>} cell key (r*n+c) → slot in v */
-    this.idx = new Map();
+    // Small circuits can index cells directly without hashing. Bound the
+    // table to 8 KiB and keep the existing sparse index for larger boards.
+    this.directIndex = n <= 64 ? new Int16Array(n * n) : null;
+    this.idx = this.directIndex ? null : new Map();
     /** @type {number[]} */ this.ri = [];
     /** @type {number[]} */ this.ci = [];
     /** @type {number[]} */ this.v = [];
@@ -39,10 +41,12 @@ export class CooMatrix {
   /** @param {number} r @param {number} c @returns {number} slot */
   _slot(r, c) {
     const k = r * this.n + c;
-    let s = this.idx.get(k);
-    if (s === undefined) {
+    const direct = this.directIndex;
+    let s = direct ? direct[k] - 1 : (this.idx.get(k) ?? -1);
+    if (s < 0) {
       s = this.v.length;
-      this.idx.set(k, s);
+      if (direct) direct[k] = s + 1;
+      else this.idx.set(k, s);
       this.ri.push(r);
       this.ci.push(c);
       this.v.push(0);
@@ -58,8 +62,9 @@ export class CooMatrix {
 
   /** @param {number} r @param {number} c @returns {number} */
   get(r, c) {
-    const s = this.idx.get(r * this.n + c);
-    return s === undefined ? 0 : this.v[s];
+    const k = r * this.n + c;
+    const s = this.directIndex ? this.directIndex[k] - 1 : (this.idx.get(k) ?? -1);
+    return s >= 0 ? this.v[s] : 0;
   }
 
   /** Zero the values, keep the pattern (slots survive for the next fill). */
@@ -104,6 +109,7 @@ export class SparseLU {
     this.reach = null;
     // The input pattern the factorization was built for.
     this.inColPtr = null; this.inRowIdx = null;
+    this.refactorRows = null; this.refactorWork = null;
   }
 
   /**
@@ -269,6 +275,9 @@ export class SparseLU {
     this.reach = reachCols;
     this.inColPtr = colPtr.slice();
     this.inRowIdx = rowIdx.slice();
+    // Same-pattern refactors scatter into this fixed pivot order each time.
+    this.refactorRows = rowIdx.map(row => pinv[row]);
+    this.refactorWork = new Float64Array(n);
   }
 
   /**
@@ -296,16 +305,16 @@ export class SparseLU {
    */
   refactor(csc) {
     const n = this.n;
-    const { colPtr, rowIdx, values } = csc;
-    const { perm, pinv, Lp, Li, Lx, Up, Ui, Ux, Udiag, reach } = this;
-    const w = new Float64Array(n);   // by pivot position this time
+    const {colPtr, values} = csc;
+    const {Lp, Li, Lx, Up, Ui, Ux, Udiag, reach, refactorRows, refactorWork: w} = this;
+    w.fill(0);
 
     for (let j = 0; j < n; j++) {
       // Scatter A(:,j) into pivot-position space. Only positions in the
       // stored patterns are read back, and those are exactly the positions
       // the stored elimination can produce — same pattern in, same out.
       for (let p = colPtr[j]; p < colPtr[j + 1]; p++) {
-        w[pinv[rowIdx[p]]] += values[p];
+        w[refactorRows[p]] += values[p];
       }
       const reachJ = reach[j];
       for (let t = 0; t < reachJ.length; t++) {
@@ -325,8 +334,6 @@ export class SparseLU {
         remainingMax = Math.max(remainingMax, Math.abs(w[Li[k]]));
       }
       if (!(Math.abs(pivotVal) >= 1e-13) || Math.abs(pivotVal) < remainingMax) {
-        // Clear workspace before handing back.
-        w.fill(0);
         return false;
       }
       Udiag[j] = pivotVal;
@@ -373,17 +380,29 @@ export class SparseLU {
  * (the slot map guarantees one entry per cell).
  *
  * @param {CooMatrix} A
+ * @param {{colPtr?: Int32Array, rowIdx?: Int32Array, values?: Float64Array, fill?: Int32Array}} workspace
+ *   Optional buffers to reuse. Results backed by a workspace are valid until its next use.
  * @returns {{n: number, colPtr: Int32Array, rowIdx: Int32Array, values: Float64Array}}
  */
-export function toCSC(A) {
+export function toCSC(A, workspace = {}) {
   const n = A.n;
   const nnz = A.v.length;
-  const colPtr = new Int32Array(n + 1);
+  if (workspace.colPtr?.length === n + 1) {
+    workspace.colPtr.fill(0);
+  } else {
+    workspace.colPtr = new Int32Array(n + 1);
+    workspace.fill = new Int32Array(n);
+  }
+  if (workspace.rowIdx?.length !== nnz) {
+    workspace.rowIdx = new Int32Array(nnz);
+    workspace.values = new Float64Array(nnz);
+  }
+  const {colPtr, rowIdx, values, fill} = workspace;
   for (let i = 0; i < nnz; i++) colPtr[A.ci[i] + 1]++;
-  for (let c = 0; c < n; c++) colPtr[c + 1] += colPtr[c];
-  const rowIdx = new Int32Array(nnz);
-  const values = new Float64Array(nnz);
-  const fill = Int32Array.from(colPtr.subarray(0, n));
+  for (let c = 0; c < n; c++) {
+    fill[c] = colPtr[c];
+    colPtr[c + 1] += colPtr[c];
+  }
   for (let i = 0; i < nnz; i++) {
     const p = fill[A.ci[i]]++;
     rowIdx[p] = A.ri[i];

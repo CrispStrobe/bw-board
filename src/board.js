@@ -29,7 +29,11 @@ import {
 import { resolveParams, classDefaults } from './parts-library.js';
 import { acSweep } from './ac.js';
 import { expandTransducers, transducerCard } from './transducers.js';
-import { expandSensingTransducers } from './sensing-transducers.js';
+import { expandSensingTransducers, combHumidityPct } from './sensing-transducers.js';
+import { inductionLoopCard } from './magnetic-coupling.js';
+import { expandDualGateMosfets } from './dual-gate-mosfet.js';
+import { expandMixerIcs } from './mixer-ic.js';
+import { expandFmIfIcs } from './fm-if-ic.js';
 import { expandRadio, normalizeStations, DEFAULT_STATIONS } from './radio.js';
 import { expandFields } from './fields.js';
 import { expandOptics, pathKnobRest, LIGHT_PATH_KIND } from './optics.js';
@@ -45,7 +49,7 @@ import { feedI2CSlave } from './devices/i2c-slave.js';
 import { checkCurrentBudget } from './current-ratings.js';
 import { createWorld, bindPartsToHost, lightLevel, lightControlDefault } from './world.js';
 import { junctionModelOf, chooseGroundReference, ledSeriesCurrent } from './mna.js';
-import { buildThermalEntries, stepThermal, shortestTau } from './thermal.js';
+import { buildThermalEntries, stepThermal, shortestTau, surroundOf } from './thermal.js';
 
 /** Re-solve when a thermal-model part has moved this far (K) since it last stamped. */
 const THERMAL_RESOLVE_K = 0.02;
@@ -1171,6 +1175,7 @@ export class BoardImpl {
   }
 
   setNetlist(parts, nets) {
+    this._bounces = null;
     this._newtonSeed = null; // junction/region state belongs to the old netlist
     this._nonConvergedAtNs = null; // a failure on the old netlist says nothing about this one
     this._ledFanout = undefined; // netlist changed: recompute the fan-out memo
@@ -1224,7 +1229,16 @@ export class BoardImpl {
     // `_stimuli`: sound and falling magnets that move with time on their own.
     const coilView = expandSensingTransducers(tdView.parts, tdView.nets);
     this._stimuli = [tdView.acoustics, coilView.stimulus].filter(Boolean);
-    const radioView = expandRadio(coilView.parts, coilView.nets, { controls: () => this.controls });
+    // Dual-gate MOSFETs are two solver `nmos` in series on a hidden middle
+    // node (src/dual-gate-mosfet.js), the mixer IC a Gilbert-cell core with
+    // hidden biases and an oscillator transistor (src/mixer-ic.js): both
+    // BEFORE the radio expansion, so the RF bands see their transistors; the
+    // FM IF IC's input termination likewise (src/fm-if-ic.js).
+    // A circuit without either passes through.
+    const tetrodeView = expandDualGateMosfets(coilView.parts, coilView.nets);
+    const mixerView0 = expandMixerIcs(tetrodeView.parts, tetrodeView.nets);
+    const mixerView = expandFmIfIcs(mixerView0.parts, mixerView0.nets);
+    const radioView = expandRadio(mixerView.parts, mixerView.nets, { controls: () => this.controls });
     this._radio = radioView.radio;
     if (this._radio && this._broadcast) this._radio.setStations(this._broadcast);
     // Field probes and junctions in reverse breakdown (src/fields.js): the
@@ -2076,7 +2090,8 @@ export class BoardImpl {
       return;
     }
 
-    const hasDevices = this._deviceStates.size > 0 || this._shiftRegisters.size > 0;
+    const hasDevices = this._deviceStates.size > 0 || this._shiftRegisters.size > 0
+      || Boolean(this._bounces?.size);
 
     // Sub-step through device deadlines so timed transitions fire at the
     // correct time, not just at the destination. Without this, a relay with
@@ -2142,6 +2157,9 @@ export class BoardImpl {
             this._integrateTransientMNA(dtSec);
           }
         }
+
+        // A bouncing contact moves exactly at its scheduled instants.
+        if (this._applyBounces(nextT)) this._solve();
 
         // Update devices at this time and re-solve if state changed
         for (let round = 0; round < 5; round++) {
@@ -3780,11 +3798,95 @@ export class BoardImpl {
    * @param {number} value
    */
   setControl(partId, value) {
+    const prev = this.controls.get(partId);
     this.controls.set(partId, value);
+    this._scheduleBounce(partId, prev, value);
     // A field probe's knob is a hand moving: it starts now (src/fields.js).
     this._fields?.onControl(partId, value, Number(this.timeNs) / 1e9);
     this._solveForUserAction();
     this._notifyChange('control', { partId, value });
+  }
+
+  /**
+   * CONTACT BOUNCE (params.bounceMs on a button or switch). A real contact
+   * hits, rebounds and hits again a few times within milliseconds before it
+   * rests, so a counter clocked straight from a button counts several steps
+   * per press. When a contact's control changes and its params.bounceMs is
+   * positive, the new state takes effect at once (first touch / first
+   * separation) and `bounces` (default 4; half as many on release, at least
+   * one) brief reversals follow inside bounceMs. Their times come from a
+   * seeded PRNG (params.bounceSeed, else a hash of the part id) advanced per
+   * change, so a run reproduces exactly; later rebounds come sooner after
+   * each other and are shorter, as the spring's energy dies away. The
+   * reversals are scheduled on the board clock (_earliestDeviceDeadline) and
+   * applied at their exact instants; a contact without bounceMs switches once.
+   */
+  _scheduleBounce(partId, prev, value) {
+    const part = this.parts?.find((p) => p.id === partId);
+    if (!part || (part.kind !== 'button' && part.kind !== 'switch')) return;
+    const bounceMs = Number(part.params?.bounceMs);
+    const closedNow = Number(value) >= 0.5;
+    const closedBefore = Number(prev) >= 0.5;
+    this._bounces?.delete(partId);
+    if (!(bounceMs > 0) || closedNow === closedBefore) return;
+    const nPress = Math.max(0, Math.round(Number(part.params?.bounces ?? 4)));
+    const n = closedNow ? nPress : Math.max(nPress > 0 ? 1 : 0, Math.floor(nPress / 2));
+    if (!n) return;
+    this._bounceCount ??= new Map();
+    const k = (this._bounceCount.get(partId) ?? 0) + 1;
+    this._bounceCount.set(partId, k);
+    let seed = Number.isFinite(Number(part.params?.bounceSeed)) ? Number(part.params.bounceSeed) >>> 0 : 0;
+    if (!part.params?.bounceSeed && part.params?.bounceSeed !== 0) for (const ch of String(partId)) seed = Math.imul(seed ^ ch.charCodeAt(0), 2654435761) >>> 0;
+    let st = (seed + Math.imul(k, 0x9e3779b9)) >>> 0;
+    const rand = () => { // mulberry32
+      st = (st + 0x6d2b79f5) >>> 0;
+      let x = st;
+      x = Math.imul(x ^ (x >>> 15), x | 1);
+      x ^= x + Math.imul(x ^ (x >>> 7), x | 61);
+      return ((x ^ (x >>> 14)) >>> 0) / 4294967296;
+    };
+    // Gaps between successive events shrink geometrically (ratio 0.6) and
+    // carry +-30 % jitter; the whole run is scaled to end inside bounceMs.
+    const raw = [];
+    for (let i = 0; i < 2 * n; i++) raw.push(Math.pow(0.6, Math.floor(i / 2)) * (i % 2 ? 0.35 : 1) * (0.7 + 0.6 * rand()));
+    const total = raw.reduce((a, b) => a + b, 0);
+    const spanNs = bounceMs * 1e6 * 0.95;
+    const t0 = BigInt(this.timeNs);
+    const events = [];
+    let acc = 0;
+    for (let i = 0; i < raw.length; i++) {
+      acc += raw[i] / total * spanNs;
+      // even i: the contact springs back (reverses), odd i: it lands again
+      events.push({ tNs: t0 + BigInt(Math.max(1, Math.round(acc))), value: i % 2 === 0 ? (closedNow ? 0 : 1) : (closedNow ? 1 : 0) });
+    }
+    (this._bounces ??= new Map()).set(partId, events);
+  }
+
+  /** The next scheduled contact-bounce instant in (afterNs, beforeNs], or null. */
+  _nextBounceNs(afterNs, beforeNs) {
+    if (!this._bounces?.size) return null;
+    let best = null;
+    for (const events of this._bounces.values()) {
+      for (const e of events) {
+        if (e.tNs > afterNs && e.tNs <= beforeNs && (best === null || e.tNs < best)) best = e.tNs;
+        if (e.tNs > afterNs) break;
+      }
+    }
+    return best;
+  }
+
+  /** Apply every bounce event due at or before tNs; true when a contact moved. */
+  _applyBounces(tNs) {
+    if (!this._bounces?.size) return false;
+    let moved = false;
+    for (const [id, events] of this._bounces) {
+      while (events.length && events[0].tNs <= tNs) {
+        const e = events.shift();
+        if (this.controls.get(id) !== e.value) { this.controls.set(id, e.value); moved = true; }
+      }
+      if (!events.length) this._bounces.delete(id);
+    }
+    return moved;
   }
 
   /**
@@ -5358,7 +5460,8 @@ export class BoardImpl {
     const th = this._thermal;
     if (!th) return;
     const bench = this.temperatureC;
-    for (const e of th.entries) th.temps.set(e.id, bench);
+    // A part in surroundings of its own (params.surroundC) starts there.
+    for (const e of th.entries) th.temps.set(e.id, surroundOf(e.part) ?? bench);
     th.solvedAt = new Map(th.temps);
   }
 
@@ -5616,7 +5719,14 @@ export class BoardImpl {
     const controllable = ['potentiometer', 'button', 'switch', 'slide_switch', 'ldr', 'ntc', 'light_sensor', 'vsource', 'tuning_cap',
       'field_probe', LIGHT_PATH_KIND,
       // A ferrite rod turns: 0..1 is 0..360° (src/radio.js, direction finding).
-      'ferrite_coil'];
+      'ferrite_coil',
+      // Relative humidity at a salt-film comb, 0..1 = 0..100 % RH (src/sensing-transducers.js).
+      'humidity_comb',
+      // A magnetic field source's distance to its pickup, 0 far .. 1 near (src/magnetic-coupling.js).
+      'induction_loop',
+      // A dipole turns (0..1 = 0..360°); the FM IF IC's knob tunes its
+      // quadrature tank (0.5 = on quadHz) (src/radio.js, src/fm-if-ic.js).
+      'dipole', 'fm_if'];
     return this.parts
       .filter(p => controllable.includes(p.kind) || lightControlDefault(p) !== null)
       .map(p => lightControlDefault(p) !== null ? {
@@ -5637,7 +5747,11 @@ export class BoardImpl {
               : p.kind === 'tuning_cap' ? (p.params?.position ?? 0.5)
                 : p.kind === 'field_probe' ? (p.params?.position ?? 0)
                   : p.kind === LIGHT_PATH_KIND ? pathKnobRest(p)
-                    : p.kind === 'ferrite_coil' ? (Number(p.params?.angleDeg ?? 0) / 360) : 0),
+                    : p.kind === 'ferrite_coil' ? (p.params?.slideWinding ? Number(p.params?.slide ?? 0) : Number(p.params?.angleDeg ?? 0) / 360)
+                      : p.kind === 'dipole' ? (Number(p.params?.angleDeg ?? 0) / 360)
+                      : p.kind === 'fm_if' ? 0.5
+                      : p.kind === 'humidity_comb' ? combHumidityPct(p, undefined) / 100
+                        : p.kind === 'induction_loop' ? inductionLoopCard(p).position : 0),
       }));
   }
 
@@ -6228,6 +6342,7 @@ export class BoardImpl {
    */
   reset() {
     this._externalClock = null;
+    this._bounces = null;
     this.pinStates.clear();
     this.drivenPwm.clear();
     this.timeNs = 0n;
@@ -7237,7 +7352,7 @@ export class BoardImpl {
   deviceEventBudgetPeak() { return this._deviceEventPeak; }
 
   _earliestDeviceDeadline(afterNs, beforeNs) {
-    let earliest = null;
+    let earliest = this._nextBounceNs(afterNs, beforeNs);
 
     // Check registry device states for known deadline fields
     for (const [, state] of this._deviceStates) {
@@ -9079,14 +9194,24 @@ export class BoardImpl {
     // The SOLVER view: identical to the drawn netlist except that an
     // expanded motor's 'a' resolves to its hidden winding net, so device
     // reads and instrument taps see the node its model actually sits on.
-    for (const net of (this._solveNets ?? this.nets)) {
-      for (const t of net.terminals) {
-        if (t.part === partId && t.terminal === terminal) {
-          return net.id;
+    const nets = this._solveNets ?? this.nets;
+    if (this._solverNetIndexSource !== nets) {
+      const index = new Map();
+      for (const net of nets) {
+        for (const t of net.terminals) {
+          let terminals = index.get(t.part);
+          if (!terminals) {
+            terminals = new Map();
+            index.set(t.part, terminals);
+          }
+          if (!terminals.has(t.terminal)) terminals.set(t.terminal, net.id);
         }
       }
+      // Both netlist installation and scope-load changes replace this view.
+      this._solverNetByTerminal = index;
+      this._solverNetIndexSource = nets;
     }
-    return undefined;
+    return this._solverNetByTerminal.get(partId)?.get(terminal);
   }
 
   /**

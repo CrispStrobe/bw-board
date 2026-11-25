@@ -72,6 +72,10 @@ import { DMath } from './det-math.js';
  *   string  air path half-shaded by a plucked string: the shading swings at
  *           stringHz, decaying with decayS, re-plucked every pluckPeriodS —
  *           a light-modulated "electric guitar".
+ *   jet     air path crossed by a thin stream of tap water that a charged
+ *           comb or ruler pulls sideways (waterJetDeflectionMm): the jet's
+ *           shadow on the beam shrinks as it bends out of it, so the
+ *           receiver sees more light the harder the comb pulls.
  *
  * NUMERICS. Coupling is a FUNCTION EVALUATED PER STEP, not a new unknown:
  * each accepted (or adopted) solution sets the emitters' powers, and every
@@ -216,6 +220,55 @@ export function receiverCard(part) {
     }
 }
 
+// ─── Room light with a spectrum (LED sensors) ────────────────────────────
+
+/**
+ * THE ROOM'S LIGHT HAS A COLOUR TOO. An LED used as a light sensor sees only
+ * wavelengths shorter than its own emission (receiverCard 'led'), and along a
+ * light_path that is applied line by line. The plain `light` control was a
+ * colourless 0..1, so a red LED and an IR LED under the same lamp could only
+ * differ by the photoSensitivity the author typed. With
+ * params.ambientSpectrum on the sensing LED, its room-light photocurrent is
+ * weighted by the share of that light it can see:
+ *
+ *   f = Σ S(λ)·R(λ) / Σ S(λ)   over 350..1100 nm in 5 nm steps,
+ *
+ * S the source's spectral power and R the LED's response, so
+ * photoSensitivity keeps meaning "amps at full light of a source it sees
+ * completely". Sources: 'incandescent' (a 2850 K black body: a bulb is
+ * mostly infrared), 'daylight' (5800 K), 'white-led' (the white emitter's two
+ * lines, 25 nm wide), 'flat'. Without the param nothing changes.
+ */
+export const AMBIENT_SPECTRA = Object.freeze(['incandescent', 'daylight', 'white-led', 'flat']);
+
+function blackBody(nm, kelvin) {
+    const l = nm * 1e-9;
+    return 1 / (l ** 5 * (DMath.exp(1.438777e-2 / (l * kelvin)) - 1));
+}
+
+function ambientPower(spectrum, nm) {
+    switch (spectrum) {
+        case 'incandescent': return blackBody(nm, 2850);
+        case 'daylight': return blackBody(nm, 5800);
+        case 'white-led': return EMITTER_TABLE.white.lines.reduce((a, [c, w]) => a + w * DMath.exp(-(((nm - c) / 25) ** 2)), 0);
+        case 'flat': return 1;
+        default: return null;
+    }
+}
+
+/** Share of `spectrum` a light-sensing LED responds to (0..1), or 1 without a known spectrum. */
+export function ambientSpectralShare(part, spectrum = part?.params?.ambientSpectrum) {
+    if (!AMBIENT_SPECTRA.includes(spectrum)) return 1;
+    const card = receiverCard({ ...part, kind: 'led' });
+    let num = 0, den = 0;
+    for (let nm = 350; nm <= 1100; nm += 5) {
+        const s = ambientPower(spectrum, nm);
+        num += s * card.response(nm);
+        den += s;
+    }
+    return den > 0 ? num / den : 1;
+}
+
 // ─── Surfaces, filters, dispersion ───────────────────────────────────────
 
 export const SURFACES = Object.freeze({
@@ -290,6 +343,46 @@ export const fibreAttenuationDbPerM = (nm) => interp(PMMA_DB, nm);
 function num(x, d) { const n = Number(x); return x !== undefined && x !== null && x !== '' && Number.isFinite(n) ? n : d; }
 const DEG = Math.PI / 180;
 
+// ─── A water jet bent by a charged comb ──────────────────────────────────
+
+/**
+ * How far (mm, at the beam) a thin stream of tap water bends toward a
+ * charged comb or ruler `combCm` away holding `combKv` kilovolts.
+ *
+ * The stream is earthed through the tap, so the comb draws a charge of the
+ * opposite sign onto it by induction, proportional to the comb's potential,
+ * and then pulls on that charge with a field that is also proportional to
+ * it: the force goes as V², so BOTH signs of charge attract (the lesson of
+ * the experiment), and as 1/d² for a comb long compared with its distance
+ * (a line charge's induced charge and field each fall as 1/d). The
+ * stiffness of the falling stream is folded into one calibration: 10 kV at
+ * 2 cm bends it 10 mm where it crosses the beam (params.jetBendMm), the
+ * order seen with a comb run through dry hair. The stream sticks to the
+ * comb beyond 25 mm (params.jetMaxMm). Not modelled: the stream breaking
+ * into drops, the comb's charge leaking away, water spraying onto it.
+ */
+export function waterJetDeflectionMm(P) {
+    const kv = num(P.combKv, 10);
+    const d = Math.max(0.5, num(P.combCm, 10));
+    const ref = num(P.jetBendMm, 10);
+    const bend = ref * (kv / 10) ** 2 * (2 / d) ** 2;
+    return Math.min(num(P.jetMaxMm, 25), bend);
+}
+
+/**
+ * The fraction of a beam `beamMm` wide that the stream (jetMm wide, centred
+ * in the beam at rest plus jetOffsetMm) shadows once bent, times its
+ * opacity (jetOpacity, 0.9: a water stream scatters most of what crosses it).
+ */
+export function waterJetShadow(P) {
+    const b = Math.max(0.1, num(P.beamMm, 4));
+    const w = Math.max(0, num(P.jetMm, 3));
+    const x = num(P.jetOffsetMm, 0) + waterJetDeflectionMm(P);
+    const lo = Math.max(-b / 2, x - w / 2), hi = Math.min(b / 2, x + w / 2);
+    const overlap = Math.max(0, hi - lo) / b;
+    return Math.min(1, Math.max(0, num(P.jetOpacity, 0.9))) * overlap;
+}
+
 /**
  * Fraction (per spectral line nm) of the emitter's power P that the receiver
  * collects through `path` at time t: returns { gain(nm), mod(t) } where the
@@ -299,7 +392,8 @@ export function pathTransfer(params, em, rx) {
     const P = params;
     const medium = String(P.medium ?? 'air');
     const rRx = Math.sqrt(rx.areaCm2 / Math.PI); // cm
-    const block = 1 - Math.min(1, Math.max(0, num(P.blocked, 0)));
+    const block = (1 - Math.min(1, Math.max(0, num(P.blocked, 0))))
+        * (medium === 'jet' ? 1 - waterJetShadow(P) : 1);
     const filt = (nm) => filterTransmission(P.filter, nm);
 
     // Free-space beam onto an area at distance dCm, off-axis angle deg.
@@ -315,7 +409,7 @@ export function pathTransfer(params, em, rx) {
         return Math.min(1, I0 * beamPattern(em, deg) * areaCm2 / d2);
     };
 
-    if (medium === 'air' || medium === 'string') {
+    if (medium === 'air' || medium === 'string' || medium === 'jet') {
         const d = Math.max(0, num(P.distanceCm, 10));
         const deg = num(P.angleDeg, 0);
         const tilt = DMath.cos(Math.min(90, Math.abs(num(P.tiltDeg, 0))) * DEG);
@@ -499,6 +593,7 @@ export function lensLaunch(P, em, a, thNA, f) {
 export const DEFAULT_KNOB = Object.freeze({
     air: ['distanceCm', 1, 30], string: ['stringHz', 80, 330], reflect: ['distanceCm', 0.3, 5],
     prism: ['slitAngleDeg', 35, 41], liquid: ['level', 0, 1], fibre: ['outGapMm', 0, 20],
+    jet: ['combCm', 20, 1],
 });
 
 /** A path's params with its knob applied (control 0..1 → knob param). */

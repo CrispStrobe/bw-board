@@ -15,8 +15,14 @@ import { registerDevice } from '../devices.js';
 import { VOICE_COIL_KIND } from '../acoustics.js';
 import {
     thermocoupleCard, airCoilCard, dropEmf, coilRun, coilInductorParams, magnetFall, fluxLinkage,
-    electrolysisCard, FARADAY, INNER_PIN,
+    electrolysisCard, FARADAY, INNER_PIN, combHumidityPct, combOhms, loopLink, pendulumRun, resetPendulumRun,
 } from '../sensing-transducers.js';
+import {
+    inductionLoopCard, loopDistanceM, sectionCoupling, pickupMutual,
+    pendulumCard, bobCoupling, bobCouplingSlope, stepPendulum, pendulumEnergy,
+} from '../magnetic-coupling.js';
+import { ptcResistanceAt } from '../thermal.js';
+import { rulerCard, hallOutput } from '../bending-ruler.js';
 
 const num = (v, d) => (Number.isFinite(Number(v)) ? Number(v) : d);
 
@@ -33,6 +39,49 @@ export function registerSensingParts() {
             const ohms = Number(part.params?.ohms) > 0 ? Number(part.params.ohms) : 8;
             const e = ac ? ac.env.emf(ac.part, ctx.tSeconds ?? 0) : 0;
             ctx.theveninBetween('a', 'coil', e, ohms);
+        },
+    });
+
+    // ─── Silicon PTC temperature sensor ────────────────────────────────
+    // A resistor whose value follows its own temperature (src/thermal.js):
+    // the thermal model's when it takes part (surroundC, heatedBy, rth),
+    // else the bench temperature.
+    registerDevice('ptc_sensor', {
+        terminals: ['a', 'b'],
+        eventLocalization: false,
+        init() { return { drives: {}, ohms: 2000, celsius: 25 }; },
+        stamp(ctx, part, state) {
+            const celsius = num(ctx.partTemperatureC, num(ctx.temperatureC, 25));
+            const ohms = ptcResistanceAt(part, celsius);
+            ctx.conductance('a', 'b', 1 / ohms);
+            if (state) { state.ohms = ohms; state.celsius = celsius; }
+        },
+    });
+
+    // ─── Bending ruler with a magnet over a linear Hall sensor ──────────
+    // src/bending-ruler.js: load -> deflection -> magnet distance -> field
+    // -> ratiometric output on ao (50 Ohm). Its knob is params.loadG.
+    registerDevice('bending_ruler', {
+        terminals: ['vcc', 'gnd', 'ao'],
+        eventLocalization: false,
+        init() { return { drives: {}, loadG: 0, deflectionMm: 0, distanceMm: 15, fieldMt: 0 }; },
+        stamp(ctx, part) {
+            // The sensor's own supply current, about 6 mA at 5 V: ~830 Ohm.
+            ctx.conductance('vcc', 'gnd', 1 / 830);
+        },
+        update(part, state, read) {
+            const card = rulerCard(part);
+            const vcc = read('vcc') - read('gnd');
+            const vTh = read('gnd') + (vcc > 0.5 ? hallOutput(part, vcc, card.fieldMt) : 0);
+            state.loadG = card.loadG;
+            state.deflectionMm = card.deflectionMm;
+            state.distanceMm = card.distanceMm;
+            state.fieldMt = card.fieldMt;
+            state.touching = card.touching;
+            const d = state.drives.ao;
+            if (d && Math.abs(d.vTh - vTh) < 1e-6) return false;
+            state.drives.ao = { vTh, rTh: 50 };
+            return true;
         },
     });
 
@@ -101,6 +150,115 @@ export function registerSensingParts() {
         },
     });
 
+    // ─── Magnetic field source (induction loop, wire, cable) ────────────
+    // Copper between `a` and the inner node; the winding from there to `b`
+    // is a solver inductor, or the primary of the transformer that couples
+    // it to its pickup (src/sensing-transducers.js). The knob (distance)
+    // sets that coupling live.
+    registerDevice('induction_loop', {
+        terminals: ['a', 'b'],
+        eventLocalization: false,
+        init() { return { drives: {}, amps: 0, distanceCm: 0, mutualH: 0, k: 0, fieldT: 0 }; },
+        stamp(ctx, part, state) {
+            const card = inductionLoopCard(part);
+            const d = loopDistanceM(card, ctx.control);
+            const link = loopLink(part);
+            if (link) link.params.k = sectionCoupling(card, link.pickup, d, link.l2);
+            ctx.theveninBetween('a', INNER_PIN, 0, card.ohms);
+            if (state) {
+                state.distanceCm = d * 100;
+                state.mutualH = link ? pickupMutual(card, link.pickup, d) : 0;
+                state.k = link ? link.params.k : 0;
+            }
+        },
+        update(part, state, read) {
+            const card = inductionLoopCard(part);
+            state.amps = (read('a') - read(INNER_PIN)) / card.ohms;
+            state.fieldT = state.mutualH && loopLink(part)
+                ? state.mutualH * state.amps / (loopLink(part).pickup.N * Math.PI * loopLink(part).pickup.r ** 2) : 0;
+            return false;
+        },
+    });
+
+    // ─── Coil pendulum ─────────────────────────────────────────────────
+    // An electromagnet with a pendulum beside it (src/magnetic-coupling.js).
+    // Copper plus the motional EMF between `a` and the inner node, the coil's
+    // inductance (moved live by an iron bob) from there to `b`; the swing is
+    // integrated at every accepted step with the coil's current.
+    const pendulumDrive = (card, run) => {
+        const slope = bobCouplingSlope(card, run.theta);
+        // Magnet: e = dΛ/dθ·ω. Iron: e = i·dΔL/dθ·ω, a resistance in series.
+        return card.bob === 'magnet'
+            ? { e: slope * run.omega, r: card.ohms }
+            : { e: 0, r: Math.max(1e-3, card.ohms + slope * run.omega) };
+    };
+    registerDevice('coil_pendulum', {
+        terminals: ['a', 'b'],
+        eventLocalization: false,
+        init(part) {
+            const card = pendulumCard(part);
+            return { drives: {}, amps: 0, angleDeg: card.startRad * 180 / Math.PI, omega: 0, amplitudeDeg: Math.abs(card.startRad) * 180 / Math.PI,
+                periodSec: 0, naturalHz: card.naturalHz, energyJ: 0, swings: 0 };
+        },
+        reset(part, state) {
+            const run = resetPendulumRun(part);
+            state.angleDeg = run.theta * 180 / Math.PI; state.omega = 0; state.amplitudeDeg = Math.abs(state.angleDeg);
+            state.periodSec = 0; state.swings = 0; state.amps = 0;
+        },
+        // THE MOTIONAL EMF IS A RAMP, NOT A STAIRCASE (as for dc_motor): the
+        // swing is stepped at accepted steps, and an EMF that jumped to each
+        // new value behind the coil's 0.1 H into a high-impedance load (a
+        // time constant of a fraction of a microsecond) drove the step
+        // controller down to microseconds. Between updates the drive carries
+        // on at its last rate of change.
+        stamp(ctx, part) {
+            const run = pendulumRun(part);
+            const { e, r } = pendulumDrive(pendulumCard(part), run);
+            const dt = Number.isFinite(ctx.tSeconds) && run.lastT !== null ? Math.max(0, ctx.tSeconds - run.lastT) : 0;
+            const de = run.eRate ? run.eRate * dt : 0, dr = run.rRate ? run.rRate * dt : 0;
+            ctx.theveninBetween('a', INNER_PIN, e + de, Math.max(1e-3, r + dr));
+        },
+        update(part, state, read, tNs) {
+            const card = pendulumCard(part);
+            const run = pendulumRun(part);
+            const t = Number(tNs) / 1e9;
+            const d0 = pendulumDrive(card, run);
+            const lag = run.lastT !== null ? Math.max(0, t - run.lastT) : 0;
+            // The drive the stamp used at this solve's time (its ramp).
+            const e = d0.e + (run.eRate ?? 0) * lag, r = Math.max(1e-3, d0.r + (run.rRate ?? 0) * lag);
+            const amps = (read('a') - read(INNER_PIN) - e) / r;
+            if (run.lastT !== null && t > run.lastT) {
+                const before = run.theta;
+                const next = stepPendulum(card, run, amps, t - run.lastT);
+                // An upward zero crossing closes a period: its length and the
+                // largest swing seen in it.
+                if (before < 0 && next.theta >= 0) {
+                    const tc = t - (t - run.lastT) * next.theta / (next.theta - before);
+                    if (run.lastCross !== null) { run.period = tc - run.lastCross; state.swings++; }
+                    run.lastCross = tc;
+                    run.amplitude = run.maxAbs;
+                    run.maxAbs = 0;
+                }
+                run.theta = next.theta; run.omega = next.omega;
+                run.maxAbs = Math.max(run.maxAbs, Math.abs(run.theta));
+                const d1 = pendulumDrive(card, run);
+                run.eRate = (d1.e - d0.e) / (t - run.lastT);
+                run.rRate = (d1.r - d0.r) / (t - run.lastT);
+            }
+            run.lastT = t;
+            const lp = coilInductorParams(part);
+            if (lp && card.bob === 'iron') lp.henrys = card.henrys + bobCoupling(card, run.theta);
+            state.amps = amps;
+            state.angleDeg = run.theta * 180 / Math.PI;
+            state.omega = run.omega;
+            state.amplitudeDeg = Math.max(run.amplitude, run.maxAbs) * 180 / Math.PI;
+            state.periodSec = run.period;
+            state.naturalHz = card.naturalHz;
+            state.energyJ = pendulumEnergy(card, run);
+            return false;
+        },
+    });
+
     // ─── Electrolysis cell ─────────────────────────────────────────────
     // Bulk resistance between `a` and the interface node; the double layer
     // and the two Faradaic diodes from there to `b` are solver parts.
@@ -135,6 +293,25 @@ export function registerSensingParts() {
             state.taste = state.tasteLevel < 1 ? 'none' : state.tasteLevel < 10 ? 'faint' : 'strong';
             // Oxidation at the electrode the current enters by: acid (H⁺) there, a sour/metallic taste.
             state.sourAt = iF > 0 ? 'a' : iF < 0 ? 'b' : null;
+            return false;
+        },
+    });
+
+    // ─── Humidity comb ─────────────────────────────────────────────────
+    // A resistance between `a` and `b` that falls steeply with the relative
+    // humidity at the film (the learner's control, else the world).
+    registerDevice('humidity_comb', {
+        terminals: ['a', 'b'],
+        eventLocalization: false,
+        init() { return { drives: {}, humidityPct: 50, ohms: 0, amps: 0 }; },
+        stamp(ctx, part, state) {
+            const rh = combHumidityPct(part, ctx.control);
+            const ohms = combOhms(part, rh);
+            ctx.theveninBetween('a', 'b', 0, ohms);
+            if (state) { state.humidityPct = rh; state.ohms = ohms; }
+        },
+        update(part, state, read) {
+            if (state.ohms > 0) state.amps = (read('a') - read('b')) / state.ohms;
             return false;
         },
     });

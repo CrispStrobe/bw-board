@@ -143,9 +143,11 @@ function solve(A, b) {
  * @returns {Float64Array}
  */
 let _luCache = null; // { lu: SparseLU, values: Float64Array }
+// factor() copies the pattern. Only the synchronous solve reads these buffers.
+const cscWorkspace = {};
 
 function solveAssembled(A, b) {
-  const csc = toCSC(A);
+  const csc = toCSC(A, cscWorkspace);
   const c = _luCache;
   if (c && c.lu.samePattern(csc)) {
     const vals = csc.values;
@@ -158,7 +160,7 @@ function solveAssembled(A, b) {
     }
     if (same) return c.lu.solve(b);
     if (c.lu.refactor(csc)) {
-      c.values = vals.slice();
+      c.values.set(vals);
       return c.lu.solve(b);
     }
     // Refactor bailed: its partial writes invalidated the stored factors.
@@ -604,6 +606,33 @@ export function mosVth(params = {}, vsb = 0) {
   // the no-shift case.
   const v = Math.max(vsb, 0);
   return vth + gamma * (Math.sqrt(phi + v) - Math.sqrt(phi));
+}
+
+/**
+ * THE OVERDRIVE, SIGNED FOR AN N-CHANNEL.
+ *
+ * `stampNMOS` has always linearised about Vgs - Vth with Vth SIGNED, which is
+ * the level-1 law: a depletion-mode n-channel (Vth < 0) conducts at Vgs = 0.
+ * The region FSM, the branch-current reader and the AC linearisation used
+ * Vgs - |Vth| instead, so for a depletion device they described a DIFFERENT
+ * transistor from the one stamped: at Vgs = 0 the FSM saw cut-off (overdrive
+ * -1.2 V) while the stamp passed Idss (overdrive +1.2 V). A single device
+ * happened to converge in saturation; two in series (a dual-gate MOSFET's
+ * halves) could not converge at all — measured: Vds = 20 mV, both gates
+ * open, "solve-not-converged" with every node at 0 V. For an enhancement
+ * n-channel (Vth > 0) the two expressions are identical, so nothing that
+ * converged before moves.
+ *
+ * The p-channel keeps Vsg - |Vth|: its cards are written with either sign
+ * for the same enhancement device (vth: -2 and vth: 2 both mean "2 V"), and
+ * the absolute value is how that convention has always been read.
+ *
+ * @param {'nmos'|'pmos'} kind
+ * @param {number} vgs  Vgs (n) or Vsg (p), already source-swapped
+ * @param {number} vth  the card's threshold (body effect included)
+ */
+export function mosOverdrive(kind, vgs, vth) {
+  return kind === 'nmos' ? vgs - vth : vgs - Math.abs(vth);
 }
 
 export function mosK(params = {}) {
@@ -3278,7 +3307,7 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
       const vth = mosVth(
         { ...part.params, vth: part.params.vth ?? (part.kind === 'nmos' ? 2.0 : -2.0),
           bulkExplicit: findNet(nets, part.id, 'bulk') !== undefined }, bias.vsb);
-      const vov = bias.vgs - Math.abs(vth);
+      const vov = mosOverdrive(part.kind, bias.vgs, vth);
       const vds = bias.vds;
       const region = mosRegions.get(part.id);
       let next = region;
@@ -3384,12 +3413,15 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
   const snapshotNewton = () => {
     const maps = [diodeVoltages, mosVsb, mosVdb, mosVds, bjtVbc, bjtVce, bjtVceDamp,
       bjtVceLastStep, opampRegions, bjtRegions, bjtVceSat, mosRegions, vccsClamps, deviceStamps]
-      .map(m => [m, new Map(m)]);
+      .map(m => [m, m.size === 0 ? null : new Map(m)]);
     const sol = Float64Array.from(solution);
     const nl = Float64Array.from(nonlinearIterate);
     const cc = parts.filter(p => p._ccClampedVolts !== undefined).map(p => [p, p._ccClampedVolts]);
     return () => {
-      for (const [m, saved] of maps) { m.clear(); for (const [k, v] of saved) m.set(k, v); }
+      for (const [m, saved] of maps) {
+        m.clear();
+        if (saved) for (const [k, v] of saved) m.set(k, v);
+      }
       solution = Float64Array.from(sol);
       nonlinearIterate = Float64Array.from(nl);
       for (const p of parts) delete p._ccClampedVolts;
@@ -4096,7 +4128,7 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
       // an ammeter in either lead gets two different answers, which is the
       // defect class this engine keeps closing — the reader must describe the
       // element the solve stamped.
-      const [vovS, dVovS] = smoothVov(bias.vgs - Math.abs(vth), mosKsubthres(part));
+      const [vovS, dVovS] = smoothVov(mosOverdrive(part.kind, bias.vgs, vth), mosKsubthres(part));
       const outputConductanceActivation = dVovS;
       const vdsE = Math.min(Math.max(bias.vds, 0), Math.max(vovS, 0));
       id = inTriode
@@ -5005,6 +5037,8 @@ function stampDevice(A, b, part, nets, nodeIndex, model, state, controls, vcc, t
     vcc,
     tSeconds,
     temperatureC: benchTemperatureC,
+    // This part's own temperature in the thermal model, else the bench.
+    partTemperatureC: partCelsius(part) ?? benchTemperatureC,
     dtSec,
     control: controls.get(part.id),
   };
