@@ -1,3 +1,18 @@
+## Busch Microtronic Circuits behavioral model — CLAIMED, 2026-11-25
+
+Owner: Brickwright Microtronic implementation lane, requested by CrispStrobe.
+Base: `9ff1fff362db4366e11ab47abd62e1f04edc6af6` (the current Brickwright pin).
+Isolated branch: `feat/busch-microtronic-circuits`.
+Own new `src/microtronic-machine.js`, `src/devices/microtronic.js`, focused tests
+and documentation, and additive `register-all.js` registration. Preserve CP1 and
+all unrelated work. This phase implements documented learner-ISA behavior in
+Circuits; native TMS1600 execution and replacement firmware remain deferred.
+No historical ROM, emulator implementation, disassembly or manual artwork is
+used or shipped. The device shares Board time and solved input/output nets.
+Qualify authored programs, explicit clock wiring, reset/program retention and
+malformed-program refusal. Preserve candidates on a feature branch; neither
+production adoption nor firmware compatibility follows from local tests.
+
 ## Kosmos CP1 and reusable MCS-48/8155 — CLAIMED, 2026-11-24
 
 Owner: Brickwright CP1 implementation lane, requested by CrispStrobe.
