@@ -109,6 +109,7 @@ export class SparseLU {
     this.reach = null;
     // The input pattern the factorization was built for.
     this.inColPtr = null; this.inRowIdx = null;
+    this.refactorRows = null; this.refactorWork = null;
   }
 
   /**
@@ -274,6 +275,9 @@ export class SparseLU {
     this.reach = reachCols;
     this.inColPtr = colPtr.slice();
     this.inRowIdx = rowIdx.slice();
+    // Same-pattern refactors scatter into this fixed pivot order each time.
+    this.refactorRows = rowIdx.map(row => pinv[row]);
+    this.refactorWork = new Float64Array(n);
   }
 
   /**
@@ -301,16 +305,16 @@ export class SparseLU {
    */
   refactor(csc) {
     const n = this.n;
-    const { colPtr, rowIdx, values } = csc;
-    const { perm, pinv, Lp, Li, Lx, Up, Ui, Ux, Udiag, reach } = this;
-    const w = new Float64Array(n);   // by pivot position this time
+    const {colPtr, values} = csc;
+    const {Lp, Li, Lx, Up, Ui, Ux, Udiag, reach, refactorRows, refactorWork: w} = this;
+    w.fill(0);
 
     for (let j = 0; j < n; j++) {
       // Scatter A(:,j) into pivot-position space. Only positions in the
       // stored patterns are read back, and those are exactly the positions
       // the stored elimination can produce — same pattern in, same out.
       for (let p = colPtr[j]; p < colPtr[j + 1]; p++) {
-        w[pinv[rowIdx[p]]] += values[p];
+        w[refactorRows[p]] += values[p];
       }
       const reachJ = reach[j];
       for (let t = 0; t < reachJ.length; t++) {
@@ -330,8 +334,6 @@ export class SparseLU {
         remainingMax = Math.max(remainingMax, Math.abs(w[Li[k]]));
       }
       if (!(Math.abs(pivotVal) >= 1e-13) || Math.abs(pivotVal) < remainingMax) {
-        // Clear workspace before handing back.
-        w.fill(0);
         return false;
       }
       Udiag[j] = pivotVal;
