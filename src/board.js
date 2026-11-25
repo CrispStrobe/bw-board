@@ -7576,6 +7576,9 @@ export class BoardImpl {
    * at the next solve all the same; only the restart is skipped.
    */
   _deviceUpdateIsEdge(before, after) {
+    // A state too large (or not plain enough) to snapshot: every reported
+    // change stays an edge, as before.
+    if (before === null) return true;
     const profile = this._transientAnalysisProfile;
     const tolOf = (a, b) => profile.absoluteVoltage + profile.relativeTolerance * Math.max(Math.abs(a), Math.abs(b));
     const da = before.drives ?? {};
@@ -7594,6 +7597,12 @@ export class BoardImpl {
     }
     const rest = (s) => { const o = { ...s }; delete o.drives; return o; };
     return discreteStateChange(rest(before), rest(after), { left: EVENT_STATE_BUDGET });
+  }
+
+  /** A device state's snapshot for _deviceUpdateIsEdge, or null when it cannot be taken. */
+  _deviceEdgeSnapshot(state) {
+    const copy = plainStateCopy(state, { left: EVENT_STATE_BUDGET });
+    return copy === NOT_PLAIN ? null : copy;
   }
 
   _updateDevices(atNs = this.timeNs, solution = this._mnaCache, measurementOnly = false, acceptedTransient = false) {
@@ -7640,10 +7649,10 @@ export class BoardImpl {
       // On an accepted transient step, `changed` means a discontinuity: the
       // trapezoidal history restarts and the step shrinks. A drive that only
       // tracks its own moving supply is not one (deviceUpdateIsEdge).
-      const before = acceptedTransient && state ? plainStateCopy(state, { left: EVENT_STATE_BUDGET }) : null;
+      const before = acceptedTransient && state ? this._deviceEdgeSnapshot(state) : undefined;
       try {
         if (model.update(part, state, read, atNs)
-          && (before === null || before === NOT_PLAIN || this._deviceUpdateIsEdge(before, state))) changed = true;
+          && (before === undefined || this._deviceUpdateIsEdge(before, state))) changed = true;
       } catch (error) {
         // A rejected accepted-step model invalidates the whole analog capture,
         // including earlier partial samples. Preserve ordinary callback and
