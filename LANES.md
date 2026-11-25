@@ -1,3 +1,24 @@
+## Busch Microtronic Circuits behavioral model — CLAIMED, 2026-11-25
+
+Owner: Brickwright Microtronic implementation lane, requested by CrispStrobe.
+Base: `9ff1fff362db4366e11ab47abd62e1f04edc6af6` (the current Brickwright pin).
+Isolated branch: `feat/busch-microtronic-circuits`.
+Own new `src/microtronic-machine.js`, `src/devices/microtronic.js`, focused tests
+and documentation, and additive `register-all.js` registration. Preserve CP1 and
+all unrelated work. This phase implements documented learner-ISA behavior in
+Circuits; native TMS1600 execution and replacement firmware remain deferred.
+No historical ROM, emulator implementation, disassembly or manual artwork is
+used or shipped. The device shares Board time and solved input/output nets.
+Qualify authored programs, explicit clock wiring, reset/program retention and
+malformed-program refusal. Preserve candidates on a feature branch; neither
+production adoption nor firmware compatibility follows from local tests.
+
+Continuation: the Microtronic end-to-end circuit check exposed that Board's
+scheduled-device substeps solve the new LED current but record its brightness
+history only at the final advance endpoint. Own the narrow per-substep LED
+sampling correction in `src/board.js` and a coarse/fine advance regression.
+Preserve scheduler deadlines, solver decisions and existing scope behavior.
+
 ## Kosmos CP1 and reusable MCS-48/8155 — CLAIMED, 2026-11-24
 
 Owner: Brickwright CP1 implementation lane, requested by CrispStrobe.
@@ -8030,3 +8051,18 @@ Branch lane/ci-local-tier-test-20261114, exact base a6013d2f9514dc5321496865356a
 Owns .github/workflows/ci-tier-gate.yml, test/ci-tier-gate.test.mjs and this row.
 Adds repository label `ci:local`. A code PR carrying it passes the gate only when the PR body has `Local-validation: <40-char-head-sha> PASS <command/result>`; the SHA must match the PR head, so a pushed change invalidates old evidence. Local or Kaggle runs are accepted; no `ci:full` and no thorough GitHub jobs are started. The existing `ci:full` thorough tier and the first-introduction retained-motion diagnostic exception are unchanged. Docs-only and `ci:full` behavior unchanged; the one cheap gate job still runs and may queue on free tier, so a one-off owner exception remains available when the queue is starved.
 Verification: YAML parse; 3 behavior/contract tests; 91 focused workflow/motion tests pass; regex accepts matching PASS lines and rejects missing PASS/stale/prefix lines; existing motion scope checks preserved. No test thresholds, workflow triggers, pins or production behavior changed.
+
+## Busch Microtronic local qualification — DONE candidate, 2026-11-25
+
+Local qualification: 48 Microtronic checks (including 31 independently
+manual-derived instruction vectors), adjacent CP1, perceived-brightness and
+scheduled-gate controls, and public registration/control/export checks pass
+155/155 with no skips. The new coarse/fine LED regression first failed on the
+existing endpoint-only sampler and passed with the substep sample. Program
+save/reload is covered; existing structural Build edits still reset live
+device execution, as documented. Native firmware remains deferred.
+
+Source implementation is complete as a candidate. Runtime and test bytes are
+identical to the locally qualified `1d58edb6dd331fba9bc33f864a93f3aacacaaf9b`;
+only this ledger changed afterward. Required exact-head hosted qualification,
+upstream merge and Brickwright production adoption remain pending.

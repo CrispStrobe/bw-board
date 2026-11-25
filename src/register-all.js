@@ -74,9 +74,11 @@ import { registerSimpleVGACard } from './devices/simplevga-card.js';
 import { registerSevenseg8, registerLedbank8 } from './devices/a2-displays.js';
 import { registerI2CSensors } from './devices/i2c-sensors.js';
 import { registerCp1Device } from './devices/cp1.js';
+import { registerMicrotronicDevice } from './devices/microtronic.js';
 
 export function registerAllDevices() {
   registerCp1Device();
+  registerMicrotronicDevice();
   registerLogicGates();
   registerRelay();
   registerDCMotor();
