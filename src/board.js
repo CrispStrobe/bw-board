@@ -6517,11 +6517,6 @@ export class BoardImpl {
   _solveMNA(powerOff, testNodeA, testNodeB, testCurrent, warmFrom = null) {
     this._syncDeviceGpioDrives();
     const options = {
-      // Newton starts from the previous accepted solution (see warmStart in
-      // mna.js) -- only for the live solve that follows a discrete event.
-      ...(warmFrom && !powerOff && !testNodeA && !testNodeB ? { warmStart: {
-        nodeVoltages: warmFrom.nodeVoltages, opampRegions: warmFrom.opampRegions,
-        ...(warmFrom.warmState ?? {}) } } : {}),
       powerOff,
       temperatureC: this.temperatureC,
       partTemperatures: this._thermal?.temps,
@@ -6542,12 +6537,18 @@ export class BoardImpl {
       this._chargeBoundedAdvanceWork('solves');
       return solveMNA(this._solveParts, this._solveNets, this._pinSources(), this.controls, this.vcc, options);
     }
-    // The live circuit continues from where it was (see `newtonSeed`).
-    // A live solve with no Newton state to continue from is the circuit being
-    // switched on: let it fall off a balance point (`settleMetastable`).
-    const result = this._solveLiveMNA(this._pinSources(),
-      { ...options, newtonSeed: this._newtonSeed ?? undefined,
-        settleMetastable: !this._newtonSeed && !warmFrom });
+    // A discrete event can supply a detached warm start. Other live solves
+    // continue from the previous Newton seed or settle from power-on.
+    if (warmFrom) {
+      options.warmStart = {
+        nodeVoltages: warmFrom.nodeVoltages,
+        opampRegions: warmFrom.opampRegions,
+        ...(warmFrom.warmState ?? {}),
+      };
+    }
+    options.newtonSeed = this._newtonSeed ?? undefined;
+    options.settleMetastable = !this._newtonSeed && !warmFrom;
+    const result = this._solveLiveMNA(this._pinSources(), options);
     if (result?.newtonState) this._newtonSeed = result.newtonState;
     return result;
   }
