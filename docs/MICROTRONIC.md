@@ -1,4 +1,4 @@
-# Busch Microtronic in Circuits — phase 1
+# Busch Microtronic in Circuits
 
 The `busch-microtronic` device runs an original implementation of the **documented
 Microtronic learner instruction set** on Board's simulated timeline. Its inputs
@@ -6,8 +6,11 @@ read solved circuit voltages; its outputs drive the same resistor, LED, switch
 and instrument nets as every other part. Programs can be entered as three-digit
 hexadecimal words or with the panel keys, stepped, run and halted.
 
-This phase does **not** execute native TMS1600 instructions or an original Busch
-ROM. It does not reproduce the TMS1600's internal RAM, display multiplex bus,
+This page describes the default behavioral mode, which interprets learner
+instructions directly. Circuits also offers an experimental **TMS1600** mode
+with an independently written monitor and simulated digital peripherals.
+See [the native monitor](MICROTRONIC-NATIVE.md) for its current scope.
+The behavioral mode does not execute the original Busch ROM. It does not reproduce the TMS1600's internal RAM, display multiplex bus,
 CD4016/CD4502 control signals, or physical 2114 address mapping. The future
 native firmware work remains separate. There is no imported emulator source,
 ROM dump, disassembly, or reproduced manual artwork in this implementation.

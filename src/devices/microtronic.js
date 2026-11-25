@@ -1,10 +1,11 @@
 // SPDX-License-Identifier: MIT
 /**
- * Microtronic system-level Circuits model. CPU execution is documented learner
- * behavior, not a TMS1600/2114 bus simulation. Digital outputs reach the same
- * solver as every external resistor, switch and LED; time comes only from Board.
+ * Microtronic Circuits device with a shared solver and simulation clock.
+ * Existing files select the behavioral model. executionMode: 'tms1600'
+ * selects the native clean-room monitor with simulated digital peripherals.
  */
 import {registerDevice} from '../devices.js';
+import {MicrotronicNative} from '../microtronic-native.js';
 import {
   createMicrotronicMachine, resetMicrotronicMachine, controlMicrotronicMachine,
   stepMicrotronicMachine, observeMicrotronicInputs,
@@ -15,6 +16,33 @@ export const MICROTRONIC_TERMINALS = Object.freeze([
   'IN1', 'IN2', 'IN3', 'IN4', 'OUT1', 'OUT2', 'OUT3', 'OUT4', 'CLOCK', '5v', 'gnd'
 ]);
 const HALF_SECOND = 500_000_000n;
+const nativeMachines = new WeakMap();
+const executionMode = part => part.params?.executionMode === 'tms1600' ? 'tms1600' : 'documented-behavior';
+
+function installMachine(part, state) {
+  const source = part.params?.program ?? 'F00';
+  if (executionMode(part) === 'tms1600') {
+    const machine = new MicrotronicNative(source);
+    nativeMachines.set(state, machine);
+    Object.assign(state, machine);
+  } else {
+    nativeMachines.delete(state);
+    Object.assign(state, createMicrotronicMachine(source));
+    delete state.nativeInstructions;
+    delete state.nativeAddress;
+  }
+}
+
+function controlMachine(state, verb, value) {
+  const native = nativeMachines.get(state);
+  if (!native) return controlMicrotronicMachine(state, verb, value);
+  try {
+    return native.control(verb, value);
+  } finally {
+    Object.assign(state, native);
+  }
+}
+
 
 export function microtronicInstructionPeriodNs(part) {
   const hz = part.params?.instructionHz ?? 20;
@@ -56,16 +84,17 @@ export function registerMicrotronicDevice() {
     init(part) {
       microtronicInstructionPeriodNs(part);
       const state = {
-        ...createMicrotronicMachine(part.params?.program ?? 'F00'),
         drives: {}, clockHigh: false, _timeNs: 0n, _nextInstructionNs: null,
         _paramsProgram: part.params?.program, _paramsInstructionHz: part.params?.instructionHz
       };
+      installMachine(part, state);
       driveOutputs(state);
       schedule(part, state);
       return state;
     },
     reset(part, state) {
-      resetMicrotronicMachine(state);
+      if (nativeMachines.has(state)) controlMachine(state, 'reset');
+      else resetMicrotronicMachine(state);
       state._timeNs = 0n; state._nextInstructionNs = null; state.clockHigh = false;
       driveOutputs(state); schedule(part, state);
     },
@@ -74,13 +103,19 @@ export function registerMicrotronicDevice() {
     },
     update(part, state, read, tNs) {
       state._timeNs = tNs;
+      if (state.model !== executionMode(part)) {
+        installMachine(part, state);
+        state._paramsProgram = part.params?.program;
+        state._nextInstructionNs = null;
+      }
+      const native = nativeMachines.get(state);
       // Keypad persistence may write the exact current canonical source back
       // into params. Equality must preserve the running machine and its PC.
       if (part.params?.program !== state._paramsProgram) {
         try {
           const next = parseMicrotronicProgram(part.params?.program ?? 'F00');
           if (formatMicrotronicProgram(next) !== state.programSource) {
-            controlMicrotronicMachine(state, 'loadProgram', next);
+            controlMachine(state, 'loadProgram', next);
             state._nextInstructionNs = null;
           }
           state._paramsProgram = part.params?.program;
@@ -101,11 +136,17 @@ export function registerMicrotronicDevice() {
       const ground = read('gnd');
       let inputs = 0;
       for (let i = 0; i < 4; i++) if (read(`IN${i + 1}`) - ground >= 2.5) inputs |= 1 << i;
-      observeMicrotronicInputs(state, inputs);
+      if (native && inputs !== native.input) {
+        try { native.sampleInputs(inputs); } catch { /* Expose the monitor fault on state.error. */ }
+        Object.assign(state, native);
+      } else if (!native) observeMicrotronicInputs(state, inputs);
       state.clockHigh = (tNs / HALF_SECOND) % 2n === 1n;
       if (state.running && !state.error && state.waitingForKey === null &&
           state._nextInstructionNs !== null && tNs >= state._nextInstructionNs) {
-        stepMicrotronicMachine(state, {singleStep: false});
+        if (native) {
+          try { native.tick(); } catch { /* Expose the monitor fault on state.error. */ }
+          Object.assign(state, native);
+        } else stepMicrotronicMachine(state, {singleStep: false});
         state._nextInstructionNs = state.running && state.waitingForKey === null ?
           tNs + microtronicInstructionPeriodNs(part) : null;
       }
@@ -114,7 +155,7 @@ export function registerMicrotronicDevice() {
     },
     control(part, state, verb, value) {
       microtronicInstructionPeriodNs(part);
-      const handled = controlMicrotronicMachine(state, verb, value);
+      const handled = controlMachine(state, verb, value);
       if (!handled) return false;
       // loadProgram is an intentional runtime write; the next params update
       // may persist it, but stale authored params must not immediately erase it.
