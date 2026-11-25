@@ -395,6 +395,9 @@ function mosSecondOrder(b, A) {
  */
 export function mosChannelFade(vds) { return vds > 0 ? Math.tanh(vds / 0.2) : 0; }
 
+/** d(mosChannelFade)/dvds. */
+export function mosChannelFadeSlope(vds) { if (!(vds > 0)) return 0; const t = Math.tanh(vds / 0.2); return (1 - t * t) / 0.2; }
+
 /**
  * Extra DC (drain→source) a gate swing of amplitude A adds, and d/dvgs: the
  * cycle average of the square law and of its slope, in one pass over the
