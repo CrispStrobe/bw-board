@@ -82,7 +82,7 @@ export async function createDebugTarget(kind, opts) {
     ]);
     const adapter = createCp1Adapter(opts);
     if (opts?.board) adapter.attachBoard(opts.board);
-    return {target: createCp1DebugTarget(adapter), adapter};
+    return {target: createCp1DebugTarget(adapter, opts), adapter};
   }
   if (kind === 'emulator') {
     return createEmulatorTarget(opts);

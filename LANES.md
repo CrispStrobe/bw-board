@@ -18,6 +18,15 @@ display/I/O/CP3, checkpoint integrity, and advertised debugger/circuit behavior.
 All existing required landing gates apply. No implementation merge or Lite
 production adoption is claimed by checkpoint preservation.
 
+2026-11-25 semantic-debug continuation: exact 2716 observations now qualify a
+data-only command/monitor/register profile. The independent observer adds
+bounded command steps, full accumulator pairs, CP1 cell breakpoints and frozen
+command/halt/error events on the shared machine. Unknown and mask-B ROMs remain
+raw-only. Authored synthetic tests and eleven original external-ROM scenarios
+cover the behavior; source hashes and limits are retained in
+`docs/CP1-SEMANTIC-DEBUG.md` and `docs/CP1-SEMANTIC-OBSERVATION.json`.
+No GPL source, annotated firmware or historical ROM is included.
+
 ## Seal-compatible ordinary x86 toolchain repair — CANDIDATE, 2026-11-16
 
 Same existing x86 owner, explicitly requested by CrispStrobe, continues PR736.

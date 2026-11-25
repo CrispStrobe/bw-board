@@ -61,6 +61,7 @@ export class Cp1Machine {
     this._keys = new Set();
     this._portListeners = new Set();
     this._pinListeners = new Set();
+    this._executionListeners = new Set();
     this._publishedPins = new Map();
     this.onPortInputRead = options.onPortInputRead ?? null;
     if (options.onPortChange) this._portListeners.add(options.onPortChange);
@@ -132,6 +133,19 @@ export class Cp1Machine {
     return () => this._pinListeners.delete(callback);
   }
 
+  /** Passive notifications; every advance route still executes this one CPU. */
+  addExecutionListener(callback) {
+    if (typeof callback !== 'function') throw new TypeError('Execution listener must be a function');
+    this._executionListeners.add(callback);
+    return () => this._executionListeners.delete(callback);
+  }
+
+  _notifyExecution(kind) {
+    if (!this._executionListeners.size) return;
+    const event = Object.freeze({kind});
+    for (const callback of [...this._executionListeners]) callback(event);
+  }
+
   _assertIdle(action) {
     if (this._stepping || this._advancing) throw new Error(`Cannot ${action} while the CP1 is advancing`);
   }
@@ -146,6 +160,7 @@ export class Cp1Machine {
     this.cpu.reset();
     this._updateDisplayDrive();
     this.publishPins();
+    this._notifyExecution('reset');
     return this;
   }
 
@@ -163,6 +178,7 @@ export class Cp1Machine {
     this.busContentionMask = this.busContentionCount = 0;
     this.cpu.reset({ cold: true });
     this.publishPins();
+    this._notifyExecution('power-cycle');
     return this;
   }
 
@@ -421,6 +437,7 @@ export class Cp1Machine {
     integer(operand, 0, 255, 'CP1 cell operand');
     chip.ram[offset] = opcode;
     chip.ram[offset + 1] = operand;
+    this._notifyExecution('program-edit');
   }
 
   /** Load cells atomically after full validation; this never executes a CP1 instruction. */
@@ -437,7 +454,12 @@ export class Cp1Machine {
       this.base.ram.fill(0);
       this.expansionChip?.ram.fill(0);
     }
-    cells.forEach((cell, index) => this.writeCell(start + index, cell));
+    cells.forEach((cell, index) => {
+      const {chip, offset} = this._cellAddress(start + index);
+      chip.ram[offset] = cell.opcode;
+      chip.ram[offset + 1] = cell.operand;
+    });
+    if (clear || cells.length) this._notifyExecution('program-edit');
     return { start, count: cells.length, capacity: this.capacity };
   }
 
@@ -445,7 +467,12 @@ export class Cp1Machine {
     if (this._stepping) throw new Error('CP1 step() cannot be re-entered');
     if (this._cycles > Number.MAX_SAFE_INTEGER - 2) throw new RangeError('CP1 cycle counter exhausted');
     this._stepping = true;
-    try { return this.cpu.step(); }
+    try {
+      this._notifyExecution('before-step');
+      const cycles = this.cpu.step();
+      this._notifyExecution('step');
+      return cycles;
+    }
     finally { this._stepping = false; }
   }
 
@@ -560,6 +587,7 @@ export class Cp1Machine {
     this._displayEpoch = epoch; this._displaySince = since;
     this._displayDrive = drive; this._displayIntervals = intervals;
     this.publishPins();
+    this._notifyExecution('restore');
     return this;
   }
 }

@@ -206,6 +206,11 @@ clear error. Unknown 2 KiB firmware is accepted and identified as unknown.
 Known-ROM metadata never changes the CPU or wiring. It does not imply an
 abstract CP1 instruction boundary for an unknown program.
 
+The shared debug target adds bounded command stepping, teaching registers,
+cell breakpoints, and command/halt/error observations for a separately qualified
+exact-ROM profile. See [CP1-SEMANTIC-DEBUG.md](CP1-SEMANTIC-DEBUG.md). This is a
+passive observer of the same machine; unknown firmware keeps raw 8049 control.
+
 `step()` returns consumed machine cycles. `advanceCycles()` and
 `advanceToMs()` return `{cycles, instructions, reached, targetCycles}`. Each
 advance has a bounded instruction budget. Whole instructions may exceed the
