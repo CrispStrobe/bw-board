@@ -47,6 +47,22 @@ function randomSystem(n, nSources, rnd) {
   return { A, b };
 }
 
+it('preserves first-touch sparse slots at either side of the small matrix limit', () => {
+  for (const size of [64, 65]) {
+    const a = new CooMatrix(size);
+    a.set(size - 1, size - 1, 4);
+    a.add(0, 0, 2);
+    a.add(size - 1, size - 1, 3);
+    assert.equal(a.get(size - 1, size - 1), 7);
+    assert.equal(a.get(1, 1), 0);
+    a.reset();
+    assert.equal(a.get(size - 1, size - 1), 0);
+    assert.equal(a.nnz, 2);
+    assert.deepEqual(a.ri, [size - 1, 0]);
+    assert.deepEqual(a.ci, [size - 1, 0]);
+  }
+});
+
 it('reuses CSC buffers without retaining previous columns or values', () => {
   const workspace = {};
   const first = new CooMatrix(3);

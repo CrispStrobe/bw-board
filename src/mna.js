@@ -3386,12 +3386,15 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
   const snapshotNewton = () => {
     const maps = [diodeVoltages, mosVsb, mosVdb, mosVds, bjtVbc, bjtVce, bjtVceDamp,
       bjtVceLastStep, opampRegions, bjtRegions, bjtVceSat, mosRegions, vccsClamps, deviceStamps]
-      .map(m => [m, new Map(m)]);
+      .map(m => [m, m.size === 0 ? null : new Map(m)]);
     const sol = Float64Array.from(solution);
     const nl = Float64Array.from(nonlinearIterate);
     const cc = parts.filter(p => p._ccClampedVolts !== undefined).map(p => [p, p._ccClampedVolts]);
     return () => {
-      for (const [m, saved] of maps) { m.clear(); for (const [k, v] of saved) m.set(k, v); }
+      for (const [m, saved] of maps) {
+        m.clear();
+        if (saved) for (const [k, v] of saved) m.set(k, v);
+      }
       solution = Float64Array.from(sol);
       nonlinearIterate = Float64Array.from(nl);
       for (const p of parts) delete p._ccClampedVolts;
