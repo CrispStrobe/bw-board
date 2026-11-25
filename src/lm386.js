@@ -269,7 +269,7 @@ export function expandLm386(parts, nets) {
         // Backward Euler while the pole rests on its swing clamp (POLE
         // INTEGRATION in the module note), as for the LM358 macromodel.
         outParts.push({ id: capId, kind: 'capacitor',
-            params: { farads: C.cInt, dampedBy: { part: part.id, channel: LM386_POLE_CHANNEL } }, terminals: ['a', 'b'] });
+            params: { farads: C.cInt, dampedBy: { part: part.id, channel: LM386_POLE_CHANNEL, nodesTrapezoidal: true } }, terminals: ['a', 'b'] });
         pole.terminals.push(TT(capId, 'a'));
         gnd.terminals.push(TT(capId, 'b'));
         const stageId = `${pre}stage`;

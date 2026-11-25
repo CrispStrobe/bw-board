@@ -8181,24 +8181,29 @@ export class BoardImpl {
       //
       // A BE capacitor inside the step is first order, so its own state takes
       // the factor 1 and the step-size exponent of a first-order error,
-      // -1/2. The node voltages keep the trapezoidal estimate: a damped
-      // capacitor is on BE only while its mode is pinned by a stiff clamp
-      // (0.1 ns against a microsecond step), so its first-order truncation
-      // error is nil and the nodes carry the trapezoidal error of every other
-      // state. (Judging every node first order while any amplifier rested on
-      // its clamp cost an LM386 horn 30 % more steps for the whole half
-      // period it sat there.) The flag changes only on accepted steps, so the
-      // full step and both half steps integrated the same way.
+      // -1/2. The node voltages mix every state, so while a capacitor on BE
+      // asks for it they take the conservative first-order estimate too (the
+      // LM358 pole: its gallery benches were measured that way, and a
+      // transistor divider clocked by one toggled at another instant without
+      // it). A capacitor whose `dampedBy` says `nodesTrapezoidal` (the LM386
+      // pole) leaves the nodes on the trapezoidal estimate: it is on BE only
+      // while a stiff clamp pins its 0.1 ns mode, so its own truncation error
+      // is nil, and judging every node first order cost an LM386 horn 30 %
+      // more steps for the whole half period it rested on the clamp. The
+      // flags change only on accepted steps, so the full step and both half
+      // steps integrated the same way.
       let firstOrder = null;
+      let nodesFirstOrder = false;
       if (profile.richardsonLte) for (const cap of dampedCaps) {
         const damp = cap.params.dampedBy;
         if (this._deviceStates.get(damp.part)?.poleClamped?.[damp.channel] === true) {
           (firstOrder ??= new Set()).add(cap.id);
+          if (!damp.nodesTrapezoidal) nodesFirstOrder = true;
         }
       }
       const TRAP_RICHARDSON = profile.richardsonLte ? 3 : 1; // 2^2 - 1
       const BE_RICHARDSON = 1;                                // 2^1 - 1
-      const nodeFactor = TRAP_RICHARDSON;
+      const nodeFactor = nodesFirstOrder ? BE_RICHARDSON : TRAP_RICHARDSON;
       let errTrap = 0;
       let errBe = 0;
       const note = (e, beState) => {
@@ -8213,7 +8218,7 @@ export class BoardImpl {
       for (const [id, vH] of h2.nodeVoltages ?? []) {
         const vF = full.nodeVoltages?.get(id) ?? 0;
         const sc = ABSTOL_V + RELTOL * Math.max(Math.abs(vH), Math.abs(vF));
-        note(Math.abs(vF - vH) / (nodeFactor * sc), false);
+        note(Math.abs(vF - vH) / (nodeFactor * sc), nodesFirstOrder);
       }
       for (const [id, vH] of h2.capVoltagesNext ?? []) {
         const vF = full.capVoltagesNext?.get(id) ?? 0;
