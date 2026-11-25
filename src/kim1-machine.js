@@ -204,7 +204,7 @@ export function resetKim1Machine(state) {
   state.cpu = {a: 0, x: 0, y: 0, s: 0xfd, p: 0x24, pc: state.startAddress, cycles: 0};
   state.riots = [newRiot(), newRiot()];
   state.address = state.stoppedAddress = state.startAddress;
-  state.running = false; state.singleStep = false; state.error = null; state.mode = 'address';
+  state.running = false; state.error = null; state.mode = 'address';
   state.executed = state.lastCycles = 0; state.lastStop = 'reset';
   saveRegisters(state); refreshKim1Display(state);
 }
@@ -300,6 +300,7 @@ export function keyKim1Machine(state, key, options = {}) {
 export function controlKim1Machine(state, verb, value, options = {}) {
   if (verb === 'loadProgram') {
     const fresh = createKim1Machine(value); // complete validation before mutation
+    fresh.singleStep = state.singleStep; // Loading RAM cannot move the physical SST switch.
     Object.assign(state, fresh);
     cores.delete(state);
     return true;

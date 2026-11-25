@@ -47,8 +47,22 @@ test('AD/DA rolling edits, +, saved PC, SST, GO and reset behave as independent 
   control(s, 'step'); assert.equal(s.ram[0x10], 0x2a); assert.equal(s.pc, 0x204);
   resetKim1Machine(s);
   assert.equal(s.ram[0x300], 0xab); assert.equal(s.ram[0x10], 0x2a);
-  assert.equal(s.cpu.a, 0); assert.equal(s.cpu.s, 0xfd); assert.equal(s.singleStep, false);
+  assert.equal(s.cpu.a, 0); assert.equal(s.cpu.s, 0xfd); assert.equal(s.singleStep, true);
   assert.match(s.programSource, /0300: AB 12/);
+});
+
+test('RS and atomic program loading preserve the physical SST switch position', () => {
+  const s = createKim1Machine();
+  assert.equal(s.singleStep, false);
+  for (const enabled of [true, false]) {
+    control(s, 'setSst', enabled);
+    key(s, 'RS'); assert.equal(s.singleStep, enabled);
+    control(s, 'loadProgram', '0200: A9 2A EA');
+    assert.equal(s.singleStep, enabled); assert.equal(s.pc, 0x200); assert.equal(s.running, false);
+    const source = s.programSource;
+    assert.throws(() => control(s, 'loadProgram', '0200: A9 XX'));
+    assert.equal(s.singleStep, enabled); assert.equal(s.programSource, source);
+  }
 });
 
 test('GO restores editable saved registers; BRK stops at the declared monitor boundary', () => {

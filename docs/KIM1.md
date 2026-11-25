@@ -26,7 +26,7 @@ PC are separate: browsing memory does not change the stopped CPU state.
 | SST | Toggle single-step mode. With SST enabled, GO executes one instruction and displays its next PC. |
 | PC | Return the cursor to the last stopped PC after browsing memory. |
 | ST | Stop at the simulator's current instruction boundary and save registers. |
-| RS | Reset controls, registers and peripheral model; retain user RAM and authored program. |
+| RS | Reset controls, registers and peripheral model; retain user RAM, authored program and SST switch position. |
 
 `board.setDeviceControl(id, verb, value)` accepts `key`, `loadProgram`, `run`,
 `halt`, `step`, `reset`, `setPc`, and `setSst`. `run` accepts an optional numeric
@@ -67,6 +67,8 @@ addresses (including hardware aliases), writes outside RAM, malformed bytes,
 and overflow are rejected. A successful load clears RAM, applies the image,
 initializes saved registers, and selects its lowest canonical address. Canonical
 source is uppercase, sorted and grouped into at most sixteen bytes per line.
+Both RS and program loading preserve the physical SST switch position. Only a
+newly created machine defaults the switch to off; use SST or `setSst` to move it.
 
 Panel RAM edits update `programSource` immediately. Persisting that exact source
 back to `part.params.program` preserves the current running state and cursor.
