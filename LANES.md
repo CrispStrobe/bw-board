@@ -13,6 +13,12 @@ Qualify authored programs, explicit clock wiring, reset/program retention and
 malformed-program refusal. Preserve candidates on a feature branch; neither
 production adoption nor firmware compatibility follows from local tests.
 
+Continuation: the Microtronic end-to-end circuit check exposed that Board's
+scheduled-device substeps solve the new LED current but record its brightness
+history only at the final advance endpoint. Own the narrow per-substep LED
+sampling correction in `src/board.js` and a coarse/fine advance regression.
+Preserve scheduler deadlines, solver decisions and existing scope behavior.
+
 ## Kosmos CP1 and reusable MCS-48/8155 — CLAIMED, 2026-11-24
 
 Owner: Brickwright CP1 implementation lane, requested by CrispStrobe.
