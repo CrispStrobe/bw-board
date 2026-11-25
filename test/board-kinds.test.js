@@ -414,6 +414,33 @@ describe('board-kind LED circuit', () => {
 });
 
 describe('board-kind GPIO follows pinStates (the engine half of the contract)', () => {
+  it('uses restored pins and rebuilds GPIO bindings when a part id is reused', () => {
+    const board = new BoardImpl(5);
+    const load = terminal => board.setNetlist(
+      [
+        { id: 'UNO', kind: 'arduino_uno', params: {}, terminals: ['gnd', terminal] },
+        { id: 'R1', kind: 'resistor', params: { ohms: 1000 }, terminals: ['a', 'b'] },
+      ],
+      [
+        { id: 'n_pin', terminals: [{ part: 'UNO', terminal }, { part: 'R1', terminal: 'a' }] },
+        { id: 'n_gnd', terminals: [{ part: 'UNO', terminal: 'gnd' }, { part: 'R1', terminal: 'b' }] },
+      ],
+    );
+    load('d11');
+    board.setPin('D11', 'pushpull', true);
+    const high = board.snapshot();
+    board.setPin('D11', 'input', false);
+    assert.ok(board.nodeVoltage('n_pin') < 0.1);
+    board.restore(high);
+    assert.ok(board.nodeVoltage('n_pin') > 4.8);
+
+    load('d12');
+    board.restore(high);
+    assert.ok(board.nodeVoltage('n_pin') < 0.1);
+    board.setPin('D12', 'pushpull', true);
+    assert.ok(board.nodeVoltage('n_pin') > 4.8);
+  });
+
   it('setPin lights a bench LED wired to a Nano GPIO terminal', () => {
     // The module header always CLAIMED this worked "exactly like MCU
     // pins"; no stamping path existed until 2026-08-13, and every

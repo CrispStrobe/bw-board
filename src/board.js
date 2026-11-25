@@ -603,6 +603,7 @@ export class BoardImpl {
      * @type {Map<string, object>}
      */
     this._deviceStates = new Map();
+    this._deviceDriveParts = [];
 
     /**
      * True only during the power-on settle (a new netlist solved while
@@ -1434,6 +1435,11 @@ export class BoardImpl {
         st._staticDrives = new Set(Object.keys(st.drives ?? {}));
         this._deviceStates.set(p.id, st);
       }
+    }
+    this._deviceDriveParts = [];
+    for (const part of parts) {
+      const state = this._deviceStates.get(part.id);
+      if (state) this._deviceDriveParts.push({ part, state, terminals: null });
     }
 
     // Keep the fully expanded and parameter-resolved circuit as the immutable
@@ -6755,16 +6761,18 @@ export class BoardImpl {
    *  treatment an MCU-kind pin gets, at the board's own logic level.
    *  Power-rail entries set at init are never touched. */
   _syncDeviceGpioDrives() {
-    if (this._deviceStates.size === 0) return;
-    for (const part of this.parts) {
-      const model = getDevice(part.kind);
+    for (const device of this._deviceDriveParts) {
+      const model = getDevice(device.part.kind);
       if (!model || !model.gpioFollowsPinStates) continue;
-      const st = this._deviceStates.get(part.id);
-      if (!st) continue;
+      const st = device.state;
+      // Pin spelling and the model's reserved power terminals belong to
+      // the netlist. The pin states themselves can change on every solve.
+      device.terminals ??= device.part.terminals
+        .filter(terminal => !st._staticDrives.has(terminal))
+        .map(terminal => ({ terminal, pin: String(terminal).toLowerCase() }));
       const vLogic = model.vcc ?? this.vcc;
-      for (const terminal of part.terminals) {
-        if (st._staticDrives && st._staticDrives.has(terminal)) continue;
-        const ps = this.pinStates.get(String(terminal).toLowerCase());
+      for (const { terminal, pin } of device.terminals) {
+        const ps = this.pinStates.get(pin);
         // pinThevenin returns the STRING 'high-z' for undriven modes, not
         // null — storing it as a drive made stampDevice compute 1/NaN and
         // poisoned the whole matrix (every node NaN, rendered as 0 V; a
