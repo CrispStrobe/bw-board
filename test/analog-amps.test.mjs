@@ -14,7 +14,10 @@ const net = (id, ...ts) => ({ id, terminals: ts.map(([part, terminal]) => ({ par
 const R = (id, ohms) => ({ id, kind: 'resistor', params: { ohms }, terminals: ['a', 'b'] });
 const DIV = (id, top, bot) => [R(`${id}T`, top), R(`${id}B`, bot)];
 
-const AMP = { id: 'U1', kind: 'lm358', params: {}, terminals: ['vcc', 'gnd', '1_pos', '1_neg', '1_out', '2_pos', '2_neg', '2_out'] };
+// The hand oracles below are the gain arithmetic of the resistors alone, so
+// the amplifier's input bias current (45 nA by default since 2026-11-25,
+// test/opamp-input-bias.test.mjs) is set to zero here.
+const AMP = { id: 'U1', kind: 'lm358', params: { inputBiasA: 0, inputOffsetCurrentA: 0 }, terminals: ['vcc', 'gnd', '1_pos', '1_neg', '1_out', '2_pos', '2_neg', '2_out'] };
 
 describe('LM358', () => {
     it('open loop saturates like the comparator it then is', () => {
