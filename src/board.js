@@ -1108,21 +1108,26 @@ export class BoardImpl {
       } else if (p.kind === 'seven_segment') {
         const common = netsOf(p.id, 'common');
         for (const seg of ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'dp']) {
-          addLed(`${p.id}_${seg}`, netsOf(p.id, seg), common);
+          const segment = netsOf(p.id, seg);
+          const anode = p.params?.common === 'anode';
+          addLed(`${p.id}_${seg}`, anode ? common : segment, anode ? segment : common);
         }
       } else if (p.kind === 'seven_seg_3' || p.kind === 'seven_seg_4') {
         // Multiplexed displays (3-digit 056SMG-3; 4-digit as on the Prechin
         // A2's tubes): eight shared segment lines, one common per digit.
         // Each digit is eight LEDs from the shared segment net to that
         // digit's common. The multiplex physics falls out for free: a
-        // segment lights only while ITS digit's common is pulled low, and
+        // segment lights only while ITS digit's common is selected (high
+        // for params.common='anode', low for the default cathode), and
         // the brightness filter integrates the scan duty exactly as it
         // does for the matrices.
         const nDigits = p.kind === 'seven_seg_4' ? 4 : 3;
         for (let digit = 0; digit < nDigits; digit++) {
           const common = netsOf(p.id, `com${digit}`);
           for (const seg of ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'dp']) {
-            addLed(`${p.id}_d${digit}_${seg}`, netsOf(p.id, seg), common);
+            const segment = netsOf(p.id, seg);
+            const anode = p.params?.common === 'anode';
+            addLed(`${p.id}_d${digit}_${seg}`, anode ? common : segment, anode ? segment : common);
           }
         }
       } else if (p.kind === 'pi_pico') {

@@ -79,8 +79,8 @@ export function createEmu8051Adapter(wasm, opts = {}) {
   // an STC15 program on the STC12 model loses P5 SILENTLY, which is how
   // the RBS15667 console's buzzer would die with no error anywhere).
   const PART_IDS = {
-    stc12c5a60s2: 0, stc12c5a16s2: 0,
-    stc15f2k60s2: 1, stc15w408as: 1,
+    stc12c5a60s2: 0, stc12c5a16s2: 4,
+    stc15f2k60s2: 1, stc15w408as: 3,
     stc89c52: 2, stc89c52rc: 2,
   };
   const partId = PART_IDS[part] ?? 0;
@@ -662,7 +662,10 @@ export function createEmu8051Adapter(wasm, opts = {}) {
      *  (the same surface as the avr8js/rp2040js/stm32 adapters' onSerial). */
     onSerial(cb) {
       if (!wasm._emu_set_serial_callback || !wasm.addFunction) return false;
-      if (serialCbPtr && wasm.removeFunction) wasm.removeFunction(serialCbPtr);
+      if (serialCbPtr && wasm.removeFunction) {
+        wasm._emu_set_serial_callback(0);
+        wasm.removeFunction(serialCbPtr);
+      }
       serialCbPtr = wasm.addFunction((byte) => { if (cb) cb(byte & 0xff); }, 'vii');
       wasm._emu_set_serial_callback(serialCbPtr);
       return true;
@@ -681,6 +684,14 @@ export function createEmu8051Adapter(wasm, opts = {}) {
 
     /** Clean up registered function pointers. */
     destroy() {
+      // Reset preserves external bindings. Detach them before releasing the
+      // function-table slots, or a reused module could call a freed function.
+      // Once our slots are released, repeated cleanup must leave a replacement
+      // adapter's bindings alone when it reuses the same WASM module.
+      if (serialCbPtr && wasm._emu_set_serial_callback) wasm._emu_set_serial_callback(0);
+      if ((pinCbPtr || readPinCbPtr || readAnalogCbPtr || advanceCbPtr) && wasm._emu_set_board_callbacks) {
+        wasm._emu_set_board_callbacks(0, 0, 0, 0, 0);
+      }
       if (wasm.removeFunction) {
         if (serialCbPtr) wasm.removeFunction(serialCbPtr);
         if (pinCbPtr) wasm.removeFunction(pinCbPtr);
@@ -688,7 +699,7 @@ export function createEmu8051Adapter(wasm, opts = {}) {
         if (readAnalogCbPtr) wasm.removeFunction(readAnalogCbPtr);
         if (advanceCbPtr) wasm.removeFunction(advanceCbPtr);
       }
-      pinCbPtr = readPinCbPtr = readAnalogCbPtr = advanceCbPtr = null;
+      serialCbPtr = pinCbPtr = readPinCbPtr = readAnalogCbPtr = advanceCbPtr = null;
     },
 
     // Conformance adapter interface
