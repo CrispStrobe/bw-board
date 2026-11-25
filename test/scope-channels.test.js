@@ -69,6 +69,26 @@ describe('scope channels: lifecycle', () => {
     assert.equal(board.getScopeData(ch), null);
   });
 
+  it('resolves solver terminals after scope load and netlist changes', () => {
+    const board = new BoardImpl(5.0);
+    const {parts, nets} = makeSimpleResistor();
+    board.setNetlist(parts, nets);
+    assert.equal(board._netForTerminal('R1', 'b'), 'net_pin');
+
+    const handle = board.addScopeChannel({
+      type: 'voltage', netId: 'net_pin', referenceNetId: 'net_gnd', inputOhms: 100000,
+    });
+    const scopeId = `@scope:${handle}:r`;
+    assert.equal(board._netForTerminal(scopeId, 'a'), 'net_pin');
+    assert.equal(board._netForTerminal(scopeId, 'b'), 'net_gnd');
+
+    board.removeScopeChannel(handle);
+    assert.equal(board._netForTerminal(scopeId, 'a'), undefined);
+
+    board.setNetlist(parts, nets.map(net => net.id === 'net_pin' ? {...net, id: 'renamed'} : net));
+    assert.equal(board._netForTerminal('R1', 'b'), 'renamed');
+  });
+
   it('clearScopeChannels removes all', () => {
     const board = new BoardImpl(5.0);
     const { parts, nets } = makeSimpleResistor();

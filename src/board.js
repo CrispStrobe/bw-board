@@ -9194,14 +9194,24 @@ export class BoardImpl {
     // The SOLVER view: identical to the drawn netlist except that an
     // expanded motor's 'a' resolves to its hidden winding net, so device
     // reads and instrument taps see the node its model actually sits on.
-    for (const net of (this._solveNets ?? this.nets)) {
-      for (const t of net.terminals) {
-        if (t.part === partId && t.terminal === terminal) {
-          return net.id;
+    const nets = this._solveNets ?? this.nets;
+    if (this._solverNetIndexSource !== nets) {
+      const index = new Map();
+      for (const net of nets) {
+        for (const t of net.terminals) {
+          let terminals = index.get(t.part);
+          if (!terminals) {
+            terminals = new Map();
+            index.set(t.part, terminals);
+          }
+          if (!terminals.has(t.terminal)) terminals.set(t.terminal, net.id);
         }
       }
+      // Both netlist installation and scope-load changes replace this view.
+      this._solverNetByTerminal = index;
+      this._solverNetIndexSource = nets;
     }
-    return undefined;
+    return this._solverNetByTerminal.get(partId)?.get(terminal);
   }
 
   /**
