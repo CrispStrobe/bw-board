@@ -1449,6 +1449,11 @@ function shockleyCompanion(vAcross, vf, rd, is, n) {
  * @param {number} [opts.testCurrent] - test current magnitude (default 0.001 A)
  * @param {number} [opts.tSeconds] - simulation time, for time-varying sources (default 0)
  * @param {boolean} [opts.dcSources] - use each waveform source's explicit dcValue
+ * @param {number} [opts.powerOnAgeSec] - seconds since the supplies were switched
+ *   on; with it each supply (`vcc` rail, DC `vsource`, registered supply device
+ *   `model.supply`) is scaled by its power-on rise (supplyRampFraction over its
+ *   `params.riseSec`, else `opts.supplyRiseSec`). Absent: no rise (DC, events).
+ * @param {number} [opts.supplyRiseSec] - the rise of a supply that states none (default 0).
  * @param {boolean} [opts.inspectBjtRegions] - return detached final region diagnostics;
  *   not an event/admission certificate and never used to change the solve.
  * @param {Map<string, number>} [opts.capVoltages] - part id → present capacitor voltage.
@@ -1732,6 +1737,11 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
   const testCurrent = opts.testCurrent ?? 0.001;
   const tSeconds = opts.tSeconds ?? 0;
   const dcSources = opts.dcSources === true;
+  const powerOnAge = Number.isFinite(opts.powerOnAgeSec) ? opts.powerOnAgeSec : null;
+  const defaultRise = Number(opts.supplyRiseSec) > 0 ? Number(opts.supplyRiseSec) : 0;
+  /** The fraction of a supply's EMF present now (its power-on rise). */
+  const supplyRamp = powerOnAge === null ? () => 1
+    : (part) => supplyRampFraction(powerOnAge, Number(part.params?.riseSec ?? defaultRise));
   // E2.2: silicon junctions shift −2 mV/°C. Assigned on EVERY entry (no
   // stale state); solveMNA is synchronous and never re-enters, and a
   // worker thread has its own module instance.
@@ -2528,7 +2538,7 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
             const controlled = controls instanceof Map ? controls.get(part.id) : undefined;
             const authored = Number.isFinite(controlled) ? Number(controlled)
               : (Number.isFinite(part.params?.volts) ? part.params.volts : vcc);
-            const railVolts = authored * srcScale;
+            const railVolts = authored * srcScale * supplyRamp(part);
             const railNet = findNet(nets, part.id, 'vcc');
             if (vsIndex.has(part.id)) {
               railStamped.set(railNet, railVolts);
@@ -2725,7 +2735,8 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
           break;
 
         case 'vsource':
-          stampIndependentVSource(A, b, part, nets, nodeIndex, groundNetId, vsIndex, vcc, tSeconds, controls, srcScale, dcSources);
+          stampIndependentVSource(A, b, part, nets, nodeIndex, groundNetId, vsIndex, vcc, tSeconds, controls,
+            srcScale * (isSupplySource(part) ? supplyRamp(part) : 1), dcSources);
           break;
 
         case 'isource':
@@ -2857,7 +2868,8 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
             const previouslyStamped = deviceStamps.has(part.id);
             deviceStamps.set(part.id, rec);
             stampDevice(A, b, part, nets, nodeIndex, model, state, controls, vcc, tSeconds,
-              transient ? transient.dtSec : undefined, srcScale, groundNetId, rec, nonlinearIterate,
+              transient ? transient.dtSec : undefined, model.supply === true ? srcScale * supplyRamp(part) : srcScale,
+              groundNetId, rec, nonlinearIterate,
               nonlinearDimensions, previouslyStamped, getTopology, model.stamp ? undefined : fallbackRailOwners);
           }
           break;
@@ -6781,6 +6793,58 @@ function independentSourceVoltage(part, vcc, tSeconds, controls, dcSources) {
     volts = dcSources ? sourceDcValue(part, vcc) : sourceVoltage(part, tSeconds, vcc);
   }
   return volts;
+}
+
+/**
+ * A DC voltage source is a supply: a battery or bench supply that the power
+ * switch connects, so it rises with the board's power-on ramp. A waveform
+ * source (sine, square, PCM ...) is an instrument with its own output and
+ * keeps its waveform from t = 0.
+ * @param {Part} part
+ */
+export function isSupplySource(part) {
+  return String(part.params?.wave ?? 'dc').toLowerCase() === 'dc';
+}
+
+/**
+ * THE POWER-ON RISE. Closing a battery's switch is not a step: the contact
+ * makes, and the battery's internal resistance (0.2-1 ohm for a 9 V block or
+ * a pack of cells) and the leads' series inductance (~1 uH for a switch and
+ * two short leads) charge the board's own supply capacitance -- the bulk and
+ * decoupling capacitors every real board carries (~10 uF), and before them the
+ * input capacitance of everything on the rail. That is an RL/RC rise of the
+ * order of tens of microseconds: L/R ~ 1-5 us, R*C ~ 2-10 us, and contact
+ * closure itself is no faster. A supply states its rise (`params.riseSec`, in
+ * seconds; SUPPLY_RISE_SEC is that typical value) and the engine takes it as a
+ * smooth (C1) S-curve from the power-on instant, deterministic and finite. A
+ * board's `supplyRiseSec` gives every supply that states none the same rise.
+ *
+ * THE DEFAULT IS STILL THE IDEAL STEP (rise 0). The engine's own analytic and
+ * SPICE oracles are ideal-step decks, and the gallery's benches were authored
+ * against the step's power-on states: a rise is a different (and physically
+ * real) trajectory, and on some benches it ends in another state -- an LM386
+ * one-shot whose output rises with the supply fires once at switch-on, a slow
+ * astable can start in a different phase. A bench that needs the real rise
+ * says so on its supply.
+ *
+ * Physically what it fixes: a transistor ON at the operating point is never
+ * OFF on the way there, because its base charges while the supply rises and
+ * not after it has arrived; a stage fed from a step started with its junctions
+ * uncharged and pulsed its collector to the full supply for nanoseconds.
+ */
+export const SUPPLY_RISE_SEC = 10e-6;
+
+/**
+ * Fraction of the supply present `sinceOnSec` after power-on (smoothstep).
+ * @param {number} sinceOnSec
+ * @param {number} [riseSec]
+ * @returns {number}
+ */
+export function supplyRampFraction(sinceOnSec, riseSec = SUPPLY_RISE_SEC) {
+  if (!(riseSec > 0) || !(sinceOnSec < riseSec)) return 1;
+  if (!(sinceOnSec > 0)) return 0;
+  const x = sinceOnSec / riseSec;
+  return x * x * (3 - 2 * x);
 }
 
 function stampIndependentVSource(A, b, part, nets, nodeIndex, groundNetId, vsIndex, vcc, tSeconds = 0, controls = null, srcScale = 1, dcSources = false) {

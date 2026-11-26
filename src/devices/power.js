@@ -130,6 +130,8 @@ export function registerPowerDevices() {
   // Terminals: pos, neg (like a real battery)
   registerDevice('battery', {
     terminals: ['pos', 'neg'],
+    // A supply: it rises with the board's power-on ramp (mna.js SUPPLY_RISE_SEC).
+    supply: true,
 
     init() {
       return { drives: {} };
@@ -160,6 +162,7 @@ export function registerPowerDevices() {
   for (const [kind, volts, rInternal] of [['potato_battery', 0.85, 5000], ['lemon_battery', 0.9, 2000]]) {
     registerDevice(kind, {
       terminals: ['pos', 'neg'],
+      supply: true,
       init() { return { drives: {} }; },
       stamp(ctx, part) {
         ctx.theveninBetween('pos', 'neg', part.params?.volts ?? volts, part.params?.rInternal ?? rInternal);
