@@ -434,6 +434,9 @@ function combineThevenin(sources) {
   return { vTh: iTotal / gTotal, rTh: 1 / gTotal };
 }
 
+/** The junction-voltage maps of a Newton state that the predictor extrapolates. */
+const PREDICTED_SEED_KEYS = ['diodeVoltages', 'bjtVbc', 'bjtVce', 'mosVds', 'mosVsb', 'mosVdb'];
+
 /** Lowest supply any modelled logic family is specified for (74HC: 2 V). */
 const LOGIC_MIN_SUPPLY_V = 2.0;
 
@@ -626,6 +629,8 @@ export class BoardImpl {
      * @type {bigint|null}
      */
     this._powerOnNs = null;
+    /** Trial solves Newton could not converge (diagnostic; see rejectTrial). */
+    this._transientTrialFailures = 0;
     /** Part id -> its own supply voltage at its last accepted device update. */
     this._deviceSupplies = new Map();
     /** @type {number|undefined} */
@@ -8042,6 +8047,9 @@ export class BoardImpl {
     // Newton state (junction voltages, region FSMs) at the last accepted
     // point seeds the next step's solve -- see `newtonSeed` in solveMNA.
     let seed = this._newtonSeed ?? null;
+    // The two accepted Newton states before `seed` and their times, for the
+    // predicted Newton start (predictSeed below).
+    let prevSeed = null, prevSeedT = null, seedT = t0;
     // Each step's Newton starts from the last accepted solution, as SPICE
     // starts each timepoint from the previous one: a capacitor-free latch
     // elsewhere on the board must not be re-decided from zero every step.
@@ -8169,7 +8177,12 @@ export class BoardImpl {
       il = r.inductorCurrentsNext ?? il;
       cc = r.capCurrentsNext ?? cc;
       lv = r.inductorVoltagesNext ?? lv;
-      seed = r.newtonState ?? seed;
+      if (r.newtonState) {
+        // A backward-Euler step starts a new history (a discontinuity): the
+        // predictor does not extrapolate across it.
+        prevSeed = stage === 'trap' ? seed : null; prevSeedT = seedT;
+        seed = r.newtonState; seedT = atSec;
+      }
       res = r;
       publish(r, atSec,quadratic);
       // One device pass per accepted step, told the SUB-STEP time — the
@@ -8267,6 +8280,32 @@ export class BoardImpl {
       (p) => p.kind === 'capacitor' && p.params?.dampedBy);
     let windowAttempts = 0;
     let windowEnd = t + ATTEMPT_WINDOW_SEC;
+    // Newton-failure memory: {h, until} after a trial Newton could not solve.
+    let nfCap = null;
+    // THE PREDICTED NEWTON START. A trapezoidal trial used to start Newton
+    // from the last accepted junction state, i.e. a constant extrapolation:
+    // along an edge every trial began a whole step behind and spent its first
+    // iteration catching up. Extrapolated linearly from the last two accepted
+    // states (the step ratio capped at 2), the start is where the junctions
+    // are heading; Newton converges to the same tolerance from either start,
+    // in fewer iterations (2.7 instead of 3.2 per accepted solve on a 60 kHz
+    // astable). Regions and clamps keep their last accepted values.
+    const predictSeed = (hs) => {
+      if (!seed || !prevSeed || !(seedT > prevSeedT) || Math.abs(seedT - t) > 1e-15) return seed;
+      const ratio = Math.min(2, hs / (seedT - prevSeedT));
+      const out = { ...seed };
+      for (const key of PREDICTED_SEED_KEYS) {
+        const now = seed[key], before = prevSeed[key];
+        if (!(now instanceof Map) || !(before instanceof Map) || now.size === 0) continue;
+        const next = new Map();
+        for (const [id, v] of now) {
+          const p = before.get(id);
+          next.set(id, Number.isFinite(p) && Number.isFinite(v) ? v + ratio * (v - p) : v);
+        }
+        out[key] = next;
+      }
+      return out;
+    };
     let fatalTrialFailure = false;
     let trapFloorRestartAt = null;
     let trapAcceptedSinceRestart = false;
@@ -8279,6 +8318,11 @@ export class BoardImpl {
       this._chargeBoundedAdvanceWork('attempts');
       attempts++;
       windowAttempts++;
+      // NEWTON-FAILURE MEMORY (see rejectTrial): a step size Newton could not
+      // converge from here is not tried again until the time it spanned has
+      // passed.
+      if (nfCap !== null && t >= nfCap.until) nfCap = null;
+      if (nfCap !== null && h > nfCap.h) h = nfCap.h;
       let hEff = Math.min(h, tEnd - t, hMax);
       const requestedEnd = t + hEff;
       const barrier = this._transientStepBarrier(t, requestedEnd);
@@ -8354,8 +8398,16 @@ export class BoardImpl {
       // is fatal; neither the controller's limits nor error scales change.
       const rejectTrial = r => {
         if (validTransientSolution(r)) return false;
+        this._transientTrialFailures++;
         if (hEff > H_MIN * 1.000001) {
           h = Math.max(H_MIN, hEff / 2);
+          // Approaching a regenerative edge the largest step Newton can
+          // converge shrinks with every accepted step. Growing the accepted
+          // half straight back past the size that just failed cost two failed
+          // solves (50 Newton iterations each, against ~3 for an accepted one)
+          // per accepted step of the approach: a third of all Newton work of a
+          // 60 kHz transistor astable.
+          nfCap = { h, until: t + hEff };
           return true;
         }
         // At the floor the trapezoidal rule cannot converge here: restart
@@ -8390,9 +8442,9 @@ export class BoardImpl {
         return validTransientSolution(r) || !atMinStep ? r
           : solveStep(...args.slice(0, 7), args[7] ?? seed, true);
       };
-      const full = trial(t, hEff, 'trap', cv, il, cc, lv);
+      const full = trial(t, hEff, 'trap', cv, il, cc, lv, predictSeed(hEff));
       if (rejectTrial(full)) { if (fatalTrialFailure) break; continue; }
-      const h1 = trial(t, hEff / 2, 'trap', cv, il, cc, lv);
+      const h1 = trial(t, hEff / 2, 'trap', cv, il, cc, lv, predictSeed(hEff / 2));
       if (rejectTrial(h1)) { if (fatalTrialFailure) break; continue; }
       const h2 = trial(t + hEff / 2, hEff / 2, 'trap',
         h1.capVoltagesNext ?? cv, h1.inductorCurrentsNext ?? il,

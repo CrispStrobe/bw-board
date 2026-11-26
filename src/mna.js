@@ -2490,6 +2490,7 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
   // precision either way.
   let polishPending = warmStarted;
   for (let iter = 0; iter < MAX_NR_ITER; iter++) {
+    newtonIterationsTotal++;
     // Clear values; the assembled pattern survives for factor reuse.
     A.reset();
     b.fill(0);
@@ -4647,6 +4648,10 @@ let benchTemperatureC = 25;
  * @type {Map<string, number>|null}
  */
 let partTemperatures = null;
+/** Newton iterations run by every solveMNA in this module instance (diagnostic). */
+let newtonIterationsTotal = 0;
+/** Total Newton iterations so far: a cost observable for tests and profiling. */
+export function newtonIterations() { return newtonIterationsTotal; }
 /** The temperature-model celsius of a part, or undefined when it has none. */
 const partCelsius = (part) => partTemperatures?.get(part.id);
 /**
