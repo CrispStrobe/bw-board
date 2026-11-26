@@ -40,6 +40,7 @@ export const WIDGET_TYPES = /** @type {const} */ ({
   RGB_LIGHT: 'rgb_light',
   TEXT:      'text',
   IMAGE:     'image',
+  MACHINE:   'machine',
 });
 
 /**
@@ -106,6 +107,8 @@ export const WIDGET_DEFAULTS = {
   // Decorations (presentation only, never bound):
   text:     { text: 'Label', fontSize: 16, color: '#334155' },
   image:    { src: '', alt: '' },
+  // The app owns the machine connection. Only the face identifier is saved.
+  machine:  { face: '' },
 };
 
 /**
