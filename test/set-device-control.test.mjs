@@ -52,13 +52,16 @@ describe('setDeviceControl: hd44780 text path', () => {
     const s = board.getDeviceState('D1');
     assert.equal(s.ddram[0], 0x48, 'H at DDRAM 0');
     assert.equal(s.ddram[1], 0x69, 'i at DDRAM 1');
+    assert.equal(s.text[0], 'Hi'.padEnd(16), 'the parallel LCD face shows the printed text');
     assert.equal(board.setDeviceControl('D1', 'cursor', [1, 2]), true);
     assert.equal(board.setDeviceControl('D1', 'print', 'X'), true);
     // Line 2 base 0x40 → flat index 40; col 2 → 42.
     assert.equal(s.ddram[42], 0x58, 'X at line 2 col 2');
+    assert.deepEqual(s.text, ['Hi'.padEnd(16), '  X'.padEnd(16)]);
     assert.equal(board.setDeviceControl('D1', 'clear', 1), true);
     assert.equal(s.ddram[0], 0x20, 'clear fills spaces');
     assert.equal(s.ac, 0, 'clear homes the address counter');
+    assert.deepEqual(s.text, [' '.repeat(16), ' '.repeat(16)], 'clear also refreshes the parallel LCD face');
   });
 });
 
