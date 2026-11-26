@@ -15,6 +15,7 @@
  *   CMD58 → R3 $00 + OCR $C0FF8000 (CCS=1: SDHC, block addressing)
  *   CMD16 → $00 (block length — accepted, ignored: SDHC is fixed 512)
  *   CMD17 → R1 $00, gap, token $FE, 512 data bytes, CRC $FF $FF
+ *   CMD24 → R1 $00, data token + 512 bytes + CRC, response and busy
  *   CMD18 → as CMD17 but streaming consecutive blocks until CMD12
  *   CMD12 → stuff byte, R1 $00 (stop transmission)
  * Everything else answers R1 $04 (illegal command) — honestly, so a
@@ -53,6 +54,9 @@ export class SDCardSPI {
         this.cmdBuf = [];
         this.acmd = false;
         this.acmd41Seen = false;
+        this.ready = false;
+        this.writeBlock = null;
+        this.writeData = [];
         // multi-block streaming state (CMD18)
         this.streaming = false;
         this.streamBlock = 0;
@@ -89,7 +93,10 @@ export class SDCardSPI {
             return;
         }
         switch (cmd) {
-            case 0: this.outQueue.push(R1_IDLE); break;
+            case 0:
+                this.ready = this.acmd41Seen = this.streaming = false;
+                this.outQueue.push(R1_IDLE);
+                break;
             case 8: this.outQueue.push(R1_IDLE, 0x00, 0x00, 0x01, 0xaa); break;
             // CMD55 answers idle until an ACMD41 has actually RETURNED
             // ready — answering $00 during the init loop reads as an
@@ -98,6 +105,14 @@ export class SDCardSPI {
             case 55: this.acmd = true; this.outQueue.push(this.ready ? R1_OK : R1_IDLE); break;
             case 58: this.outQueue.push(R1_OK, 0xc0, 0xff, 0x80, 0x00); break;
             case 16: this.outQueue.push(R1_OK); break;
+            case 24:
+                if (!this.ready) this.outQueue.push(R1_IDLE);
+                else if (arg * 512 + 512 > this.image.length) this.outQueue.push(0x20);
+                else {
+                    this.writeBlock = arg;
+                    this.outQueue.push(R1_OK);
+                }
+                break;
             case 17: this.outQueue.push(R1_OK); this._queueBlock(arg); break;
             case 18:
                 this.outQueue.push(R1_OK);
@@ -115,6 +130,18 @@ export class SDCardSPI {
     }
 
     _byteExchanged(inByte) {
+        if (this.writeBlock !== null) {
+            // CRC is disabled in SPI mode. Collect both CRC bytes before committing.
+            if (!this.writeData.length && inByte !== 0xfe) return;
+            this.writeData.push(inByte);
+            if (this.writeData.length === 515) {
+                this.image.set(this.writeData.slice(1, 513), this.writeBlock * 512);
+                this.writeBlock = null;
+                this.writeData.length = 0;
+                this.outQueue.push(0x05, 0x00);
+            }
+            return;
+        }
         // Command frames start with 01xxxxxx; collect 6 bytes.
         if (this.cmdBuf.length === 0) {
             if ((inByte & 0xc0) === 0x40) this.cmdBuf.push(inByte);
@@ -141,6 +168,10 @@ export class SDCardSPI {
             if (level === 1) {                  // deselect: reset the bit engine
                 this.bitIdx = 0; this.inShift = 0;
                 this.cmdBuf.length = 0;
+                this.outQueue.length = 0;
+                this.streaming = false;
+                this.writeBlock = null;
+                this.writeData.length = 0;
                 this.outByte = 0xff;
                 this._setMiso(1);
             } else {
