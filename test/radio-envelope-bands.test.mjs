@@ -759,3 +759,33 @@ describe('radio bands: a VHF Colpitts oscillator holds its swing', () => {
         assert.ok(perMs < 20000, `${perMs} band substeps per simulated ms`);
     });
 });
+
+describe('radio bands: an oscillation off its band\'s centre', () => {
+    it('a keyed transmitter 45 kHz off its band\'s centre holds its swing: the substep resolves the rotation its envelope has', () => {
+        // Gap (2026-11-26): a keyed Meissner transmitter linked to a receiver
+        // (a remote-control bench) shares a band centred on the receiver's
+        // tank and runs ~45 kHz from it. Its mode estimate does not flag it
+        // (a steady oscillator at σ ≈ 0), so nothing bounded the substep by
+        // that rotation: every 4 µs trial step turned it by 1.1 rad, backward
+        // Euler damped it by a third, and it grew back — a 3.5–5.6 V sawtooth
+        // ~25 000 times a second that the transient solve chased at ~2 500
+        // solves per ms. The substep now follows the rotation the envelope
+        // actually has (RfBand._kForRotation). MEASURED: steady 5.78–5.81 V,
+        // ~1 250 solves per ms.
+        const fx = JSON.parse(readFileSync(new URL('./fixtures/rf-remote-netlist.json', import.meta.url), 'utf8'));
+        const b = new BoardImpl(fx.vcc);
+        b.setNetlist(fx.parts, fx.nets);
+        b.setPower(true);
+        ms(b, 10);
+        b.setControl(fx.key, 1);
+        ms(b, 11);
+        const s0 = b.transientAnalysisStatus().work.solves;
+        let lo = Infinity, hi = 0;
+        for (let k = 1; k <= 100; k++) { ms(b, 11 + k * 0.02); const a = tankAmp(b, fx.txTank); lo = Math.min(lo, a); hi = Math.max(hi, a); }
+        assert.equal(b._radio.error, null);
+        assert.ok(lo > 4, `the transmitter swings volts: ${lo.toFixed(3)} V`);
+        assert.ok(hi / lo < 1.03, `a steady swing, ${lo.toFixed(3)}–${hi.toFixed(3)} V`);
+        const perMs = (b.transientAnalysisStatus().work.solves - s0) / 2;
+        assert.ok(perMs < 1800, `${perMs} solves per simulated ms`);
+    });
+});
