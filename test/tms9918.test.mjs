@@ -230,3 +230,32 @@ describe('debug target video()', () => {
     assert.equal(bareTarget.video(), null, 'no VDP → null, never a black lie');
   });
 });
+
+it('a part-bound Controller screen reads the VDP of the attached 6502', async () => {
+    const {createM6502Adapter} = await import('../src/m6502-adapter.js');
+    const {registerRetroDips} = await import('../src/devices/retro-dips.js');
+    const {getDevice} = await import('../src/devices.js');
+    const {bindPanelToBoard} = await import('../src/controller-binding.js');
+    const {ControllerPanel} = await import('../src/controller.js');
+    registerRetroDips();
+    const partState = getDevice('tms9918').init();
+    assert.equal(partState.videoFrame(), null);
+    const board = {getDeviceState: id => id === 'vdp1' ? partState : null, setPin() {}};
+    const adapter = createM6502Adapter({
+        config: {clockHz: 1_000_000, regions: [], chips: [{kind: 'vdp', name: 'vdp1', at: 0x4000}]}
+    });
+    adapter.attachBoard(board);
+    const panel = new ControllerPanel();
+    panel.addWidget('display', 'simplevga', {});
+    panel.bindToPart('display', 'vdp1');
+    const binding = bindPanelToBoard(panel, board);
+    try {
+        binding.pumpDisplays();
+        const frames = panel.getWidget('display').state;
+        assert.equal(frames.signal, true);
+        assert.equal(frames.rgba.length, 256 * 192 * 4);
+        assert.deepEqual(frames.rgba, adapter.machine.chips.vdp1.videoFrame().rgba);
+    } finally {
+        binding.dispose();
+    }
+});

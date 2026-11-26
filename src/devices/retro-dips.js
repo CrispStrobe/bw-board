@@ -206,7 +206,16 @@ export function registerRetroDips() {
     registerDevice('i8251', dipSurface(I8251, 5.0));
     registerDevice('i8284', dipSurface(I8284, 5.0));
     registerDevice('mc6850', dipSurface(MC6850, 5.0));
-    registerDevice('tms9918', dipSurface(TMS9918, 5.0));
+    registerDevice('tms9918', {
+        ...dipSurface(TMS9918, 5.0),
+        init() {
+            return {
+                drives: {},
+                _video: null,
+                videoFrame() { return this._video?.videoFrame() ?? null; },
+            };
+        },
+    });
 
     // DIP oscillator can (E5.9) — a POWERED clock module, which a crystal
     // is not: OE / GND / OUT / VCC in package order (1, 7, 8, 14), square
