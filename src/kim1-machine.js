@@ -5,6 +5,10 @@
  * CPU execution is NMOS 6502; monitor keys are higher-level simulator actions.
  * See docs/KIM1.md for the supported map, clock, and compatibility boundary.
  */
+import {createKim1Backplane, createKim1MemoryCard, createKim1Video, kim1ExpansionAt, kim1ExpansionWritable} from './kim1-expansion.js';
+import {Kim1K1013} from './kim1-k1013.js';
+import {Kim1CorshamDisk} from './kim1-corsham-disk.js';
+import {SDCardSPI} from './sdcard-spi.js';
 import {NMOS6502} from './nmos6502.js';
 import {readKim1Records} from './kim1-tape.js';
 import {createBrickwrightKim1Roms} from './kim1-rom.generated.js';
@@ -137,12 +141,21 @@ function portValue(riot, port) {
   return value & 255;
 }
 
-function readRegister(riot, reg, acknowledge) {
+function readRegister(riot, reg, acknowledge, sdCard, disk) {
   reg &= 15;
   if (!(reg & 4)) {
-    if ((reg & 3) === 0) return portValue(riot, 'a');
+    if ((reg & 3) === 0) {
+      const input = portValue(riot, 'a');
+      if (disk && !disk.hostWrites) return (input & riot.ddra) | (disk.data & ~riot.ddra);
+      if (!sdCard) return input;
+      const mask = 1 << sdCard.pins.miso;
+      return riot.ddra & mask ? input : (input & ~mask) | (sdCard.misoLevel << sdCard.pins.miso);
+    }
     if ((reg & 3) === 1) return riot.ddra;
-    if ((reg & 3) === 2) return portValue(riot, 'b');
+    if ((reg & 3) === 2) {
+      const input = portValue(riot, 'b');
+      return disk && !(riot.ddrb & 4) ? (input & ~4) | (disk.ack ? 4 : 0) : input;
+    }
     return riot.ddrb;
   }
   const timer = riot.timer;
@@ -164,13 +177,21 @@ function writeRegister(riot, reg, value) {
   timerLoad(riot.timer, value, [1, 8, 64, 1024][reg & 3], !!(reg & 8));
 }
 
+function machineAddress(state, address) {
+  return mappedAddress(address, state.expansion || state.backplane || state.memoryCard || state.k1008);
+}
+
 function accessRead(state, address, acknowledge) {
-  const a = mappedAddress(address, state.expansion);
+  if (state.k1013?.has(address)) return state.k1013.read(address, acknowledge);
+  const device = kim1ExpansionAt(state, address);
+  if (device) return device.data[address];
+  const a = machineAddress(state, address);
   if (a < 0x400) return state.ram[a];
   if (state.expansion && expandedRam(a)) return state.expansion[a];
   if (a >= 0x1780 && a < 0x1800) return state.riotRam[a - 0x1780];
-  if (a >= 0x1700 && a < 0x1780) return readRegister(state.riots[a >= 0x1740 ? 1 : 0], a & 15, acknowledge);
-  if (state.roms && a >= 0x1800) return state.roms[a >= 0x1c00 ? 1 : 0][a & 1023];
+  if (a >= 0x1700 && a < 0x1780) return readRegister(state.riots[a >= 0x1740 ? 1 : 0], a & 15, acknowledge,
+    a < 0x1740 ? state.sdCard : null, a < 0x1740 ? state.corshamDisk : null);
+  if (state.roms && a >= 0x1800 && a < 0x2000) return state.roms[a >= 0x1c00 ? 1 : 0][a & 1023];
   return null;
 }
 
@@ -178,18 +199,44 @@ export function peekKim1Byte(state, address) { return accessRead(state, address,
 export function readKim1Byte(state, address, {strict = true} = {}) {
   const value = accessRead(state, address, true);
   if (value !== null || !strict) return value;
-  const a = mappedAddress(address, state.expansion);
+  const a = machineAddress(state, address);
   throw new Error(a >= 0x1800 ? `Original KIM-1 ROM at $${hex(address & 65535, 4)} is unavailable; ROM monitor routines are not emulated.` :
     `Unmapped KIM-1 read at $${hex(address & 65535, 4)}; expansion memory is not installed.`);
 }
 
+function updateSDCard(state) {
+  const card = state.sdCard;
+  if (!card) return;
+  const {pa, ddra} = state.riots[0];
+  const lines = [[card.pins.cs, 1], [card.pins.mosi, 1], [card.pins.sck, 0]];
+  for (const [pin, idle] of lines) {
+    const level = (ddra & (1 << pin)) ? (pa >> pin) & 1 : idle;
+    const old = pin === card.pins.cs ? card.cs : pin === card.pins.mosi ? card.mosi : card.sck;
+    if (old !== level) card.pinChange(pin, level);
+  }
+}
+
 export function writeKim1Byte(state, address, value, {authored = false} = {}) {
-  const a = mappedAddress(address, state.expansion);
+  if (state.k1013?.has(address)) { state.k1013.write(address, value); return; }
+  const device = kim1ExpansionAt(state, address);
+  if (device) {
+    if (!kim1ExpansionWritable(device, address)) throw new Error(`$${hex(address, 4)} is expansion ROM.`);
+    device.data[address] = value;
+    return;
+  }
+  const a = machineAddress(state, address);
   value &= 255;
   if (a < 0x400) state.ram[a] = value;
   else if (state.expansion && expandedRam(a)) state.expansion[a] = value;
   else if (a >= 0x1780 && a < 0x1800) state.riotRam[a - 0x1780] = value;
-  else if (a >= 0x1700 && a < 0x1780) writeRegister(state.riots[a >= 0x1740 ? 1 : 0], a & 15, value);
+  else if (a >= 0x1700 && a < 0x1780) {
+    writeRegister(state.riots[a >= 0x1740 ? 1 : 0], a & 15, value);
+    if (a < 0x1740) {
+      if ((a & 14) === 0) updateSDCard(state);
+      const riot = state.riots[0];
+      state.corshamDisk?.update(riot.pb, riot.ddrb, riot.pa & riot.ddra);
+    }
+  }
   else throw new Error(`$${hex(address & 65535, 4)} is not writable ${authored ? 'program RAM' : 'KIM-1 memory'}.`);
   if (authored && (isRam(a) || (state.expansion && expandedRam(a)))) {
     state.image[a] = value;
@@ -211,7 +258,7 @@ function syncCpu(state, core) {
 }
 
 function physicalRead(state, address) {
-  const a = mappedAddress(address, state.expansion);
+  const a = machineAddress(state, address);
   if (a >= 0x1740 && a < 0x1780 && (a & 7) === 0) pollKim1Tty(state.frontPanel, state.riots[1]);
   const value = readKim1Byte(state, address, {strict: false});
   if (value !== null) state.busLatch = value;
@@ -219,8 +266,14 @@ function physicalRead(state, address) {
 }
 
 function physicalWrite(state, address, value) {
-  const a = mappedAddress(address, state.expansion);
+  const a = machineAddress(state, address);
   state.busLatch = value;
+  if (state.k1013?.has(address)) { state.k1013.write(address, value); return; }
+  const device = kim1ExpansionAt(state, address);
+  if (device) {
+    if (kim1ExpansionWritable(device, address)) device.data[address] = value;
+    return;
+  }
   if (a < 0x400 || (state.expansion && expandedRam(a)) || (a >= 0x1700 && a < 0x1800)) {
     writeKim1Byte(state, address, value);
   }
@@ -245,6 +298,7 @@ export function createKim1Machine(source = KIM1_DEFAULT_PROGRAM) {
   const state = {
     model: 'independent-monitor-nmos6502', roms: null, romSource: null, frontPanel: null, segments: null, ttyOutput: '', busLatch: 255,
     pendingNmi: false, pendingReset: false, ram: new Uint8Array(1024), riotRam: new Uint8Array(128),
+    backplane: null, memoryCard: null, sdCard: null, corshamDisk: null, k1008: null, k1013: null,
     expansion: parsed.expanded ? new Uint8Array(65536) : null,
     image: parsed.image, programSource: formatKim1Program(parsed), startAddress: parsed.start,
     cpu: {a: 0, x: 0, y: 0, s: 0xfd, p: 0x24, pc: parsed.start, cycles: 0},
@@ -263,6 +317,9 @@ export function createKim1Machine(source = KIM1_DEFAULT_PROGRAM) {
 export function resetKim1Machine(state) {
   state.cpu = {a: 0, x: 0, y: 0, s: 0xfd, p: 0x24, pc: state.startAddress, cycles: 0};
   state.riots = [newRiot(), newRiot()];
+  updateSDCard(state);
+  state.corshamDisk?.reset();
+  state.k1013?.reset();
   if (state.roms) {
     const tty = state.frontPanel.tty, baud = 1_000_000 / state.frontPanel.bitCycles;
     hardwareInstructions.delete(state);
@@ -487,6 +544,67 @@ export function keyKim1Machine(state, key, options = {}) {
 }
 
 export function controlKim1Machine(state, verb, value, options = {}) {
+  if (verb === 'setExpandedRam') {
+    if (typeof value !== 'boolean') throw new Error('Expanded RAM requires an on/off value.');
+    state.expansion = value ? state.expansion ?? new Uint8Array(65536) : null;
+    return true;
+  }
+  if (verb === 'setK1008') {
+    if (value !== state.k1008?.address) state.k1008 = value === null ? null : createKim1Video(value);
+    return true;
+  }
+  if (verb === 'mountK1013') {
+    const {drive, image} = value;
+    const disk = state.k1013 ?? new Kim1K1013({
+      read: address => peekKim1Byte(state, address) ?? 255,
+      write: (address, byte) => {
+        if (!state.k1013?.has(address)) physicalWrite(state, address, byte);
+      }
+    });
+    disk.mount(drive, image);
+    state.k1013 = disk;
+    return true;
+  }
+  if (verb === 'setBackplane') {
+    const next = value === null ? null : createKim1Backplane(value);
+    if (next && state.backplane) {
+      for (let address = 0x2000; address < 0xfffa; address++) {
+        if (kim1ExpansionWritable(next, address) && kim1ExpansionWritable(state.backplane, address)) {
+          next.data[address] = state.backplane.data[address];
+        }
+      }
+    }
+    state.backplane = next;
+    return true;
+  }
+  if (verb === 'setMemoryCard') {
+    state.memoryCard = value === null ? null : createKim1MemoryCard(value);
+    return true;
+  }
+  if (verb === 'mountCorshamDisk') {
+    if (value === null) { state.corshamDisk = null; return true; }
+    if (!(value instanceof Uint8Array) || !value.length || value.length % 128) {
+      throw new Error('Choose a raw Corsham disk image made up of complete 128-byte records.');
+    }
+    state.corshamDisk = new Kim1CorshamDisk(value);
+    state.sdCard = null;
+    const riot = state.riots[0];
+    state.corshamDisk.update(riot.pb, riot.ddrb, riot.pa & riot.ddra);
+    return true;
+  }
+  if (verb === 'mountSD') {
+    if (value === null) { state.sdCard = null; return true; }
+    if (!(value instanceof Uint8Array) || !value.length || value.length % 512) {
+      throw new Error('Choose a raw SD image made up of complete 512-byte sectors.');
+    }
+    // PAL-1 direct SPI wiring, shared with the CP/M-65 KIM-1 driver.
+    const card = new SDCardSPI({cs: 4, sck: 3, mosi: 2, miso: 1});
+    card.setImage(value.slice());
+    state.sdCard = card;
+    state.corshamDisk = null;
+    updateSDCard(state);
+    return true;
+  }
   if (verb === 'useBrickwrightRom') { mountKim1Roms(state, createBrickwrightKim1Roms(), 'brickwright'); return true; }
   if (verb === 'loadRoms') { mountKim1Roms(state, value); return true; }
   if (verb === 'useTeachingMonitor') {
@@ -505,9 +623,18 @@ export function controlKim1Machine(state, verb, value, options = {}) {
   if (verb === 'clearTty' && state.roms) { state.frontPanel.received = state.ttyOutput = ''; return true; }
   if (verb === 'loadProgram') {
     const fresh = createKim1Machine(value); // complete validation before mutation
-    if (state.roms) {
+    if (state.roms || state.backplane || state.memoryCard || state.sdCard || state.corshamDisk || state.k1008 || state.k1013) {
+      for (const address of Object.keys(fresh.image).map(Number)) {
+        const device = kim1ExpansionAt(state, address);
+        if (device && !kim1ExpansionWritable(device, address)) {
+          throw new Error(`$${hex(address, 4)} is expansion ROM.`);
+        }
+        if (state.backplane && !state.memoryCard && !device && !isRam(address)) {
+          throw new Error(`No KIM-4 RAM module at $${hex(address, 4)}.`);
+        }
+      }
       // Host tape import installs memory while the monitor and its registers stay live.
-      state.expansion ??= fresh.expansion;
+      if (!state.backplane) state.expansion ??= fresh.expansion;
       for (const [address, byte] of Object.entries(fresh.image)) writeKim1Byte(state, Number(address), byte);
       state.image = fresh.image;
       state.startAddress = state.address = fresh.startAddress;

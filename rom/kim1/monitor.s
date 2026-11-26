@@ -76,7 +76,7 @@ Reset:
     and #1
     sta Device
     bne @keypad
-    jsr GetChar
+    jsr ReceiveChar
     jmp TerminalStart
 @keypad:
     jmp PanelLoop
@@ -250,13 +250,19 @@ ReadMatrix:
     txa
     rts
 
+.segment "CRLF"
+    jmp CompatNewline
+
+.segment "PRINTBYTE"
+    jmp SendHexByte
+
 .segment "HEXOUT"
 HexOut:
     jmp SendNibble
 
 .segment "GETCH"
 GetChar:
-    jmp ReceiveChar
+    jmp CompatReceive
 
 .segment "PANEL"
 ReceiveChar:
@@ -302,7 +308,7 @@ PrepareIo:
 
 .segment "OUTCH"
 OutChar:
-    jmp TransmitChar
+    jmp CompatTransmit
 
 .segment "TX"
 TransmitChar:
@@ -473,6 +479,71 @@ FirstDigit:
 SecondDigit:
     .byte $33,$2F,$2B
 
+.segment "PACK"
+    jmp CompatPack
+
+; Cartridge-facing ABI. The monitor's own code uses the serial routines directly.
+.segment "COMPAT"
+CompatReceive:
+    jsr ReceiveChar
+    ldy #$FF
+    ora #0
+    clv
+    clc
+    rts
+
+CompatTransmit:
+    jsr TransmitChar
+    ldy #$FF
+    tya
+    cmp #$FF
+    clc
+    clv
+    rts
+
+CompatNewline:
+    jsr LineBreak
+    ldx #6
+@padding:
+    lda #0
+    jsr TransmitChar
+    dex
+    bne @padding
+    ldx #$FF
+    txa
+    tay
+    clc
+    clv
+    rts
+
+; Pack an uppercase ASCII hex nibble into the 16-bit input accumulator.
+CompatPack:
+    cmp #'0'
+    bcc @leave
+    cmp #'9'+1
+    bcc @decimal
+    cmp #'A'
+    bcc @leave
+    cmp #'F'+1
+    bcs @leave
+    sec
+    sbc #'A'-10
+    bcs @shift
+@decimal:
+    and #$0F
+@shift:
+    ldy #4
+@digit:
+    asl $F8
+    rol $F9
+    dey
+    bne @digit
+    ora $F8
+    sta $F8
+    lda #0
+@leave:
+    rts
+
 .segment "VECTORS"
     .word NmiVector, Reset, IrqVector
 
@@ -487,24 +558,24 @@ SecondDigit:
 .segment "TEXT"
 TerminalStart:
     lda #13
-    jsr OutChar
+    jsr TransmitChar
     lda #10
-    jsr OutChar
+    jsr TransmitChar
     lda #'K'
-    jsr OutChar
+    jsr TransmitChar
     lda #'I'
-    jsr OutChar
+    jsr TransmitChar
     lda #'M'
-    jsr OutChar
+    jsr TransmitChar
     lda #'>'
-    jsr OutChar
+    jsr TransmitChar
 TerminalClear:
     lda #0
     sta HaveHex
     sta EntryLo
     sta EntryHi
 TerminalLoop:
-    jsr GetChar
+    jsr ReceiveChar
     sta RawChar
     jsr AsciiHex
     bcc @command
@@ -587,7 +658,7 @@ ReportAddress:
     lda AddrLo
     jsr SendHexByte
     lda #' '
-    jsr OutChar
+    jsr TransmitChar
     ldy #0
     lda (AddrLo),y
     jsr SendHexByte
@@ -595,9 +666,9 @@ ReportAddress:
 
 LineBreak:
     lda #13
-    jsr OutChar
+    jsr TransmitChar
     lda #10
-    jmp OutChar
+    jmp TransmitChar
 
 ; C is set for a hexadecimal digit on return.
 AsciiHex:
@@ -639,12 +710,12 @@ SendNibble:
 @digit:
     adc #'0'
     plp
-    jmp OutChar
+    jmp TransmitChar
 
 PaperLoad:
     jsr ResetRecords
 @leader:
-    jsr GetChar
+    jsr ReceiveChar
     cmp #';'
     bne @leader
     jsr ResetSum
@@ -689,18 +760,18 @@ PaperLoad:
     bne PaperError
     jsr LineBreak
     lda #'O'
-    jsr OutChar
+    jsr TransmitChar
     lda #'K'
-    jsr OutChar
+    jsr TransmitChar
     jmp TerminalStart
 
 PaperError:
     jsr LineBreak
     lda #'E'
-    jsr OutChar
+    jsr TransmitChar
     lda #'R'
-    jsr OutChar
-    jsr OutChar
+    jsr TransmitChar
+    jsr TransmitChar
     jmp TerminalStart
 
 ReadSumByte:
@@ -712,7 +783,7 @@ ReadSumByte:
     rts
 
 ReadHexByte:
-    jsr GetChar
+    jsr ReceiveChar
     jsr AsciiHex
     bcc @invalid
     asl a
@@ -720,7 +791,7 @@ ReadHexByte:
     asl a
     asl a
     sta HalfHex
-    jsr GetChar
+    jsr ReceiveChar
     jsr AsciiHex
     bcc @invalid
     ora HalfHex
@@ -819,13 +890,13 @@ PaperDump:
     jsr WriteSumByte
     jsr EndRecord
     lda #$13
-    jsr OutChar
+    jsr TransmitChar
     jmp TerminalStart
 
 StartRecord:
     jsr ResetSum
     lda #';'
-    jmp OutChar
+    jmp TransmitChar
 
 WriteSumByte:
     jsr AddChecksum

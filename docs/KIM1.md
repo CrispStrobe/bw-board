@@ -255,3 +255,40 @@ SOFTWARE.
 - [Ruud Baltissen’s archived KIM-1 hardware notes](https://web.archive.org/web/20141129191318id_/http://6502.org/trainers/buildkim/buildkim.htm)
 - [Patric Sokoll’s KIM-1 hardware collection](https://patric-sokoll.de/Computermuseum/MOS%20KIM-1/MOS%20KIM-1.html)
 - [Hans Otten’s KIM-1 manuals and MOS documents](http://retro.hansotten.nl/6502-sbc/kim-1-manuals-and-software/kim-1-manuals-and-software/)
+
+## Expansion hardware and guest images
+
+- KIM-4 holds six modules. KIM-2 decodes an aligned 4 KiB RAM window. KIM-3
+  and KIM-3B decode aligned 8 KiB RAM windows. The KIM-5 socket accepts a
+  locally supplied 6 KiB resident editor/assembler ROM at $E000–$F7FF.
+  Overlapping slots and configurations that conflict with the KIM-1 vectors
+  are rejected.
+- The programmable memory card imports and exports a complete 128 KiB
+  `memcfg` raw map. Each address has one byte of data and one byte of flags.
+  An enabled map byte can overlay RAM, ROM or a vector. Disabled bytes let
+  the rest of the bus decode normally.
+- PAL-1 direct SDHC SPI uses PA4=CS, PA3=SCK, PA2=MOSI and PA1=MISO.
+  The SPI interface reads and writes sectors through the emulated 6530.
+  Corsham disk mode uses PA0–PA7 for data and PB0/PB1/PB2 for direction,
+  strobe and acknowledgement. It implements the basic status and sector
+  operations from Bob Applegate's Remote Disk Protocol v1.1 with one
+  writable raw drive.
+- K-1008 scans 320×200 pixels out of the first 8000 bytes of an aligned
+  8 KiB memory window, least-significant bit first. This is a digital
+  framebuffer view of the board.
+- K-1013 maps the 765 main status and data registers to $FFEE/$FFEF,
+  status and DMA direction to $FFE8, and DMA address to $FFEA. It supports
+  up to four writable 77-track, 26-sector, single-sided disks with 256-byte
+  sectors. Import raw or matching ImageDisk media. The DMA windows are
+  $C000/$E000 and the image export is raw. This model has no flux timing or
+  Pico-specific extended filesystem commands.
+- ACE KIM has a separate 65C02 machine with the KC keypad's PIA register
+  behavior and a 16×2 HD44780. The ACE test uses the upstream MIT v1.8 BIOS
+  and v1.1 KC Monitor. MOS 6530 ROMs cannot be interchanged with ACE firmware.
+
+The [Media Lab](https://github.com/CrispStrobe/brickwright-media-lab) carries
+paper-tape exercises, reproducible ACE firmware and verified CP/M-65
+downloads. CP/M-65 reached its prompt through SPI, Corsham DSK and K-1013 IMD.
+A five-line historical KIM-5 assembler session selected from the KIM-4 slot
+produced `A9 5A 8D 08 02 00` with zero reported errors on both the original
+MOS 6530 ROMs and the Brickwright ROM.

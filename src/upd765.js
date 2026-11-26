@@ -237,7 +237,7 @@ export const GEOMETRIES = Object.freeze({
  * zero-based; the off-by-one that costs an afternoon is forgetting it.
  */
 export function chsToLba(geom, c, h, s) {
-    return (c * geom.heads + h) * geom.sectors + (s - 1);
+    return (c * geom.heads + h) * geom.sectors + (s - (geom.sectorBase ?? 1));
 }
 
 /** Size in bytes of a whole image with this geometry. */
@@ -262,6 +262,10 @@ export function resolveGeometry(spec, byteLength) {
             if (!Number.isInteger(g[k]) || g[k] <= 0) {
                 throw new Error(`upd765: geometry.${k} must be a positive integer`);
             }
+        }
+        if (spec.sectorBase !== undefined) {
+            if (spec.sectorBase !== 0 && spec.sectorBase !== 1) throw new Error('upd765: sectorBase must be 0 or 1');
+            g.sectorBase = spec.sectorBase;
         }
         return Object.freeze(g);
     }
@@ -844,7 +848,7 @@ export class UPD765 {
                 d.track, hd, 0, sizeCode(d.geom.bytesPerSector)]);
             return;
         }
-        const r = (d.idIndex % d.geom.sectors) + 1;
+        const r = (d.idIndex % d.geom.sectors) + (d.geom.sectorBase ?? 1);
         d.idIndex = (d.idIndex + 1) % d.geom.sectors;
         this._result([base, 0, 0, d.track, hd, r, sizeCode(d.geom.bytesPerSector)]);
     }
@@ -995,7 +999,8 @@ export class UPD765 {
         if (!g) return -1;
         if (c < 0 || c >= g.cylinders) return -1;
         if (h < 0 || h >= g.heads) return -1;
-        if (r < 1 || r > g.sectors) return -1;
+        const base = g.sectorBase ?? 1;
+        if (r < base || r >= base + g.sectors) return -1;
         const off = chsToLba(g, c, h, r) * g.bytesPerSector;
         if (off + g.bytesPerSector > d.image.length) return -1;   // short image
         return off;
@@ -1025,10 +1030,11 @@ export class UPD765 {
     _nextSector() {
         const x = this.exec;
         if (x.r < x.eot) { x.r++; return true; }
-        if (x.mt && x.h === 0) { x.h = 1; x.r = 1; return true; }
+        const base = this.drives[x.drive].geom.sectorBase ?? 1;
+        if (x.mt && x.h === 0) { x.h = 1; x.r = base; return true; }
         x.c = (x.c + 1) & 0xff;
         if (x.mt) x.h = 0;
-        x.r = 1;
+        x.r = base;
         return false;
     }
 
