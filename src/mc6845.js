@@ -85,6 +85,7 @@ export class MC6845 {
      *   fg?: number[],
      *   bg?: number[],
      *   vramSize?: number,
+     *   requireDisplaySetup?: boolean,
      * }} [opts]
      */
     constructor(opts = {}) {
@@ -106,6 +107,12 @@ export class MC6845 {
         this.regs[9] = initCharH - 1; // R9: max scan line
         this.regs[10] = 0;          // R10: cursor start (line 0, no blink)
         this.regs[11] = initCharH - 1; // R11: cursor end
+        // The wired 6502 display waits for firmware to configure geometry.
+        this.requireDisplaySetup = opts.requireDisplaySetup === true;
+        if (this.requireDisplaySetup) {
+            this.regs[1] = 0;
+            this.regs[6] = 0;
+        }
         // R12-R17: start address and cursor default to 0
 
         /** @type {Uint8Array} Video RAM — character codes */
@@ -254,6 +261,10 @@ export class MC6845 {
      * {width, height, rgba, frame, signal}.
      */
     videoFrame() {
+        if (this.requireDisplaySetup && (!this.regs[1] || !this.regs[6] ||
+            this.cols * this.charW > 800 || this.rows * this.charH > 512)) {
+            return { width: 640, height: 256, rgba: null, frame: this.frame, mode: 'text', signal: false };
+        }
         const cols = this.cols;
         const rows = this.rows;
         const charH = this.charH;

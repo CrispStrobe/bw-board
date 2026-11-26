@@ -360,7 +360,7 @@ export class M6502Machine {
                     config.regions.some(r => r.kind === 'ram' && !r.perm &&
                         r.start <= vramAt && r.end >= vramAt + vramSize - 1);
                 if (!flatRam) throw new Error(`machine config: ${c.name} video RAM must be a power-of-two window in linear RAM`);
-                chip = new MC6845({ clockHz: config.clockHz, charset: CRTC_FONT, vramSize });
+                chip = new MC6845({ clockHz: config.clockHz, charset: CRTC_FONT, vramSize, requireDisplaySetup: true });
                 chip.vram = this.mem.subarray(vramAt, vramAt + vramSize);
             } else if (c.kind === 'tilevga') {
                 // rene6502's tile VGA card: a 16K dual-port VRAM window
