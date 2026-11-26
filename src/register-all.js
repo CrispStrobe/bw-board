@@ -75,10 +75,12 @@ import { registerSevenseg8, registerLedbank8 } from './devices/a2-displays.js';
 import { registerI2CSensors } from './devices/i2c-sensors.js';
 import { registerCp1Device } from './devices/cp1.js';
 import { registerMicrotronicDevice } from './devices/microtronic.js';
+import { registerKim1Device } from './devices/kim1.js';
 
 export function registerAllDevices() {
   registerCp1Device();
   registerMicrotronicDevice();
+  registerKim1Device();
   registerLogicGates();
   registerRelay();
   registerDCMotor();
@@ -144,3 +146,4 @@ export function registerAllDevices() {
   registerLedbank8();
   registerI2CSensors();
 }
+
