@@ -13,6 +13,15 @@
 export { BoardImpl } from './board.js';
 export { extractCp1Machine } from './cp1-extract.js';
 export { registerCp1Device, CP1_TERMINALS } from './devices/cp1.js';
+export { registerCardiacDevice, CARDIAC_TERMINALS, cardiacInputWord } from './devices/cardiac.js';
+export {
+  CARDIAC_MODEL, CARDIAC_MEMORY_SIZE, CARDIAC_IO_LIMIT, CARDIAC_OPCODES,
+  createCardiacMachine, parseCardiacProgram, formatCardiacProgram, formatCardiacWord,
+  decodeCardiacWord, stepCardiacMachine, runCardiacMachine, resetCardiacMachine,
+  controlCardiacMachine, enqueueCardiacInput, snapshotCardiacMachine, restoreCardiacMachine, onCardiacEvent
+} from './cardiac-machine.js';
+export { createCardiacAdapter } from './cardiac-adapter.js';
+export { createCardiacDebugTarget } from './cardiac-debug.js';
 export { pinThevenin, R_STRONG, R_QUASI_PULLUP } from './pin-model.js';
 // The engine owns pin NAMES, so the consumers that audit netlist spellings
 // have to be able to ask it which two names are one physical pin — a

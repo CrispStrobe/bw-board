@@ -168,7 +168,8 @@ describe('createDebugTarget: missing options', () => {
 describe('getTargetKinds', () => {
   it('returns all target kinds', () => {
     const kinds = getTargetKinds();
-    assert.equal(kinds.length, 17);
+    assert.equal(kinds.length, 18);
+    assert.ok(kinds.some(k => k.kind === 'cardiac'));
     assert.ok(kinds.find(k => k.kind === 'cp1'));
     assert.ok(kinds.find(k => k.kind === 'esp8266'));
     assert.ok(kinds.find(k => k.kind === 'riscv32'));
