@@ -888,8 +888,14 @@ export function ebersMollParams(part) {
   // JUNCTION_TEMPCO_V_PER_K per kelvin from 25 C -- the shift effVf applies to
   // the piecewise junctions, expressed as IS. Parts outside the model are
   // untouched (the card is the oracle's).
-  const celsius = partTemperatures?.get(part.id);
-  const isT = celsius === undefined ? is
+  //
+  // A part outside the model is at the BENCH temperature, like every other
+  // junction (effVf). It used to be left at the card's 25 C whatever the
+  // bench was: a piecewise transistor's VBE followed the bench at -2 mV/K
+  // and an exponential one, the model a transistor-as-thermometer is built
+  // on, did not move at all.
+  const celsius = partTemperatures?.get(part.id) ?? benchTemperatureC;
+  const isT = celsius === 25 ? is
     : is * DMath.exp(-(celsius - 25) * JUNCTION_TEMPCO_V_PER_K / (n * JUNCTION_THERMAL_VOLTAGE));
   return { is: isT, nVt: n * JUNCTION_THERMAL_VOLTAGE, bf, br, vaf, ikf, rb, rc,
     cje, cjc, tf };
