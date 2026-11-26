@@ -109,3 +109,14 @@ test('mounted ROM boots from the hardware vector and clocks RIOT writes on indiv
   assert.equal(f.state.roms, null);
   assert.equal(f.state._wakeNs, null);
 });
+
+test('the bundled Brickwright ROM boots and drives the 6530 digit select through Board cycles', () => {
+  const f = fixture();
+  model.control(f.part, f.state, 'useBrickwrightRom');
+  f.advance(12_000_000n);
+  assert.equal(f.state.romSource, 'brickwright');
+  assert.deepEqual(f.state.segments, Array(6).fill(0x3f));
+  assert.ok(f.state.cpu.cycles > 10_000);
+  assert.equal(f.state.cpu.pc >= 0x1800 && f.state.cpu.pc < 0x2000, true);
+  assert.equal(f.state.error, null);
+});

@@ -139,7 +139,7 @@ export function registerKim1Device() {
       kim1ClockHz(part);
       const handled = controlKim1Machine(state, verb, value, {advanceTimers: false});
       if (!handled) return false;
-      if (verb === 'loadRoms' || verb === 'useTeachingMonitor') {
+      if (verb === 'loadRoms' || verb === 'useBrickwrightRom' || verb === 'useTeachingMonitor') {
         state._clockHz = state.roms ? 1_000_000 : kim1ClockHz(part);
         state._cyclePhase = 0n;
       }

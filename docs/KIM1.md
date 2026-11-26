@@ -2,8 +2,8 @@
 
 The `kim-1` device executes documented NMOS 6502 machine code and connects the
 user I/O ports to the circuit solver. It starts in the independent teaching
-monitor. An optional hardware mode boots two user-supplied 6530 ROMs and drives
-the panel and TTY through their port registers. All new implementation files
+monitor. Hardware mode boots the separately authored Brickwright ROM or two
+user-supplied 6530 ROMs and drives the panel and TTY through their port registers. All new implementation files
 are MIT. Historical firmware stays in the active simulation session.
 
 The default program is a NOP/JMP loop at `$0200`. The device starts stopped.
@@ -105,8 +105,9 @@ byte for open-bus reads and ignores writes to ROM and unpopulated addresses.
 
 ## Hardware mode
 
-In Circuits, open **Firmware and TTY** and choose two 1,024-byte images named
-for 6530-003 and 6530-002, or one 2,048-byte image with 003 first. The Board
+In Circuits, open **Firmware and TTY** and select **Use Brickwright ROM**. The
+same menu can mount two 1,024-byte images named for 6530-003 and 6530-002, or a
+combined 2,048-byte image with 003 first. The Board
 executes each memory access on the shared 1 MHz clock, including dummy reads
 and the two NMOS read-modify-write cycles. The 74145 selects seven-column keypad
 rows and the six display digits. ST requests NMI and SST requests it after
@@ -119,9 +120,14 @@ program in hardware mode writes to RAM without resetting the running monitor.
 Use the hardware keypad to select the program entry address. In the teaching
 monitor, loading selects the entry address automatically.
 
-For an optional check with local ROM and tape files:
+Build and qualify the [independently specified replacement ROM](KIM1-ROM-CONTRACT.md)
+with the cc65 assembler and linker. Include a directory after `--bin-dir` to
+export both raw chips and the combined image.
 
 ```sh
+node scripts/build-kim1-rom.mjs --check
+node scripts/build-kim1-rom.mjs --bin-dir ./rom-output
+node scripts/qualify-kim1-rom.mjs --brickwright
 node scripts/qualify-kim1-rom.mjs 6530-003.bin 6530-002.bin program.ptp
 ```
 

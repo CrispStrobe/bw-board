@@ -7,6 +7,7 @@
  */
 import {NMOS6502} from './nmos6502.js';
 import {readKim1Records} from './kim1-tape.js';
+import {createBrickwrightKim1Roms} from './kim1-rom.generated.js';
 import {createKim1FrontPanel, queueKim1FrontKey, setKim1Tty, sendKim1Tty,
   stepKim1FrontPanel, pollKim1Tty, kim1FrontSegments, kim1FrontText} from './kim1-peripherals.js';
 
@@ -242,7 +243,7 @@ function coreFor(state) {
 export function createKim1Machine(source = KIM1_DEFAULT_PROGRAM) {
   const parsed = parseKim1Program(source);
   const state = {
-    model: 'independent-monitor-nmos6502', roms: null, frontPanel: null, segments: null, ttyOutput: '', busLatch: 255,
+    model: 'independent-monitor-nmos6502', roms: null, romSource: null, frontPanel: null, segments: null, ttyOutput: '', busLatch: 255,
     pendingNmi: false, pendingReset: false, ram: new Uint8Array(1024), riotRam: new Uint8Array(128),
     expansion: parsed.expanded ? new Uint8Array(65536) : null,
     image: parsed.image, programSource: formatKim1Program(parsed), startAddress: parsed.start,
@@ -312,12 +313,13 @@ function enterMonitor(state, reason) {
   refreshKim1Display(state);
 }
 
-export function mountKim1Roms(state, images) {
+export function mountKim1Roms(state, images, romSource = 'imported') {
   if (!Array.isArray(images) || images.length !== 2 || images.some(image =>
     !(image instanceof Uint8Array) || image.length !== 1024)) {
     throw new Error('Supply the 1,024-byte 6530-003 and 6530-002 ROM images, in that order.');
   }
   state.roms = images.map(image => new Uint8Array(image));
+  state.romSource = romSource;
   state.frontPanel = createKim1FrontPanel();
   resetKim1Machine(state);
 }
@@ -485,10 +487,11 @@ export function keyKim1Machine(state, key, options = {}) {
 }
 
 export function controlKim1Machine(state, verb, value, options = {}) {
+  if (verb === 'useBrickwrightRom') { mountKim1Roms(state, createBrickwrightKim1Roms(), 'brickwright'); return true; }
   if (verb === 'loadRoms') { mountKim1Roms(state, value); return true; }
   if (verb === 'useTeachingMonitor') {
     hardwareInstructions.delete(state);
-    state.roms = state.frontPanel = state.segments = null;
+    state.roms = state.romSource = state.frontPanel = state.segments = null;
     state.ttyOutput = '';
     resetKim1Machine(state);
     return true;
