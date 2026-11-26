@@ -2775,6 +2775,30 @@ class RfBand {
         return Math.max(0, Math.min(this.kMax, K_MAX, k));
     }
 
+    /**
+     * The substep ceiling for the rotation the band's envelope actually has
+     * (rotationHz): an oscillation whose mode estimate does not flag it
+     * (a steady oscillator at σ ≈ 0, its tank another resonance's mode) still
+     * turns in this band's frame, and a substep that turned it by a large
+     * angle damped it (backward Euler: by 1/|1 − jωh|). A keyed medium-wave
+     * transmitter 45 kHz off its band's centre lost a third of its swing at
+     * every 4 µs trial step and grew back, ~25 000 times a second, and the
+     * transient solve chased the sawtooth (2 500 solves per ms).
+     */
+    _kForRotation() {
+        // A band's own oscillation only: in a band that carries stations or
+        // products the envelope's phase also turns with their modulation
+        // (an FM IF's deviation), which their own rotation bounds already
+        // resolve.
+        if (this.members?.length || this.products?.length) return K_MAX;
+        let peak = 0;
+        for (const p of this.integ.portVoltages(this.X)) peak = Math.max(peak, Math.hypot(p[0], p[1]));
+        if (!(peak > OSC_VOLTS)) return K_MAX;
+        const rot = Math.abs(this.rotationHz());
+        if (!(rot > 200)) return K_MAX;
+        return Math.max(0, Math.min(K_MAX, Math.floor(DMath.log2(1 / (ROTATION_STEPS * rot) / H_UNIT))));
+    }
+
     portVoltages() { return this.integ ? this.integ.portVoltages(this.X) : []; }
 
     /**
@@ -2859,7 +2883,7 @@ class RfBand {
             // While it grows, the growth rate changes with the swing (the
             // junctions compress): re-estimate it every few dozen substeps.
             if (this.growth > 0 && ++this._sinceBound >= 48) this._bound();
-            const kBias = this._kForBias();
+            const kBias = Math.min(this._kForBias(), this._kForRotation());
             if (this.k > kBias) this.k = kBias;
             const other = r._otherAmplitudes(this);
             const stamps = (vp) => r._stamps(this.omega, vp, other);
