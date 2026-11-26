@@ -128,6 +128,15 @@ export const ATMEGA328P = {
   eepromBytes: 1024,
 };
 
+// ATmega168P shares the 328P peripheral registers and two-word vector slots.
+export const ATMEGA168P = {
+  ...ATMEGA328P,
+  name: 'ATmega168P',
+  flashWords: 0x2000,
+  sramBytes: 1024,
+  eepromBytes: 512,
+};
+
 // ─── ATmega88PA (E5.8) ─────────────────────────────────────────────────────
 //
 // Same die family as the 328P (doc8271 covers 48A..328P together): identical
@@ -901,6 +910,7 @@ export const ATMEGA32U4 = {
 
 export const CHIPS = {
   atmega328p: ATMEGA328P,
+  atmega168p: ATMEGA168P,
   atmega88pa: ATMEGA88PA,
   atmega2560: ATMEGA2560,
   atmega32u4: ATMEGA32U4,

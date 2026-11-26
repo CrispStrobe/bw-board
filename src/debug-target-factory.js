@@ -394,7 +394,7 @@ async function createEmulatorTarget(opts) {
 async function createAvr8jsTarget(kind, opts) {
   const {
     board, hex, symbols,
-    clockHz, vcc,
+    clockHz, vcc, chip: requestedChip,
   } = opts;
 
   if (!board) throw new Error('avr8js target requires opts.board');
@@ -402,7 +402,7 @@ async function createAvr8jsTarget(kind, opts) {
   // Map factory kind to chip name: 'avr8js' → 'atmega328p' (default)
   const chip = kind === 'atmega2560' ? 'atmega2560'
     : kind === 'attiny85' ? 'attiny85'
-      : kind === 'attiny88' ? 'attiny88' : 'atmega328p';
+      : kind === 'attiny88' ? 'attiny88' : (requestedChip ?? 'atmega328p');
 
   // avr8js has no destructive init — order is flexible, but we follow the
   // same adapter-first, board-second, program-third pattern for consistency.
