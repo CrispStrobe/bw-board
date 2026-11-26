@@ -1364,6 +1364,14 @@ export class BoardImpl {
     const mixerView = expandFmIfIcs(mixerView0.parts, mixerView0.nets);
     const radioView = expandRadio(mixerView.parts, mixerView.nets, { controls: () => this.controls });
     this._radio = radioView.radio;
+    // Parts the radio front end replaces in the solve (a coil by its windings'
+    // copper or inductance, a junction's rectified current in its rf_detect
+    // companion): where their terminal currents are (branchCurrent).
+    this._currentAliases = new Map();
+    for (const [id, term, src, srcTerm] of radioView.aliases ?? []) {
+      if (!this._currentAliases.has(id)) this._currentAliases.set(id, []);
+      this._currentAliases.get(id).push([term, src, srcTerm]);
+    }
     if (this._radio && this._broadcast) this._radio.setStations(this._broadcast);
     // Field probes and junctions in reverse breakdown (src/fields.js): the
     // room's mains wiring, a charged object, the learner's finger; avalanche
@@ -3365,8 +3373,16 @@ export class BoardImpl {
     }
     this._assertDeterminateCurrent(this._mnaCache, partId, terminal);
     const partCurrents = this._mnaCache.branchCurrents.get(partId);
-    if (!partCurrents) return 0;
-    let i = partCurrents.get(terminal) ?? 0;
+    const aliases = this._currentAliases?.get(partId);
+    if (!partCurrents && !aliases) return 0;
+    let i = partCurrents?.get(terminal) ?? 0;
+    // A part the radio front end replaces (src/radio.js expandRadio): its
+    // current through this terminal is that of the solver parts standing in
+    // for it there — a ferrite rod's winding by its copper, a transistor's
+    // rectified current by its rf_detect companion.
+    for (const [term, src, srcTerm] of aliases ?? []) {
+      if (term === terminal) i += this._mnaCache.branchCurrents.get(src)?.get(srcTerm) ?? 0;
+    }
     // A light-path receiver's optical photocurrent is solved in a hidden part
     // beside it (src/optics.js expandOptics); it flows through the receiver's
     // own leads, so it is part of the receiver's current.

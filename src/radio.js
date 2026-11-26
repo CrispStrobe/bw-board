@@ -558,6 +558,9 @@ export function expandRadio(parts, nets, opts) {
         outParts.push(part);
         ends.forEach(([n, t]) => n.terminals.push(T(part.id, t)));
     };
+    // Where a part the front end replaces carries its current in the solve
+    // (board.branchCurrent): [part, terminal, solver part, its terminal].
+    const aliases = [];
     const control = (id) => opts.controls?.()?.get(id);
 
     // Tuning capacitor: the solver's own capacitor, its farads read live
@@ -690,6 +693,7 @@ export function expandRadio(parts, nets, opts) {
             const id = `${p.id}_w${i}`;
             const [na, nb] = ends(w);
             if (radiator) {
+                aliases.push([p.id, w.a, id, 'a'], [p.id, w.a, `${id}d`, 'a'], [p.id, w.b, `${id}r`, 'b'], [p.id, w.b, `${id}d`, 'b']);
                 const mid = { id: `n_${id}_mid`, terminals: [] };
                 outNets.push(mid);
                 add({ id, kind: 'inductor', params: { henrys: fw.L[i][i] }, terminals: ['a', 'b'] }, [[na, 'a'], [mid, 'b']]);
@@ -700,6 +704,7 @@ export function expandRadio(parts, nets, opts) {
                 add({ id, kind: 'resistor', params: { ohms: Math.max(0.01, copper * w.turns) }, terminals: ['a', 'b'] },
                     [[na, 'a'], [nb, 'b']]);
                 hidden.push(id);
+                aliases.push([p.id, w.a, id, 'a'], [p.id, w.b, id, 'b']);
             }
             currentIds.push(id);
         });
@@ -838,7 +843,7 @@ export function expandRadio(parts, nets, opts) {
     const earths = parts.filter(p => p.kind === 'earth' && netOf(p.id, 'earth'));
     const dipoles = parts.filter(p => p.kind === 'dipole' && netOf(p.id, 'a') && netOf(p.id, 'b') && netOf(p.id, 'a') !== netOf(p.id, 'b'));
     // Without an antenna or an RF coil nothing carries RF: the parts are plain passives.
-    if (!antennas.length && !coupled.length && !dipoles.length) return { parts: outParts, nets: outNets, radio: null };
+    if (!antennas.length && !coupled.length && !dipoles.length) return { parts: outParts, nets: outNets, radio: null, aliases };
     const antennaSpecs = [];
     // A half-wave dipole (folded: 300 Ω; plain: 75 Ω): balanced, no earth.
     // Its EMF is the field times its effective length (λ/π for a half-wave
@@ -981,8 +986,10 @@ export function expandRadio(parts, nets, opts) {
         Object.defineProperty(det, 'radio', { value: radio, enumerable: false });
         radio.detectors.push(det);
         add(hidden, wired.map(t => [netOf(p.id, t), t]));
+        // Its rectified current flows through the device's own leads.
+        for (const t of wired) aliases.push([p.id, t, id, t]);
     }
-    return { parts: outParts, nets: outNets, radio };
+    return { parts: outParts, nets: outNets, radio, aliases };
 }
 
 /**
@@ -1033,6 +1040,7 @@ function expandRadioPhasor(parts, nets, opts) {
         outParts.push(part);
         ends.forEach(([n, t]) => n.terminals.push(T(part.id, t)));
     };
+    const aliases = [];
 
     // Tuning capacitor: the solver's own capacitor, its farads read live
     // from the knob, so turning it needs no new netlist and keeps the
@@ -1062,6 +1070,7 @@ function expandRadioPhasor(parts, nets, opts) {
             const id = `${p.id}_L0`;
             add({ id, kind: 'inductor', params: { henrys: fw.L[0][0] }, terminals: ['a', 'b'] }, [[na, 'a'], [nb, 'b']]);
             hidden.push(id);
+            aliases.push([p.id, wn[0].a, id, 'a'], [p.id, wn[0].b, id, 'b']);
         } else {
             const [p1, p2] = ends(wn[0]);
             const [s1, s2] = ends(wn[1]);
@@ -1070,11 +1079,13 @@ function expandRadioPhasor(parts, nets, opts) {
                 params: { l1: fw.L[0][0], l2: fw.L[1][1], k: fw.L[0][1] / Math.sqrt(fw.L[0][0] * fw.L[1][1]) } },
             [[p1, 'p1'], [p2, 'p2'], [s1, 's1'], [s2, 's2']]);
             hidden.push(id);
+            aliases.push([p.id, wn[0].a, id, 'p1'], [p.id, wn[0].b, id, 'p2'], [p.id, wn[1].a, id, 's1'], [p.id, wn[1].b, id, 's2']);
             if (wn.length === 3) {
                 const [na, nb] = ends(wn[2]);
                 const lid = `${p.id}_L2`;
                 add({ id: lid, kind: 'inductor', params: { henrys: fw.L[2][2] }, terminals: ['a', 'b'] }, [[na, 'a'], [nb, 'b']]);
                 hidden.push(lid);
+                aliases.push([p.id, wn[2].a, lid, 'a'], [p.id, wn[2].b, lid, 'b']);
             }
         }
         // RF damping in the TIME domain only. The tank's ~1 MHz natural mode
@@ -1090,6 +1101,7 @@ function expandRadioPhasor(parts, nets, opts) {
             add({ id, kind: 'resistor', params: { ohms: 2 * Math.PI * 1e6 * fw.L[i][i] }, terminals: ['a', 'b'] },
                 [[na, 'a'], [nb, 'b']]);
             hidden.push(id);
+            aliases.push([p.id, w.a, id, 'a'], [p.id, w.b, id, 'b']);
         });
         const terminals = wn.flatMap((_, i) => [`w${i}a`, `w${i}b`]);
         coupled.push({
@@ -1103,7 +1115,7 @@ function expandRadioPhasor(parts, nets, opts) {
     const antennas = parts.filter(p => p.kind === 'antenna' && netOf(p.id, 'a'));
     const earths = parts.filter(p => p.kind === 'earth' && netOf(p.id, 'earth'));
     // Without an antenna nothing carries RF: the parts are plain passives.
-    if (!antennas.length) return { parts: outParts, nets: outNets, radio: null };
+    if (!antennas.length) return { parts: outParts, nets: outNets, radio: null, aliases };
     const earthNet = { id: EARTH_NET, terminals: [] };
     outNets.push(earthNet);
     const R = (id, ohms, a, b) => add({ id, kind: 'resistor', params: { ohms }, terminals: ['a', 'b'] }, [[a, 'a'], [b, 'b']]);
@@ -1151,8 +1163,10 @@ function expandRadioPhasor(parts, nets, opts) {
         Object.defineProperty(det, 'radio', { value: radio, enumerable: false });
         radio.detectors.push(det);
         add(hidden, wired.map(t => [netOf(p.id, t), t]));
+        // Its rectified current flows through the device's own leads.
+        for (const t of wired) aliases.push([p.id, t, id, t]);
     }
-    return { parts: outParts, nets: outNets, radio };
+    return { parts: outParts, nets: outNets, radio, aliases };
 }
 
 // ─── Products between bands: mixing and harmonics ───────────────────────
