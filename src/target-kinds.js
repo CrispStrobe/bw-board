@@ -47,6 +47,11 @@ export const LABWIRED_KIND = {
 export function getTargetKinds() {
   return [
     {
+      kind: 'cardiac',
+      label: 'Educational (Bell Labs CARDIAC)',
+      description: 'Decimal card computer: 100 words, ten instructions, visible execution and optional modern circuit I/O.',
+    },
+    {
       kind: 'cp1',
       label: 'Experimental (Kosmos CP1 / 8049)',
       description: 'CP1 firmware machine with 8155 RAM/I/O and optional CP3. Requires a user-supplied 2 KB ROM.',
