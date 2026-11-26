@@ -637,6 +637,8 @@ export class BoardImpl {
      * @type {bigint|null}
      */
     this._powerOnNs = null;
+    /** Trial solves Newton could not converge (diagnostic; see rejectTrial). */
+    this._transientTrialFailures = 0;
     /** Part id -> its own supply voltage at its last accepted device update. */
     this._deviceSupplies = new Map();
     /** @type {number|undefined} */
@@ -8348,6 +8350,8 @@ export class BoardImpl {
       (p) => p.kind === 'capacitor' && p.params?.dampedBy);
     let windowAttempts = 0;
     let windowEnd = t + ATTEMPT_WINDOW_SEC;
+    // Newton-failure memory: {h, until} after a trial Newton could not solve.
+    let nfCap = null;
     let fatalTrialFailure = false;
     let trapFloorRestartAt = null;
     let trapAcceptedSinceRestart = false;
@@ -8360,6 +8364,14 @@ export class BoardImpl {
       this._chargeBoundedAdvanceWork('attempts');
       attempts++;
       windowAttempts++;
+      // NEWTON-FAILURE MEMORY (see rejectTrial): a step size Newton could not
+      // converge from here is not tried again until the time it spanned has
+      // passed. The failure belongs to the edge that caused it: a
+      // discontinuity (a reset, a switch, a device flip, a backward-Euler
+      // restart) begins a new history, and a size that failed before it says
+      // nothing about the steps after it.
+      if (nfCap !== null && (t >= nfCap.until || !trapReady)) nfCap = null;
+      if (nfCap !== null && h > nfCap.h) h = nfCap.h;
       let hEff = Math.min(h, tEnd - t, hMax);
       const requestedEnd = t + hEff;
       const barrier = this._transientStepBarrier(t, requestedEnd);
@@ -8435,8 +8447,16 @@ export class BoardImpl {
       // is fatal; neither the controller's limits nor error scales change.
       const rejectTrial = r => {
         if (validTransientSolution(r)) return false;
+        this._transientTrialFailures++;
         if (hEff > H_MIN * 1.000001) {
           h = Math.max(H_MIN, hEff / 2);
+          // Approaching a regenerative edge the largest step Newton can
+          // converge shrinks with every accepted step. Growing the accepted
+          // half straight back past the size that just failed cost two failed
+          // solves (50 Newton iterations each, against ~3 for an accepted one)
+          // per accepted step of the approach: a third of all Newton work of a
+          // 60 kHz transistor astable.
+          nfCap = { h, until: t + hEff };
           return true;
         }
         // At the floor the trapezoidal rule cannot converge here: restart
