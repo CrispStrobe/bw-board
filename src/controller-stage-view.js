@@ -77,6 +77,8 @@ export const WIDGET_RENDER_INFO = {
   // Decorations: presentation only, no input events, never bound.
   text:      { minSize: { w: 60, h: 24 },   inputEvents: [], icon: 'text' },
   image:     { minSize: { w: 60, h: 60 },   inputEvents: [], icon: 'image' },
+  // The host handles a machine face's inputs through that machine's session.
+  machine:   { minSize: { w: 320, h: 240 }, inputEvents: [], icon: 'machine' },
 };
 
 // ─── Stage-view descriptor ─────────────────────────────────────────────────
