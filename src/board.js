@@ -4262,6 +4262,58 @@ export class BoardImpl {
   }
 
   /**
+   * Run a single HC-SR04 transaction for a host-executed program. The
+   * module's deadlines indicate when to sample the actual MCU input.
+   * Native CPU emulators clock the same pins themselves.
+   * @returns {number|null} echo pulse width in microseconds, or no echo
+   */
+  measureUltrasonic(partId, declaredPins) {
+    if (!this.powered || this._externalClock) return null;
+    const fromWire = (part, role) => {
+      // The echo may pass through a resistor divider for a 3.3 V input.
+      const pins = this._mcuPinsDriving(part, [role], role === 'echo' ? 1 : 0);
+      return pins.length === 1 ? pins[0].pin : null;
+    };
+    const matchesPin = (actual, declared) =>
+      actual != null && (declared == null || actual.toLowerCase() === declared.toLowerCase());
+    const sensors = this.parts.filter(part => part.kind === 'ultrasonic');
+    const named = sensors.find(part => part.id === partId || part.declName === partId);
+    const candidates = named ? [named] : declaredPins ? sensors : [];
+    const wired = candidates.map(part => ({
+      part, trig: fromWire(part, 'trig'), echo: fromWire(part, 'echo'),
+    })).filter(({ trig, echo }) => trig !== echo
+      && matchesPin(trig, declaredPins?.trig) && matchesPin(echo, declaredPins?.echo));
+    if (wired.length !== 1) return null;
+    const { part, trig, echo } = wired[0];
+    const state = this.getDeviceState(part.id);
+    if (!state) return null;
+    const start = this.getTime();
+    if (state._sampledNs != null && start - state._sampledNs < 60_000_000n) return state._sampledEchoUs;
+
+    this.setPin(echo, 'input', false);
+    this.setPin(trig, 'pushpull', false);
+    this.advanceTo(start + 2_000n);
+    this.setPin(trig, 'pushpull', true);
+    this.advanceTo(start + 12_000n);
+    this.setPin(trig, 'pushpull', false);
+
+    const timeout = start + 30_000_000n;
+    let width = null;
+    if (state._wakeNs > this.getTime() && state._wakeNs < timeout) {
+      this.advanceTo(state._wakeNs);
+      const rise = this.getTime();
+      if (this.readPin(echo) && state._wakeNs > rise && state._wakeNs <= timeout) {
+        this.advanceTo(state._wakeNs);
+        if (!this.readPin(echo)) width = Number(this.getTime() - rise) / 1000;
+      }
+    }
+    if (width === null) this.advanceTo(timeout);
+    state._sampledNs = start;
+    state._sampledEchoUs = width;
+    return width;
+  }
+
+  /**
    * The one MCU pin that drives `part`, or null with the reason recorded.
    * Several candidates narrow to those on an enable net; still several is
    * refused by name rather than guessed.
