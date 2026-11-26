@@ -11,6 +11,7 @@
  */
 
 export { BoardImpl } from './board.js';
+export { Tms1600, TMS1600_RAM_SIZE, TMS1600_ROM_SIZE, TMS1600_RESET_ADDRESS } from './tms1600.js';
 export { extractCp1Machine } from './cp1-extract.js';
 export { registerCp1Device, CP1_TERMINALS } from './devices/cp1.js';
 export { pinThevenin, R_STRONG, R_QUASI_PULLUP } from './pin-model.js';
