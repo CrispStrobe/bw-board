@@ -523,8 +523,12 @@ export class BandIntegrator {
                         let best, bestF;
                         if (f1 < 0) { lo = sA; rLo = at(lo); } else { hi = sB; rHi = at(hi); }
                         const fLo = F(rLo, lo), fHi = F(rHi, hi);
-                        if (f1 < 0 && fLo < 0) { best = rLo; bestF = 0; }        // consistent end beyond the start: stop at it
-                        else if (f1 >= 0 && fHi > 0) { best = rHi; bestF = 0; }  // …or beyond the start the other way
+                        // No consistent swing within the step's own change: the
+                        // explicit end stands (taking the bracket's far end
+                        // instead accepted an end no stamps agreed with, and a
+                        // superhet's MOSFET aerial stage, starting from noise,
+                        // was stepped to 1e-74 V).
+                        if ((f1 < 0 && fLo < 0) || (f1 >= 0 && fHi > 0)) { best = null; bestF = 0; }
                         else {
                             best = Math.abs(fLo) < Math.abs(fHi) ? rLo : rHi;
                             bestF = Math.min(Math.abs(fLo), Math.abs(fHi));
@@ -537,7 +541,7 @@ export class BandIntegrator {
                                 if (v > 0) lo = s; else hi = s;
                             }
                         }
-                        if (bestF < 0.05) { u = best.w; dc = best.d; }
+                        if (!best) { /* explicit end */ } else if (bestF < 0.05) { u = best.w; dc = best.d; }
                         // No consistent swing found within the step's change (the
                         // bracket closed on a pole of a step too long for the
                         // junctions' gain): the explicit end stands, retried shorter.
