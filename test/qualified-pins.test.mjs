@@ -12,20 +12,28 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { BoardImpl } from '../src/board.js';
+import { registerRetroDips } from '../src/devices/retro-dips.js';
 
-function machineBench() {
+registerRetroDips();
+
+function machineBench({cpu, extraPpi = false} = {}) {
+  const port = cpu ? {id: 'via', kind: 'i8255', params: {}, terminals: ['pb0', 'pc7']}
+    : {id: 'via', kind: 'mcu', params: {}, terminals: ['PA0', 'PA1', 'PB7']};
+  const [outPin, inPin] = cpu ? ['pb0', 'pc7'] : ['PA0', 'PB7'];
   const parts = [
-    { id: 'via', kind: 'mcu', params: {}, terminals: ['PA0', 'PA1', 'PB7'] },
+    port,
     { id: 'r1', kind: 'resistor', params: { ohms: 220 }, terminals: ['a', 'b'] },
     { id: 'd1', kind: 'led', params: {}, terminals: ['anode', 'cathode'] },
     { id: 'v1', kind: 'vcc', params: {}, terminals: ['vcc'] },
     { id: 'g1', kind: 'gnd', params: {}, terminals: ['gnd'] },
   ];
+  if (cpu) parts.push({id: 'cpu', kind: cpu, params: {}, terminals: ['vcc', 'gnd']});
+  if (extraPpi) parts.push({...port, id: 'other'});
   const nets = [
-    { id: 'n_pa0', terminals: [{ part: 'via', terminal: 'PA0' }, { part: 'r1', terminal: 'a' }] },
+    { id: 'n_pa0', terminals: [{ part: 'via', terminal: outPin }, { part: 'r1', terminal: 'a' }] },
     { id: 'n_led', terminals: [{ part: 'r1', terminal: 'b' }, { part: 'd1', terminal: 'anode' }] },
     { id: 'n_gnd', terminals: [{ part: 'd1', terminal: 'cathode' }, { part: 'g1', terminal: 'gnd' }] },
-    { id: 'n_vcc', terminals: [{ part: 'v1', terminal: 'vcc' }, { part: 'via', terminal: 'PB7' }] },
+    { id: 'n_vcc', terminals: [{ part: 'v1', terminal: 'vcc' }, { part: 'via', terminal: inPin }] },
   ];
   const b = new BoardImpl(5.0);
   b.setNetlist(parts, nets);
@@ -107,5 +115,22 @@ describe('chip-qualified pins', () => {
     b.setPin('nosuch.PA9', 'pushpull', true);
     assert.equal(b.readPin('nosuch.PA9'), 0);
     assert.ok(b.ledBrightness('d1') < 0.05, 'stray id changed nothing');
+  });
+
+  it('routes 8086 Blocks pin names to the only connected 8255', () => {
+    const b = machineBench({cpu: 'i8086'});
+    b.setPin('P2.0', 'pushpull', true);
+    assert.ok(b.ledBrightness('d1') > 0.5);
+    assert.equal(b.readPin('P3.7'), 1);
+    b.setPin('P2.0', 'pushpull', false);
+    assert.ok(b.ledBrightness('d1') < 0.05);
+  });
+
+  it('requires chip-qualified pins when two 8255s are present', () => {
+    const b = machineBench({cpu: 'i8088', extraPpi: true});
+    b.setPin('P2.0', 'pushpull', true);
+    assert.ok(b.ledBrightness('d1') < 0.05);
+    b.setPin('via.PB0', 'pushpull', true);
+    assert.ok(b.ledBrightness('d1') > 0.5);
   });
 });

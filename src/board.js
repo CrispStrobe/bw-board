@@ -7022,6 +7022,19 @@ export class BoardImpl {
       }
       break;
     }
+    // Brickwright's 8086 Blocks use P1/P2/P3 for 8255 ports A/B/C.
+    // Resolve them only on a PC bench with one unambiguous 8255.
+    const parallelPin = !resolved && /^p([1-3])\.([0-7])$/.exec(keyLower);
+    if (parallelPin && this.parts.some(part => /^(i)?808[68]$/.test(part.kind))) {
+      const interfaces = this.parts.filter(part => part.kind === 'i8255');
+      if (interfaces.length === 1) {
+        const port = 'abc'[Number(parallelPin[1]) - 1];
+        const key = `p${port}${parallelPin[2]}`;
+        const [ppi] = interfaces;
+        const terminal = ppi.terminals.find(p => String(p).toLowerCase() === key);
+        if (terminal !== undefined) resolved = {partId: ppi.id, terminal: String(terminal)};
+      }
+    }
     this._qualCache.set(keyLower, resolved);
     return resolved;
   }
