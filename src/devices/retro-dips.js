@@ -107,6 +107,12 @@ const W65C51 = [   // DIP-28
     'xtlo', 'dcdb', 'dsrb', 'rxd', 'dtrb', 'ctsb', 'rtsb', 'nc',
     'txd', 'rs1', 'rs0', 'd7',
 ];
+const MC6845 = [
+    'vss', 'resetb', 'lpstb',
+    ...Array.from({ length: 14 }, (_, bit) => `ma${bit}`), 'de', 'cursor', 'vdd',
+    'hsync', 'ra0', 'ra1', 'ra2', 'ra3', 'ra4', 'vsync', 'clk', 'rsb', 'csb', 'e', 'rw',
+    'd0', 'd1', 'd2', 'd3', 'd4', 'd5', 'd6', 'd7',
+];
 const NS16C550 = [   // DIP-40 (PC16550D pinout, TI/NS datasheet)
     'd0', 'd1', 'd2', 'd3', 'd4', 'd5', 'd6', 'd7',
     'rclk', 'sin', 'sout', 'cs0', 'cs1', 'cs2b', 'baudoutb', 'xin',
@@ -208,6 +214,16 @@ export function registerRetroDips() {
     registerDevice('mc6850', dipSurface(MC6850, 5.0));
     registerDevice('tms9918', {
         ...dipSurface(TMS9918, 5.0),
+        init() {
+            return {
+                drives: {},
+                _video: null,
+                videoFrame() { return this._video?.videoFrame() ?? null; },
+            };
+        },
+    });
+    registerDevice('mc6845', {
+        ...dipSurface(MC6845, 5.0),
         init() {
             return {
                 drives: {},
