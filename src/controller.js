@@ -581,6 +581,7 @@ export class ControllerPanel {
     if (!frame) return;
     w.state.rgba = frame.rgba ? new Uint8ClampedArray(frame.rgba) : null;
     w.state.signal = frame.signal !== false;
+    w.state.source = frame.source ?? null;
     w.state.frame = Number(frame.frame) || 0;
     w.config.width = Number(frame.width) || w.config.width;
     w.config.height = Number(frame.height) || w.config.height;
