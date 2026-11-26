@@ -1555,6 +1555,7 @@ const WINDING_TERMINALS = { inductor: ['a', 'b'], transformer: ['p1', 'p2', 's1'
 // supply ground remain per-solve decisions.
 const LIVE_MNA_TOPOLOGY = new WeakMap();
 
+const SOURCE_SPAN_PARAMS = ['volts', 'emf', 'vcc'];
 const VOLTAGE_ROW_KINDS = new Set(['vcc', 'opamp', 'vcvs', 'vsource', 'capacitor']);
 
 function indexMnaParts(parts) {
@@ -2248,8 +2249,12 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
   const sourceSpan = (() => {
     let lo = 0; let hi = 0;
     for (const part of parts) {
-      for (const key of ['volts', 'emf', 'vcc']) {
-        const v = Number(part.params?.[key]);
+      const params = part.params;
+      if (params == null) continue;
+      for (const key of SOURCE_SPAN_PARAMS) {
+        const value = params[key];
+        if (value === undefined) continue;
+        const v = Number(value);
         if (!Number.isFinite(v)) continue;
         if (v < lo) lo = v;
         if (v > hi) hi = v;
@@ -4955,7 +4960,9 @@ function stampDevice(A, b, part, nets, nodeIndex, model, state, controls, vcc, t
   // floating source. With `ref: '<terminal>'` the source drives `terminal`
   // relative to the device's OWN pin: the standard floating-Thévenin
   // companion (spec-updates/referenced-device-drives.md).
-  for (const [terminal, drive] of Object.entries(state.drives ?? {})) {
+  const drives = state.drives;
+  for (const terminal of drives ? Object.keys(drives) : []) {
+    const drive = drives[terminal];
     if (!drive) continue;
     const net = netFor(terminal);
     if (!net) continue;
