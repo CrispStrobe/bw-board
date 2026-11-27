@@ -434,6 +434,9 @@ function combineThevenin(sources) {
   return { vTh: iTotal / gTotal, rTh: 1 / gTotal };
 }
 
+/** Lowest supply any modelled logic family is specified for (74HC: 2 V). */
+const LOGIC_MIN_SUPPLY_V = 2.0;
+
 export class BoardImpl {
   constructor(vcc = 5.0) {
     /** @type {number} */
@@ -614,6 +617,19 @@ export class BoardImpl {
      * @type {boolean}
      */
     this._primingEdges = false;
+
+    /**
+     * Board time (ns) at which the supplies were last switched on: a supply's
+     * power-on rise (its `params.riseSec`, mna.js SUPPLY_RISE_SEC) runs from
+     * here. `supplyRiseSec` is the rise of every supply that states none
+     * (default 0: an ideal step).
+     * @type {bigint|null}
+     */
+    this._powerOnNs = null;
+    /** Part id -> its own supply voltage at its last accepted device update. */
+    this._deviceSupplies = new Map();
+    /** @type {number|undefined} */
+    this.supplyRiseSec = undefined;
 
     /**
      * LED cube state: part id → { selectPins, dataPins, polarity, voxelHistory }.
@@ -1464,6 +1480,7 @@ export class BoardImpl {
     // absent from capVoltages, because the public-parts loop further down
     // re-seeded only what the user drew.
     this.capVoltages.clear();
+    this._deviceSupplies?.clear();
     for (const p of this._solveParts) {
       if (p.kind === 'inductor' && !this.inductorCurrents.has(p.id)) {
         this.inductorCurrents.set(p.id, 0);
@@ -6602,6 +6619,8 @@ export class BoardImpl {
     this.pinStates.clear();
     this.drivenPwm.clear();
     this.timeNs = 0n;
+    // A new run from rest: the supplies rise again from zero.
+    this._powerOnNs = this.powered ? 0n : null;
     this.capVoltages.clear();
     this.ledHistory.clear();
     this._ledWindowFloor = null;
@@ -6696,6 +6715,7 @@ export class BoardImpl {
       capVoltages: new Map(this.capVoltages),
       inductorCurrents: new Map(this.inductorCurrents),
       ...(this._thermal ? { partTemperatures: new Map(this._thermal.temps) } : {}),
+      powerOnNs: this._powerOnNs,
     };
   }
 
@@ -6707,6 +6727,9 @@ export class BoardImpl {
     this._newtonSeed = null; // the snapshot carries no Newton state; start cold
     this.timeNs = snap.timeNs;
     this.powered = snap.powered;
+    // A snapshot that never saw a power-on (an empty board) keeps the one
+    // this board's own setNetlist took.
+    this._powerOnNs = snap.powerOnNs ?? this._powerOnNs;
     this.pinStates = new Map(snap.pinStates);
     // A driven PWM is a pin state and comes back with the pins: the designer
     // snapshots and restores around every edit (see below), and a program's
@@ -7219,6 +7242,8 @@ export class BoardImpl {
     }
     // A part at its own temperature (thermal model) is beyond the walker.
     if (this._thermal) return true;
+    // So is a supply with a power-on rise (mna.js SUPPLY_RISE_SEC).
+    if (this._longestSupplyRise() > 0) return true;
     for (const p of this.parts) {
       if (MNA_ONLY_KINDS.has(p.kind) || getDevice(p.kind)) return true;
       // An LED with a photocurrent carries a hidden solver element.
@@ -7415,6 +7440,8 @@ export class BoardImpl {
     // An antenna's stations are modulated: the detected programme is a
     // waveform even though no drawn source has one.
     if (this._radio) return true;
+    // A supply with a power-on rise is a waveform while it rises.
+    if (this._longestSupplyRise() > 0) return true;
     // Mains fields and junction noise move with time (src/fields.js).
     if (this._fields?.timeVarying) return true;
     // Sound at a listening transducer, a magnet falling through a coil.
@@ -7693,8 +7720,32 @@ export class BoardImpl {
    * a steady clock level counts nothing, also when its clock is driven by a
    * gate that starts at its init level and settles at the other one.
    */
+  /**
+   * The solveMNA options of the supplies' power-on rise at board time `tSec`
+   * of a transient: how long ago they were switched on, and the rise of a
+   * supply that states none. Empty when nothing can still be rising.
+   * @param {number} tSec
+   */
+  _powerOnAge(tSec) {
+    if (!this.powered || this._powerOnNs === null) return {};
+    const age = tSec - Number(this._powerOnNs) / 1e9;
+    if (!(age < this._longestSupplyRise())) return {};
+    return { powerOnAgeSec: age, supplyRiseSec: this.supplyRiseSec ?? 0 };
+  }
+
+  /** The longest power-on rise any supply of this netlist has (seconds). */
+  _longestSupplyRise() {
+    let rise = Number(this.supplyRiseSec) > 0 ? Number(this.supplyRiseSec) : 0;
+    for (const p of this._solveParts ?? this.parts) {
+      const r = Number(p.params?.riseSec);
+      if (r > rise) rise = r;
+    }
+    return rise;
+  }
+
   _solvePowerOn() {
     this._primingEdges = this.powered;
+    if (this.powered) this._powerOnNs = this.timeNs;
     try {
       this._solve();
     } finally {
@@ -7782,7 +7833,7 @@ export class BoardImpl {
    * attempts per 100 us in which nothing switched. Such a drive is restamped
    * at the next solve all the same; only the restart is skipped.
    */
-  _deviceUpdateIsEdge(before, after) {
+  _deviceUpdateIsEdge(before, after, supplyBefore = null, supplyNow = null) {
     // A state too large (or not plain enough) to snapshot: every reported
     // change stays an edge, as before.
     if (before === null) return true;
@@ -7798,7 +7849,16 @@ export class BoardImpl {
       if (typeof x !== 'object' || typeof y !== 'object') return true;
       for (const key of new Set([...Object.keys(x), ...Object.keys(y)])) {
         if (key === 'vTh') {
-          if (!(Number.isFinite(x.vTh) && Number.isFinite(y.vTh)) || Math.abs(x.vTh - y.vTh) > tolOf(x.vTh, y.vTh)) return true;
+          if (!(Number.isFinite(x.vTh) && Number.isFinite(y.vTh))) return true;
+          if (Math.abs(x.vTh - y.vTh) <= tolOf(x.vTh, y.vTh)) continue;
+          // A level that is the same FRACTION of the part's own supply (a
+          // gate's high at its supply pin, a sensor's mid-rail output) only
+          // followed that supply, which moves continuously: while the
+          // supplies rise at power-on such a drive moved on every accepted
+          // step, and every step restarted the history at a 1 ns seed.
+          if (!(supplyBefore > 0 && supplyNow > 0)
+            || Math.abs(x.vTh / supplyBefore - y.vTh / supplyNow) * Math.max(supplyBefore, supplyNow)
+              > tolOf(x.vTh, y.vTh)) return true;
         } else if (x[key] !== y[key]) return true;
       }
     }
@@ -7810,6 +7870,39 @@ export class BoardImpl {
   _deviceEdgeSnapshot(state) {
     const copy = plainStateCopy(state, { left: EVENT_STATE_BUDGET });
     return copy === NOT_PLAIN ? null : copy;
+  }
+
+  /**
+   * BELOW ITS SUPPLY, LOGIC DOES NOT CLOCK. No logic family is specified
+   * below 2 V (74HC's minimum; 4000-series and TTL need more): there the
+   * input stages and the flip-flops inside are not logic at all. A clocked
+   * part whose own supply pins see less than that therefore only tracks its
+   * inputs (the edge detector primes, src/devices/edge-detect.js), like at
+   * the power-on settle, and acts on the first edge after its supply is up.
+   * This is what makes the supply's power-on rise (mna.js SUPPLY_RISE_SEC)
+   * safe for counters: a transistor that switches on at 0.7 V of a rising
+   * rail pulls a clock line low long before the counter can count it.
+   * Parts without a wired supply pin (behavioural parts on the board rail)
+   * are unaffected.
+   * @param {Part} part
+   * @param {Function} read
+   */
+  /** The voltage across a part's own supply pins (vcc/vdd to gnd/vss), or null. */
+  _ownSupply(part, read) {
+    const t = part.terminals;
+    if (!Array.isArray(t)) return null;
+    const pos = t.includes('vcc') ? 'vcc' : t.includes('vdd') ? 'vdd' : null;
+    const neg = t.includes('gnd') ? 'gnd' : t.includes('vss') ? 'vss' : null;
+    if (!pos || !neg || !read.connected(pos) || !read.connected(neg)) return null;
+    return read(pos) - read(neg);
+  }
+
+  _belowLogicSupply(part, read) {
+    const supply = this._ownSupply(part, read);
+    // Exactly 0 V is a supply pin on a net nothing drives: the models read
+    // that as the board's default rail (`read('vcc') || 5`), and so does this.
+    if (supply === null || read(part.terminals.includes('vcc') ? 'vcc' : 'vdd') === 0) return false;
+    return supply < LOGIC_MIN_SUPPLY_V;
   }
 
   _updateDevices(atNs = this.timeNs, solution = this._mnaCache, measurementOnly = false, acceptedTransient = false) {
@@ -7852,14 +7945,22 @@ export class BoardImpl {
       };
       this._attachMeasurementValidity(model, read, solution);
       if (model.transientUpdateContext === true) read.transient = acceptedTransient;
-      if (priming) read.priming = true;
+      if (priming || this._belowLogicSupply(part, read)) read.priming = true;
       // On an accepted transient step, `changed` means a discontinuity: the
       // trapezoidal history restarts and the step shrinks. A drive that only
       // tracks its own moving supply is not one (deviceUpdateIsEdge).
       const before = acceptedTransient && state ? this._deviceEdgeSnapshot(state) : undefined;
+      // The part's own supply now and at its previous accepted update: a
+      // drive that follows it in proportion is no edge (_deviceUpdateIsEdge).
+      let supplyNow = null, supplyBefore = null;
+      if (before !== undefined) {
+        supplyNow = this._ownSupply(part, read);
+        supplyBefore = this._deviceSupplies.get(part.id) ?? null;
+        this._deviceSupplies.set(part.id, supplyNow);
+      }
       try {
         if (model.update(part, state, read, atNs)
-          && (before === undefined || this._deviceUpdateIsEdge(before, state))) changed = true;
+          && (before === undefined || this._deviceUpdateIsEdge(before, state, supplyBefore, supplyNow))) changed = true;
       } catch (error) {
         // A rejected accepted-step model invalidates the whole analog capture,
         // including earlier partial samples. Preserve ordinary callback and
@@ -8051,6 +8152,8 @@ export class BoardImpl {
           capCurrents: ccS, inductorVoltages: lvS, newtonSeed: seedS ?? undefined },
         deviceStates: this._deviceStates,
         qualifiedSources: qual,
+        // The supplies' power-on rise (mna.js supplyRampFraction).
+        ...this._powerOnAge(tStart + hs),
         // Warm start for nonlinear-current laws: the last published point.
         nonlinearGuess: this.nodeVoltages,
         // Op-amp rail regions remember the last accepted step (hysteresis).
