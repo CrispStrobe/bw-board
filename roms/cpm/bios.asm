@@ -51,6 +51,9 @@ CBOOT:  DI
         OUT     (ACIACTL),A
         XOR     A
         LD      (4),A                   ; current drive = A:
+IF DEFINED VDP_CONSOLE
+        CALL    VDP_INIT
+ENDIF
         JP      GOCPM
 
 ; === Warm boot ===
@@ -133,7 +136,11 @@ BCONOUT:IN      A,(ACIACTL)
         JP      Z,BCONOUT              ; wait (always ready in model)
         LD      A,C
         OUT     (ACIADT),A
+IF DEFINED VDP_CONSOLE
+        JP      VDP_CHAR
+ELSE
         RET
+ENDIF
 
 ; === List / punch / reader stubs ===
 BLIST:  LD      A,C
@@ -253,4 +260,7 @@ DIRBUF: DEFS    128
 CSV0:   DEFS    16
 ALV0:   DEFS    31
 
+IF DEFINED VDP_CONSOLE
+        INCLUDE "vdp-console.asm"
+ENDIF
         END

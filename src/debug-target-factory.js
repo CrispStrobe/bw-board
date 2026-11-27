@@ -76,6 +76,13 @@ export { LABWIRED_KIND, getTargetKinds } from './target-kinds.js';
  *   adapter: the boundary-A adapter (emulator/avr8js only)
  */
 export async function createDebugTarget(kind, opts) {
+  if (kind === 'cardiac') {
+    const [{createCardiacAdapter}, {createCardiacDebugTarget}] = await Promise.all([
+      import('./cardiac-adapter.js'), import('./cardiac-debug.js')
+    ]);
+    const adapter = createCardiacAdapter(opts);
+    return {target: createCardiacDebugTarget(adapter, opts), adapter};
+  }
   if (kind === 'cp1') {
     const [{createCp1Adapter}, {createCp1DebugTarget}] = await Promise.all([
       import('./cp1-adapter.js'), import('./cp1-debug.js')
@@ -128,7 +135,7 @@ export async function createDebugTarget(kind, opts) {
     return createSerialTarget(opts);
   }
   throw new Error(
-    `Unknown debug target kind: '${kind}'. Use 'emulator', 'avr8js', 'atmega2560', 'attiny85', 'attiny88', 'eater6502', 'i8086', 'i80286', 'z80', 'riscv32', 'rp2040js', 'stm32f0', 'stm32g0', 'labwired', 'esp8266', or 'serial'.`
+    `Unknown debug target kind: '${kind}'. Use 'cardiac', 'cp1', 'emulator', 'avr8js', 'atmega2560', 'attiny85', 'attiny88', 'eater6502', 'i8086', 'i80286', 'i80386', 'z80', 'riscv32', 'rp2040js', 'stm32f0', 'stm32g0', 'labwired', 'esp8266', or 'serial'.`
   );
 }
 
@@ -387,7 +394,7 @@ async function createEmulatorTarget(opts) {
 async function createAvr8jsTarget(kind, opts) {
   const {
     board, hex, symbols,
-    clockHz, vcc,
+    clockHz, vcc, chip: requestedChip,
   } = opts;
 
   if (!board) throw new Error('avr8js target requires opts.board');
@@ -395,7 +402,7 @@ async function createAvr8jsTarget(kind, opts) {
   // Map factory kind to chip name: 'avr8js' → 'atmega328p' (default)
   const chip = kind === 'atmega2560' ? 'atmega2560'
     : kind === 'attiny85' ? 'attiny85'
-      : kind === 'attiny88' ? 'attiny88' : 'atmega328p';
+      : kind === 'attiny88' ? 'attiny88' : (requestedChip ?? 'atmega328p');
 
   // avr8js has no destructive init — order is flexible, but we follow the
   // same adapter-first, board-second, program-third pattern for consistency.

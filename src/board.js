@@ -1236,21 +1236,26 @@ export class BoardImpl {
       } else if (p.kind === 'seven_segment') {
         const common = netsOf(p.id, 'common');
         for (const seg of ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'dp']) {
-          addLed(`${p.id}_${seg}`, netsOf(p.id, seg), common);
+          const segment = netsOf(p.id, seg);
+          const anode = p.params?.common === 'anode';
+          addLed(`${p.id}_${seg}`, anode ? common : segment, anode ? segment : common);
         }
       } else if (p.kind === 'seven_seg_3' || p.kind === 'seven_seg_4') {
         // Multiplexed displays (3-digit 056SMG-3; 4-digit as on the Prechin
         // A2's tubes): eight shared segment lines, one common per digit.
         // Each digit is eight LEDs from the shared segment net to that
         // digit's common. The multiplex physics falls out for free: a
-        // segment lights only while ITS digit's common is pulled low, and
+        // segment lights only while ITS digit's common is selected (high
+        // for params.common='anode', low for the default cathode), and
         // the brightness filter integrates the scan duty exactly as it
         // does for the matrices.
         const nDigits = p.kind === 'seven_seg_4' ? 4 : 3;
         for (let digit = 0; digit < nDigits; digit++) {
           const common = netsOf(p.id, `com${digit}`);
           for (const seg of ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'dp']) {
-            addLed(`${p.id}_d${digit}_${seg}`, netsOf(p.id, seg), common);
+            const segment = netsOf(p.id, seg);
+            const anode = p.params?.common === 'anode';
+            addLed(`${p.id}_d${digit}_${seg}`, anode ? common : segment, anode ? segment : common);
           }
         }
       } else if (p.kind === 'pi_pico') {
@@ -4279,6 +4284,58 @@ export class BoardImpl {
   }
 
   /**
+   * Run a single HC-SR04 transaction for a host-executed program. The
+   * module's deadlines indicate when to sample the actual MCU input.
+   * Native CPU emulators clock the same pins themselves.
+   * @returns {number|null} echo pulse width in microseconds, or no echo
+   */
+  measureUltrasonic(partId, declaredPins) {
+    if (!this.powered || this._externalClock) return null;
+    const fromWire = (part, role) => {
+      // The echo may pass through a resistor divider for a 3.3 V input.
+      const pins = this._mcuPinsDriving(part, [role], role === 'echo' ? 1 : 0);
+      return pins.length === 1 ? pins[0].pin : null;
+    };
+    const matchesPin = (actual, declared) =>
+      actual != null && (declared == null || actual.toLowerCase() === declared.toLowerCase());
+    const sensors = this.parts.filter(part => part.kind === 'ultrasonic');
+    const named = sensors.find(part => part.id === partId || part.declName === partId);
+    const candidates = named ? [named] : declaredPins ? sensors : [];
+    const wired = candidates.map(part => ({
+      part, trig: fromWire(part, 'trig'), echo: fromWire(part, 'echo'),
+    })).filter(({ trig, echo }) => trig !== echo
+      && matchesPin(trig, declaredPins?.trig) && matchesPin(echo, declaredPins?.echo));
+    if (wired.length !== 1) return null;
+    const { part, trig, echo } = wired[0];
+    const state = this.getDeviceState(part.id);
+    if (!state) return null;
+    const start = this.getTime();
+    if (state._sampledNs != null && start - state._sampledNs < 60_000_000n) return state._sampledEchoUs;
+
+    this.setPin(echo, 'input', false);
+    this.setPin(trig, 'pushpull', false);
+    this.advanceTo(start + 2_000n);
+    this.setPin(trig, 'pushpull', true);
+    this.advanceTo(start + 12_000n);
+    this.setPin(trig, 'pushpull', false);
+
+    const timeout = start + 30_000_000n;
+    let width = null;
+    if (state._wakeNs > this.getTime() && state._wakeNs < timeout) {
+      this.advanceTo(state._wakeNs);
+      const rise = this.getTime();
+      if (this.readPin(echo) && state._wakeNs > rise && state._wakeNs <= timeout) {
+        this.advanceTo(state._wakeNs);
+        if (!this.readPin(echo)) width = Number(this.getTime() - rise) / 1000;
+      }
+    }
+    if (width === null) this.advanceTo(timeout);
+    state._sampledNs = start;
+    state._sampledEchoUs = width;
+    return width;
+  }
+
+  /**
    * The one MCU pin that drives `part`, or null with the reason recorded.
    * Several candidates narrow to those on an enable net; still several is
    * refused by name rather than guessed.
@@ -6992,6 +7049,19 @@ export class BoardImpl {
         }
       }
       break;
+    }
+    // Brickwright's 8086 Blocks use P1/P2/P3 for 8255 ports A/B/C.
+    // Resolve them only on a PC bench with one unambiguous 8255.
+    const parallelPin = !resolved && /^p([1-3])\.([0-7])$/.exec(keyLower);
+    if (parallelPin && this.parts.some(part => /^(i)?808[68]$/.test(part.kind))) {
+      const interfaces = this.parts.filter(part => part.kind === 'i8255');
+      if (interfaces.length === 1) {
+        const port = 'abc'[Number(parallelPin[1]) - 1];
+        const key = `p${port}${parallelPin[2]}`;
+        const [ppi] = interfaces;
+        const terminal = ppi.terminals.find(p => String(p).toLowerCase() === key);
+        if (terminal !== undefined) resolved = {partId: ppi.id, terminal: String(terminal)};
+      }
     }
     this._qualCache.set(keyLower, resolved);
     return resolved;

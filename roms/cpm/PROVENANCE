@@ -70,3 +70,10 @@ Research" in their embedded strings.  The BIOS is our own work (MIT).
 For the brickwright-lite NOTICE file: CP/M 2.2 CCP+BDOS, originally
 Copyright (C) 1979 Digital Research, redistributed under the nonexclusive
 grant from DRDOS, Inc. (Bryan Sparks, 7 July 2022).
+
+bios-vdp.bin is the same MIT BIOS with the TMS9918A console enabled.
+Build with `node scripts/build-cpm-vdp.mjs` and Pasmo 0.5.3
+(`PASMO=/path/to/pasmo` overrides the assembler path). The 6×8 ASCII patterns
+are generated from bw-board's public-domain FUNSCII font in src/funscii-font.js.
+The ports are 98h (data) and 99h (control/status). The MC6850 is retained for
+console input and also receives console output.

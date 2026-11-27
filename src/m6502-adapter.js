@@ -184,10 +184,14 @@ export function createM6502Adapter(opts = {}) {
       // Bridge PS/2 parts to the machine VIA before reset, so the
       // capture chain's advance() runs from the first instruction.
       bridgePS2(b);
-      // Publish machine video through the physical card's board state so a
-      // part-bound controller widget mirrors the actual framebuffer.
+      // Part-bound Controller widgets read video through the circuit device.
+      for (const part of b.parts || []) {
+        if (part.kind !== 'simplevga_card' && part.kind !== 'tms9918' && part.kind !== 'mc6845') continue;
+        const state = b.getDeviceState?.(part.id);
+        if (state) state._video = null;
+      }
       for (const c of config.chips) {
-        if (c.kind !== 'simplevga') continue;
+        if (c.kind !== 'simplevga' && c.kind !== 'vdp' && c.kind !== 'crtc') continue;
         const state = typeof b.getDeviceState === 'function' ? b.getDeviceState(c.name) : null;
         if (state) state._video = machine.chips[c.name] || null;
       }

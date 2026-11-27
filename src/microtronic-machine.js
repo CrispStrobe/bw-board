@@ -38,6 +38,11 @@ export function parseMicrotronicProgram(source) {
   source.split(/\r?\n/).forEach((raw, line) => {
     let text = raw.replace(/[;#].*$/, '').trim();
     if (!text) return;
+    const origin = text.match(/^@\s*([0-9a-f]{1,2})$/i);
+    if (origin) {
+      address = parseInt(origin[1], 16);
+      return;
+    }
     const label = text.match(/^([0-9a-f]{1,2})\s*:\s*/i);
     if (label) {
       address = parseInt(label[1], 16);

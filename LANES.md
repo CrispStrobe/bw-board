@@ -1,3 +1,25 @@
+## CARDIAC Lab — REVIEW CANDIDATE, 2026-11-26
+
+Default-branch claim publication is pending review. Automatic approval review refused direct default-branch pushes; implementation remains isolated on the feature branch until approval.
+
+Owner: Brickwright CARDIAC implementation lane, requested by CrispStrobe.
+Isolated branch: `feat/cardiac-lab-20261126`.
+Base: `de8083c5a894a49c9fa4c6f0fb6f8866e2d758c0`.
+Scope: Original CARDIAC decimal machine, bounded execution and snapshots, debugger target, modern sampled-input/latched-output circuit adapter device, additive exports/registration, focused semantic and electrical tests and compatibility documentation.
+
+Companion package boundaries: Brickwright, bw-board, bw-circuit-ui and
+sb3-creator. Preserve all unrelated CP1, Microtronic, KIM and other work.
+One authoritative machine and simulation clock; original CARDIAC opcode order.
+Modern circuit I/O is explicitly identified as a Brickwright extension.
+Independent code, lesson text and artwork; comparison implementations are
+references, with license and semantic differences recorded. No historical
+manual assets or incompatible emulator code are imported.
+
+Qualify decimal overflow/shift/branch/input boundaries, source-to-memory
+correspondence, actual circuit I/O, execution ownership, incomplete-source
+persistence, and desktop/narrow browser operation. Upstream changes are
+qualified before exact downstream adoption; local checks are not hosted CI.
+
 ## Busch Microtronic Circuits behavioral model — CLAIMED, 2026-11-25
 
 Owner: Brickwright Microtronic implementation lane, requested by CrispStrobe.

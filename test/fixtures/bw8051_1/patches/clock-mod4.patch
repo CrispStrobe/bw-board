@@ -1,0 +1,76 @@
+--- a/main.c
++++ b/main.c
+@@ -9,6 +9,7 @@
+ #include "models.h"
+ #include "adc.h"
+ #include "ds1302.h"
++#include "eeprom.h"
+ #include "eeprom_consts.h"
+ #ifdef BCD_DISPLAY
+ #include "led_bcd.h"
+@@ -404,7 +405,11 @@
+                                         // at 25degC, raw is 512, thus 24 is 522 and limit between 24 and 25 is 517
+                                         // so between 0deg and 1deg, limit is 517+24*10 = 757 
+                                         // (*5 due to previous adjustment of raw value)
+-    while (raw<val) {temp++; val-=50;}
++    while (raw < val) {
++      temp++;
++      if (val < 50) break; // Do not wrap unsigned val at a zero ADC input.
++      val -= 50;
++    }
+ 
+     return temp + (cfg_table[CFG_TEMP_BYTE] & CFG_TEMP_MASK) - 4;
+ }
+@@ -861,8 +866,8 @@
+   fillDigit(4, CONF_C_F ? LED_f : LED_c);
+ #endif
+ #else
+-  fillDigit(0, ds_int2bcd_tens(temp));
+-  fillDigit(1, ds_int2bcd_ones(temp));
++  fillDigit(0, ds_int2bcd_tens(temperature));
++  fillDigit(1, ds_int2bcd_ones(temperature));
+   fillDigit(2, CONF_C_F ? LED_f : LED_c);
+   fillDot(2, 1);
+ #endif
+@@ -1462,11 +1467,13 @@
+     }    
+   } else if (ev == EV_S2_SHORT) {
+     saveSettings();
++#ifdef WITH_NMEA
+     if (nmea_prev_tz_hr != nmea_tz_hr || nmea_prev_tz_min != nmea_tz_min ||
+         nmea_prev_tz_dst != nmea_tz_dst ||
+         nmea_prev_autosync != nmea_autosync) {
+       enable_nmea_receiving();
+     }
++#endif
+     buttons_mode = K_NORMAL;
+   }
+ }
+@@ -1956,6 +1963,7 @@
+   // set photoresistor & ntc pins to open-drain output
+   P1M1 |= (1 << ADC_LIGHT) | (1 << ADC_TEMP);
+   P1M0 |= (1 << ADC_LIGHT) | (1 << ADC_TEMP);
++  P1ASF |= (1 << ADC_LIGHT) | (1 << ADC_TEMP);
+ 
+   // init rtc
+   ds_init();
+--- a/hwconfig.h
++++ b/hwconfig.h
+@@ -96,7 +96,7 @@
+ 
+ // Mask to activate one digit (active LOW)
+ #ifdef SIX_DIGITS
+-const uint8_t led_digit_mask[6] = {
++static const uint8_t led_digit_mask[6] = {
+     ~((1 << LED_DIGITS_PORT_BASE) << 0),
+     ~((1 << LED_DIGITS_PORT_BASE) << 1),
+     ~((1 << LED_DIGITS_PORT_BASE) << 2),
+@@ -105,7 +105,7 @@
+     ~((1 << LED_DIGITS_PORT_BASE) << 5)
+   };
+ #else
+-const uint8_t led_digit_mask[4] = {
++static const uint8_t led_digit_mask[4] = {
+     ~((1 << LED_DIGITS_PORT_BASE) << 0),
+     ~((1 << LED_DIGITS_PORT_BASE) << 1),
+     ~((1 << LED_DIGITS_PORT_BASE) << 2),

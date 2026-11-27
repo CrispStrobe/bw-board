@@ -21,6 +21,7 @@ import { logicalTimeDomain } from './instruction-debug-events.js';
 import { MC6850 } from './mc6850.js';
 import { Z80CTC } from './z80-ctc.js';
 import { MC6845 } from './mc6845.js';
+import { TMS9918 } from './tms9918.js';
 import { ZXULA } from './zx-ula.js';
 import { ZXTape } from './zx-tape.js';
 import { AY38912 } from './ay-3-8912.js';
@@ -128,6 +129,11 @@ export class Z80Machine {
                 const chip = new MC6850({
                     onTx: (b) => { if (this.hooks.onSerial) this.hooks.onSerial(b, this.tMs); },
                 });
+                this.chips[p.name] = chip;
+                mapPort(p.at, { chip, rs: 0 });
+                mapPort(p.at + 1, { chip, rs: 1 });
+            } else if (p.kind === 'vdp') {
+                const chip = new TMS9918({ clockHz: config.clockHz });
                 this.chips[p.name] = chip;
                 mapPort(p.at, { chip, rs: 0 });
                 mapPort(p.at + 1, { chip, rs: 1 });

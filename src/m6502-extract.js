@@ -37,6 +37,7 @@ const SELECT = {
     // the R/W / phi2 gating a real board adds is timing, and this
     // extractor models the address domain (same bound as RWB above).
     tms9918: { kind: 'vdp', low: ['csrb', 'cswb'] },
+    mc6845: { kind: 'crtc', low: ['csb'] },
     // MC6850 (E5.1): three selects, all address-domain — cs0 and cs1
     // high, /cs2 low. The E clock is timing (same bound as PHI2 above);
     // the z80 twin extracts this chip identically on the IO side.
@@ -54,11 +55,11 @@ const SELECT = {
 };
 const RS_PINS = {
     via: ['rs0', 'rs1', 'rs2', 'rs3'], acia: ['rs0', 'rs1'], vdp: ['mode'],
-    acia6850: ['rs'], uart16550: ['a0', 'a1', 'a2'],
+    acia6850: ['rs'], crtc: ['rsb'], uart16550: ['a0', 'a1', 'a2'],
     riot: ['a0', 'a1', 'a2', 'a3', 'a4', 'a5', 'a6', 'rs0b'],
 };
 const CHIP_DECL = {
-    via: 'W65C22', acia: 'W65C51', vdp: 'TMS9918', tilevga: 'TILEVGA', simplevga: 'SIMPLEVGA',
+    via: 'W65C22', acia: 'W65C51', vdp: 'TMS9918', crtc: 'MC6845', tilevga: 'TILEVGA', simplevga: 'SIMPLEVGA',
     acia6850: 'MC6850', uart16550: 'NS16C550', riot: 'M6532', psg8912: 'AY38912', um245r: 'UM245R',
 };
 
@@ -422,17 +423,31 @@ export function extract6502Machine(circuit) {
             const bad = straight(c.part.id, rs, rs.map((_, i) => i));
             if (bad) { reasons.push(`${c.part.id}.${bad} must ride A${rs.indexOf(bad)} — register selects are the low address lines`); continue; }
             const span = c.kind === 'via' ? 16
-                : (c.kind === 'vdp' || c.kind === 'acia6850') ? 2
+                : (c.kind === 'vdp' || c.kind === 'acia6850' || c.kind === 'crtc') ? 2
                 : c.kind === 'uart16550' ? 8
                 : c.kind === 'riot' ? 256 : 4;
             if (r.count > span) notes.push(`${c.part.id} mirrors through ${hx(r.lo)}-${hx(r.hi)} (decoded coarsely); its registers sit at ${hx(r.lo)}`);
             // span = the MEASURED decode window, so the machine mirrors
             // the registers through it exactly like the silicon — a read
             // at any mirrored address hits the chip, not open bus.
-            chips.push({ kind: c.kind, name: c.part.id, at: r.lo, span: r.count });
+            const chip = { kind: c.kind, name: c.part.id, at: r.lo, span: r.count };
+            if (c.kind === 'crtc') {
+                chip.vramAt = c.part.params?.vramAt ?? 0x3000;
+                chip.vramSize = c.part.params?.vramSize ?? 0x1000;
+            }
+            chips.push(chip);
         }
     }
     if (reasons.length) return { ok: false, notes, reasons };
+    for (const chip of chips.filter(c => c.kind === 'crtc')) {
+        const { vramAt, vramSize } = chip;
+        if (!Number.isInteger(vramAt) || !Number.isInteger(vramSize) ||
+            vramSize < 1 || vramSize > 0x4000 || (vramSize & (vramSize - 1)) ||
+            !regions.some(r => r.kind === 'ram' && !r.perm && r.start <= vramAt && r.end >= vramAt + vramSize - 1)) {
+            return { ok: false, notes, reasons: [`${chip.name}: video RAM must be a power-of-two window in linear RAM`] };
+        }
+        notes.push(`${chip.name}: character RAM ${hx(vramAt)}–${hx(vramAt + vramSize - 1)}`);
+    }
     chips.push(...ayResolved);
 
     // gfoot SimpleVGA is a write-snooping card. It occupies no decoded

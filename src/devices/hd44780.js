@@ -68,7 +68,7 @@ export function registerHD44780() {
         drives: {},
 
         // ── HD44780 internal registers ──────────────────────────
-        ddram: new Uint8Array(80),         // 80 bytes DDRAM (§5.1)
+        ddram: new Uint8Array(80).fill(0x20),  // blank simulated display DDRAM (§5.1)
         cgram: new Uint8Array(64),         // 64 bytes CGRAM (§5.2)
         ac: 0,                             // address counter (7 bits)
         acIsCgram: false,                  // true when AC points into CGRAM
@@ -133,6 +133,7 @@ export function registerHD44780() {
           state.ddram.fill(0x20);
           state.ac = 0;
           state.displayOn = true;
+          _rebuildText(state);
           return true;
         case 'cursor': {
           const a = Array.isArray(value) ? value : [0, 0];
@@ -149,6 +150,7 @@ export function registerHD44780() {
             state.ac = (state.ac + 1) & 0x7f;
           }
           state.displayOn = true;
+          _rebuildText(state);
           return true;
         }
       }

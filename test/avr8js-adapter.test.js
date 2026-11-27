@@ -149,3 +149,16 @@ test('digital input: D8 follows the board level on D9 within a slice', () => {
   a.advanceNs(100_000);
   assert.equal(lastD8(), false, 'and back down');
 });
+
+test('ATmega168P debugger runs the selected chip with its own memory limits', async () => {
+  const { createDebugTarget } = await import('../src/debug-target-factory.js');
+  const board = stubBoard();
+  const { adapter } = await createDebugTarget('avr8js', { board, chip: 'atmega168p' });
+  assert.equal(adapter.cpu.progMem.byteLength, 16384);
+  assert.equal(adapter.cpu.data.length, 1024 + 0x100);
+  adapter.loadProgram(BLINK);
+  adapter.advanceNs(2_000_000);
+  const driven = board.calls.filter(c => c.name === 'D13' && c.mode === 'pushpull');
+  assert.deepEqual(new Set(driven.map(c => c.high)), new Set([false, true]));
+  assert.throws(() => adapter.loadProgram(new Uint16Array(8193)), /ATmega168P flash holds 8192 words/);
+});

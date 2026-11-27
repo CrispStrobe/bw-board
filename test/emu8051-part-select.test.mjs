@@ -42,6 +42,14 @@ describe('emu8051 adapter part selection', () => {
     assert.deepEqual(b.calls.find(c => c[0] === 'part'), ['part', 2]);
   });
 
+  it('the smaller parts select their own silicon profile instead of a larger sibling', () => {
+    for (const [part, id] of [['STC15W408AS', 3], ['stc12c5a16s2', 4]]) {
+      const w = stubWasm(true);
+      createEmu8051Adapter(w, {part});
+      assert.deepEqual(w.calls.find(c => c[0] === 'part'), ['part', id], part);
+    }
+  });
+
   it('a build without _emu_set_part warns for non-default parts and stays quiet for the default', () => {
     const warns = [];
     const orig = console.warn;

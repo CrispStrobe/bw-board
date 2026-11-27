@@ -40,6 +40,7 @@ export const WIDGET_TYPES = /** @type {const} */ ({
   RGB_LIGHT: 'rgb_light',
   TEXT:      'text',
   IMAGE:     'image',
+  MACHINE:   'machine',
 });
 
 /**
@@ -106,6 +107,8 @@ export const WIDGET_DEFAULTS = {
   // Decorations (presentation only, never bound):
   text:     { text: 'Label', fontSize: 16, color: '#334155' },
   image:    { src: '', alt: '' },
+  // The app owns the machine connection. Only the face identifier is saved.
+  machine:  { face: '' },
 };
 
 /**
@@ -578,6 +581,7 @@ export class ControllerPanel {
     if (!frame) return;
     w.state.rgba = frame.rgba ? new Uint8ClampedArray(frame.rgba) : null;
     w.state.signal = frame.signal !== false;
+    w.state.source = frame.source ?? null;
     w.state.frame = Number(frame.frame) || 0;
     w.config.width = Number(frame.width) || w.config.width;
     w.config.height = Number(frame.height) || w.config.height;

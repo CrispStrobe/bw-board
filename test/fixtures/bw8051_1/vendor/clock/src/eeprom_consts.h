@@ -1,0 +1,18 @@
+#ifndef EEPROM_CONSTS_H
+#define EEPROM_CONSTS_H
+
+#define IAP_ADDRESS  0x0000
+
+// NMEA settings
+
+#define IAP_TZ_HR       (IAP_ADDRESS + 0)
+#define IAP_TZ_MIN      (IAP_ADDRESS + 1)
+#define IAP_TZ_DST      (IAP_ADDRESS + 2)
+#define IAP_TZ_AUTOSYNC (IAP_ADDRESS + 3)
+
+// Brightness settings
+
+#define IAP_MIN_BRIGHTNESS      (IAP_ADDRESS + 4)
+#define IAP_LIGHT_SENSOR_CORR   (IAP_ADDRESS + 5)
+
+#endif // #define EEPROM_CONSTS_H

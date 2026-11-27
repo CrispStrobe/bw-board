@@ -56,15 +56,19 @@ export function createAvr8jsAdapter(opts = {}) {
   const clockHz = opts.clockHz ?? chip.clockHz;
   const vcc = opts.vcc ?? chip.vcc;
 
-  const progMem = new Uint16Array(chip.flashWords);
-  if (opts.program && opts.program.length > chip.flashWords) {
-    // Refuse WITH THE SIZE NAMED — a silent truncation boots garbage and a
-    // bare RangeError names neither the image nor the chip.
-    throw new Error(`Program is ${opts.program.length} words `
-      + `(${opts.program.length * 2} bytes); ${chip.name} flash holds `
-      + `${chip.flashWords} words (${chip.flashWords * 2} bytes)`);
+  function checkProgramSize(words) {
+    if (words.length > chip.flashWords) {
+      throw new Error(`Program is ${words.length} words `
+        + `(${words.length * 2} bytes); ${chip.name} flash holds `
+        + `${chip.flashWords} words (${chip.flashWords * 2} bytes)`);
+    }
   }
-  if (opts.program) progMem.set(opts.program);
+
+  const progMem = new Uint16Array(chip.flashWords);
+  if (opts.program) {
+    checkProgramSize(opts.program);
+    progMem.set(opts.program);
+  }
   const cpu = new CPU(progMem, chip.sramBytes);
   // FAST-DISPATCH FORK (src/vendor/avr8js-fast/instruction.js): avr8js decodes
   // each opcode through a 99-branch linear if/else chain (72.7% of ticks under
@@ -491,6 +495,7 @@ export function createAvr8jsAdapter(opts = {}) {
     },
 
     loadProgram(words) {
+      checkProgramSize(words);
       progMem.fill(0);
       progMem.set(words);
       cpu.reset();

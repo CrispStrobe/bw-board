@@ -76,7 +76,7 @@ export function registerSensors() {
       if (state._pending && tNs >= state._echoStartNs) {
         state._pending = false;
         state._measuring = true;
-        state._wakeNs = 0n;
+        state._wakeNs = state._echoEndNs;
         state.drives.echo = { vTh: vcc, rTh: 50 };
         changed = true;
       }
@@ -84,6 +84,7 @@ export function registerSensors() {
       // End echo pulse when time is up
       if (state._measuring && tNs >= state._echoEndNs) {
         state._measuring = false;
+        state._wakeNs = 0n;
         state.drives.echo = { vTh: 0, rTh: 50 };
         changed = true;
       }
