@@ -114,10 +114,10 @@ was **not adopted**: it raises the Meissner noise start from 1.9 s to 44 s and
 the short-wave oscillator from 8 s to 37 s locally, and no convergence
 argument fixes 64 rather than another value.
 
-### The runaway control becomes ~1000x slower
+### The runaway control becomes ~2000x slower
 
 `an RF band that runs away is refused` takes 0.64 s on master and about
-600 s with the repair (local, loaded machine). On master the overdriven
+1249 s with the repair (rough: local, heavily loaded machine; an earlier note said ~600 s, which was wrong). Both pass. On master the overdriven
 (ratio 1.074) transmitter never starts: its bands sit at k = 14 with
 20–30 µs of old-bias future retained after every accepted step. With the
 repair it starts, runs away, is refused, and the remaining bands then force
