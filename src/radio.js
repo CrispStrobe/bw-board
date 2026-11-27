@@ -2014,7 +2014,9 @@ export class RadioFrontEnd {
         this._biasPrev = this._bias;
         this._lastSolution = solution;
         // Band history past this instant was integrated with the previous
-        // operating point: discard it, so it is redone with this one.
+        // operating point. Keep only the interpolation bracket and its one
+        // look-ahead point; a rejected trial's more distant future must be
+        // redone with the newly accepted bias.
         for (const b of this._bands) b.prune(tSec);
         // Products' homes follow where an oscillation really is
         // (_planProducts): re-plan when one has moved by a quarter of the
@@ -3066,12 +3068,32 @@ class RfBand {
         this.hist = [{ t: this.t, vp: Array.from({ length: K }, () => [0, 0]), X: this.X, k: this.k }];
     }
 
-    /** Accepted transient step at t: history before it is no longer needed. */
+    /** Accepted transient step: retain its interpolation grid, not a rejected future. */
     prune(tSec) {
         const h = this.hist;
         let i = 0;
         while (i < h.length - 1 && h[i + 1].t <= tSec) i++;
-        if (i > 0) this.hist = h.slice(i);
+        // portsAt uses the bracket around t and one further point for its
+        // C1 slope. They are existing complex states on the RF grid: do not
+        // interpolate/restart X at the transient solver's unrelated grid.
+        const end = Math.min(h.length, i + 3);
+        if (i > 0 || end < h.length) this.hist = h.slice(i, end);
+        if (end < h.length) {
+            const last = this.hist[this.hist.length - 1];
+            this.X = last.X;
+            this.t = last.t;
+            this.integ.X = this.X;
+            this.integ.t = this.t;
+            this.k = Math.min(this.k, last.k ?? this.k);
+            this.calm = 0;
+            this._sigmaCache = null;
+            this._sinceBound = 0;
+            this._tUnstable = Math.min(this._tUnstable, this.t);
+            // An impulse in the discarded trial is no longer in X. Its
+            // physical event must be applied when the replacement reaches
+            // it; an impulse already retained in X stays consumed.
+            for (const e of this.radio._events ?? []) if (e.tc > this.t) this._applied?.delete(e);
+        }
     }
 
 }
