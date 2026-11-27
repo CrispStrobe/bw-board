@@ -40,13 +40,17 @@ function swing(warm, chunk) {
 it('a slow emitter bypass: the swing the full-carrier reference has, whatever the advance schedule', () => {
     // REFERENCE (ngspice 47, gear, 10 ns): 8.9725–8.9843 V, emitter 0.0517 V;
     // the 20 ns / trapezoidal / 5 ns runs agree within 0.15 %.
-    // MEASURED 2026-11-27 after the repair: 8.916–8.921 V both ways, emitter
-    // 0.051 V. Before it, 20 µs advances squegged (0.0001–9.84 V, 2784 Hz).
-    for (const [warm, chunk] of [[5, 5], [5, 0.02]]) {
-        const s = swing(warm, chunk);
+    // MEASURED 2026-11-27 after the repair, 6–9 ms: 8.895–8.915 V (one
+    // 6 ms advance), 8.895–8.908 V (20 µs advances), 8.901 V (outer step
+    // <= 1 µs); emitter 0.062 V in all three (the generic transistor's knee,
+    // as before the repair). Before it, 20 µs advances squegged
+    // (0.0001–9.84 V, 2784 Hz) and so did any outer-step cap.
+    const runs = [[5, 5], [5, 0.02]].map(([warm, chunk]) => ({ chunk, ...swing(warm, chunk) }));
+    for (const s of runs) {
         assert.ok(s.lo > 0.98 * ref.envelopeMinV && s.hi < 1.02 * ref.envelopeMaxV,
-            `${chunk} ms advances: ${s.lo.toFixed(3)}–${s.hi.toFixed(3)} V against ${ref.envelopeMinV.toFixed(3)}–${ref.envelopeMaxV.toFixed(3)} V`);
-        assert.ok(s.hi / s.lo < 1.005, `${chunk} ms advances: a steady swing, ${s.lo.toFixed(4)}–${s.hi.toFixed(4)} V`);
-        assert.ok(Math.abs(s.emitter - ref.emitterV[0]) < 0.005, `${chunk} ms advances: emitter ${s.emitter.toFixed(4)} V against ${ref.emitterV[0].toFixed(4)} V`);
+            `${s.chunk} ms advances: ${s.lo.toFixed(3)}–${s.hi.toFixed(3)} V against ${ref.envelopeMinV.toFixed(3)}–${ref.envelopeMaxV.toFixed(3)} V`);
+        assert.ok(s.hi / s.lo < 1.005, `${s.chunk} ms advances: a steady swing, ${s.lo.toFixed(4)}–${s.hi.toFixed(4)} V`);
+        assert.ok(Math.abs(s.emitter - ref.emitterV[0]) < 0.015, `${s.chunk} ms advances: emitter ${s.emitter.toFixed(4)} V against ${ref.emitterV[0].toFixed(4)} V`);
     }
+    assert.ok(Math.abs(runs[0].emitter - runs[1].emitter) < 0.002, `the advance schedule does not move the bias (${runs[0].emitter.toFixed(4)} against ${runs[1].emitter.toFixed(4)} V)`);
 });

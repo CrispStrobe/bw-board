@@ -91,29 +91,35 @@ advances from power-on steady again (8.69–8.93 V), at six times the work
 
 ## The repair
 
-`RadioFrontEnd.onAccepted` now takes a transistor's rectified collector
-current from its companion's own law at the **accepted bias** and the swing
-(Σ ln I0) **smoothed over `CURRENT_TAU_SEC`**, and does not smooth the
-current itself. The swing is what answers the band one step late (the chase
-the smoothing was introduced against); the bias is not, and a stage its own
-rectified current cuts off stops pumping its tank at once. Diodes and mixers
-keep their smoothed currents. The base–collector clamp current is no longer
-counted as transport current (it was, through the companion's collector
-lead).
+`RadioFrontEnd.onAccepted` now smooths a transistor's collector current
+(over `CURRENT_TAU_SEC`) **on the way up only**. When the current falls, the
+band follows it at once. A stage its own rectified current cuts off then
+stops pumping its tank, and the clamp no longer over-drains the bias. A
+rising current is still smoothed, which is what the smoothing was there for:
+the rectified part answers the band's swing one step late, and following it
+step by step made the two solves chase each other. Diodes and mixers are
+unchanged.
+
+A first candidate was rejected: smoothing the *swing* (Σ ln I0) and taking
+the bias as it was accepted. The rectified current is e^(v_BE + ln I0), and
+in class C the two terms cancel. Lagging one of them starved oscillators:
+a superhet's local oscillator ran at 3.5 µA instead of 0.75 mA, and four
+radio-mixing controls failed (`r11/rf-bias-gm-20261127` at `2bb8aa9e`;
+the Meissner numbers with it were 8.916–8.921 V).
 
 Same bench, same window, after the repair:
 
-| Advance schedule / outer cap | RF min–max (V) | Emitter (V) | Bias node (V) | Tone | Solves |
-| --- | ---: | ---: | ---: | ---: | ---: |
-| `run(6)` then 20 µs (the scenario) | 8.916–8.921 | 0.051 | 0.565–0.567 | none | 4 993 (was 6 730) |
-| 20 µs advances from power-on | 8.914–8.920 | 0.051 | 0.566–0.567 | none | 3 766 (was 23 593) |
-| `run(6)`, outer step ≤ 1 µs | 8.918–8.918 | 0.051 | 0.566 | none | 27 322 |
-| carrier reference | 8.973–8.984 | 0.052 | 0.518–0.528 | none | — |
+| Advance schedule / outer cap | RF min–max (V) | Emitter (V) | Tone | Solves |
+| --- | ---: | ---: | ---: | ---: |
+| `run(6)` then 20 µs (the scenario) | 8.895–8.915 | 0.062 | none | 8 173 (was 6 730) |
+| 20 µs advances from power-on | 8.895–8.908 | 0.062 | none | 5 551 (was 23 593) |
+| `run(6)`, outer step ≤ 1 µs | 8.901–8.901 | 0.062 | none | 27 736 |
+| carrier reference | 8.973–8.984 | 0.052 | none | — |
 
-The trajectory no longer depends on the advance schedule or the outer step,
-the emitter now agrees with the carrier run (0.051 against 0.052 V; was
-0.062), and the swing is 0.6 % below it (was 0.9 %); the remaining bias-node
-offset is the generic transistor's knee.
+The trajectory no longer depends on the advance schedule or the outer step.
+The swing is 0.8 % below the carrier run's. The emitter's 10 mV and the bias
+node's 60 mV offsets are the generic transistor's piecewise knee against
+Shockley's law; they were there before the repair too.
 
 ## Not repaired: strong feedback
 
@@ -138,4 +144,4 @@ scenario's "> 0.5 V detector swing" would fail physically there too.
   that scenario "genuinely green"; the bench needs a circuit that squegs in
   the carrier reference, and the engine must then reproduce that.
 * The engine's target for the authored circuit is steady at ~8.98 V under
-  every step cap and advance schedule; after the repair it is (8.92 V).
+  every step cap and advance schedule; after the repair it is (8.90 V).
