@@ -2645,7 +2645,7 @@ class RfBand {
             Y1.re[i] = (Yp.im[i] - Ym.im[i]) / (2 * dw);
             Y1.im[i] = -(Yp.re[i] - Ym.re[i]) / (2 * dw);
         }
-        this.integ = new BandIntegrator({ N, ports: sys.ports, inj: sys.inj });
+        this.integ = new BandIntegrator({ N, ports: sys.ports, inj: sys.inj, blocks: sys.junctions.map(j => j.p) });
         this.integ.setLinear(Y0, Y1);
         this.integ.X = this.X;
         this.integ.t = this.t;
