@@ -243,9 +243,77 @@ const CONSISTENCY_TOL = 0.01;
  * cost: a steady oscillator, the slow part of a burst).
  */
 const CONSISTENCY_DV = VT / 4;
-const portNorm = (p) => { let s = 0; for (const [r, i] of p) s += r * r + i * i; return Math.sqrt(s); };
-const portDist = (p, q) => { let s = 0; for (let a = 0; a < p.length; a++) { const r = p[a][0] - q[a][0], i = p[a][1] - q[a][1]; s += r * r + i * i; } return Math.sqrt(s); };
 export const K_MAX = 15;          // 32.8 µs
+
+/**
+ * Make every describing-function swing agree with the resulting port, not
+ * merely the norm of all ports. A common scale transfers a strong port's
+ * correction into unrelated ports (even a disconnected equilibrium).
+ *
+ * The describing functions depend on amplitudes, so the nonlinear solve is
+ * real and K-dimensional; each trial still solves the full complex coupled
+ * network. Newton steps are confined to each port's own start/end interval.
+ * As with the previous correction, a root outside that interval does not
+ * extend the explicit step: gain/bias dynamics remain the caller's concern.
+ */
+function consistentPorts(start, end, at) {
+    const a0 = start.map(p => Math.hypot(...p)), a1 = end.map(p => Math.hypot(...p));
+    if (Math.max(...a0, ...a1) <= CONSISTENCY_VOLTS
+        || Math.max(...a0.map((v, q) => Math.abs(v - a1[q]))) <= CONSISTENCY_DV) return null;
+    const scale = a0.map((v, q) => Math.max(v, a1[q], CONSISTENCY_VOLTS));
+    const lo = a0.map((v, q) => Math.min(v, a1[q]) / scale[q]);
+    const hi = a0.map((v, q) => Math.max(v, a1[q]) / scale[q]);
+    const active = lo.map((v, q) => q).filter(q => hi[q] - lo[q] > 1e-12);
+    const evaluate = x => {
+        const amplitudes = x.map((v, q) => v * scale[q]);
+        const r = at(amplitudes);
+        const residual = r.p.map((p, q) => (Math.hypot(...p) - amplitudes[q]) / scale[q]);
+        return { ...r, amplitudes, residual, error: Math.max(...residual.map(Math.abs)) };
+    };
+    let x = a1.map((v, q) => v / scale[q]);
+    let current = evaluate(x);
+    if (current.error <= CONSISTENCY_TOL || !active.length) return null;
+    // A correction must point back into at least one port's own change.
+    if (!active.some(q => current.residual[q] * (a0[q] - a1[q]) > 0)) return null;
+    for (let iteration = 0; iteration < 32; iteration++) {
+        if (current.error < 1e-8) return current;
+        const M = active.length, jacobian = new Float64Array(M * M);
+        for (let c = 0; c < M; c++) {
+            const q = active[c], trial = x.slice();
+            const dx = 1e-5 * Math.max(x[q], CONSISTENCY_VOLTS / scale[q]);
+            trial[q] += dx;
+            const other = evaluate(trial);
+            for (let r = 0; r < M; r++) jacobian[r * M + c] = (other.residual[active[r]] - current.residual[active[r]]) / dx;
+        }
+        let delta;
+        try {
+            [delta] = csolveSmall(jacobian, new Float64Array(M * M),
+                active.map(q => -current.residual[q]), new Float64Array(M), M);
+        } catch { return { inconsistent: true }; }
+        let next = null, nextX = null;
+        for (let damping = 1; damping >= 1 / 1024; damping /= 2) {
+            const trial = x.slice();
+            for (let c = 0; c < M; c++) {
+                const q = active[c];
+                trial[q] = Math.max(lo[q], Math.min(hi[q], x[q] + damping * delta[c]));
+            }
+            const candidate = evaluate(trial);
+            if (candidate.error < current.error * (1 - 1e-4 * damping)) {
+                next = candidate; nextX = trial; break;
+            }
+        }
+        if (!next) {
+            // A constrained step can have its root beyond the explicit
+            // change (positive feedback). Keep that explicit end. Failure
+            // in the interior instead asks the caller to retry shorter.
+            const outside = active.some((q, c) => (x[q] <= lo[q] + 1e-12 && delta[c] < 0)
+                || (x[q] >= hi[q] - 1e-12 && delta[c] > 0));
+            return outside ? null : { inconsistent: true };
+        }
+        current = next; x = nextX;
+    }
+    return { inconsistent: true };
+}
 
 /**
  * A band's integrator. The caller supplies, per refresh, the linear system
@@ -259,12 +327,14 @@ export class BandIntegrator {
      * @param {number} o.N
      * @param {{pos:number|undefined, neg:number|undefined}[]} o.ports - voltage selectors (port i: X[pos] − X[neg])
      * @param {{pos:number|undefined, neg:number|undefined}[]} [o.inj] - current-injection patterns (same count; default the ports)
+     * @param {number[][]} [o.blocks] - port indices sharing a nonlinear constitutive law; omitted means one coupled law
      */
-    constructor({ N, ports, inj = ports }) {
+    constructor({ N, ports, inj = ports, blocks = [ports.map((_, q) => q)] }) {
         this.N = N;
         this.ports = ports;   // [{pos, neg}] voltage selectors (Qᵀ)
         this.inj = inj;       // [{pos, neg}] current-injection patterns (P), same count
         this.K = ports.length;
+        this.blocks = blocks;
         this.X = { re: new Float64Array(N), im: new Float64Array(N) };
         this.t = null;        // time of X
         this.hist = [];       // [{t, re, im}] since the last commit (for interpolation)
@@ -308,7 +378,25 @@ export class BandIntegrator {
             const [r, i] = this._sel(q, W[c][0], W[c][1]);
             C0r[q * K + c] = r; C0i[q * K + c] = i;
         }
-        f = { h, a, lu, W, C0r, C0i };
+        // A nonlinear law and the linear response both connect ports. Only
+        // truly disconnected components may choose a consistency correction
+        // independently: an out-of-range root in one must not suppress an
+        // admissible correction in another. No magnitude cutoff discards a
+        // weak physical coupling.
+        const parent = Array.from({ length: K }, (_, q) => q);
+        const root = q => { while (parent[q] !== q) q = parent[q]; return q; };
+        const join = (q, c) => { parent[root(q)] = root(c); };
+        for (const block of this.blocks) for (let i = 1; i < block.length; i++) join(block[0], block[i]);
+        for (let q = 0; q < K; q++) for (let c = 0; c < K; c++) {
+            if (C0r[q * K + c] !== 0 || C0i[q * K + c] !== 0) join(q, c);
+        }
+        const groups = new Map();
+        for (let q = 0; q < K; q++) {
+            const key = root(q);
+            if (!groups.has(key)) groups.set(key, []);
+            groups.get(key).push(q);
+        }
+        f = { h, a, lu, W, C0r, C0i, groups: [...groups.values()] };
         this._lus.set(key, f);
         return f;
     }
@@ -486,70 +574,50 @@ export class BandIntegrator {
             // (backward Euler in the junctions too), on the port space only.
             if (w && this.implicit !== false) {
                 const p1 = this._portsOut(z, w, f);
-                const n1 = portNorm(p1), n0 = portNorm(vp);
-                let dA = 0;
-                for (let q = 0; q < K; q++) dA = Math.max(dA, Math.abs(Math.hypot(p1[q][0], p1[q][1]) - Math.hypot(vp[q][0], vp[q][1])));
-                if (Math.max(n1, n0) > CONSISTENCY_VOLTS && dA > CONSISTENCY_DV) {
-                    const at = (s) => {
-                        const Ss = stamps(p1.map(([x, y]) => [x * s, y * s]));
+                let dA = 0, largest = 0;
+                for (let q = 0; q < K; q++) {
+                    const a0 = Math.hypot(...vp[q]), a1 = Math.hypot(...p1[q]);
+                    dA = Math.max(dA, Math.abs(a1 - a0));
+                    largest = Math.max(largest, a0, a1);
+                }
+                if (largest > CONSISTENCY_VOLTS && dA > CONSISTENCY_DV) {
+                    const at = amplitudes => {
+                        const ports = p1.map(([x, y], q) => {
+                            const amplitude = Math.hypot(x, y);
+                            // Only swing enters a describing function; retain
+                            // the explicit end's phase whenever it has one.
+                            return amplitude > 0 ? [x * amplitudes[q] / amplitude, y * amplitudes[q] / amplitude] : [amplitudes[q], 0];
+                        });
+                        const Ss = stamps(ports);
                         const d = this._capDelta(S, Ss, hp, h, f);
                         const zs = z.map(([x, y], q) => [x + d.z[q][0], y + d.z[q][1]]);
                         const ws = this._woodbury(f, a, h, Ss, zs);
-                        return { S: Ss, z: zs, d, w: ws, p: ws ? this._portsOut(zs, ws, f) : zs };
+                        return { d, w: ws, p: ws ? this._portsOut(zs, ws, f) : zs };
                     };
-                    const r1 = at(1);
-                    // The correction may only shorten or undo the explicit
-                    // step's own change of swing — never carry the end past the
-                    // explicit end, nor back past the swing the step started
-                    // from: s within [min(1, n0/n1), max(1, n0/n1)]. That is
-                    // what the collapse needs (a step that overshot into a
-                    // steep stamp is pulled back toward its start; one that
-                    // collapsed is lifted back toward it), and it leaves alone a
-                    // step whose end stamps only say "more of the same": a
-                    // MOSFET stage whose square law gains with its swing, or a
-                    // Meissner limited by its bias (pushing those ends further
-                    // made the one squeg and kept the other from squegging),
-                    // and a medium-wave oscillator that followed such pushes
-                    // step after step ran away to 10 kV.
-                    const sA = Math.min(1, n0 / n1), sB = Math.max(1, n0 / n1);
-                    const F = (r, s) => portNorm(r.p) / (s * n1) - 1;
-                    const f1 = F(r1, 1);
-                    const room = f1 < 0 ? sA < 1 : sB > 1;
-                    if (room && portDist(r1.p, p1) > CONSISTENCY_TOL * n1) {
-                        // F(s) = |ports out (stamps at s·p1)| / (s·|p1|) − 1,
-                        // falling in s (more swing, more compression): bisect
-                        // within the step's own change.
-                        let lo = 1, hi = 1, rLo = r1, rHi = r1;
-                        let best, bestF;
-                        if (f1 < 0) { lo = sA; rLo = at(lo); } else { hi = sB; rHi = at(hi); }
-                        const fLo = F(rLo, lo), fHi = F(rHi, hi);
-                        // No consistent swing within the step's own change: the
-                        // explicit end stands (taking the bracket's far end
-                        // instead accepted an end no stamps agreed with, and a
-                        // superhet's MOSFET aerial stage, starting from noise,
-                        // was stepped to 1e-74 V).
-                        if ((f1 < 0 && fLo < 0) || (f1 >= 0 && fHi > 0)) { best = null; bestF = 0; }
+                    const amplitudes = vp.map(p => Math.hypot(...p));
+                    let corrected = false;
+                    for (const group of f.groups) {
+                        const best = consistentPorts(group.map(q => vp[q]), group.map(q => p1[q]), local => {
+                            const trial = amplitudes.slice();
+                            group.forEach((q, i) => { trial[q] = local[i]; });
+                            const result = at(trial);
+                            return { p: group.map(q => result.p[q]) };
+                        });
+                        if (!best) continue;
+                        if (best.inconsistent) inconsistent = true;
                         else {
-                            best = Math.abs(fLo) < Math.abs(fHi) ? rLo : rHi;
-                            bestF = Math.min(Math.abs(fLo), Math.abs(fHi));
-                            for (let i = 0; i < 40 && hi > lo * (1 + 1e-6); i++) {
-                                const s = Math.sqrt(lo * hi);
-                                const r = at(s);
-                                const v = F(r, s);
-                                best = r; bestF = Math.abs(v);
-                                if (Math.abs(v) < 1e-6) break;
-                                if (v > 0) lo = s; else hi = s;
-                            }
+                            group.forEach((q, i) => { amplitudes[q] = best.amplitudes[i]; });
+                            corrected = true;
                         }
-                        if (!best) { /* explicit end */ } else if (bestF < 0.05) { u = best.w; dc = best.d; }
-                        // No consistent swing found within the step's change (the
-                        // bracket closed on a pole of a step too long for the
-                        // junctions' gain): the explicit end stands, retried shorter.
-                        else inconsistent = true;
                         this.implicitSteps = (this.implicitSteps ?? 0) + 1;
+                    }
+                    if (corrected) {
+                        const best = at(amplitudes);
+                        u = best.w; dc = best.d;
                     }
                 }
             }
+
             if (dc) {
                 // y += W·Δc (the junction capacitances' history at the new stamps)
                 for (let c = 0; c < K; c++) {
