@@ -1959,6 +1959,7 @@ export class RadioFrontEnd {
     /** Called by the board after every accepted transient step. */
     onAccepted(board, tSec, solution) {
         this._radiate(tSec, solution);
+        // Each transistor's B–E swing now (Σ ln I0 over the bands), as its rf_detect companion sees it.
         const L = this._sys ? this.detectors.map((d, i) => (d.kind === 'npn' || d.kind === 'pnp') ? (this.junctionDrive(i, tSec)?.[0]?.L ?? 0) : 0) : null;
         this._bias = this._snapshot(solution);
         // The calibrated emitter Is is the device's own law: take the
@@ -1985,19 +1986,36 @@ export class RadioFrontEnd {
             // in the transient solve). The RF transconductance follows the
             // total: an oscillator biased into class C by its own swing keeps
             // its gain from the current it now draws at the peaks.
-            const rect = solution?.branchCurrents?.get(this.detectors[i].id)?.get('collector');
-            if (Number.isFinite(rect)) b.ic += Math.abs(rect);
+            //
+            // The rectified part is the companion's own law at the ACCEPTED
+            // bias and the swing smoothed over CURRENT_TAU_SEC: it is the
+            // swing that answers the band one step late, and following it
+            // step by step made the two solves chase each other. The bias is
+            // not smoothed. (Smoothing the whole current, as before, kept a
+            // Meissner stage's gain up for ~25 µs after its own rectified
+            // current had cut it off: the swing crept on, the base–collector
+            // clamp drained the bias capacitor five times further than the
+            // full-carrier reference does, and the stage squegged where the
+            // circuit runs steadily — docs/RF-MEISSNER-REFERENCE-2026-11-27.md.)
+            const Ln = L?.[i] ?? 0;
+            const pL = this._biasPrev?.[i]?.Lbar;
+            b.Lbar = pL === undefined || !Number.isFinite(dt) ? Ln : pL + (Ln - pL) * (1 - DMath.exp(-dt / CURRENT_TAU_SEC));
+            const [rect] = rectificationCurrentL(b.vbe, b.Lbar, b.isEff, b.card.nVt);
+            b.ic += Math.abs(rect) * b.beta / (b.beta + 1);
+            b.icFollowsBias = true;
         });
-        // The DC currents the RF conductances are taken from, smoothed over
-        // CURRENT_TAU_SEC: their rectified part answers the band's swing one
-        // step late, and following it step by step makes the two solves chase
-        // each other (a detector's own RC is slower than this anyway).
+        // The other DC currents the RF conductances are taken from (a
+        // diode's, a mixer's), smoothed over CURRENT_TAU_SEC: their rectified
+        // part answers the band's swing one step late, and following it step
+        // by step makes the two solves chase each other (a detector's own RC
+        // is slower than this anyway). A transistor's is smoothed in its
+        // swing only (above).
         const wc = Number.isFinite(dt) ? 1 - DMath.exp(-dt / CURRENT_TAU_SEC) : 1;
         const prevBias = this._biasPrev;
         if (prevBias && prevBias.length === this._bias.length) {
             this._bias.forEach((b, i) => {
                 const p = prevBias[i];
-                if (b.ic !== undefined && p.ic !== undefined) b.ic = p.ic + (b.ic - p.ic) * wc;
+                if (b.ic !== undefined && p.ic !== undefined && !b.icFollowsBias) b.ic = p.ic + (b.ic - p.ic) * wc;
                 if (Number.isFinite(b.i) && Number.isFinite(p.i)) b.i = p.i + (b.i - p.i) * wc;
             });
         }
