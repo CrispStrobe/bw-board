@@ -1992,25 +1992,12 @@ export class RadioFrontEnd {
         // CURRENT_TAU_SEC: their rectified part answers the band's swing one
         // step late, and following it step by step makes the two solves chase
         // each other (a detector's own RC is slower than this anyway).
-        //
-        // A transistor's current is smoothed on the way UP only. Falling, it
-        // is followed at once: a stage its own rectified current cuts off
-        // stops pumping its tank. (Smoothed both ways, a cut-off Meissner
-        // stage kept its gain for ~25 µs, its swing crept on, the base–
-        // collector clamp drained the bias capacitor five times further than
-        // the full-carrier reference does, and the stage squegged at ~2.8 kHz
-        // where the circuit runs steadily — whenever the transient solve took
-        // small steps: docs/RF-MEISSNER-REFERENCE-2026-11-27.md.) Smoothing the
-        // swing instead of the current is no answer: the rectified current is
-        // e^(v_BE + ln I0), the two terms cancel, and lagging one of them
-        // starves a class-C oscillator.
         const wc = Number.isFinite(dt) ? 1 - DMath.exp(-dt / CURRENT_TAU_SEC) : 1;
         const prevBias = this._biasPrev;
         if (prevBias && prevBias.length === this._bias.length) {
             this._bias.forEach((b, i) => {
                 const p = prevBias[i];
-                const falls = b.isEff !== undefined && b.ic < p.ic;
-                if (b.ic !== undefined && p.ic !== undefined && !falls) b.ic = p.ic + (b.ic - p.ic) * wc;
+                if (b.ic !== undefined && p.ic !== undefined) b.ic = p.ic + (b.ic - p.ic) * wc;
                 if (Number.isFinite(b.i) && Number.isFinite(p.i)) b.i = p.i + (b.i - p.i) * wc;
             });
         }

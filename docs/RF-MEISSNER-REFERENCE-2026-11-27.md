@@ -89,37 +89,47 @@ Removing the 5 µs smoothing altogether (`CURRENT_TAU_SEC` → 0) makes 20 µs
 advances from power-on steady again (8.69–8.93 V), at six times the work
 (41 461 solves at the scenario's schedule against 6 730).
 
-## The repair
+## Repair attempts: none qualified
 
-`RadioFrontEnd.onAccepted` now smooths a transistor's collector current
-(over `CURRENT_TAU_SEC`) **on the way up only**. When the current falls, the
-band follows it at once. A stage its own rectified current cuts off then
-stops pumping its tank, and the clamp no longer over-drains the bias. A
-rising current is still smoothed, which is what the smoothing was there for:
-the rectified part answers the band's swing one step late, and following it
-step by step made the two solves chase each other. Diodes and mixers are
-unchanged.
+Both candidates are kept, with their measurements, on
+`r11/rf-bias-gm-candidates-20261127`. Master is unchanged.
+`test/radio-meissner-reference.test.mjs` is the executable witness: it fails
+on master (20 µs advances squeg, 0.002–9.52 V) and is marked `todo` until a
+repair passes it together with the existing RF controls.
 
-A first candidate was rejected: smoothing the *swing* (Σ ln I0) and taking
-the bias as it was accepted. The rectified current is e^(v_BE + ln I0), and
-in class C the two terms cancel. Lagging one of them starved oscillators:
-a superhet's local oscillator ran at 3.5 µA instead of 0.75 mA, and four
-radio-mixing controls failed (`r11/rf-bias-gm-20261127` at `2bb8aa9e`;
-the Meissner numbers with it were 8.916–8.921 V).
+**A. Smooth the swing, not the current** (`dbb65169`). The rectified part
+was taken from the companion's law at the accepted bias, with Σ ln I0
+smoothed over `CURRENT_TAU_SEC`. On the Meissner bench it gave 8.916–8.921 V
+under every schedule, with the emitter at 0.051 V (reference 0.052 V) and
+fewer solves (4 993 instead of 6 730). **Rejected:** the rectified current is
+e^(v_BE + ln I0), and in class C the two terms cancel. Lagging one of them
+starves oscillators. A superhet's local oscillator ran at 3.5 µA instead of
+0.75 mA, and four radio-mixing controls failed locally.
 
-Same bench, same window, after the repair:
+**B. Smooth a transistor's current rising only; follow it at once when it
+falls** (`2f714359`). Meissner: 8.895–8.915 V under every schedule
+(8 173 / 5 551 / 27 736 solves for a 6 ms advance / 20 µs advances / a
+1 µs outer cap). **Rejected:** hosted CI run 46075189076 fails five
+radio-envelope-bands controls:
+- a regenerative stage past its threshold now squegs, 0.001–7.287 V;
+- the VHF Colpitts swing wanders, 5.52–8.29 V;
+- the resonance-scan control oscillates at only 0.27 V;
+- the short-wave beacon beat is 775 Hz against 1850 ± 300 Hz;
+- the platform fingerprint reads 946 solves against 949.
 
-| Advance schedule / outer cap | RF min–max (V) | Emitter (V) | Tone | Solves |
-| --- | ---: | ---: | ---: | ---: |
-| `run(6)` then 20 µs (the scenario) | 8.895–8.915 | 0.062 | none | 8 173 (was 6 730) |
-| 20 µs advances from power-on | 8.895–8.908 | 0.062 | none | 5 551 (was 23 593) |
-| `run(6)`, outer step ≤ 1 µs | 8.901–8.901 | 0.062 | none | 27 736 |
-| carrier reference | 8.973–8.984 | 0.052 | none | — |
+A falling-only time constant of 1 µs passes two of those controls, and 2 µs
+fails one again. A knob whose outcome is not monotone in its value is not a
+repair.
 
-The trajectory no longer depends on the advance schedule or the outer step.
-The swing is 0.8 % below the carrier run's. The emitter's 10 mV and the bias
-node's 60 mV offsets are the generic transistor's piecewise knee against
-Shockley's law; they were there before the repair too.
+**Diagnosis.** All three behaviours come from the same scheme. The band
+uses the bias of the last accepted step, and the transient solve uses the
+band's swing as a given function of time. That is an explicit coupling of a
+stiff loop: the rectified current answers the swing exponentially. Each
+filter on the exchanged current moves the spurious relaxation from one
+circuit to another. A real repair has to make the exchange consistent
+within the step, for example by re-integrating the band over the step with
+the trial bias and iterating to agreement, or by solving the junction's
+DC/RF balance jointly. It cannot just retune `CURRENT_TAU_SEC`.
 
 ## Not repaired: strong feedback
 
@@ -127,7 +137,7 @@ The same bench with `couplingRatio` 0.2 does squeg in the carrier run
 (bursts of 13 V every 0.96 ms, ~1040 Hz, RF below 1 µV between them; steady
 8.95 V without the slow bypass; the 5–8 ms traces are in the script's
 style, `couplingRatio` 0.1 bursts at ~2300 Hz). The engine runs that variant
-steadily at 8.89 V (before the repair: its band ran away at ~2 ms). Its first-
+steadily at 8.89 V (with candidate A; on master its band runs away at ~2 ms). Its first-
 order mode estimate places the stage's growth (σ ≈ 2.6·10⁷ s⁻¹) hundreds of
 kHz off the band's centre, where `_own` discards it, so the band steps at
 16 µs and backward Euler damps a growth it should resolve. That is a
@@ -144,4 +154,5 @@ scenario's "> 0.5 V detector swing" would fail physically there too.
   that scenario "genuinely green"; the bench needs a circuit that squegs in
   the carrier reference, and the engine must then reproduce that.
 * The engine's target for the authored circuit is steady at ~8.98 V under
-  every step cap and advance schedule; after the repair it is (8.90 V).
+  every step cap and advance schedule. Master reaches it only at coarse
+  steps; no repair is qualified yet.
