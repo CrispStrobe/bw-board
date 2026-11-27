@@ -104,3 +104,23 @@ it('acceptance with no surplus RF future does not reset the existing continuatio
     assert.equal(b.calm, 3);
     assert.equal(b._sigmaCache, cache);
 });
+
+it('the RC-envelope witness separates the switched-bias solution from the stale-history one', () => {
+    // Independent closed forms for the same complex RC envelope: the bias
+    // switched at the accepted instant, e^-2.48 = 0.0837432 V, and a history
+    // that keeps the first conductance's future to the observation,
+    // e^-1.5 = 0.2231302 V (the unrepaired prune measured 0.223142 V). The
+    // repaired band must land on the first and far from the second.
+    const accepted = 5.2e-6, observed = 15e-6;
+    const switched = Math.exp(-(firstG * accepted + nextG * (observed - accepted)) / capacitance);
+    const stale = Math.exp(-firstG * observed / capacitance);
+    assert(Math.abs(switched - 0.0837432) < 1e-7 && Math.abs(stale - 0.2231302) < 1e-7);
+    const b = decay(5);
+    b.advanceTo(20e-6);
+    b.prune(accepted);
+    b.radio.conductance = nextG;
+    b.advanceTo(observed);
+    const amplitude = Math.hypot(...b.phasorAt(0, observed));
+    assert(Math.abs(amplitude - switched) < 0.1 * Math.abs(stale - switched),
+        `amplitude ${amplitude} must follow the switched bias (${switched}), not the stale history (${stale})`);
+});
