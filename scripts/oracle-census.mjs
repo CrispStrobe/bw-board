@@ -417,7 +417,7 @@ export const INPUTS = [
         // `census-covers-the-tree` could not see them as guard-then-skip tests at
         // all. Converting them to a real `skip:` made them visible, and the census
         // immediately said what it says: an external input with no row.
-        gates: ['test/emu8051-idle-fastforward.test.mjs', 'test/brightness-emu8051.test.js',
+        gates: ['test/emu8051-callback-lifetime.test.mjs', 'test/emu8051-idle-fastforward.test.mjs', 'test/brightness-emu8051.test.js',
             'test/emu8051-debug.test.js', 'test/emu8051-checkpoint-refusal-shape.test.mjs', 'test/emu8051-debug-events.test.mjs',
             'test/conformance-real-wasm.test.js',
             'test/device-drivers-e2e.test.js', 'test/end-to-end-dimmer.test.js',
