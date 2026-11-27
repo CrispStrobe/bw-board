@@ -245,74 +245,50 @@ const CONSISTENCY_TOL = 0.01;
 const CONSISTENCY_DV = VT / 4;
 export const K_MAX = 15;          // 32.8 µs
 
+const portNorm = p => { let s = 0; for (const [r, i] of p) s += r * r + i * i; return Math.sqrt(s); };
+const portDist = (p, q) => { let s = 0; for (let a = 0; a < p.length; a++) { const r = p[a][0] - q[a][0], i = p[a][1] - q[a][1]; s += r * r + i * i; } return Math.sqrt(s); };
+
 /**
- * Make every describing-function swing agree with the resulting port, not
- * merely the norm of all ports. A common scale transfers a strong port's
- * correction into unrelated ports (even a disconnected equilibrium).
- *
- * The describing functions depend on amplitudes, so the nonlinear solve is
- * real and K-dimensional; each trial still solves the full complex coupled
- * network. Newton steps are confined to each port's own start/end interval.
- * As with the previous correction, a root outside that interval does not
- * extend the explicit step: gain/bias dynamics remain the caller's concern.
+ * The existing scalar mode correction, confined to one nonlinear device.
+ * Its coupled ports (for example a transistor's BE and BC junctions) must
+ * stay together: limiting the collector can require BE to rise past its
+ * own explicit end while the block's norm decreases. Scaling another
+ * device's ports along with it instead transfers that correction into an
+ * unrelated oscillator. This is a mode approximation, not a claim that
+ * every individual junction voltage solves a fully implicit equation.
  */
-function consistentPorts(start, end, at) {
-    const a0 = start.map(p => Math.hypot(...p)), a1 = end.map(p => Math.hypot(...p));
-    if (Math.max(...a0, ...a1) <= CONSISTENCY_VOLTS
-        || Math.max(...a0.map((v, q) => Math.abs(v - a1[q]))) <= CONSISTENCY_DV) return null;
-    const scale = a0.map((v, q) => Math.max(v, a1[q], CONSISTENCY_VOLTS));
-    const lo = a0.map((v, q) => Math.min(v, a1[q]) / scale[q]);
-    const hi = a0.map((v, q) => Math.max(v, a1[q]) / scale[q]);
-    const active = lo.map((v, q) => q).filter(q => hi[q] - lo[q] > 1e-12);
-    const evaluate = x => {
-        const amplitudes = x.map((v, q) => v * scale[q]);
-        const r = at(amplitudes);
-        const residual = r.p.map((p, q) => (Math.hypot(...p) - amplitudes[q]) / scale[q]);
-        return { ...r, amplitudes, residual, error: Math.max(...residual.map(Math.abs)) };
+function consistentMode(start, end, at) {
+    const n0 = portNorm(start), n1 = portNorm(end);
+    let dA = 0;
+    for (let q = 0; q < end.length; q++) dA = Math.max(dA, Math.abs(Math.hypot(...end[q]) - Math.hypot(...start[q])));
+    if (!(n1 > 0) || Math.max(n0, n1) <= CONSISTENCY_VOLTS || dA <= CONSISTENCY_DV) return null;
+    const trial = s => {
+        const inputs = end.map(([x, y]) => [x * s, y * s]);
+        return { ...at(inputs), inputs };
     };
-    let x = a1.map((v, q) => v / scale[q]);
-    let current = evaluate(x);
-    if (current.error <= CONSISTENCY_TOL || !active.length) return null;
-    // A correction must point back into at least one port's own change.
-    if (!active.some(q => current.residual[q] * (a0[q] - a1[q]) > 0)) return null;
-    for (let iteration = 0; iteration < 32; iteration++) {
-        if (current.error < 1e-8) return current;
-        const M = active.length, jacobian = new Float64Array(M * M);
-        for (let c = 0; c < M; c++) {
-            const q = active[c], trial = x.slice();
-            const dx = 1e-5 * Math.max(x[q], CONSISTENCY_VOLTS / scale[q]);
-            trial[q] += dx;
-            const other = evaluate(trial);
-            for (let r = 0; r < M; r++) jacobian[r * M + c] = (other.residual[active[r]] - current.residual[active[r]]) / dx;
-        }
-        let delta;
-        try {
-            [delta] = csolveSmall(jacobian, new Float64Array(M * M),
-                active.map(q => -current.residual[q]), new Float64Array(M), M);
-        } catch { return { inconsistent: true }; }
-        let next = null, nextX = null;
-        for (let damping = 1; damping >= 1 / 1024; damping /= 2) {
-            const trial = x.slice();
-            for (let c = 0; c < M; c++) {
-                const q = active[c];
-                trial[q] = Math.max(lo[q], Math.min(hi[q], x[q] + damping * delta[c]));
-            }
-            const candidate = evaluate(trial);
-            if (candidate.error < current.error * (1 - 1e-4 * damping)) {
-                next = candidate; nextX = trial; break;
-            }
-        }
-        if (!next) {
-            // A constrained step can have its root beyond the explicit
-            // change (positive feedback). Keep that explicit end. Failure
-            // in the interior instead asks the caller to retry shorter.
-            const outside = active.some((q, c) => (x[q] <= lo[q] + 1e-12 && delta[c] < 0)
-                || (x[q] >= hi[q] - 1e-12 && delta[c] > 0));
-            return outside ? null : { inconsistent: true };
-        }
-        current = next; x = nextX;
+    const r1 = trial(1);
+    const sA = Math.min(1, n0 / n1), sB = Math.max(1, n0 / n1);
+    const F = (r, s) => portNorm(r.p) / (s * n1) - 1;
+    const f1 = F(r1, 1);
+    const room = f1 < 0 ? sA < 1 : sB > 1;
+    if (!room || portDist(r1.p, end) <= CONSISTENCY_TOL * n1) return null;
+    let lo = 1, hi = 1, rLo = r1, rHi = r1;
+    if (f1 < 0) { lo = sA; rLo = trial(lo); } else { hi = sB; rHi = trial(hi); }
+    const fLo = F(rLo, lo), fHi = F(rHi, hi);
+    if ((f1 < 0 && fLo < 0) || (f1 >= 0 && fHi > 0)) return { tried: true };
+    let best = Math.abs(fLo) < Math.abs(fHi) ? rLo : rHi;
+    let bestF = Math.min(Math.abs(fLo), Math.abs(fHi));
+    // Keep the reviewed coupled-mode arithmetic. A one-port block is an
+    // actual scalar equation, so solve it more tightly for independent
+    // equilibrium and capacitance-history comparisons.
+    const tolerance = end.length === 1 ? 1e-9 : 1e-6;
+    for (let i = 0; i < 40 && hi > lo * (1 + tolerance); i++) {
+        const s = Math.sqrt(lo * hi), r = trial(s), value = F(r, s);
+        best = r; bestF = Math.abs(value);
+        if (Math.abs(value) < tolerance) break;
+        if (value > 0) lo = s; else hi = s;
     }
-    return { inconsistent: true };
+    return bestF < 0.05 ? { ...best, tried: true } : { tried: true, inconsistent: true };
 }
 
 /**
@@ -570,51 +546,60 @@ export class BandIntegrator {
             // reached the limit by a few tens of millivolts collapsed the
             // swing by volts. Checked on a step that moves a swing by more
             // than CONSISTENCY_DV: the stamps at the step's end, if they
-            // move its end by more than CONSISTENCY_TOL, are solved for
-            // (backward Euler in the junctions too), on the port space only.
+            // move its end by more than CONSISTENCY_TOL, a consistent mode
+            // scale is solved for within each device's coupled ports.
             if (w && this.implicit !== false) {
                 const p1 = this._portsOut(z, w, f);
-                let dA = 0, largest = 0;
-                for (let q = 0; q < K; q++) {
-                    const a0 = Math.hypot(...vp[q]), a1 = Math.hypot(...p1[q]);
-                    dA = Math.max(dA, Math.abs(a1 - a0));
-                    largest = Math.max(largest, a0, a1);
-                }
-                if (largest > CONSISTENCY_VOLTS && dA > CONSISTENCY_DV) {
-                    const at = amplitudes => {
-                        const ports = p1.map(([x, y], q) => {
-                            const amplitude = Math.hypot(x, y);
-                            // Only swing enters a describing function; retain
-                            // the explicit end's phase whenever it has one.
-                            return amplitude > 0 ? [x * amplitudes[q] / amplitude, y * amplitudes[q] / amplitude] : [amplitudes[q], 0];
-                        });
-                        const Ss = stamps(ports);
-                        const d = this._capDelta(S, Ss, hp, h, f);
-                        const zs = z.map(([x, y], q) => [x + d.z[q][0], y + d.z[q][1]]);
-                        const ws = this._woodbury(f, a, h, Ss, zs);
-                        return { d, w: ws, p: ws ? this._portsOut(zs, ws, f) : zs };
-                    };
-                    const amplitudes = vp.map(p => Math.hypot(...p));
-                    let corrected = false;
-                    for (const group of f.groups) {
-                        const best = consistentPorts(group.map(q => vp[q]), group.map(q => p1[q]), local => {
-                            const trial = amplitudes.slice();
-                            group.forEach((q, i) => { trial[q] = local[i]; });
-                            const result = at(trial);
-                            return { p: group.map(q => result.p[q]) };
-                        });
-                        if (!best) continue;
-                        if (best.inconsistent) inconsistent = true;
-                        else {
-                            group.forEach((q, i) => { amplitudes[q] = best.amplitudes[i]; });
-                            corrected = true;
+                const inputs = vp.map(p => p.slice());
+                const at = ports => {
+                    const Ss = stamps(ports);
+                    const d = this._capDelta(S, Ss, hp, h, f);
+                    const zs = z.map(([x, y], q) => [x + d.z[q][0], y + d.z[q][1]]);
+                    const ws = this._woodbury(f, a, h, Ss, zs);
+                    return { d, w: ws, p: ws ? this._portsOut(zs, ws, f) : zs };
+                };
+                let corrected = false;
+                for (const group of f.groups) {
+                    const members = new Set(group);
+                    const blocks = this.blocks.filter(block => block.some(q => members.has(q)));
+                    const residualTolerance = blocks.every(block => block.length === 1) ? 1e-8 : 2e-6;
+                    let converged = false, selected = [];
+                    // Independent components never share a scalar or a
+                    // fallback. Coupled devices retain separate mode scales;
+                    // retry their interaction if another block moved a root.
+                    for (let iteration = 0; iteration < 8; iteration++) {
+                        selected = [];
+                        let failed = false;
+                        for (const block of blocks) {
+                            const best = consistentMode(block.map(q => vp[q]), block.map(q => p1[q]), local => {
+                                const ports = inputs.slice();
+                                block.forEach((q, i) => { ports[q] = local[i]; });
+                                const result = at(ports);
+                                return { p: block.map(q => result.p[q]) };
+                            });
+                            if (best?.tried) this.implicitSteps = (this.implicitSteps ?? 0) + 1;
+                            if (best?.inconsistent) { failed = true; break; }
+                            if (best?.inputs) {
+                                block.forEach((q, i) => { inputs[q] = best.inputs[i]; });
+                                selected.push(block);
+                            } else block.forEach(q => { inputs[q] = vp[q]; });
                         }
-                        this.implicitSteps = (this.implicitSteps ?? 0) + 1;
+                        if (failed) break;
+                        if (!selected.length || blocks.length === 1) { converged = true; break; }
+                        const output = at(inputs).p;
+                        if (selected.every(block => {
+                            const applied = portNorm(block.map(q => inputs[q]));
+                            return Math.abs(portNorm(block.map(q => output[q])) / applied - 1) <= residualTolerance;
+                        })) { converged = true; break; }
                     }
-                    if (corrected) {
-                        const best = at(amplitudes);
-                        u = best.w; dc = best.d;
-                    }
+                    if (!converged) {
+                        inconsistent = true;
+                        group.forEach(q => { inputs[q] = vp[q]; });
+                    } else if (selected.length) corrected = true;
+                }
+                if (corrected) {
+                    const best = at(inputs);
+                    u = best.w; dc = best.d;
                 }
             }
 

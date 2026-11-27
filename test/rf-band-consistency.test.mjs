@@ -1,5 +1,6 @@
-// The envelope integrator must satisfy each nonlinear port's equation.
-// A norm of all ports can agree while an unrelated oscillator is moved.
+// Independent scalar constitutive laws must keep their own equations.
+// A norm shared with another device can agree while an unrelated
+// oscillator is moved; passive physical coupling must still be retained.
 import { it } from 'node:test';
 import assert from 'node:assert/strict';
 import { BandIntegrator, H_UNIT, VT } from '../src/rf-bands.js';
@@ -11,12 +12,18 @@ const zeros = n => new Float64Array(n * n);
 // C dX_q/dt + g(|X_q|) X_q = J_q: diagonal, uncoupled channels.
 // The independent oracle below solves this equation directly, without the
 // integrator's Woodbury update or its nonlinear consistency algorithm.
-function step(initial, source, k, { phases = initial.map(() => 0), previous = null, junctionCap = () => 0, law = conductance } = {}) {
+function step(initial, source, k, { phases = initial.map(() => 0), previous = null, junctionCap = () => 0, law = conductance, coupling = 0 } = {}) {
     const n = initial.length;
     const band = new BandIntegrator({ N: n, ports: initial.map((_, pos) => ({ pos })), blocks: initial.map((_, q) => [q]) });
     const cap = zeros(n);
     for (let q = 0; q < n; q++) cap[q * n + q] = capacitance;
-    band.setLinear({ re: zeros(n), im: zeros(n) }, { re: cap, im: zeros(n) });
+    const y0 = zeros(n);
+    if (coupling) {
+        assert.equal(n, 2);
+        y0[0] = y0[3] = coupling;
+        y0[1] = y0[2] = -coupling;
+    }
+    band.setLinear({ re: y0, im: zeros(n) }, { re: cap, im: zeros(n) });
     const phasors = amplitudes => ({
         re: Float64Array.from(amplitudes, (v, q) => v * Math.cos(phases[q])),
         im: Float64Array.from(amplitudes, (v, q) => v * Math.sin(phases[q])),
@@ -121,5 +128,25 @@ it('RF consistency does not let an independent out-of-bounds root suppress anoth
             'the independent compression channel still gets its own consistent root');
         assert(Math.abs(actual.amplitudes[unchanged] - explicit) < 1e-14,
             'the channel whose root is outside its change retains exactly its explicit end');
+    }
+});
+
+it('RF consistency retains physical coupling and satisfies both coupled scalar equations', () => {
+    const k = 14, h = H_UNIT * 2 ** k;
+    const initial = [0.2, 0.1], expected = [0.1, 0.08];
+    // Manufacture a known solution of two nonlinear shunts joined by a
+    // passive resistor. Positive d(g(A)A)/dA and the passive conductance
+    // matrix make this root unique. The sources below come directly from
+    // KCL, independently of the integrator and its block iteration.
+    for (const coupling of [0, 1e-12, 1e-5]) {
+        const source = expected.map((v, q) => capacitance * (v - initial[q]) / h
+            + conductance(v) * v + coupling * (v - expected[1 - q]));
+        for (const reversed of [false, true]) {
+            const order = values => reversed ? values.toReversed() : values;
+            const actual = step(order(initial), order(source), k, { coupling });
+            assert.equal(actual.result.inconsistent, false, 'the coupled monotone root is resolved');
+            for (let q = 0; q < 2; q++) assert(Math.abs(actual.amplitudes[q] - order(expected)[q]) < 1e-8,
+                `physical coupling ${coupling} S, port ${q}: ${actual.amplitudes[q]} vs ${order(expected)[q]}`);
+        }
     }
 });
