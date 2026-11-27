@@ -85,9 +85,50 @@ transistor's piecewise knee against Shockley's law). The bursting answers
 are the artefact. The stale-history repair removes a masking effect and so
 moves the default schedule onto the bursting branch too.
 
-Removing the 5 µs smoothing (`CURRENT_TAU_SEC` → 0) makes 20 µs advances
-from power-on steady again (8.69–8.93 V); its cost and its effect on the
-other RF controls are being measured.
+Removing the 5 µs smoothing altogether (`CURRENT_TAU_SEC` → 0) makes 20 µs
+advances from power-on steady again (8.69–8.93 V), at six times the work
+(41 461 solves at the scenario's schedule against 6 730).
+
+## The repair
+
+`RadioFrontEnd.onAccepted` now takes a transistor's rectified collector
+current from its companion's own law at the **accepted bias** and the swing
+(Σ ln I0) **smoothed over `CURRENT_TAU_SEC`**, and does not smooth the
+current itself. The swing is what answers the band one step late (the chase
+the smoothing was introduced against); the bias is not, and a stage its own
+rectified current cuts off stops pumping its tank at once. Diodes and mixers
+keep their smoothed currents. The base–collector clamp current is no longer
+counted as transport current (it was, through the companion's collector
+lead).
+
+Same bench, same window, after the repair:
+
+| Advance schedule / outer cap | RF min–max (V) | Emitter (V) | Bias node (V) | Tone | Solves |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| `run(6)` then 20 µs (the scenario) | 8.916–8.921 | 0.051 | 0.565–0.567 | none | 4 993 (was 6 730) |
+| 20 µs advances from power-on | 8.914–8.920 | 0.051 | 0.566–0.567 | none | 3 766 (was 23 593) |
+| `run(6)`, outer step ≤ 1 µs | 8.918–8.918 | 0.051 | 0.566 | none | 27 322 |
+| carrier reference | 8.973–8.984 | 0.052 | 0.518–0.528 | none | — |
+
+The trajectory no longer depends on the advance schedule or the outer step,
+the emitter now agrees with the carrier run (0.051 against 0.052 V; was
+0.062), and the swing is 0.6 % below it (was 0.9 %); the remaining bias-node
+offset is the generic transistor's knee.
+
+## Not repaired: strong feedback
+
+The same bench with `couplingRatio` 0.2 does squeg in the carrier run
+(bursts of 13 V every 0.96 ms, ~1040 Hz, RF below 1 µV between them; steady
+8.95 V without the slow bypass; the 5–8 ms traces are in the script's
+style, `couplingRatio` 0.1 bursts at ~2300 Hz). The engine runs that variant
+steadily at 8.89 V (before the repair: its band ran away at ~2 ms). Its first-
+order mode estimate places the stage's growth (σ ≈ 2.6·10⁷ s⁻¹) hundreds of
+kHz off the band's centre, where `_own` discards it, so the band steps at
+16 µs and backward Euler damps a growth it should resolve. That is a
+separate defect of strongly fed-back stages and is not claimed here. Note
+also that in that variant the linked receiver's detector swings only
+0.02–0.11 V (the bursts are short and the receiver 11 kHz off): the
+scenario's "> 0.5 V detector swing" would fail physically there too.
 
 ## Consequences
 
@@ -97,4 +138,4 @@ other RF controls are being measured.
   that scenario "genuinely green"; the bench needs a circuit that squegs in
   the carrier reference, and the engine must then reproduce that.
 * The engine's target for the authored circuit is steady at ~8.98 V under
-  every step cap and advance schedule.
+  every step cap and advance schedule; after the repair it is (8.92 V).
