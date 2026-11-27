@@ -22,6 +22,7 @@ import { AudioBus } from './audio-bus.js';
 import { W65C22 } from './w65c22.js';
 import { W65C51 } from './w65c51.js';
 import { TMS9918 } from './tms9918.js';
+import { BbcVideo } from './bbc-video.js';
 import { MC6845 } from './mc6845.js';
 import { FUNSCII } from './funscii-font.js';
 import { SimpleVGA } from './simplevga.js';
@@ -231,7 +232,7 @@ export class M6502Machine {
         for (const c of config.chips) {
             const regs = c.kind === 'via' ? 16 : c.kind === 'uart16550' ? 8
                 : c.kind === 'latch' ? 1 : c.kind === 'vdp' ? 2
-                : (c.kind === 'acia6850' || c.kind === 'crtc') ? 2
+                : ['acia6850', 'crtc', 'bbcvideo'].includes(c.kind) ? 2
                 : c.kind === 'riot' ? 256
                 : c.kind === 'psg8912' ? 2
                 : c.kind === 'um245r' ? 1
@@ -362,6 +363,11 @@ export class M6502Machine {
                 if (!flatRam) throw new Error(`machine config: ${c.name} video RAM must be a power-of-two window in linear RAM`);
                 chip = new MC6845({ clockHz: config.clockHz, charset: CRTC_FONT, vramSize, requireDisplaySetup: true });
                 chip.vram = this.mem.subarray(vramAt, vramAt + vramSize);
+            } else if (c.kind === 'bbcvideo') {
+                if (!config.regions.some(r => r.kind === 'ram' && !r.perm && r.start <= 0x3000 && r.end >= 0x7fff)) {
+                    throw new Error(`machine config: ${c.name} requires linear screen RAM at $3000-$7FFF`);
+                }
+                chip = new BbcVideo({memory: this.mem, clockHz: config.clockHz});
             } else if (c.kind === 'tilevga') {
                 // rene6502's tile VGA card: a 16K dual-port VRAM window
                 // (addressed like any chip), vblank pacing off the CPU
