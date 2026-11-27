@@ -150,3 +150,36 @@ it('RF consistency retains physical coupling and satisfies both coupled scalar e
         }
     }
 });
+
+it('RF consistency resolves a steep multiport root before judging coupled-device convergence', () => {
+    const k = 14, h = H_UNIT * 2 ** k, n = 3;
+    const initial = [0.28, 0.28, 0.1], expected = [0.18, 0.18, 0.08];
+    // Ports 0 and 1 share a radial nonlinear conductance; a passive resistor
+    // from each joins them to the separate third device. Symmetry preserves
+    // their common mode. Positive differential conductance and capacitance
+    // give one implicit root, manufactured directly from KCL below.
+    for (const coupling of [1e-9, 1e-6]) {
+        const band = new BandIntegrator({ N: n, ports: [{ pos: 0 }, { pos: 1 }, { pos: 2 }], blocks: [[0, 1], [2]] });
+        const cap = zeros(n);
+        cap[0] = cap[4] = cap[8] = capacitance;
+        const y0 = Float64Array.of(coupling, 0, -coupling, 0, coupling, -coupling,
+            -coupling, -coupling, 2 * coupling);
+        band.setLinear({ re: y0, im: zeros(n) }, { re: cap, im: zeros(n) });
+        band.X = { re: Float64Array.from(initial), im: new Float64Array(n) };
+        band.t = 0;
+        const source = expected.map((v, q) => capacitance * (v - initial[q]) / h + conductance(v) * v
+            + coupling * (q < 2 ? v - expected[2] : 2 * v - expected[0] - expected[1]));
+        const result = band.step(k, ports => {
+            const S0r = zeros(n);
+            S0r[0] = S0r[4] = conductance(Math.hypot(...ports[0], ...ports[1]) / Math.SQRT2);
+            S0r[8] = conductance(Math.hypot(...ports[2]));
+            return { S0r, S0i: zeros(n), S1r: zeros(n), S1i: zeros(n) };
+        }, () => ({ re: Float64Array.from(source), im: new Float64Array(n) }));
+        assert(band.implicitSteps > 0, 'exercise the coupled nonlinear correction');
+        assert.equal(result.inconsistent, false, 'inner root precision must meet the outer residual check');
+        // The multiport mode's existing outer convergence target is 2 ppm.
+        // Check that accuracy against the independent root in every port.
+        for (let q = 0; q < n; q++) assert(Math.abs(result.re[q] / expected[q] - 1) < 2e-6,
+            `coupling ${coupling} S, port ${q}: ${result.re[q]} vs the independent KCL root ${expected[q]}`);
+    }
+});

@@ -1,6 +1,7 @@
-# RF consistency investigation — unqualified checkpoint
+# RF device consistency repair — qualification evidence
 
-This branch is an investigation checkpoint, **not an approved supplier pin**.
+The engine candidate has passed the focused RF qualification below. Hosted
+upstream qualification and exact supplier adoption remain separate gates.
 It starts at Board master `d21d6d8b819263eb08231134b7556efa82289a90`.
 No existing radio tolerance, oracle, or supplier fixture has been changed.
 
@@ -38,41 +39,78 @@ the model: BE/BC began at [0.18131, 7.93637] V, the explicit end was
 [0.22297, 8.42563] V. Collector limiting legitimately needed BE to move
 beyond its individual explicit box while the block norm decreased.
 
-All six new focused tests pass. They include a mixed-law negative (one
+All seven new focused tests pass. They include a mixed-law negative (one
 independent root lies outside its allowed change) and a coupled passive
 network whose exact KCL root is manufactured independently of the solver.
 The coupled witness runs with 0, 1 pS and 10 uS coupling and swapped ordering.
+A seventh manufactured KCL root covers a coupled multiport/scalar pair and
+exposes an inner/outer precision mismatch. Inner bisection on coupled
+components must resolve the residual demanded by their outer iteration;
+otherwise repeated false refusals restart backward Euler and create detector
+jitter. Coupled inner roots now use 1e-9 precision. The isolated-device
+arithmetic and all outer, physical and performance thresholds are unchanged.
 The existing exact single-Meissner trajectory/step-count golden is unchanged
 and passes, as do its headroom, quench and 1-ulp controls and the VHF swing,
 frequency, continuity and substep-cost guard.
 
-## Qualification blockers
+## Qualification results and remaining scope
 
 The first vector candidate completed the six radio suites with 58/65 cases
 passing and failed headroom, quench collapse, physical stability, current
 and trajectory checks. It was checkpointed as unqualified and superseded.
 
-The current device-block candidate completes the same six suites
+The final precision candidate completes the six existing radio suites
 (`radio-envelope-bands`, `radio-front-end`, `radio-mixing`, `radio-currents`,
-`radio-fm-impulse`, `radio-skywave`) with **64/65 cases passing**. The remaining
-failure is the keyed transmitter cost guard: 3243 transient solves per
-simulated ms against the unchanged <1800 limit. Its RF amplitude and
-steadiness assertions pass. No existing oracle has been changed.
+`radio-fm-impulse`, `radio-skywave`) and seven new consistency regressions with
+**72/72 cases passing**, including the original single-device trajectory,
+headroom, quench, 1-ulp, VHF stability and cost guards.
+
+The earlier block checkpoint failed the keyed-transmitter cost guard at
+3243 transient solves/ms. Runtime instrumentation found 344 false
+inconsistent trials in two milliseconds. Correct inner precision eliminates
+those refusals and restores 1126.5 solves/ms, below the unchanged <1800 limit.
+Band work is 976.5 substeps/ms. No outer tolerance or physical bound changed.
 
 The original supplier fixture (Board `de8083c5a894a49c9fa4c6f0fb6f8866e2d758c0`,
 CUI `ee2b4127a88f1b308f8d749cae4d7c1db1deae9e`) reproduced the reported
 1170.56856 Hz speaker crossing count in the 2–5 ms window. Read-only phasor
 history shows an LO that bursts to volts then collapses to microvolts while
 transmitter RF remains around 0.1–0.2 V. The later 5–8 ms window is also
-nonstationary. The first vector candidate still burst and gave about 1505 Hz. The current
-block candidate maintains a roughly 5.79 V LO at 5 ms, but the original
-window's speaker crossing count is about 3177 Hz. The whistle is therefore
-still unqualified. These observations do not support weakening the
-5830 +/-600 Hz assertion or merely moving its observation window.
+nonstationary. The first vector candidate still burst and gave about 1505 Hz. The first
+block candidate restored a steady LO but its false step refusals still
+jittered the phase. The precision repair removes that defect.
 
-Next steps are to resolve the keyed-transmitter cost regression and inspect
-the remaining mixer settling/phase behavior. Upstream qualification and
-physical/negative controls remain required before any supplier adoption.
+A separate diagnostic reference disables consistency correction and bounds
+the RF step at 128 ns and 64 ns. After 8 ms of power-on settling, the 3 ms
+measurement window gives these carrier phase-difference frequencies:
+
+| Condition | 128 ns reference | 64 ns reference | Production candidate |
+| --- | ---: | ---: | ---: |
+| 9 V, tuning 0.3 | 3862.157 Hz | 3862.205 Hz | 3861.532 Hz |
+| 9 V, transmitter tuning 0.302 | 6200.687 Hz | 6200.815 Hz | 6197.565 Hz |
+| 6 V, tuning 0.3 | 4947.543 Hz | 4947.621 Hz | 4946.737 Hz |
+
+These are physical reference measurements, not replacements for the old
+speaker-crossing count. The settled mixer output and speaker carry matching
+complete-period tones. The production source SHA-256 for this qualification
+is `cbd8e11bcc1b8c037ab97f5ed323604b920d38c145778b9206cc6e3feab3819f`
+(`src/rf-bands.js`); the reference disables the changed correction path.
+
+Re-running the historical Board `b094eb22` reproduces approximately 5853 Hz
+of speaker crossings, but its mixer current crosses approximately 16388 Hz,
+its RF phase is nonstationary, and transmitter base bias is -31.8 V at 5 ms.
+The historical 5830 Hz datum is therefore retained as **nonqualifying
+transient evidence**, not adopted as a settled RF-beat oracle. The supplier's
+measurement and learner text need a separately reviewed correction grounded
+in the two fine references, settled phase/audio agreement and negative
+controls. This engine checkpoint does not silently restamp that oracle.
+
+Removing the transmitter-to-mixer coupling capacitor leaves the LO running
+and suppresses mixer audio; the remaining speaker voltage is a decaying
+power-on offset, not a tone. A far transmitter tuning of 0.6 is a separate
+**unqualified wide-range case**: the fine explicit reference fails transient
+convergence near 2.984 ms. No general wide-range tuning qualification is
+claimed, and this case is not converted into a passing silence assertion.
 
 ## Focused reproduction
 
@@ -82,5 +120,6 @@ node --test --test-name-pattern='VHF Colpitts oscillator holds its swing' test/r
 node --test test/radio-currents.test.mjs
 ```
 
-All three commands pass on this checkpoint. The full RF cost guard and the
-supplier whistle remain blockers.
+All three commands pass on this checkpoint. Hosted upstream qualification,
+the evidence-based supplier oracle repair, and exact fixture adoption remain
+to be completed. The separate far-range case remains unqualified.

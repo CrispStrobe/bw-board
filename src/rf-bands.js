@@ -257,7 +257,7 @@ const portDist = (p, q) => { let s = 0; for (let a = 0; a < p.length; a++) { con
  * unrelated oscillator. This is a mode approximation, not a claim that
  * every individual junction voltage solves a fully implicit equation.
  */
-function consistentMode(start, end, at) {
+function consistentMode(start, end, at, coupled = false) {
     const n0 = portNorm(start), n1 = portNorm(end);
     let dA = 0;
     for (let q = 0; q < end.length; q++) dA = Math.max(dA, Math.abs(Math.hypot(...end[q]) - Math.hypot(...start[q])));
@@ -278,10 +278,12 @@ function consistentMode(start, end, at) {
     if ((f1 < 0 && fLo < 0) || (f1 >= 0 && fHi > 0)) return { tried: true };
     let best = Math.abs(fLo) < Math.abs(fHi) ? rLo : rHi;
     let bestF = Math.min(Math.abs(fLo), Math.abs(fHi));
-    // Keep the reviewed coupled-mode arithmetic. A one-port block is an
-    // actual scalar equation, so solve it more tightly for independent
-    // equilibrium and capacitance-history comparisons.
-    const tolerance = end.length === 1 ? 1e-9 : 1e-6;
+    // Keep the reviewed single-device arithmetic. A one-port block is an
+    // actual scalar equation. Coupled devices also need a tighter inner
+    // root: near a steep junction law, a small scale bracket can still
+    // leave a residual larger than the outer convergence tolerance. Repeating
+    // that same root would falsely reject the step and restart its history.
+    const tolerance = coupled || end.length === 1 ? 1e-9 : 1e-6;
     for (let i = 0; i < 40 && hi > lo * (1 + tolerance); i++) {
         const s = Math.sqrt(lo * hi), r = trial(s), value = F(r, s);
         best = r; bestF = Math.abs(value);
@@ -576,7 +578,7 @@ export class BandIntegrator {
                                 block.forEach((q, i) => { ports[q] = local[i]; });
                                 const result = at(ports);
                                 return { p: block.map(q => result.p[q]) };
-                            });
+                            }, blocks.length > 1);
                             if (best?.tried) this.implicitSteps = (this.implicitSteps ?? 0) + 1;
                             if (best?.inconsistent) { failed = true; break; }
                             if (best?.inputs) {
