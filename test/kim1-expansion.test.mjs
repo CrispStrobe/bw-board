@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {createKim1Machine, controlKim1Machine, peekKim1Byte, readKim1Byte, writeKim1Byte, stepKim1Machine, resetKim1Machine} from '../src/kim1-machine.js';
+import {createKim1Machine, controlKim1Machine, peekKim1Byte, readKim1Byte, writeKim1Byte, stepKim1Machine, resetKim1Machine, advanceKim1Cycles, clockKim1Hardware, kim1TimerDeadlineCycles} from '../src/kim1-machine.js';
 import {exportKim1MemoryCard} from '../src/kim1-expansion.js';
 
 test('KIM-4 slots decode distinct RAM and ROM and keep the KIM-1 vectors', () => {
@@ -255,4 +255,75 @@ test('Corsham file media handles directory, reads and atomic writes through the 
   assert.deepEqual(machine.corshamDisk.files.get('Z.TXT'), Uint8Array.of(7));
   assert.throws(() => controlKim1Machine(machine, 'mountCorshamFiles', [{name: '../A.TXT', bytes}]), /8.3/);
   assert.equal(machine.corshamDisk.files.size, 3);
+});
+
+function corshamTimerMachine(line) {
+  const machine = createKim1Machine('0200: EA 4C 00 02\n0220: E6 40 40');
+  controlKim1Machine(machine, 'useBrickwrightRom');
+  stepKim1Machine(machine);
+  machine.cpu.pc = 0x200;
+  for (const vector of [0x17fa, 0x17fe]) {
+    writeKim1Byte(machine, vector, 0x20);
+    writeKim1Byte(machine, vector + 1, 0x02);
+  }
+  controlKim1Machine(machine, 'mountCorshamFiles', []);
+  controlKim1Machine(machine, 'setCorshamTimerLine', line);
+  return machine;
+}
+
+test('the Corsham timer supports all periods, an active-low pulse, and disable over the RIOT', () => {
+  const machine = corshamTimerMachine('irq');
+  const exchange = corshamExchange(machine);
+  for (const [index, ms] of [10, 20, 30, 40, 50, 100, 250, 500, 1000].entries()) {
+    assert.deepEqual(exchange([0x1e, index + 1], 1), [0x82]);
+    assert.equal(kim1TimerDeadlineCycles(machine), ms * 1000);
+    advanceKim1Cycles(machine, ms * 1000 - 1);
+    assert.equal(machine.corshamDisk.timerPulse, 0);
+    advanceKim1Cycles(machine, 1);
+    assert.equal(machine.corshamDisk.timerPulse, 4);
+    advanceKim1Cycles(machine, 4);
+    assert.equal(machine.corshamDisk.timerPulse, 0);
+    assert.equal(kim1TimerDeadlineCycles(machine), ms * 1000 - 4);
+  }
+  assert.deepEqual(exchange([0x1e, 255], 1), [0x82]);
+  assert.equal(kim1TimerDeadlineCycles(machine), 999996);
+  assert.deepEqual(exchange([0x1e, 0], 1), [0x82]);
+  assert.equal(kim1TimerDeadlineCycles(machine), null);
+  advanceKim1Cycles(machine, 1_000_000);
+  assert.equal(machine.corshamDisk.timerPulse, 0);
+});
+
+test('ROM execution sees IRQ only while the pulse is active and I is clear', () => {
+  for (const line of ['none', 'irq']) {
+    const machine = corshamTimerMachine(line);
+    const exchange = corshamExchange(machine);
+    exchange([0x1e, 1], 1);
+    advanceKim1Cycles(machine, 10000);
+    assert.equal(stepKim1Machine(machine), 2, 'IRQ is masked at first');
+    advanceKim1Cycles(machine, 2);
+    machine.cpu.p &= ~4;
+    assert.equal(stepKim1Machine(machine), 3, 'expired pulse is not latched as IRQ');
+    advanceKim1Cycles(machine, machine.corshamDisk.timerRemaining);
+    assert.equal(stepKim1Machine(machine), line === 'irq' ? 7 : 2);
+    for (let i = 0; i < 3; i++) stepKim1Machine(machine);
+    assert.equal(machine.ram[0x40], line === 'irq' ? 1 : 0);
+    assert.equal(machine.cpu.s, 0xfa, 'RTI restored the reset stack');
+  }
+});
+
+test('the bus-cycle execution path accepts exactly one IRQ per pulse and latches NMI after the pulse', () => {
+  for (const line of ['irq', 'nmi']) {
+    const machine = corshamTimerMachine(line);
+    if (line === 'irq') machine.cpu.p &= ~4;
+    corshamExchange(machine)([0x1e, 1], 1);
+    advanceKim1Cycles(machine, line === 'irq' ? 9999 : 10005);
+    for (let cycle = 0; cycle < 50; cycle++) {
+      advanceKim1Cycles(machine, 1);
+      clockKim1Hardware(machine);
+    }
+    assert.equal(machine.error, null);
+    assert.equal(machine.ram[0x40], 1);
+    assert.equal(machine.cpu.s, 0xfa);
+    assert.equal(machine.pendingNmi, false);
+  }
 });

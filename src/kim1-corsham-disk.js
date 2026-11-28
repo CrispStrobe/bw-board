@@ -8,12 +8,19 @@ const validName = name => typeof name === 'string' && /^[A-Z0-9_-]{1,8}(\.[A-Z0-
 const geometry = [0, 128, 256, 512, 1024];
 const sectorRead = new Set([0x18, 0x1f]);
 const sectorWrite = new Set([0x19, 0x20]);
+// The shield's separate TIMER_OUT pin emits a brief active-low pulse. Model
+// that pulse as four cycles on the KIM-1's 1 MHz expansion clock.
+const timerPeriods = [0, 10, 20, 30, 40, 50, 100, 250, 500, 1000].map(ms => ms * 1000);
+const timerPulseWidth = 4;
 
 export class Kim1CorshamDisk {
   constructor(image, files = null) {
     this.image = image.slice();
     this.clockOffsetMs = 0;
     this.weekdayOffset = 0;
+    this.timerPeriod = 0;
+    this.timerRemaining = 0;
+    this.timerPulse = 0;
     this.files = null;
     if (files !== null) {
       if (!Array.isArray(files) || files.length > MAX_FILES) throw new Error('Choose up to 64 Corsham files.');
@@ -101,6 +108,17 @@ export class Kim1CorshamDisk {
       if (frame.length === 9) this.setClock(frame.slice(1));
       return;
     }
+    if (command === 0x1e) {
+      if (frame.length === 2) {
+        const period = timerPeriods[drive];
+        if (period !== undefined) {
+          this.timerRemaining = this.timerPeriod = period;
+          this.timerPulse = 0;
+        }
+        this.response = [0x82];
+      }
+      return;
+    }
     if (command === 0x14) {
       if (frame.length === 2) this.response = [0x93, drive === 0 && this.image.length ? 1 : 0];
       return;
@@ -123,6 +141,19 @@ export class Kim1CorshamDisk {
       this.image.set(frame.slice(header), offset);
       this.response = [0x82];
     }
+  }
+
+  advanceTimer(cycles) {
+    if (!this.timerPeriod) return false;
+    if (cycles < this.timerRemaining) {
+      this.timerRemaining -= cycles;
+      this.timerPulse = Math.max(0, this.timerPulse - cycles);
+      return false;
+    }
+    const sincePulse = (cycles - this.timerRemaining) % this.timerPeriod;
+    this.timerRemaining = this.timerPeriod - sincePulse;
+    this.timerPulse = Math.max(0, timerPulseWidth - sincePulse);
+    return true;
   }
 
   setClock([month, day, century, yearOfCentury, hour, minute, second, weekday]) {
