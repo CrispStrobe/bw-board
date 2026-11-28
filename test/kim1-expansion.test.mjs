@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {createKim1Machine, controlKim1Machine, peekKim1Byte, readKim1Byte, writeKim1Byte, stepKim1Machine} from '../src/kim1-machine.js';
+import {createKim1Machine, controlKim1Machine, peekKim1Byte, readKim1Byte, writeKim1Byte, stepKim1Machine, resetKim1Machine} from '../src/kim1-machine.js';
 import {exportKim1MemoryCard} from '../src/kim1-expansion.js';
 
 test('KIM-4 slots decode distinct RAM and ROM and keep the KIM-1 vectors', () => {
@@ -96,14 +96,11 @@ test('PAL-1 SPI initializes, writes and reads a sector through KIM-1 PA', () => 
   assert.ok(image.every(value => value === 0));
 });
 
-test('Corsham handshakes transfer short and long sectors through KIM-1 RIOT registers', () => {
-  const machine = createKim1Machine();
-  const image = new Uint8Array(512);
-  controlKim1Machine(machine, 'mountCorshamDisk', image);
+function corshamExchange(machine) {
   const port = (register, byte) => writeKim1Byte(machine, 0x1700 + register, byte);
   const ack = () => !!(peekKim1Byte(machine, 0x1702) & 4);
   port(3, 3);
-  const exchange = (request, responseLength) => {
+  return (request, responseLength) => {
     port(1, 255);
     port(2, 1);
     for (const byte of request) {
@@ -124,12 +121,41 @@ test('Corsham handshakes transfer short and long sectors through KIM-1 RIOT regi
       return value;
     });
   };
+}
+
+test('Corsham handshakes transfer short and long sectors through KIM-1 RIOT registers', () => {
+  const machine = createKim1Machine();
+  const image = new Uint8Array(512);
+  controlKim1Machine(machine, 'mountCorshamDisk', image);
+  const exchange = corshamExchange(machine);
   assert.deepEqual(exchange([5], 1), [0x85]);
   const data = Array.from({length: 128}, (_, i) => 255 - i);
   assert.deepEqual(exchange([0x20, 0, 1, 0, 0, 0, 1, ...data], 1), [0x82]);
   assert.deepEqual(exchange([0x18, 0, 1, 0, 1, 0], 129), [0x94, ...data]);
   assert.deepEqual(exchange([0x1f, 0, 1, 0, 0, 0, 4], 2), [0x83, 16]);
   assert.deepEqual(machine.corshamDisk.image.slice(128, 256), Uint8Array.from(data));
+});
+
+test('Corsham RTC sends binary time, validates writes and keeps ticking across a KIM reset', (t) => {
+  let now = Date.UTC(2026, 10, 28, 17, 48, 51);
+  t.mock.method(Date, 'now', () => now);
+  const machine = createKim1Machine();
+  controlKim1Machine(machine, 'mountCorshamFiles', []);
+  let exchange = corshamExchange(machine);
+  assert.deepEqual(exchange([0x07], 9), [0x87, 11, 28, 20, 26, 17, 48, 51, 6]);
+
+  assert.deepEqual(exchange([0x08, 2, 29, 0, 24, 23, 59, 59, 6], 1), [0x82]);
+  assert.deepEqual(exchange([0x07], 9), [0x87, 2, 29, 20, 24, 23, 59, 59, 6]);
+  assert.deepEqual(exchange([0x08, 2, 29, 20, 23, 0, 0, 0, 3], 2), [0x83, 18]);
+
+  now += 2000;
+  resetKim1Machine(machine);
+  exchange = corshamExchange(machine);
+  assert.deepEqual(exchange([0x07], 9), [0x87, 3, 1, 20, 24, 0, 0, 1, 0]);
+  assert.deepEqual(exchange([0x10], 1), [0x91]);
+
+  controlKim1Machine(machine, 'mountCorshamDisk', new Uint8Array(512));
+  assert.deepEqual(corshamExchange(machine)([0x07], 9), [0x87, 11, 28, 20, 26, 17, 48, 53, 6]);
 });
 
 test('K-1013 DMA transfers sector zero both ways without disrupting the KIM-1 boot vectors', () => {

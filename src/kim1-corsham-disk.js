@@ -12,6 +12,8 @@ const sectorWrite = new Set([0x19, 0x20]);
 export class Kim1CorshamDisk {
   constructor(image, files = null) {
     this.image = image.slice();
+    this.clockOffsetMs = 0;
+    this.weekdayOffset = 0;
     this.files = null;
     if (files !== null) {
       if (!Array.isArray(files) || files.length > MAX_FILES) throw new Error('Choose up to 64 Corsham files.');
@@ -85,6 +87,20 @@ export class Kim1CorshamDisk {
       return;
     }
     if (command === 0x05) { this.response = [0x85]; return; }
+    if (command === 0x07) {
+      // The shield sends binary decimal values after converting the RTC registers from BCD.
+      const date = new Date(Date.now() + this.clockOffsetMs);
+      const year = date.getUTCFullYear();
+      this.response = [
+        0x87, date.getUTCMonth() + 1, date.getUTCDate(), Math.floor(year / 100), year % 100,
+        date.getUTCHours(), date.getUTCMinutes(), date.getUTCSeconds(), (date.getUTCDay() + this.weekdayOffset) % 7
+      ];
+      return;
+    }
+    if (command === 0x08) {
+      if (frame.length === 9) this.setClock(frame.slice(1));
+      return;
+    }
     if (command === 0x14) {
       if (frame.length === 2) this.response = [0x93, drive === 0 && this.image.length ? 1 : 0];
       return;
@@ -107,6 +123,21 @@ export class Kim1CorshamDisk {
       this.image.set(frame.slice(header), offset);
       this.response = [0x82];
     }
+  }
+
+  setClock([month, day, century, yearOfCentury, hour, minute, second, weekday]) {
+    // A zero century is used by shields with a two-digit year.
+    const year = (century || 20) * 100 + yearOfCentury;
+    const timestamp = Date.UTC(year, month - 1, day, hour, minute, second);
+    const date = new Date(timestamp);
+    if (century > 99 || yearOfCentury > 99 || month < 1 || month > 12 ||
+      date.getUTCDate() !== day || hour > 23 || minute > 59 || second > 59 || weekday > 6) {
+      this.response = [0x83, 18];
+      return;
+    }
+    this.clockOffsetMs = timestamp - Date.now();
+    this.weekdayOffset = (weekday - date.getUTCDay() + 7) % 7;
+    this.response = [0x82];
   }
 
   receiveFileCommand(command, byte) {
