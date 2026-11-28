@@ -87,6 +87,33 @@ test('386 adapter refuses unsupported floppy size without replacing installed me
   assert.equal(adapter.machine.chips.fdc1.drives[0].image, installed);
 });
 
+test('386 floppy export copies current disk bytes at an idle controller boundary', async () => {
+  const {adapter} = await createDebugTarget('i80386', {profile: 'freedos-vga'});
+  assert.throws(() => adapter.captureFloppy(), /No floppy is mounted/);
+  const original = Buffer.alloc(80 * 2 * 15 * 512);
+  adapter.attachFloppyImage(original);
+  const fdc = adapter.machine.chips.fdc1;
+  fdc.drives[0].image[820] = 0x5a;
+  const exported = adapter.captureFloppy();
+  assert.equal(exported[820], 0x5a);
+  assert.equal(original[820], 0);
+  exported[820] = 0;
+  assert.equal(adapter.captureFloppy()[820], 0x5a);
+  // Start a WRITE DATA command through the controller's I/O ports.
+  fdc.write(2, 0x1c);
+  fdc.write(5, 0x45);
+  assert.throws(() => adapter.captureFloppy(), /floppy drive is busy/);
+  fdc.reset();
+  assert.equal(adapter.captureFloppy()[820], 0x5a);
+  // Direct FDC mounts can also be backed by a Buffer.
+  fdc.insert(0, original);
+  const direct = adapter.captureFloppy();
+  direct[820] = 0x5a;
+  assert.equal(original[820], 0);
+  fdc.eject(0);
+  assert.throws(() => adapter.captureFloppy(), /No floppy is mounted/);
+});
+
 test('DOSBox disk media can attach lazily to the experimental target', async () => {
   const { adapter, target } = await createDebugTarget('i80386', {});
   const image = new Uint8Array(4 * 17 * 512);
