@@ -593,11 +593,27 @@ export function expandRadio(parts, nets, opts) {
     // time domain (the drawn coil's own branch a–m), and the hidden
     // inductor m–b becomes a short. A metal detector's 100 kHz search
     // oscillator then runs in a band, as an oscillator on a ferrite rod does.
+    // Radiator test shared by every RF coil kind (see the ferrite coils below).
+    const isLinked = (p) => !!p.params?.linkTo || parts.some(o => o.params?.linkTo === p.id);
+    const acGroundNet = (n) => n.terminals.some(t => { const k = outParts.find(o => o.id === t.part)?.kind; return k === 'gnd' || k === 'vcc' || k === 'vsource' || k === 'battery'; });
+    const isTuned = (p, nets) => {
+        const own = new Set(nets.filter(n => n && !acGroundNet(n)));
+        return outParts.some(o => (o.kind === 'capacitor' || o.kind === 'tuning_cap' || o.kind === 'polarized_cap')
+            && (own.has(netOf(o.id, 'a')) || own.has(netOf(o.id, 'b'))));
+    };
     for (const p of parts.filter(q => q.kind === 'air_coil')) {
         const lp = coilInductorParams(p);
         const inner = outParts.findIndex(q => q.id === `${p.id}_l` && q.kind === 'inductor');
         if (!lp || inner < 0 || !netOf(p.id, 'a') || !netOf(p.id, 'b') || netOf(p.id, 'a') === netOf(p.id, 'b')) continue;
-        outParts[inner] = { ...outParts[inner], kind: 'resistor', params: { ohms: 1e-3 } };
+        // Linked and untuned, an air coil is a radiator like an untuned
+        // ferrite coil (below): a switched current must rise and fall with
+        // its own L/R in the time domain. Shorting its inductance there let a
+        // switch step the current in one solve, and the step radiated without
+        // limit (an earphone coil 0.2 m from a VHF aerial coil rang the
+        // receiver's 10.7 MHz IF band to 3.7 V and stopped its oscillator).
+        const airRadiator = isLinked(p) && !isTuned(p, [netOf(p.id, 'a'), netOf(p.id, 'b')]);
+        if (airRadiator) add({ id: `${p.id}_rd`, kind: 'resistor', params: { ohms: RADIATOR_DAMPING_OHMS }, terminals: ['a', 'b'] }, [[netOf(p.id, 'a'), 'a'], [netOf(p.id, 'b'), 'b']]);
+        else outParts[inner] = { ...outParts[inner], kind: 'resistor', params: { ohms: 1e-3 } };
         const c = { part: p, kind: 'air_coil', windings: [{ a: 'a', b: 'b', turns: 1, main: true }],
             // The short m–b is time-domain only: in the RF view the drawn
             // coil's copper branch a–m would otherwise sit across the winding.

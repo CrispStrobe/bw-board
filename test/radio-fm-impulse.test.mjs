@@ -297,3 +297,44 @@ describe('a MOSFET\'s rectified RF current in triode', () => {
         assert.ok(b.nodeVoltages.get('d') < 0.1, `the drain sits in triode: ${b.nodeVoltages.get('d')} V`);
     });
 });
+
+describe('impulse radiation: a linked air coil is a radiator too', () => {
+    it('its switched current falls with its own L/R, not in one solve; the ring it radiates falls as the near field', () => {
+        // Gap (2026-11-28, found building an earphone-coil click beside a VHF
+        // superhet): an air coil in an RF circuit had its inductance only in
+        // the RF bands, so in the time domain a switch broke its current in
+        // one solve (174 mA to 9e-12 A). That step radiated without limit:
+        // beside the superhet it rang the 10.7 MHz IF band to 3.7 V and
+        // stopped the local oscillator. Linked and untuned, an air coil now
+        // keeps its L in the time domain, with the radiator's damping across
+        // it, like an untuned ferrite coil.
+        const pair = (d) => {
+            const b = new BoardImpl(9);
+            b.setNetlist([P('G', 'gnd', {}, ['gnd']), P('VS', 'vsource', { volts: 9 }, ['pos', 'neg']), P('RS', 'resistor', { ohms: 47 }, ['a', 'b']),
+                P('S', 'switch', {}, ['a', 'b']), P('LT', 'air_coil', { turns: 200, radiusM: 0.015, lengthM: 0.02, wireMm: 0.3 }, ['a', 'b']),
+                P('LR', 'ferrite_coil', { rodHeightM: 0, linkTo: 'LT', distanceM: d }, ['a', 'tap', 'b', 'c1', 'c2']), P('TC', 'tuning_cap', { position: 0.3 }, ['a', 'b'])],
+            [net('v', ['VS', 'pos'], ['RS', 'a']), net('c', ['RS', 'b'], ['S', 'a']), net('s', ['S', 'b'], ['LT', 'b']),
+                net('rx', ['LR', 'b'], ['TC', 'a']), net('g', ['G', 'gnd'], ['VS', 'neg'], ['LT', 'a'], ['LR', 'a'], ['TC', 'b'])]);
+            b.setControl('S', 1);
+            b.setBroadcast([]);
+            b.setPower(true);
+            ms(b, 0.8);
+            const i0 = Math.abs(b.branchCurrent('LT', 'a'));
+            b.setControl('S', 0);
+            ms(b, 0.801);
+            const i1 = Math.abs(b.branchCurrent('LT', 'a'));
+            let m = peak(b, 'rx');
+            for (let i = 2; i <= 40; i++) { ms(b, 0.8 + i * 0.001); m = Math.max(m, peak(b, 'rx')); }
+            assert.equal(b._radio.error, null);
+            return { i0, i1, m };
+        };
+        const near = pair(0.1), far = pair(0.2);
+        // MEASURED 2026-11-28: 0.174 A, 1 µs after the break 0.0218 A (an e-fold per ~0.5 µs); before the fix 9e-12 A.
+        assert.ok(near.i0 > 0.1, `the coil carries its current: ${near.i0} A`);
+        assert.ok(near.i1 > 0.05 * near.i0 && near.i1 < 0.5 * near.i0, `1 µs after the break it is still falling: ${near.i1} A`);
+        // The peak is sampled every 1 µs of a ring whose envelope beats, so the
+        // ratio is the near field's eighth only roughly. MEASURED 2026-11-28:
+        // near.m / far.m 10.6 (sampled from 0.801 ms; from 0.802 ms 99.8 V / 11.2 V, 8.9x).
+        assert.ok(near.m / far.m > 5 && near.m / far.m < 13, `twice as far, about an eighth: ${near.m} V against ${far.m} V`);
+    });
+});
