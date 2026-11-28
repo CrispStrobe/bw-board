@@ -90,7 +90,7 @@ test('386 adapter refuses unsupported floppy size without replacing installed me
 test('386 floppy export copies current disk bytes at an idle controller boundary', async () => {
   const {adapter} = await createDebugTarget('i80386', {profile: 'freedos-vga'});
   assert.throws(() => adapter.captureFloppy(), /No floppy is mounted/);
-  const original = new Uint8Array(80 * 2 * 15 * 512);
+  const original = Buffer.alloc(80 * 2 * 15 * 512);
   adapter.attachFloppyImage(original);
   const fdc = adapter.machine.chips.fdc1;
   fdc.drives[0].image[820] = 0x5a;
@@ -105,6 +105,11 @@ test('386 floppy export copies current disk bytes at an idle controller boundary
   assert.throws(() => adapter.captureFloppy(), /floppy drive is busy/);
   fdc.reset();
   assert.equal(adapter.captureFloppy()[820], 0x5a);
+  // Direct FDC mounts can also be backed by a Buffer.
+  fdc.insert(0, original);
+  const direct = adapter.captureFloppy();
+  direct[820] = 0x5a;
+  assert.equal(original[820], 0);
   fdc.eject(0);
   assert.throws(() => adapter.captureFloppy(), /No floppy is mounted/);
 });

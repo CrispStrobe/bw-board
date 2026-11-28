@@ -140,7 +140,7 @@ export function createI80386Adapter(opts = {}) {
       if (!geometry) throw new Error('386 AT floppy image must be 360KiB or 1.2MiB');
       const fdc = machine.chips.fdc1;
       if (typeof fdc?.insert !== 'function') throw new Error('386 AT profile has no floppy controller');
-      fdc.insert(0, image.slice(), geometry);
+      fdc.insert(0, new Uint8Array(image), geometry);
     },
     captureFloppy() {
       const fdc = machine.chips.fdc1;
@@ -150,7 +150,7 @@ export function createI80386Adapter(opts = {}) {
         throw new Error('The floppy drive is busy. Wait for disk activity to finish, then try again.');
       }
       // JavaScript cannot run the guest between the idle check and this copy.
-      return image.slice();
+      return new Uint8Array(image);
     },
     sendScancode(scancode) { return machine.keyIn?.(scancode) ?? false; },
     keyIn(scancode) { return machine.keyIn?.(scancode) ?? false; },
