@@ -25,11 +25,12 @@ const anchors = [
   ['esp32_4848s040', 'GPIO44', 44], ['attiny85', 'PB5', 13],
   ['attiny88', 'PD7', 31], ['attiny88_qfn32', 'PA3', 3],
   ['stm32f030', 'PB1', 17], ['eater6502', 'VIA1.PB7', 15],
+  ['stc15_mcu', 'P5.5', 45], ['pybadge', 'RX', 0],
 ];
 
-test('public inventory is immutable, explicit, and covers 16 electrical surfaces', () => {
-  assert.equal(PORTABLE_GPIO_PROFILES.length, 16);
-  assert.equal(new Set(PORTABLE_GPIO_PROFILES.map(entry => entry.kind)).size, 16);
+test('public inventory is immutable, explicit, and covers 18 electrical surfaces', () => {
+  assert.equal(PORTABLE_GPIO_PROFILES.length, 18);
+  assert.equal(new Set(PORTABLE_GPIO_PROFILES.map(entry => entry.kind)).size, 18);
   assert.ok(Object.isFrozen(PORTABLE_GPIO_PROFILES));
   for (const entry of PORTABLE_GPIO_PROFILES) {
     assert.ok(Object.isFrozen(entry) && Object.isFrozen(entry.pins) && entry.pins.every(Object.isFrozen));
@@ -42,8 +43,7 @@ test('public inventory is immutable, explicit, and covers 16 electrical surfaces
     assert.ok(entry.pins.every(pin => Number.isInteger(pin.pin) && pin.pin >= 0 && pin.pin < 256));
   }
   assert.equal(getPortableGpioProfile('__proto__'), null);
-  assert.equal(getPortableGpioProfile('pybadge'), null, 'unqualified serial/analog aliases are not guessed');
-  assert.equal(getPortableGpioProfile('stc15_mcu'), null, 'case-aliased package requires a separate qualified mapping');
+  assert.equal(getPortableGpioProfile('kosmos-cp1'), null, 'an autonomous computer requires a separate ownership contract');
 });
 
 test('numbering anchors retain complete names and exclude power, control and unexposed pins', () => {
@@ -65,6 +65,8 @@ test('numbering anchors retain complete names and exclude power, control and une
     ['attiny88_qfn32', ['PA4', 'PC8']],
     ['stm32f030', ['PA8', 'PA13', 'PA14', 'PF0', 'PF1', 'BOOT0', 'NRST']],
     ['eater6502', ['PA0', 'VIA2.PA0', 'VIA1.PC0']],
+    ['stc15_mcu', ['P4.0', 'P4.3', 'P4.6', 'P4.7', 'P5.0', 'P5.3', 'P5.6', 'P6.0', 'RST', 'XTAL1']],
+    ['pybadge', ['D0', 'D1', 'D4', 'D7', 'D8', 'A6', 'A7', 'A8', 'A9', 'SDA', 'SCL', 'STEMMA_SDA', 'STEMMA_SCL', 'USB', 'BATTERY', 'ENABLE', 'PA17', 'PB17']],
   ]) for (const pad of pads) assert.equal(logicalPinForTerminal(kind, pad), null, `${kind}.${pad}`);
   assert.equal(logicalPinForTerminal('unknown', 'P0'), null);
   assert.equal(logicalPinForTerminal('microbit', 0), null);
@@ -72,7 +74,11 @@ test('numbering anchors retain complete names and exclude power, control and une
 
 for (const entry of PORTABLE_GPIO_PROFILES) {
   test(`${entry.kind}: whole registered terminal map and partial circuit map resolve`, () => {
-    const terminals = entry.kind === 'mcu' ? entry.pins.map(pin => pin.terminal) : getDevice(entry.kind).terminals;
+    // STC15's registry lists both uppercase and lowercase spellings for
+    // compatibility with old lessons. A physical circuit must declare each
+    // pad only once; independently test the duplicate-case refusal below.
+    const registered = entry.kind === 'mcu' ? entry.pins.map(pin => pin.terminal) : getDevice(entry.kind).terminals;
+    const terminals = entry.kind === 'stc15_mcu' ? [...new Map(registered.map(pad => [pad.toLowerCase(), pad])).values()] : registered;
     const before = [...terminals];
     const mapping = resolvePortableGpioController(boardFor(entry.kind, terminals));
     assert.equal(mapping.profile, entry);
@@ -154,11 +160,40 @@ test('missing, malformed, ambiguous and unqualified controllers fail before chan
   assert.throws(() => resolvePortableGpioController(boardFor('microbit', null)), /no terminal map/);
   assert.throws(() => resolvePortableGpioController(boardFor('microbit', ['p0', 1])), /invalid terminal/);
   assert.throws(() => resolvePortableGpioController(boardFor('microbit', ['p8', '3v', 'gnd'])), /no supported digital pins/);
-  assert.throws(() => resolvePortableGpioController(boardFor('pybadge', ['a0'])), /does not support pybadge/);
+  assert.throws(() => resolvePortableGpioController(boardFor('pybadge', ['sda', 'stemma_sda', 'gnd'])), /no supported digital pins/);
   registerDevice('portable_gpio_unverified', { terminals: ['p0'], gpioFollowsPinStates: true, vcc: 3.3 });
   assert.throws(() => resolvePortableGpioController(boardFor('portable_gpio_unverified', ['p0'])), /does not support/);
   multiple.parts[1] = part('b', 'portable_gpio_unverified', ['p0']);
   assert.throws(() => resolvePortableGpioController(multiple), /exactly one GPIO controller/);
+});
+
+test('STC15 upper- and lowercase package maps preserve all 38 GPIOs and reject duplicate case drives', () => {
+  const profile = getPortableGpioProfile('stc15_mcu');
+  assert.equal(profile.pins.length, 38);
+  for (const uppercase of [false, true]) {
+    const pads = profile.pins.map(({ terminal }) => uppercase ? terminal.toUpperCase() : terminal);
+    const mapping = resolvePortableGpioController(boardFor('stc15_mcu', [...pads, 'VCC', 'GND']));
+    assert.deepEqual(mapping.pins, [...Array(32).keys(), 33, 34, 36, 37, 44, 45]);
+    assert.deepEqual(mapping.pinMap.map(({ terminal }) => terminal), pads);
+  }
+  assert.throws(() => resolvePortableGpioController(boardFor('stc15_mcu', getDevice('stc15_mcu').terminals)),
+    /duplicate logical pin/);
+  assert.throws(() => resolvePortableGpioController(boardFor('stc15_mcu', ['P5.4', 'p5.4'])),
+    /duplicate logical pin 44/);
+});
+
+test('PyBadge independent pads keep Arduino numbering without guessing duplicate connector aliases', () => {
+  const expected = [
+    ['rx', 0], ['tx', 1], ['d2', 2], ['d3', 3], ['d5', 5], ['d6', 6], ['free', 7],
+    ['d9', 9], ['d10', 10], ['d11', 11], ['d12', 12], ['d13', 13],
+    ['a0', 14], ['a1', 15], ['a2', 16], ['a3', 17], ['a4', 18], ['a5', 19],
+    ['miso', 26], ['mosi', 27], ['sck', 28],
+  ];
+  const mapping = resolvePortableGpioController(boardFor('pybadge', getDevice('pybadge').terminals));
+  assert.equal(mapping.pinMap.length, 21);
+  assert.deepEqual(mapping.pinMap, expected.map(([terminal, pin]) => ({ pin, terminal })));
+  assert.notEqual(logicalPinForTerminal('pybadge', 'rx'), logicalPinForTerminal('pybadge', 'sck'));
+  assert.notEqual(logicalPinForTerminal('pybadge', 'tx'), logicalPinForTerminal('pybadge', 'd5'));
 });
 
 test('model registration, voltage and terminal mismatches do not widen a profile', () => {
