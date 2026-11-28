@@ -121,9 +121,18 @@ function advanceTimer(timer, cycles) {
   }
 }
 
+function advanceCorshamTimer(state, cycles) {
+  if (state.corshamDisk?.advanceTimer(cycles) && state.corshamTimerLine === 'nmi') state.pendingNmi = true;
+}
+
+function corshamIrq(state, cpu) {
+  return state.corshamTimerLine === 'irq' && state.corshamDisk?.timerPulse > 0 && !(cpu.p & 4);
+}
+
 export function advanceKim1Cycles(state, cycles) {
   if (!Number.isSafeInteger(cycles) || cycles < 0) throw new Error('KIM-1 cycle advance must be a non-negative safe integer.');
   for (const riot of state.riots) advanceTimer(riot.timer, cycles);
+  advanceCorshamTimer(state, cycles);
   refreshKim1Display(state);
 }
 
@@ -131,6 +140,7 @@ export function advanceKim1Cycles(state, cycles) {
 export function kim1TimerDeadlineCycles(state) {
   const waits = state.riots.map(r => r.timer).filter(t => t.active && !t.expired)
     .map(t => t.phase + t.count * t.divider);
+  if (state.corshamTimerLine !== 'none' && state.corshamDisk?.timerRemaining) waits.push(state.corshamDisk.timerRemaining);
   return waits.length ? Math.min(...waits) : null;
 }
 
@@ -298,7 +308,7 @@ export function createKim1Machine(source = KIM1_DEFAULT_PROGRAM) {
   const state = {
     model: 'independent-monitor-nmos6502', roms: null, romSource: null, frontPanel: null, segments: null, ttyOutput: '', busLatch: 255,
     pendingNmi: false, pendingReset: false, ram: new Uint8Array(1024), riotRam: new Uint8Array(128),
-    backplane: null, memoryCard: null, sdCard: null, corshamDisk: null, k1008: null, k1013: null,
+    backplane: null, memoryCard: null, sdCard: null, corshamDisk: null, corshamTimerLine: 'none', k1008: null, k1013: null,
     expansion: parsed.expanded ? new Uint8Array(65536) : null,
     image: parsed.image, programSource: formatKim1Program(parsed), startAddress: parsed.start,
     cpu: {a: 0, x: 0, y: 0, s: 0xfd, p: 0x24, pc: parsed.start, cycles: 0},
@@ -392,6 +402,7 @@ function stepRomInstruction(state, core) {
     core.nmi();
     return 7;
   }
+  if (corshamIrq(state, core) && core.irq()) return 7;
   const oldPc = mappedAddress(core.pc, state.expansion);
   const opcode = peekKim1Byte(state, core.pc);
   const cycles = core.step();
@@ -404,7 +415,8 @@ export function clockKim1Hardware(state) {
   const core = coreFor(state);
   let instruction = hardwareInstructions.get(state);
   if (!instruction) {
-    const operation = state.pendingReset ? 'reset' : state.pendingNmi ? 'nmi' : 'step';
+    const operation = state.pendingReset ? 'reset' : state.pendingNmi ? 'nmi' :
+      corshamIrq(state, core) ? 'irq' : 'step';
     if (operation === 'reset') state.pendingReset = false;
     if (operation === 'nmi') state.pendingNmi = false;
     instruction = {operation, reads: [], count: 0, pc: core.pc, opcode: peekKim1Byte(state, core.pc)};
@@ -451,7 +463,10 @@ export function clockKim1Hardware(state) {
 function stepRomWithPeripherals(state, core, advanceTimers) {
   const read = core.read, dummyRead = core.dummyRead, write = core.write;
   const tick = () => {
-    if (advanceTimers) for (const riot of state.riots) advanceTimer(riot.timer, 1);
+    if (advanceTimers) {
+      for (const riot of state.riots) advanceTimer(riot.timer, 1);
+      advanceCorshamTimer(state, 1);
+    }
     stepKim1FrontPanel(state.frontPanel, state.riots[1], 1);
   };
   core.read = address => { tick(); return read(address); };
@@ -579,6 +594,11 @@ export function controlKim1Machine(state, verb, value, options = {}) {
   }
   if (verb === 'setMemoryCard') {
     state.memoryCard = value === null ? null : createKim1MemoryCard(value);
+    return true;
+  }
+  if (verb === 'setCorshamTimerLine') {
+    if (!['none', 'irq', 'nmi'].includes(value)) throw new Error('Choose an unconnected, IRQ, or NMI Corsham timer output.');
+    state.corshamTimerLine = value;
     return true;
   }
   if (verb === 'mountCorshamFiles') {
