@@ -342,6 +342,31 @@ TransmitChar:
     pla
     rts
 
+; External bit-bang callers use these ROM addresses and keep their loop
+; state across the wait. These adapters use the monitor's fixed 300-baud clock.
+.segment "DELAY"
+    jmp DelayBit
+
+.segment "DEHALF"
+    jmp DelayHalf
+
+.segment "BITWAIT"
+.macro delay_entry entry, wait
+entry:
+    php
+    pha
+    tya
+    pha
+    jsr wait
+    pla
+    tay
+    pla
+    plp
+    rts
+.endmacro
+delay_entry DelayBit, FullBit
+delay_entry DelayHalf, HalfBit
+
 ; At 1 MHz, one serial bit spans approximately 3333 cycles.
 ; Keep each delay loop physically within one page.
 FullBit:

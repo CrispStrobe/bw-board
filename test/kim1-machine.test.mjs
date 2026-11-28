@@ -161,3 +161,23 @@ test('Intel HEX preserves its checked entry and expansion bytes through addresse
   assert.deepEqual(parseKim1Program(formatKim1Program(parsed)), parsed);
   assert.throws(() => parseKim1Program(source.replace('EA00F4','EA00F5')), /checksum/);
 });
+
+test('the clean-room monitor provides register-safe bit and half-bit delays for external TTY callers', () => {
+  for (const [entry, period] of [[0x1ed4, 3333], [0x1eeb, 1667]]) {
+    const s = createKim1Machine('0200: A9 42 A2 17 A0 31 38 20 ' +
+      (entry & 255).toString(16) + ' 1E EA');
+    control(s, 'useBrickwrightRom');
+    control(s, 'setTty', {enabled: true, baud: 300});
+    while (s.cpu.cycles < 800000 && !s.error && !s.ttyOutput.includes('KIM>')) stepKim1Machine(s);
+    assert.match(s.ttyOutput, /KIM>/);
+    control(s, 'sendTty', '0200 G');
+    while (s.cpu.cycles < 2000000 && s.cpu.pc !== 0x200 && !s.error) stepKim1Machine(s);
+    assert.equal(s.cpu.pc, 0x200);
+    for (let i = 0; i < 4; i++) stepKim1Machine(s);
+    const before = s.cpu.cycles;
+    for (let i = 0; i < 3000 && s.cpu.pc !== 0x20a && !s.error; i++) stepKim1Machine(s);
+    assert.equal(s.error, null);
+    assert.deepEqual([s.cpu.pc, s.cpu.a, s.cpu.x, s.cpu.y, s.cpu.p & 1], [0x20a, 0x42, 0x17, 0x31, 1]);
+    assert.ok(Math.abs(s.cpu.cycles - before - period) < 100);
+  }
+});
