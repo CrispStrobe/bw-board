@@ -172,7 +172,11 @@ export function createDos8086(machine, io = {}) {
     /** The virtual filesystem. A teaching sandbox has no business touching a real one. */
     const files = io.files || new Map();
     const handles = new Map();          // handle → { name, pos, write }
-    let nextHandle = 5;                 // 0-4 are the standard handles
+    const allocateHandle = () => {
+        let handle = 5; // 0-4 are the standard handles.
+        while (handles.has(handle)) handle++;
+        return handle;
+    };
 
     const unsupported = new Map();      // "int:ah" → count
     /**
@@ -464,10 +468,20 @@ export function createDos8086(machine, io = {}) {
                 // and ignore.
                 if (cpu.al === 0) { cpu.dl = 0x2f; cpu.al = 0; return; }
                 cpu.al = 0; return;
+            case 0x44: {                                  // IOCTL: get handle device information
+                if (cpu.al !== 0) { note(0x21, ah); return fail(1); }
+                const handle = handles.get(cpu.bx);
+                if (!handle && cpu.bx > 4) return fail(6);
+                const device = handle ? handle.std : cpu.bx;
+                cpu.dx = device === 0 ? 0x81 : device === 1 || device === 2 ? 0x82 :
+                    device === undefined ? 0 : 0x80;
+                return ok();
+            }
+            case 0x51: case 0x62: cpu.bx = psp; return;     // get current PSP
             case 0x45: {                                  // duplicate handle
                 const h = handles.get(cpu.bx);
                 if (!h && cpu.bx > 4) return fail(6);
-                const n = nextHandle++;
+                const n = allocateHandle();
                 handles.set(n, h ? { ...h } : { name: null, pos: 0, write: true, std: cpu.bx });
                 cpu.ax = n; return ok();
             }
@@ -531,16 +545,16 @@ export function createDos8086(machine, io = {}) {
                 return;
             }
             case 0x3c: {                                  // create file
-                const name = zstr(cpu.ds, cpu.dx);
+                const name = fileKey(zstr(cpu.ds, cpu.dx));
                 files.set(name, new Uint8Array(0));
-                const h = nextHandle++;
+                const h = allocateHandle();
                 handles.set(h, { name, pos: 0, write: true });
                 cpu.ax = h; return ok();
             }
             case 0x3d: {                                  // open file
-                const name = zstr(cpu.ds, cpu.dx);
+                const name = fileKey(zstr(cpu.ds, cpu.dx));
                 if (!files.has(name)) return fail(2);     // file not found
-                const h = nextHandle++;
+                const h = allocateHandle();
                 handles.set(h, { name, pos: 0, write: (cpu.al & 3) !== 0 });
                 cpu.ax = h; return ok();
             }
@@ -583,7 +597,7 @@ export function createDos8086(machine, io = {}) {
                 cpu.ax = cpu.cx; return ok();
             }
             case 0x41: {                                  // delete file
-                const name = zstr(cpu.ds, cpu.dx);
+                const name = fileKey(zstr(cpu.ds, cpu.dx));
                 if (!files.has(name)) return fail(2);     // file not found
                 files.delete(name);
                 return ok();
@@ -592,8 +606,11 @@ export function createDos8086(machine, io = {}) {
                 const h = handles.get(cpu.bx);
                 if (!h) return fail(6);
                 const buf = files.get(h.name) || new Uint8Array(0);
-                const off = ((cpu.cx << 16) | cpu.dx) >>> 0;
-                h.pos = cpu.al === 1 ? h.pos + off : cpu.al === 2 ? buf.length + off : off;
+                const off = (cpu.cx << 16) | cpu.dx;
+                if (cpu.al > 2) return fail(1);
+                const position = (cpu.al === 1 ? h.pos : cpu.al === 2 ? buf.length : 0) + off;
+                if (position < 0 || position > 0xffffffff) return fail(25);
+                h.pos = position;
                 cpu.dx = (h.pos >>> 16) & 0xffff; cpu.ax = h.pos & 0xffff;
                 return ok();
             }
@@ -601,6 +618,15 @@ export function createDos8086(machine, io = {}) {
             case 0x4d: cpu.ax = exitCode; return;
             default: note(0x21, ah); return fail(1);      // function not supported
         }
+    }
+
+    function writeEnvironment(seg) {
+        // Keep the tiny environment below the PSP and above the BIOS data area.
+        if (seg < 0x54) return;
+        const environment = seg - 4;
+        const data = 'PATH=A:\\\x00\x00\x00\x00'; // double-NUL, followed by zero extra strings
+        for (let i = 0; i < data.length; i++) wr8(environment, i, data.charCodeAt(i));
+        wr16(seg, 0x2c, environment);
     }
 
     /**
@@ -695,6 +721,15 @@ export function createDos8086(machine, io = {}) {
         cpu.si = (si + i) & 0xffff;
         cpu.al = wild;
     }
+
+    const fileKey = name => {
+        if (files.has(name)) return name;
+        const folded = name.toUpperCase();
+        for (const key of files.keys()) {
+            if (key.toUpperCase() === folded) return key;
+        }
+        return name;
+    };
 
     const zstr = (seg, off) => {
         let s = '';
@@ -1113,6 +1148,7 @@ export function createDos8086(machine, io = {}) {
             for (let i = 0; i < 0x100; i++) wr8(psp, i, 0);
             wr8(psp, 0, 0xcd); wr8(psp, 1, 0x20);       // int 20h
             wr16(psp, 0x02, MEM_TOP);                   // top-of-memory: the .COM owns to the arena top
+            writeEnvironment(psp);
             writeCommandTail(psp, args);
             for (let i = 0; i < bytes.length; i++) wr8(psp, 0x100 + i, bytes[i]);
             cpu.cs = psp; cpu.ds = psp; cpu.es = psp; cpu.ss = psp;
@@ -1142,6 +1178,7 @@ export function createDos8086(machine, io = {}) {
             for (let i = 0; i < 0x100; i++) wr8(psp, i, 0);
             wr8(psp, 0, 0xcd); wr8(psp, 1, 0x20);
             wr16(psp, 0x02, MEM_TOP);                   // top-of-memory: the .EXE owns to the arena top (LINK/MASM size their heap from here)
+            writeEnvironment(psp);
             writeCommandTail(psp, args);
             const image = bytes.subarray(imageStart, imageEnd);
             for (let i = 0; i < image.length; i++) {
