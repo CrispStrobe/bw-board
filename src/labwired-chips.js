@@ -1014,14 +1014,16 @@ peripherals:
     size: "1KB"
 `;
 
-/** PyBadge header map from Microsoft's UF2 board_config.h CF2 table. */
+/** PyBadge header map. UART is on PB17/PB16, not PA17/PA16: the latter
+ * are SCK/D5. Adafruit's CircuitPython pybadge/pins.c and Arduino
+ * variants/pybadge_m4/variant.cpp agree; see docs/PORTABLE-GPIO.md. */
 export const PYBADGE_LABWIRED_PINS = {
   a0: { peripheral: 'porta', pin: 2 }, a1: { peripheral: 'porta', pin: 5 },
   a2: { peripheral: 'portb', pin: 8 }, a3: { peripheral: 'portb', pin: 9 },
   a4: { peripheral: 'porta', pin: 4 }, a5: { peripheral: 'porta', pin: 6 },
   sck: { peripheral: 'porta', pin: 17 }, mosi: { peripheral: 'portb', pin: 23 },
-  miso: { peripheral: 'portb', pin: 22 }, rx: { peripheral: 'porta', pin: 17 },
-  tx: { peripheral: 'porta', pin: 16 }, sda: { peripheral: 'porta', pin: 12 },
+  miso: { peripheral: 'portb', pin: 22 }, rx: { peripheral: 'portb', pin: 17 },
+  tx: { peripheral: 'portb', pin: 16 }, sda: { peripheral: 'porta', pin: 12 },
   scl: { peripheral: 'porta', pin: 13 }, stemma_sda: { peripheral: 'porta', pin: 12 },
   stemma_scl: { peripheral: 'porta', pin: 13 }, d2: { peripheral: 'portb', pin: 3 },
   d3: { peripheral: 'portb', pin: 2 }, d5: { peripheral: 'porta', pin: 16 },

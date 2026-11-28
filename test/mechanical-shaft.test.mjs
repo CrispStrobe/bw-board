@@ -5,13 +5,46 @@ import {registerDCMotor} from '../src/devices/dc-motor.js';
 import {registerMiscParts} from '../src/devices/misc-parts.js';
 registerDCMotor();
 const close=(a,b,tol=1e-6)=>assert.ok(Math.abs(a-b)<tol,`${a} ≠ ${b}`);
-function fixture(voltage=5){const board=new BoardImpl(voltage);board.setNetlist([
+function fixture(voltage=5,windingH=0){const board=new BoardImpl(voltage);board.setNetlist([
  {id:'power',kind:'vcc',params:{},terminals:['vcc']},{id:'gnd',kind:'gnd',params:{},terminals:['gnd']},
- {id:'motor',kind:'dc_motor',terminals:['a','b'],params:{windingR:10,windingH:0,kV:.1,kT:.1,J:1e-12}}
+ {id:'motor',kind:'dc_motor',terminals:['a','b'],params:{windingR:10,windingH,kV:.1,kT:.1,J:1e-12}}
 ],[{id:'v',terminals:[{part:'power',terminal:'vcc'},{part:'motor',terminal:'a'}]},{id:'g',terminals:[{part:'gnd',terminal:'gnd'},{part:'motor',terminal:'b'}]}]);return board;}
 test('a blocked external shaft draws stall current and transfers torque, not an independent speed',()=>{const b=fixture();b.attachMechanicalShaft('motor');b.advanceTo(5_000_000n);const sample=b.takeMechanicalShaftImpulse('motor');close(sample.currentA,.5);close(sample.impulseNms,.00025,1e-8);close(b.getDeviceState('motor').velocity,0);close(b.takeMechanicalShaftImpulse('motor').impulseNms,0);});
 test('measured shaft speed supplies back-EMF, including regenerative torque',()=>{const b=fixture();b.attachMechanicalShaft('motor',{angleRad:0,velocityRadS:20});b.advanceTo(5_000_000n);let x=b.takeMechanicalShaftImpulse('motor');close(x.currentA,.3);close(x.impulseNms,.00015,1e-8);close(x.armatureWorkJ,x.copperLossJ+x.impulseNms*20,1e-7);b.setMechanicalShaftState('motor',{angleRad:.1,velocityRadS:60});b.advanceTo(10_000_000n);x=b.takeMechanicalShaftImpulse('motor');close(x.currentA,-.1);assert.ok(x.impulseNms<0);});
 test('reset and detach release ownership; invalid and duplicate ownership are refused',()=>{const b=fixture();assert.throws(()=>b.attachMechanicalShaft('gnd'));const detach=b.attachMechanicalShaft('motor');assert.throws(()=>b.attachMechanicalShaft('motor'));assert.throws(()=>b.setMechanicalShaftState('motor',{angleRad:NaN,velocityRadS:0}));detach();assert.throws(()=>b.takeMechanicalShaftImpulse('motor'));b.attachMechanicalShaft('motor');b.reset();assert.throws(()=>b.takeMechanicalShaftImpulse('motor'));});
+test('an inductive motor keeps its external ownership through transient event probes and releases it',()=>{
+ const b=fixture(5,.005),detach=b.attachMechanicalShaft('motor');
+ const owner=b.getDeviceState('motor').externalShaft;
+ b.advanceTo(5_000_000n);
+ assert.equal(b.getDeviceState('motor').externalShaft,owner);
+ const work=b.takeMechanicalShaftImpulse('motor');assert.ok(work.chargeC>0);assert.ok(work.impulseNms>0);
+ close(b.getDeviceState('motor').velocity,0);
+ detach();assert.equal(b.getDeviceState('motor').externalShaft,undefined);
+ const next=b.attachMechanicalShaft('motor',{angleRad:.5,velocityRadS:2});
+ detach();assert.throws(()=>b.attachMechanicalShaft('motor'),/already has an owner/);
+ b.advanceTo(10_000_000n);next();assert.equal(b.getDeviceState('motor').externalShaft,undefined);
+});
+
+test('transient rollback preserves servo and distance handles, then stale releases cannot affect replacements',async()=>{
+ const {registerServo}=await import('../src/devices/servo.js'),{registerSensors}=await import('../src/devices/sensors.js');registerServo();registerSensors();
+ const b=fixture(5,.005),parts=[...b.parts,
+  {id:'s',kind:'servo',terminals:['vcc','gnd','signal'],params:{}},
+  {id:'u',kind:'ultrasonic',terminals:['vcc','gnd','trig','echo'],params:{distance:100}}];
+ const nets=b.nets.map(net=>({...net,terminals:[...net.terminals,...['s','u'].map(part=>({part,terminal:net.id==='v'?'vcc':'gnd'}))]}));
+ b.setNetlist(parts,nets);b.attachMechanicalShaft('motor');
+ const servo=b.attachExternalServo('s',110),sensor=b.attachExternalDistanceSensor('u');sensor.sample(250);
+ const servoOwner=b.getDeviceState('s').externalServo,sensorOwner=b.getDeviceState('u').externalDistance;
+ b.advanceTo(5_000_000n);
+ assert.equal(b.getDeviceState('s').externalServo,servoOwner);assert.equal(b.getDeviceState('u').externalDistance,sensorOwner);
+ assert.equal(servo.target().powered,true);servo.sample(100);sensor.sample(125);
+ assert.equal(b.getDeviceState('s').actualAngle,100);assert.equal(b.getDeviceState('u').externalDistance.distanceMm,125);
+ servo.release();sensor.release();
+ const nextServo=b.attachExternalServo('s',90),nextSensor=b.attachExternalDistanceSensor('u');
+ servo.release();sensor.release();nextServo.sample(80);nextSensor.sample(500);
+ assert.throws(()=>servo.sample(90),/released/);assert.throws(()=>sensor.sample(90),/released/);
+ b.advanceTo(10_000_000n);nextServo.release();nextSensor.release();
+ assert.equal(b.getDeviceState('s').externalServo,undefined);assert.equal(b.getDeviceState('u').externalDistance,undefined);
+});
 test('an external clock allows the owner and refuses independent advance/reset reuse',()=>{const b=fixture(),lease=b.claimExternalClock();assert.throws(()=>b.claimExternalClock());assert.throws(()=>b.advanceTo(1_000_000n));lease.run(()=>b.advanceTo(1_000_000n));assert.equal(b.timeNs,1_000_000n);assert.throws(()=>lease.run(()=>Promise.resolve()));b.reset();assert.throws(()=>lease.run(()=>b.advanceTo(1n)));const next=b.claimExternalClock();lease.release();assert.throws(()=>b.advanceTo(1n));next.release();b.advanceTo(1_000_000n);});
 test('encoder pins follow physical positions, including reverse, and refuse skipped edges',()=>{registerMiscParts();const b=new BoardImpl(5);b.setNetlist([{id:'m',kind:'dc_motor_encoder',terminals:['a','b','enc_a','enc_b'],params:{pulsesPerRev:10}}],[{id:'ea',terminals:[{part:'m',terminal:'enc_a'}]},{id:'eb',terminals:[{part:'m',terminal:'enc_b'}]}]);b.attachMechanicalShaft('m');const angle=edge=>(edge+.1)*2*Math.PI/40;for(const edge of[1,2,1,0,-1]){b.setMechanicalShaftState('m',{angleRad:angle(edge),velocityRadS:0});assert.equal(b.getDeviceState('m').count,edge);}assert.throws(()=>b.setMechanicalShaftState('m',{angleRad:angle(4),velocityRadS:0}),/sampling rate/);assert.equal(b.getDeviceState('m').count,-1);});
 test('external servo keeps measured angle while decoding target; ultrasonic consumes measured range without editing source',async()=>{
