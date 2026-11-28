@@ -711,3 +711,45 @@ test('the POLLS never block, because answering "no" is what they are for', async
     for (let i = 0; i < 30000 && !dos.terminated; i++) dos.step();
     assert.ok(dos.terminated, 'the poll answered and the program ran on');
 });
+
+test('DOS services expose the current PSP, environment, handle types and reusable file handles', () => {
+    const m = new I8086Machine(DOSBOX8086);
+    const base = 0x8000;
+    const files = new Map([['STDIO.H', Uint8Array.of(41, 42, 43)]]);
+    const dos = createDos8086(m, {files}).install().loadCom(com([
+        [0x100, [0xcd, 0x21]],
+        [0x120, [...Buffer.from('stdio.h'), 0]]
+    ]));
+    function call (regs) {
+        Object.assign(m.cpu, {cs: 0x800, ip: 0x100, ax: 0, bx: 0, cx: 0, dx: 0}, regs);
+        for (let step = 0; m.cpu.ip !== 0x102 || m.cpu.cs !== 0x800; step++) {
+            assert.ok(step < 5, 'INT 21h returned to the COM program');
+            dos.step();
+        }
+        return {carry: !!(m.cpu.flags & 1), ax: m.cpu.ax, bx: m.cpu.bx, dx: m.cpu.dx};
+    }
+    for (const ax of [0x5100, 0x6200]) assert.equal(call({ax}).bx, 0x800);
+    const env = (m._read(base + 0x2c) | m._read(base + 0x2d) << 8) * 16;
+    const prefix = Buffer.from([80, 65, 84, 72, 61, 65, 58, 92]);
+    assert.deepEqual(Buffer.from(Array.from({length: prefix.length + 4}, (_, i) => m._read(env + i))),
+        Buffer.concat([prefix, Buffer.alloc(4)]));
+    assert.equal(call({ax: 0x4400, bx: 1}).dx, 0x82);
+
+    let handle = 0;
+    for (let pass = 0; pass < 24; pass++) {
+        const opened = call({ax: 0x3d00, dx: 0x120});
+        assert.equal(opened.carry, false);
+        if (pass === 0) handle = opened.ax;
+        assert.equal(opened.ax, handle, 'opening again reuses the released DOS handle');
+        assert.equal(call({ax: 0x4400, bx: handle}).dx, 0);
+        assert.equal(call({ax: 0x3e00, bx: handle}).carry, false);
+    }
+    assert.equal(call({ax: 0x4400, bx: handle}).ax, 6);
+    assert.equal(call({ax: 0x3d00, dx: 0x120}).ax, handle);
+    assert.equal(call({ax: 0x4202, bx: handle, cx: 0xffff, dx: 0xffff}).ax, 2);
+    assert.equal(call({ax: 0x3f00, bx: handle, cx: 1, dx: 0x140}).ax, 1);
+    assert.equal(m._read(base + 0x140), 43);
+    const invalidSeek = call({ax: 0x4200, bx: handle, cx: 0xffff, dx: 0xffff});
+    assert.equal(invalidSeek.carry, true);
+    assert.equal(call({ax: 0x4201, bx: handle}).ax, 3);
+});
