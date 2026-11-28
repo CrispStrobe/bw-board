@@ -181,3 +181,14 @@ test('the clean-room monitor provides register-safe bit and half-bit delays for 
     assert.ok(Math.abs(s.cpu.cycles - before - period) < 100);
   }
 });
+
+test('the clean-room monitor prints the POINT address and a space at the public TTY entries', () => {
+  const s = createKim1Machine('0200: A9 34 85 FA A9 12 85 FB 20 1E 1E 20 9E 1E A9 21 20 A0 1E 4C 13 02');
+  control(s, 'useBrickwrightRom');
+  control(s, 'setTty', {enabled: true, baud: 300});
+  while (s.cpu.cycles < 800000 && !s.error && !s.ttyOutput.includes('KIM>')) stepKim1Machine(s);
+  control(s, 'sendTty', '0200 G');
+  while (s.cpu.cycles < 2000000 && !s.error && !s.ttyOutput.includes('1234 !')) stepKim1Machine(s);
+  assert.equal(s.error, null);
+  assert.match(s.ttyOutput, /1234 !/);
+});

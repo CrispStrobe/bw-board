@@ -1,16 +1,36 @@
 // SPDX-License-Identifier: MIT
-// Parallel sector subset of Bob Applegate's Remote Disk Protocol v1.1.
+// Bob Applegate's Remote Disk Protocol v1.1, with mutually exclusive
+// sector-image and read-only loose-file media.
 const geometry = [0, 128, 256, 512, 1024];
 const sectorRead = new Set([0x18, 0x1f]);
 const sectorWrite = new Set([0x19, 0x20]);
 
 export class Kim1CorshamDisk {
-  constructor(image) {
+  constructor(image, files = null) {
     this.image = image.slice();
+    this.files = null;
+    if (files !== null) {
+      if (!Array.isArray(files) || files.length > 64) throw new Error('Choose up to 64 Corsham files.');
+      this.files = new Map();
+      let total = 0;
+      for (const {name, bytes} of files) {
+        const normalized = typeof name === 'string' && /^[A-Z0-9_-]{1,8}(\.[A-Z0-9_-]{1,3})?$/i.test(name)
+          ? name.toUpperCase() : null;
+        if (!normalized || this.files.has(normalized) || !(bytes instanceof Uint8Array) ||
+          bytes.length > 65536 || (total += bytes.length) > 2097152) {
+          throw new Error('Corsham files need unique 8.3 names, at most 64 KiB each and 2 MiB in total.');
+        }
+        this.files.set(normalized, bytes.slice());
+      }
+      this.names = [...this.files.keys()].sort();
+    }
     this.reset();
   }
 
   reset() {
+    this.directoryIndex = null;
+    this.openFile = null;
+    this.offset = 0;
     this.frame = [];
     this.response = [];
     this.index = 0;
@@ -27,6 +47,10 @@ export class Kim1CorshamDisk {
         this.frame = [];
         this.response = [];
         this.index = 0;
+      } else if (this.directoryIndex !== null && !this.response.length) {
+        const name = this.names[this.directoryIndex++];
+        this.response = name === undefined ? [0x91] : [0x90, ...Array.from(name, char => char.charCodeAt(0)), 0];
+        if (name === undefined) this.directoryIndex = null;
       }
       this.ack = !hostWrites && !strobe && this.response.length > 0;
     } else if (strobe !== this.strobe) {
@@ -49,13 +73,15 @@ export class Kim1CorshamDisk {
     const frame = this.frame;
     frame.push(byte);
     const [command, drive, sizeCode] = frame;
+    if (frame.length === 1) this.directoryIndex = null;
+    if (this.files && this.receiveFileCommand(command, byte)) return;
     if (command === 0x01) {
       this.response = [0x81, ...Array.from('Brickwright\r\n1.1', char => char.charCodeAt(0)), 0];
       return;
     }
     if (command === 0x05) { this.response = [0x85]; return; }
     if (command === 0x14) {
-      if (frame.length === 2) this.response = [0x93, drive === 0 ? 1 : 0];
+      if (frame.length === 2) this.response = [0x93, drive === 0 && this.image.length ? 1 : 0];
       return;
     }
     const reading = sectorRead.has(command);
@@ -75,6 +101,38 @@ export class Kim1CorshamDisk {
     else {
       this.image.set(frame.slice(header), offset);
       this.response = [0x82];
+    }
+  }
+
+  receiveFileCommand(command, byte) {
+    const frame = this.frame;
+    switch (command) {
+    case 0x10: // Directory entries are resumed at each read-direction transition.
+      this.directoryIndex = 0;
+      return true;
+    case 0x15:
+      this.openFile = null;
+      return true;
+    case 0x16:
+    case 0x1b:
+      if (frame.length > 14) {
+        this.response = [0x83, 12];
+      } else if (frame.length > 1 && byte === 0) {
+        const name = String.fromCharCode(...frame.slice(1, -1)).toUpperCase();
+        this.openFile = command === 0x16 ? this.files.get(name) ?? null : null;
+        this.offset = 0;
+        this.response = this.openFile ? [0x82] : [0x83, command === 0x1b ? 13 : 12];
+      }
+      return true;
+    case 0x17:
+      if (frame.length === 2) {
+        const bytes = this.openFile?.subarray(this.offset, this.offset + byte) ?? [];
+        this.offset += bytes.length;
+        this.response = [0x92, bytes.length, ...bytes];
+      }
+      return true;
+    default:
+      return false;
     }
   }
 }

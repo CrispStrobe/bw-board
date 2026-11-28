@@ -165,3 +165,48 @@ test('K-1013 DMA transfers sector zero both ways without disrupting the KIM-1 bo
   assert.equal(machine.k1013.chip.drives[0].image[0], 0x26);
   assert.equal(image[0], 0x5a);
 });
+
+test('Corsham file media resumes directories across direction changes and reads files in chunks', () => {
+  const machine = createKim1Machine();
+  const bytes = Uint8Array.of(42, 43, 44);
+  controlKim1Machine(machine, 'mountCorshamFiles', [
+    {name: 'z.txt', bytes}, {name: 'a.hex', bytes: new Uint8Array()}
+  ]);
+  bytes[0] = 0;
+  const port = (reg, value) => writeKim1Byte(machine, 0x1700 + reg, value);
+  const ack = () => !!(peekKim1Byte(machine, 0x1702) & 4);
+  port(3, 3);
+  const exchange = (request, count) => {
+    port(1, 255);
+    port(2, 1);
+    for (const byte of request) {
+      assert.equal(ack(), false);
+      port(0, byte);
+      port(2, 3);
+      assert.equal(ack(), true);
+      port(2, 1);
+    }
+    port(1, 0);
+    port(2, 0);
+    return Array.from({length: count}, () => {
+      assert.equal(ack(), true);
+      const answer = peekKim1Byte(machine, 0x1700);
+      port(2, 2);
+      port(2, 0);
+      return answer;
+    });
+  };
+  const name = filename => [...new TextEncoder().encode(filename), 0];
+  assert.deepEqual(exchange([0x10], 7), [0x90, ...name('A.HEX')]);
+  assert.deepEqual(exchange([], 7), [0x90, ...name('Z.TXT')]);
+  assert.deepEqual(exchange([], 1), [0x91]);
+  assert.deepEqual(exchange([0x16, ...name('missing')], 2), [0x83, 12]);
+  assert.deepEqual(exchange([0x16, ...name('z.txt')], 1), [0x82]);
+  assert.deepEqual(exchange([0x17, 2], 4), [0x92, 2, 42, 43]);
+  assert.deepEqual(exchange([0x17, 2], 3), [0x92, 1, 44]);
+  assert.deepEqual(exchange([0x17, 2], 2), [0x92, 0]);
+  exchange([0x15], 0);
+  assert.deepEqual(exchange([0x1b, ...name('Z.TXT')], 2), [0x83, 13]);
+  assert.throws(() => controlKim1Machine(machine, 'mountCorshamFiles', [{name: '../A.TXT', bytes}]), /8.3/);
+  assert.equal(machine.corshamDisk.files.size, 2);
+});

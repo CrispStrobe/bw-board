@@ -250,6 +250,12 @@ ReadMatrix:
     txa
     rts
 
+.segment "POINT"
+    lda AddrHi
+    jsr SendHexByte
+    lda AddrLo
+    jmp SendHexByte
+
 .segment "CRLF"
     jmp CompatNewline
 
@@ -305,6 +311,9 @@ PrepareIo:
     sta KbdB
     sta KbdDB
     rts
+
+.segment "OUTSP"
+    lda #' '           ; fall through to the public OUTCH entry
 
 .segment "OUTCH"
 OutChar:
