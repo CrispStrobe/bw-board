@@ -166,7 +166,7 @@ test('K-1013 DMA transfers sector zero both ways without disrupting the KIM-1 bo
   assert.equal(image[0], 0x5a);
 });
 
-test('Corsham file media resumes directories across direction changes and reads files in chunks', () => {
+test('Corsham file media handles directory, reads and atomic writes through the RIOT', () => {
   const machine = createKim1Machine();
   const bytes = Uint8Array.of(42, 43, 44);
   controlKim1Machine(machine, 'mountCorshamFiles', [
@@ -205,8 +205,28 @@ test('Corsham file media resumes directories across direction changes and reads 
   assert.deepEqual(exchange([0x17, 2], 4), [0x92, 2, 42, 43]);
   assert.deepEqual(exchange([0x17, 2], 3), [0x92, 1, 44]);
   assert.deepEqual(exchange([0x17, 2], 2), [0x92, 0]);
+  assert.deepEqual(exchange([0x15, 0x1b, ...name('NEW.HEX')], 1), [0x82]);
+  assert.deepEqual(exchange([0x1c, 2, 1, 2], 1), [0x82]);
+  assert.deepEqual(exchange([0x1c, 1, 3], 1), [0x82]);
+  assert.equal(machine.corshamDisk.files.has('NEW.HEX'), false);
   exchange([0x15], 0);
-  assert.deepEqual(exchange([0x1b, ...name('Z.TXT')], 2), [0x83, 13]);
+  const exported = machine.corshamDisk.exportFiles();
+  assert.deepEqual(exported.map(entry => entry.name), ['A.HEX', 'NEW.HEX', 'Z.TXT']);
+  assert.deepEqual(exported[1].bytes, Uint8Array.of(1, 2, 3));
+  exported[1].bytes[0] = 9;
+  assert.deepEqual(exchange([0x16, ...name('new.hex')], 1), [0x82]);
+  assert.deepEqual(exchange([0x17, 4], 5), [0x92, 3, 1, 2, 3]);
+  exchange([0x15], 0);
+  assert.deepEqual(exchange([0x1b, ...name('Z.TXT')], 1), [0x82]);
+  const fullChunk = [0x1c, 255, ...new Uint8Array(255).fill(5)];
+  for (let i = 0; i < 257; i++) assert.deepEqual(exchange(fullChunk, 1), [0x82]);
+  assert.deepEqual(exchange([0x1c, 2, 6, 7], 2), [0x83, 18]);
+  exchange([0x15], 0);
+  assert.deepEqual(machine.corshamDisk.files.get('Z.TXT'), Uint8Array.of(42, 43, 44));
+  assert.deepEqual(exchange([0x1b, ...name('Z.TXT')], 1), [0x82]);
+  assert.deepEqual(exchange([0x1c, 1, 7], 1), [0x82]);
+  exchange([0x15], 0);
+  assert.deepEqual(machine.corshamDisk.files.get('Z.TXT'), Uint8Array.of(7));
   assert.throws(() => controlKim1Machine(machine, 'mountCorshamFiles', [{name: '../A.TXT', bytes}]), /8.3/);
-  assert.equal(machine.corshamDisk.files.size, 2);
+  assert.equal(machine.corshamDisk.files.size, 3);
 });

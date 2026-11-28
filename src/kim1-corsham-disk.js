@@ -1,6 +1,10 @@
 // SPDX-License-Identifier: MIT
 // Bob Applegate's Remote Disk Protocol v1.1, with mutually exclusive
-// sector-image and read-only loose-file media.
+// sector-image and session-local loose-file media.
+const MAX_FILES = 64;
+const MAX_FILE_BYTES = 65536;
+const MAX_TOTAL_BYTES = 2097152;
+const validName = name => typeof name === 'string' && /^[A-Z0-9_-]{1,8}(\.[A-Z0-9_-]{1,3})?$/i.test(name);
 const geometry = [0, 128, 256, 512, 1024];
 const sectorRead = new Set([0x18, 0x1f]);
 const sectorWrite = new Set([0x19, 0x20]);
@@ -10,19 +14,19 @@ export class Kim1CorshamDisk {
     this.image = image.slice();
     this.files = null;
     if (files !== null) {
-      if (!Array.isArray(files) || files.length > 64) throw new Error('Choose up to 64 Corsham files.');
+      if (!Array.isArray(files) || files.length > MAX_FILES) throw new Error('Choose up to 64 Corsham files.');
       this.files = new Map();
       let total = 0;
       for (const {name, bytes} of files) {
-        const normalized = typeof name === 'string' && /^[A-Z0-9_-]{1,8}(\.[A-Z0-9_-]{1,3})?$/i.test(name)
-          ? name.toUpperCase() : null;
+        const normalized = validName(name) ? name.toUpperCase() : null;
         if (!normalized || this.files.has(normalized) || !(bytes instanceof Uint8Array) ||
-          bytes.length > 65536 || (total += bytes.length) > 2097152) {
+          bytes.length > MAX_FILE_BYTES || (total += bytes.length) > MAX_TOTAL_BYTES) {
           throw new Error('Corsham files need unique 8.3 names, at most 64 KiB each and 2 MiB in total.');
         }
         this.files.set(normalized, bytes.slice());
       }
       this.names = [...this.files.keys()].sort();
+      this.fileBytes = total;
     }
     this.reset();
   }
@@ -30,6 +34,7 @@ export class Kim1CorshamDisk {
   reset() {
     this.directoryIndex = null;
     this.openFile = null;
+    this.pendingFile = null;
     this.offset = 0;
     this.frame = [];
     this.response = [];
@@ -112,16 +117,31 @@ export class Kim1CorshamDisk {
       return true;
     case 0x15:
       this.openFile = null;
+      this.commitPendingFile();
+      this.frame = []; // DONE has no reply. The next command may arrive while the host still drives the bus.
       return true;
     case 0x16:
     case 0x1b:
-      if (frame.length > 14) {
+      if (frame.length === 1) {
+        this.openFile = null;
+        this.pendingFile = null;
+      } else if (frame.length > 14) {
         this.response = [0x83, 12];
-      } else if (frame.length > 1 && byte === 0) {
-        const name = String.fromCharCode(...frame.slice(1, -1)).toUpperCase();
-        this.openFile = command === 0x16 ? this.files.get(name) ?? null : null;
-        this.offset = 0;
-        this.response = this.openFile ? [0x82] : [0x83, command === 0x1b ? 13 : 12];
+      } else if (byte === 0) {
+        const requested = String.fromCharCode(...frame.slice(1, -1));
+        const name = requested.toUpperCase();
+        if (!validName(requested)) {
+          this.response = [0x83, 12];
+        } else if (command === 0x16) {
+          this.openFile = this.files.get(name) ?? null;
+          this.offset = 0;
+          this.response = this.openFile ? [0x82] : [0x83, 12];
+        } else if (!this.files.has(name) && this.files.size === MAX_FILES) {
+          this.response = [0x83, 18];
+        } else {
+          this.pendingFile = {name, chunks: [], length: 0, previousLength: this.files.get(name)?.length ?? 0};
+          this.response = [0x82];
+        }
       }
       return true;
     case 0x17:
@@ -131,8 +151,43 @@ export class Kim1CorshamDisk {
         this.response = [0x92, bytes.length, ...bytes];
       }
       return true;
+    case 0x1c:
+      if (frame.length === 2 + frame[1]) this.appendFileChunk(frame.slice(2));
+      return true;
     default:
       return false;
     }
+  }
+
+  appendFileChunk(bytes) {
+    const file = this.pendingFile;
+    if (!file || file.length + bytes.length > MAX_FILE_BYTES ||
+      this.fileBytes - file.previousLength + file.length + bytes.length > MAX_TOTAL_BYTES) {
+      this.pendingFile = null;
+      this.response = [0x83, 18];
+      return;
+    }
+    if (bytes.length) file.chunks.push(bytes);
+    file.length += bytes.length;
+    this.response = [0x82];
+  }
+
+  commitPendingFile() {
+    const file = this.pendingFile;
+    if (!file) return;
+    const bytes = new Uint8Array(file.length);
+    let offset = 0;
+    for (const chunk of file.chunks) {
+      bytes.set(chunk, offset);
+      offset += chunk.length;
+    }
+    this.fileBytes += bytes.length - file.previousLength;
+    this.files.set(file.name, bytes);
+    this.names = [...this.files.keys()].sort();
+    this.pendingFile = null;
+  }
+
+  exportFiles() {
+    return (this.names ?? []).map(name => ({name, bytes: this.files.get(name).slice()}));
   }
 }
