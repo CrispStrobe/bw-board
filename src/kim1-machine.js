@@ -581,6 +581,13 @@ export function controlKim1Machine(state, verb, value, options = {}) {
     state.memoryCard = value === null ? null : createKim1MemoryCard(value);
     return true;
   }
+  if (verb === 'mountCorshamFiles') {
+    state.corshamDisk = new Kim1CorshamDisk(new Uint8Array(0), value);
+    state.sdCard = null;
+    const riot = state.riots[0];
+    state.corshamDisk.update(riot.pb, riot.ddrb, riot.pa & riot.ddra);
+    return true;
+  }
   if (verb === 'mountCorshamDisk') {
     if (value === null) { state.corshamDisk = null; return true; }
     if (!(value instanceof Uint8Array) || !value.length || value.length % 128) {

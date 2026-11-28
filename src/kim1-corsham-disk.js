@@ -1,16 +1,43 @@
 // SPDX-License-Identifier: MIT
-// Parallel sector subset of Bob Applegate's Remote Disk Protocol v1.1.
+// Bob Applegate's Remote Disk Protocol v1.1, with mutually exclusive
+// sector-image and session-local loose-file media.
+const MAX_FILES = 64;
+const MAX_FILE_BYTES = 65536;
+const MAX_TOTAL_BYTES = 2097152;
+const validName = name => typeof name === 'string' && /^[A-Z0-9_-]{1,8}(\.[A-Z0-9_-]{1,3})?$/i.test(name);
 const geometry = [0, 128, 256, 512, 1024];
 const sectorRead = new Set([0x18, 0x1f]);
 const sectorWrite = new Set([0x19, 0x20]);
 
 export class Kim1CorshamDisk {
-  constructor(image) {
+  constructor(image, files = null) {
     this.image = image.slice();
+    this.clockOffsetMs = 0;
+    this.weekdayOffset = 0;
+    this.files = null;
+    if (files !== null) {
+      if (!Array.isArray(files) || files.length > MAX_FILES) throw new Error('Choose up to 64 Corsham files.');
+      this.files = new Map();
+      let total = 0;
+      for (const {name, bytes} of files) {
+        const normalized = validName(name) ? name.toUpperCase() : null;
+        if (!normalized || this.files.has(normalized) || !(bytes instanceof Uint8Array) ||
+          bytes.length > MAX_FILE_BYTES || (total += bytes.length) > MAX_TOTAL_BYTES) {
+          throw new Error('Corsham files need unique 8.3 names, at most 64 KiB each and 2 MiB in total.');
+        }
+        this.files.set(normalized, bytes.slice());
+      }
+      this.names = [...this.files.keys()].sort();
+      this.fileBytes = total;
+    }
     this.reset();
   }
 
   reset() {
+    this.directoryIndex = null;
+    this.openFile = null;
+    this.pendingFile = null;
+    this.offset = 0;
     this.frame = [];
     this.response = [];
     this.index = 0;
@@ -27,6 +54,10 @@ export class Kim1CorshamDisk {
         this.frame = [];
         this.response = [];
         this.index = 0;
+      } else if (this.directoryIndex !== null && !this.response.length) {
+        const name = this.names[this.directoryIndex++];
+        this.response = name === undefined ? [0x91] : [0x90, ...Array.from(name, char => char.charCodeAt(0)), 0];
+        if (name === undefined) this.directoryIndex = null;
       }
       this.ack = !hostWrites && !strobe && this.response.length > 0;
     } else if (strobe !== this.strobe) {
@@ -49,13 +80,29 @@ export class Kim1CorshamDisk {
     const frame = this.frame;
     frame.push(byte);
     const [command, drive, sizeCode] = frame;
+    if (frame.length === 1) this.directoryIndex = null;
+    if (this.files && this.receiveFileCommand(command, byte)) return;
     if (command === 0x01) {
       this.response = [0x81, ...Array.from('Brickwright\r\n1.1', char => char.charCodeAt(0)), 0];
       return;
     }
     if (command === 0x05) { this.response = [0x85]; return; }
+    if (command === 0x07) {
+      // The shield sends binary decimal values after converting the RTC registers from BCD.
+      const date = new Date(Date.now() + this.clockOffsetMs);
+      const year = date.getUTCFullYear();
+      this.response = [
+        0x87, date.getUTCMonth() + 1, date.getUTCDate(), Math.floor(year / 100), year % 100,
+        date.getUTCHours(), date.getUTCMinutes(), date.getUTCSeconds(), (date.getUTCDay() + this.weekdayOffset) % 7
+      ];
+      return;
+    }
+    if (command === 0x08) {
+      if (frame.length === 9) this.setClock(frame.slice(1));
+      return;
+    }
     if (command === 0x14) {
-      if (frame.length === 2) this.response = [0x93, drive === 0 ? 1 : 0];
+      if (frame.length === 2) this.response = [0x93, drive === 0 && this.image.length ? 1 : 0];
       return;
     }
     const reading = sectorRead.has(command);
@@ -76,5 +123,102 @@ export class Kim1CorshamDisk {
       this.image.set(frame.slice(header), offset);
       this.response = [0x82];
     }
+  }
+
+  setClock([month, day, century, yearOfCentury, hour, minute, second, weekday]) {
+    // A zero century is used by shields with a two-digit year.
+    const year = (century || 20) * 100 + yearOfCentury;
+    const timestamp = Date.UTC(year, month - 1, day, hour, minute, second);
+    const date = new Date(timestamp);
+    if (century > 99 || yearOfCentury > 99 || month < 1 || month > 12 ||
+      date.getUTCDate() !== day || hour > 23 || minute > 59 || second > 59 || weekday > 6) {
+      this.response = [0x83, 18];
+      return;
+    }
+    this.clockOffsetMs = timestamp - Date.now();
+    this.weekdayOffset = (weekday - date.getUTCDay() + 7) % 7;
+    this.response = [0x82];
+  }
+
+  receiveFileCommand(command, byte) {
+    const frame = this.frame;
+    switch (command) {
+    case 0x10: // Directory entries are resumed at each read-direction transition.
+      this.directoryIndex = 0;
+      return true;
+    case 0x15:
+      this.openFile = null;
+      this.commitPendingFile();
+      this.frame = []; // DONE has no reply. The next command may arrive while the host still drives the bus.
+      return true;
+    case 0x16:
+    case 0x1b:
+      if (frame.length === 1) {
+        this.openFile = null;
+        this.pendingFile = null;
+      } else if (frame.length > 14) {
+        this.response = [0x83, 12];
+      } else if (byte === 0) {
+        const requested = String.fromCharCode(...frame.slice(1, -1));
+        const name = requested.toUpperCase();
+        if (!validName(requested)) {
+          this.response = [0x83, 12];
+        } else if (command === 0x16) {
+          this.openFile = this.files.get(name) ?? null;
+          this.offset = 0;
+          this.response = this.openFile ? [0x82] : [0x83, 12];
+        } else if (!this.files.has(name) && this.files.size === MAX_FILES) {
+          this.response = [0x83, 18];
+        } else {
+          this.pendingFile = {name, chunks: [], length: 0, previousLength: this.files.get(name)?.length ?? 0};
+          this.response = [0x82];
+        }
+      }
+      return true;
+    case 0x17:
+      if (frame.length === 2) {
+        const bytes = this.openFile?.subarray(this.offset, this.offset + byte) ?? [];
+        this.offset += bytes.length;
+        this.response = [0x92, bytes.length, ...bytes];
+      }
+      return true;
+    case 0x1c:
+      if (frame.length === 2 + frame[1]) this.appendFileChunk(frame.slice(2));
+      return true;
+    default:
+      return false;
+    }
+  }
+
+  appendFileChunk(bytes) {
+    const file = this.pendingFile;
+    if (!file || file.length + bytes.length > MAX_FILE_BYTES ||
+      this.fileBytes - file.previousLength + file.length + bytes.length > MAX_TOTAL_BYTES) {
+      this.pendingFile = null;
+      this.response = [0x83, 18];
+      return;
+    }
+    if (bytes.length) file.chunks.push(bytes);
+    file.length += bytes.length;
+    this.response = [0x82];
+  }
+
+  commitPendingFile() {
+    const file = this.pendingFile;
+    if (!file) return;
+    const bytes = new Uint8Array(file.length);
+    let offset = 0;
+    for (const chunk of file.chunks) {
+      bytes.set(chunk, offset);
+      offset += chunk.length;
+    }
+    this.fileBytes += bytes.length - file.previousLength;
+    this.files.set(file.name, bytes);
+    this.names = [...this.files.keys()].sort();
+    this.pendingFile = null;
+  }
+
+  exportFiles() {
+    return (this.names ?? []).map(name => ({name, bytes: this.files.get(name).slice()}));
   }
 }

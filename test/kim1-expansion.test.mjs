@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {createKim1Machine, controlKim1Machine, peekKim1Byte, readKim1Byte, writeKim1Byte, stepKim1Machine} from '../src/kim1-machine.js';
+import {createKim1Machine, controlKim1Machine, peekKim1Byte, readKim1Byte, writeKim1Byte, stepKim1Machine, resetKim1Machine} from '../src/kim1-machine.js';
 import {exportKim1MemoryCard} from '../src/kim1-expansion.js';
 
 test('KIM-4 slots decode distinct RAM and ROM and keep the KIM-1 vectors', () => {
@@ -96,14 +96,11 @@ test('PAL-1 SPI initializes, writes and reads a sector through KIM-1 PA', () => 
   assert.ok(image.every(value => value === 0));
 });
 
-test('Corsham handshakes transfer short and long sectors through KIM-1 RIOT registers', () => {
-  const machine = createKim1Machine();
-  const image = new Uint8Array(512);
-  controlKim1Machine(machine, 'mountCorshamDisk', image);
+function corshamExchange(machine) {
   const port = (register, byte) => writeKim1Byte(machine, 0x1700 + register, byte);
   const ack = () => !!(peekKim1Byte(machine, 0x1702) & 4);
   port(3, 3);
-  const exchange = (request, responseLength) => {
+  return (request, responseLength) => {
     port(1, 255);
     port(2, 1);
     for (const byte of request) {
@@ -124,12 +121,41 @@ test('Corsham handshakes transfer short and long sectors through KIM-1 RIOT regi
       return value;
     });
   };
+}
+
+test('Corsham handshakes transfer short and long sectors through KIM-1 RIOT registers', () => {
+  const machine = createKim1Machine();
+  const image = new Uint8Array(512);
+  controlKim1Machine(machine, 'mountCorshamDisk', image);
+  const exchange = corshamExchange(machine);
   assert.deepEqual(exchange([5], 1), [0x85]);
   const data = Array.from({length: 128}, (_, i) => 255 - i);
   assert.deepEqual(exchange([0x20, 0, 1, 0, 0, 0, 1, ...data], 1), [0x82]);
   assert.deepEqual(exchange([0x18, 0, 1, 0, 1, 0], 129), [0x94, ...data]);
   assert.deepEqual(exchange([0x1f, 0, 1, 0, 0, 0, 4], 2), [0x83, 16]);
   assert.deepEqual(machine.corshamDisk.image.slice(128, 256), Uint8Array.from(data));
+});
+
+test('Corsham RTC sends binary time, validates writes and keeps ticking across a KIM reset', (t) => {
+  let now = Date.UTC(2026, 10, 28, 17, 48, 51);
+  t.mock.method(Date, 'now', () => now);
+  const machine = createKim1Machine();
+  controlKim1Machine(machine, 'mountCorshamFiles', []);
+  let exchange = corshamExchange(machine);
+  assert.deepEqual(exchange([0x07], 9), [0x87, 11, 28, 20, 26, 17, 48, 51, 6]);
+
+  assert.deepEqual(exchange([0x08, 2, 29, 0, 24, 23, 59, 59, 6], 1), [0x82]);
+  assert.deepEqual(exchange([0x07], 9), [0x87, 2, 29, 20, 24, 23, 59, 59, 6]);
+  assert.deepEqual(exchange([0x08, 2, 29, 20, 23, 0, 0, 0, 3], 2), [0x83, 18]);
+
+  now += 2000;
+  resetKim1Machine(machine);
+  exchange = corshamExchange(machine);
+  assert.deepEqual(exchange([0x07], 9), [0x87, 3, 1, 20, 24, 0, 0, 1, 0]);
+  assert.deepEqual(exchange([0x10], 1), [0x91]);
+
+  controlKim1Machine(machine, 'mountCorshamDisk', new Uint8Array(512));
+  assert.deepEqual(corshamExchange(machine)([0x07], 9), [0x87, 11, 28, 20, 26, 17, 48, 53, 6]);
 });
 
 test('K-1013 DMA transfers sector zero both ways without disrupting the KIM-1 boot vectors', () => {
@@ -164,4 +190,69 @@ test('K-1013 DMA transfers sector zero both ways without disrupting the KIM-1 bo
   assert.equal(result()[1], 0x80);
   assert.equal(machine.k1013.chip.drives[0].image[0], 0x26);
   assert.equal(image[0], 0x5a);
+});
+
+test('Corsham file media handles directory, reads and atomic writes through the RIOT', () => {
+  const machine = createKim1Machine();
+  const bytes = Uint8Array.of(42, 43, 44);
+  controlKim1Machine(machine, 'mountCorshamFiles', [
+    {name: 'z.txt', bytes}, {name: 'a.hex', bytes: new Uint8Array()}
+  ]);
+  bytes[0] = 0;
+  const port = (reg, value) => writeKim1Byte(machine, 0x1700 + reg, value);
+  const ack = () => !!(peekKim1Byte(machine, 0x1702) & 4);
+  port(3, 3);
+  const exchange = (request, count) => {
+    port(1, 255);
+    port(2, 1);
+    for (const byte of request) {
+      assert.equal(ack(), false);
+      port(0, byte);
+      port(2, 3);
+      assert.equal(ack(), true);
+      port(2, 1);
+    }
+    port(1, 0);
+    port(2, 0);
+    return Array.from({length: count}, () => {
+      assert.equal(ack(), true);
+      const answer = peekKim1Byte(machine, 0x1700);
+      port(2, 2);
+      port(2, 0);
+      return answer;
+    });
+  };
+  const name = filename => [...new TextEncoder().encode(filename), 0];
+  assert.deepEqual(exchange([0x10], 7), [0x90, ...name('A.HEX')]);
+  assert.deepEqual(exchange([], 7), [0x90, ...name('Z.TXT')]);
+  assert.deepEqual(exchange([], 1), [0x91]);
+  assert.deepEqual(exchange([0x16, ...name('missing')], 2), [0x83, 12]);
+  assert.deepEqual(exchange([0x16, ...name('z.txt')], 1), [0x82]);
+  assert.deepEqual(exchange([0x17, 2], 4), [0x92, 2, 42, 43]);
+  assert.deepEqual(exchange([0x17, 2], 3), [0x92, 1, 44]);
+  assert.deepEqual(exchange([0x17, 2], 2), [0x92, 0]);
+  assert.deepEqual(exchange([0x15, 0x1b, ...name('NEW.HEX')], 1), [0x82]);
+  assert.deepEqual(exchange([0x1c, 2, 1, 2], 1), [0x82]);
+  assert.deepEqual(exchange([0x1c, 1, 3], 1), [0x82]);
+  assert.equal(machine.corshamDisk.files.has('NEW.HEX'), false);
+  exchange([0x15], 0);
+  const exported = machine.corshamDisk.exportFiles();
+  assert.deepEqual(exported.map(entry => entry.name), ['A.HEX', 'NEW.HEX', 'Z.TXT']);
+  assert.deepEqual(exported[1].bytes, Uint8Array.of(1, 2, 3));
+  exported[1].bytes[0] = 9;
+  assert.deepEqual(exchange([0x16, ...name('new.hex')], 1), [0x82]);
+  assert.deepEqual(exchange([0x17, 4], 5), [0x92, 3, 1, 2, 3]);
+  exchange([0x15], 0);
+  assert.deepEqual(exchange([0x1b, ...name('Z.TXT')], 1), [0x82]);
+  const fullChunk = [0x1c, 255, ...new Uint8Array(255).fill(5)];
+  for (let i = 0; i < 257; i++) assert.deepEqual(exchange(fullChunk, 1), [0x82]);
+  assert.deepEqual(exchange([0x1c, 2, 6, 7], 2), [0x83, 18]);
+  exchange([0x15], 0);
+  assert.deepEqual(machine.corshamDisk.files.get('Z.TXT'), Uint8Array.of(42, 43, 44));
+  assert.deepEqual(exchange([0x1b, ...name('Z.TXT')], 1), [0x82]);
+  assert.deepEqual(exchange([0x1c, 1, 7], 1), [0x82]);
+  exchange([0x15], 0);
+  assert.deepEqual(machine.corshamDisk.files.get('Z.TXT'), Uint8Array.of(7));
+  assert.throws(() => controlKim1Machine(machine, 'mountCorshamFiles', [{name: '../A.TXT', bytes}]), /8.3/);
+  assert.equal(machine.corshamDisk.files.size, 3);
 });
