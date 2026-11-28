@@ -156,3 +156,59 @@ scenario's "> 0.5 V detector swing" would fail physically there too.
 * The engine's target for the authored circuit is steady at ~8.98 V under
   every step cap and advance schedule. Master reaches it only at coarse
   steps; no repair is qualified yet.
+
+## Addendum 2026-11-28: the "radio front end error" on master 818e0263
+
+sb3-creator #255/#258 redesigned the bench (`couplingRatio` 0.2, receiver
+0.22 m away) so that it squegs in its own full-carrier reference (bursts at
+~1057 Hz, 12.5–12.9 V peaks, detector 0.13–0.69 V). On bw-board 818e0263 its
+squeg scenario still stops with "radio front end error". Traced with the big
+bypass in, from power-on:
+
+| Advance schedule | What happens |
+| --- | --- |
+| `run(6)`, the scenario | the 0.7585 MHz band refuses at 1.889 ms (2.65·10⁶ V) |
+| 15 × 20 µs, then 0.5 µs | the 0.7585 MHz band refuses at 0.3115 ms (2.08·10⁴ V) |
+| 20 µs advances | the 59.75 MHz parasitic band refuses at 0.3209 ms (2.31·10⁴ V), then the transient solve fails (`be` stage) |
+
+**The first jump is a radiated impulse, not the band's own growth.** In the
+0.5 µs trace the transmitter band had grown smoothly to 2.09 V (collector
+port). Then one 16 ns substep moved the receiver's detector-diode port from
+0.11 V to 14.5 V. Retrying that substep at 1 ns did not stop it (0.11 → 1.46 V,
+1/16 of the impulse). Replaying it with the transistor's current set to
+anything from 0.8 to 5.5 mA gives the same jump, so it is not the
+transconductance or the consistency correction either (`implicit = false`
+changes nothing). The source is `_radiate`/`_kickVector`. At burst start
+the transient view of the transmitter's main winding swings by milliamps
+within tens of nanoseconds. That view also holds the tank's L and C, so it
+rings at the carrier once its own steps are short. `_radiate` records 70
+slope corners (|Δs| up to 3·10⁵ A/s²) between 311.2 and 311.5 µs. They come
+due together in that one substep and sum to 1.35·10⁻⁸ A·s at the receiver
+tank's node: tens of volts on its ~160 pF. A plain step of the burst's
+~5 mA DC through the 23.5 µH mutual would put about 2·10⁻¹⁰ A·s there.
+Two things go wrong. The carrier's own content is radiated a second time
+through the transient view (the band network already couples the two rods).
+And corners that should nearly cancel are applied late and at different
+substeps, while the band runs ahead of the circuit.
+
+**Removing the radiation removes the error but not the defect.** With
+`_radiate` disabled, the same bench raises no error. At the scenario's
+schedule it never squegs, though: 6–9 ms, tank 4·10⁻⁹ V, silent. At 20 µs
+advances it reaches a nonsense 118 V tank and a 278 V detector, with a
+140 Hz "tone". At 0.3 ms the band's small-signal modes include σ = 8.3·10⁶ s⁻¹
+at −249 kHz (kept by `_own`), 9.35·10⁶ at −428 kHz and 4.55·10⁶ at −612 kHz
+(both dropped by the "half the centre frequency" rule). The stage grows an
+e-fold in ~0.1 µs, a twelfth of a carrier period. That is the strongly fed-back
+regime this doc already lists as unrepaired: the envelope band takes it as
+steady at one schedule and runs it away at another.
+
+**Verdict.** The squeg stays `todo` and VARIANT. Two separate defects stand
+between the engine and the reference. (1) Impulse radiation double-counts the
+carrier when a linked coil's transient current rings at RF, and it applies
+cancelling corners unbalanced when the band runs ahead. A candidate repair
+would radiate per linear segment instead of per corner (the area of each
+segment is bounded by M·Δi, so nothing needs to cancel), restricted to
+spectral content the band network does not already carry. It is not
+attempted here. (2) An envelope band cannot follow a stage whose growth rate
+is a sizable fraction of its carrier frequency. No engine change was made.
+The scenario's "steady" and "reversed" checks pass on 818e0263 as before.
