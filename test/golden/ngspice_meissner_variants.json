@@ -1,0 +1,149 @@
+{
+ "note": "Circuit variants of lab-meissner-squegg in the full-carrier reference (test/golden/run_ngspice_meissner.py netlist, gear, 20 ns max step, window 5-8 ms). name: sw_<couplingRatio>_<bias>_<case>; bias pot = the authored 700 kOhm feed, div = 82k/18k divider. couplingRatio sets the coupling winding to 250 uH * ratio^2 with 2 Ohm * ratio copper. Diagnostic only: no variant is a qualified replacement circuit.",
+ "results": [
+  {
+   "envelopeMinV": 0.0008189350000007423,
+   "envelopeMaxV": 10.904779158,
+   "burstsPerSecond": 2333.3333333333335,
+   "emitterV": [
+    0.0152724225,
+    0.0276405654
+   ],
+   "biasNodeV": [
+    -0.600154367,
+    0.601016199
+   ],
+   "detectorV": [
+    0.0725743596,
+    0.139986705
+   ],
+   "name": "sw_0.1_pot_sq"
+  },
+  {
+   "envelopeMinV": 8.9090316938,
+   "envelopeMaxV": 8.922442598750001,
+   "burstsPerSecond": 0.0,
+   "emitterV": [
+    0.0276471414,
+    0.0790863213
+   ],
+   "biasNodeV": [
+    -0.0946704464,
+    -0.0849044405
+   ],
+   "detectorV": [
+    1.02185842,
+    1.03028232
+   ],
+   "name": "sw_0.1_pot_steady"
+  },
+  {
+   "envelopeMinV": 1.6671617749999998,
+   "envelopeMaxV": 10.9652936765,
+   "burstsPerSecond": 13666.666666666666,
+   "emitterV": [
+    0.0811167688,
+    0.092249045
+   ],
+   "biasNodeV": [
+    -0.412862927,
+    0.545591026
+   ],
+   "detectorV": [
+    0.481735399,
+    0.507914205
+   ],
+   "name": "sw_0.1_div_sq"
+  },
+  {
+   "envelopeMinV": 8.8326811375,
+   "envelopeMaxV": 8.852713339,
+   "burstsPerSecond": 0.0,
+   "emitterV": [
+    0.0603762999,
+    0.1706707
+   ],
+   "biasNodeV": [
+    0.00741725164,
+    0.025148868
+   ],
+   "detectorV": [
+    0.980655502,
+    0.988802461
+   ],
+   "name": "sw_0.1_div_steady"
+  },
+  {
+   "envelopeMinV": 1.4999999464748726e-08,
+   "envelopeMaxV": 13.419026655,
+   "burstsPerSecond": 1000.0,
+   "emitterV": [
+    0.0116409327,
+    0.0334773927
+   ],
+   "biasNodeV": [
+    -2.19897909,
+    0.602769511
+   ],
+   "detectorV": [
+    0.019237288,
+    0.105456823
+   ],
+   "name": "sw_0.2_pot_sq"
+  },
+  {
+   "envelopeMinV": 8.9504724805,
+   "envelopeMaxV": 8.956755493800001,
+   "burstsPerSecond": 0.0,
+   "emitterV": [
+    0.0284244478,
+    0.0860775206
+   ],
+   "biasNodeV": [
+    -0.896540564,
+    -0.886109274
+   ],
+   "detectorV": [
+    1.05503842,
+    1.06376099
+   ],
+   "name": "sw_0.2_pot_steady"
+  },
+  {
+   "envelopeMinV": 0.24261562000000048,
+   "envelopeMaxV": 13.334585015,
+   "burstsPerSecond": 6333.333333333333,
+   "emitterV": [
+    0.100876403,
+    0.121757576
+   ],
+   "biasNodeV": [
+    -2.00008139,
+    0.630542837
+   ],
+   "detectorV": [
+    0.277647007,
+    0.321922701
+   ],
+   "name": "sw_0.2_div_sq"
+  },
+  {
+   "envelopeMinV": 8.892391633,
+   "envelopeMaxV": 8.9062068775,
+   "burstsPerSecond": 0.0,
+   "emitterV": [
+    0.0822974771,
+    0.244666025
+   ],
+   "biasNodeV": [
+    -0.756256756,
+    -0.732560623
+   ],
+   "detectorV": [
+    1.04199771,
+    1.05062074
+   ],
+   "name": "sw_0.2_div_steady"
+  }
+ ]
+}

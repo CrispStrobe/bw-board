@@ -1,0 +1,252 @@
+{
+ "generator": "test/golden/run_ngspice_meissner.py",
+ "ngspice": [
+  "** ngspice-47 : Circuit level simulation program"
+ ],
+ "results": [
+  {
+   "name": "sq gear 20 ns",
+   "case": "sq",
+   "settings": {
+    "tmax": "20n"
+   },
+   "windowMs": [
+    6.0,
+    9.0
+   ],
+   "envelopeMinV": 8.9667985847,
+   "envelopeMaxV": 8.98183788625,
+   "burstsPerSecond": 0.0,
+   "emitterV": [
+    0.0527721529,
+    0.0529829415
+   ],
+   "biasNodeV": [
+    0.519924467,
+    0.52927274
+   ],
+   "detectorV": [
+    1.02905271,
+    1.03755781
+   ],
+   "seconds": 142.4
+  },
+  {
+   "name": "sq gear 10 ns",
+   "case": "sq",
+   "settings": {},
+   "windowMs": [
+    6.0,
+    9.0
+   ],
+   "envelopeMinV": 8.9724523935,
+   "envelopeMaxV": 8.9843108286,
+   "burstsPerSecond": 0.0,
+   "emitterV": [
+    0.0516360418,
+    0.0518426026
+   ],
+   "biasNodeV": [
+    0.518356905,
+    0.527720354
+   ],
+   "detectorV": [
+    1.03519977,
+    1.04384053
+   ],
+   "seconds": 185.2
+  },
+  {
+   "name": "sq trap 10 ns",
+   "case": "sq",
+   "settings": {
+    "method": "trap"
+   },
+   "windowMs": [
+    6.0,
+    9.0
+   ],
+   "envelopeMinV": 8.974519178800001,
+   "envelopeMaxV": 8.9875542209,
+   "burstsPerSecond": 0.0,
+   "emitterV": [
+    0.0514024692,
+    0.0516086165
+   ],
+   "biasNodeV": [
+    0.517965895,
+    0.527374483
+   ],
+   "detectorV": [
+    1.03674554,
+    1.04541946
+   ],
+   "seconds": 216.8
+  },
+  {
+   "name": "sq gear 5 ns reltol 1e-5",
+   "case": "sq",
+   "settings": {
+    "tmax": "5n",
+    "tstep": "10n",
+    "reltol": "1e-5"
+   },
+   "windowMs": [
+    6.0,
+    9.0
+   ],
+   "envelopeMinV": 8.983887623849999,
+   "envelopeMaxV": 8.986673424249998,
+   "burstsPerSecond": 0.0,
+   "emitterV": [
+    0.0514327567,
+    0.0516386428
+   ],
+   "biasNodeV": [
+    0.518001902,
+    0.527411027
+   ],
+   "detectorV": [
+    1.03654285,
+    1.04521454
+   ],
+   "seconds": 298.1
+  },
+  {
+   "name": "sq from the operating point, kicked",
+   "case": "sq",
+   "settings": {
+    "start": "op-kick"
+   },
+   "windowMs": [
+    6.0,
+    9.0
+   ],
+   "envelopeMinV": 8.970357298949999,
+   "envelopeMaxV": 8.9839966273,
+   "burstsPerSecond": 0.0,
+   "emitterV": [
+    0.0519183288,
+    0.0543494942
+   ],
+   "biasNodeV": [
+    0.518640218,
+    0.530268909
+   ],
+   "detectorV": [
+    1.03469343,
+    1.0437852
+   ],
+   "seconds": 55.2
+  },
+  {
+   "name": "sq from the squeg-entry state",
+   "case": "sq",
+   "settings": {
+    "start": "squeg-entry",
+    "tstop": "8m"
+   },
+   "windowMs": [
+    6.0,
+    8.0
+   ],
+   "envelopeMinV": 8.97255290065,
+   "envelopeMaxV": 8.98435646205,
+   "burstsPerSecond": 0.0,
+   "emitterV": [
+    0.0516143994,
+    0.0518261017
+   ],
+   "biasNodeV": [
+    0.518334153,
+    0.527702973
+   ],
+   "detectorV": [
+    1.03520317,
+    1.0438447
+   ],
+   "seconds": 39.6
+  },
+  {
+   "name": "sq transistor Is 1e-13, Vaf 100, Rb 50",
+   "case": "sq",
+   "settings": {
+    "qmodel": "Is=1e-13 Bf=100 Br=1 Cjc=4p Tf=0.5305n Vaf=100 Rb=50"
+   },
+   "windowMs": [
+    6.0,
+    9.0
+   ],
+   "envelopeMinV": 9.00205724395,
+   "envelopeMaxV": 9.01017307925,
+   "burstsPerSecond": 0.0,
+   "emitterV": [
+    0.0527427422,
+    0.0529619413
+   ],
+   "biasNodeV": [
+    0.462738031,
+    0.472089872
+   ],
+   "detectorV": [
+    1.04701082,
+    1.05576337
+   ],
+   "seconds": 181.3
+  },
+  {
+   "name": "steady (small bypass) gear 10 ns",
+   "case": "steady",
+   "settings": {
+    "tstop": "25m"
+   },
+   "windowMs": [
+    22.0,
+    25.0
+   ],
+   "envelopeMinV": 8.93271262405,
+   "envelopeMaxV": 8.94402096895,
+   "burstsPerSecond": 0.0,
+   "emitterV": [
+    0.0335145385,
+    0.075935505
+   ],
+   "biasNodeV": [
+    0.529484269,
+    0.538695396
+   ],
+   "detectorV": [
+    1.00233935,
+    1.01066391
+   ],
+   "seconds": 174.7
+  },
+  {
+   "name": "rev gear 10 ns",
+   "case": "rev",
+   "settings": {
+    "tstop": "8m"
+   },
+   "windowMs": [
+    5.0,
+    8.0
+   ],
+   "envelopeMinV": 0.0,
+   "envelopeMaxV": 5.000000413701855e-09,
+   "burstsPerSecond": 0.0,
+   "emitterV": [
+    1.03914545,
+    1.03916024
+   ],
+   "biasNodeV": [
+    1.69500167,
+    1.69501682
+   ],
+   "detectorV": [
+    2.78137069e-10,
+    2.275712e-07
+   ],
+   "seconds": 30.9
+  }
+ ]
+}
