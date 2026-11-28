@@ -1,5 +1,24 @@
 # Portable digital GPIO profiles
 
+## PyBadge header correction (2026-11-28)
+
+The CPU-backed LabWired header map previously assigned RX to PA17 and TX to
+PA16. That made RX collide with SCK and TX with D5. The corrected GPIO
+mapping uses **PB17 for RX and PB16 for TX**, leaving the independent PA17
+and PA16 pins unchanged. This is a GPIO routing correction, not qualification
+of native BASIC or every SAMD51 UART peripheral mode.
+
+Primary pin-table evidence retrieved on 2026-11-28:
+
+- [Adafruit CircuitPython PyBadge pins.c](https://github.com/adafruit/circuitpython/blob/main/ports/atmel-samd/boards/pybadge/pins.c),
+  source blob `6c81b537c956e3a5081b4609f1ef26adedfe32b1`.
+- [Adafruit ArduinoCore-samd PyBadge variant.cpp](https://github.com/adafruit/ArduinoCore-samd/blob/master/variants/pybadge_m4/variant.cpp),
+  source blob `ebc2c7f48b86a559df69907d564bb7b6da1aa862`.
+
+Both independent vendor tables identify the two UART pins on port B and the
+SPI clock/D5 on port A. `test/labwired-chips.test.mjs` retains these separate
+hardware anchors so a port-name transcription cannot silently join them again.
+
 ## Feature branch ownership
 
 Owner: ChatGPT, continuing CrispStrobe's branch-only CrispBASIC work.

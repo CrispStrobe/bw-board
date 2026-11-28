@@ -1,3 +1,16 @@
+## CrispBASIC additional electrical profiles — CLAIMED, 2026-11-28
+
+Owner: ChatGPT continuation requested by CrispStrobe. Base:
+`8be0fbc8e91f1ed2cebb26883210efceef9234cc`; feature-only checkpoints on
+`feature/crispbasic-machine-profiles-20261128`. Own `src/portable-gpio.js`,
+its focused tests and documentation, plus the narrow independently verified
+PyBadge RX/TX mapping correction in `src/labwired-chips.js` and its regression.
+Qualify PyBadge and STC15 GPIO using actual solved circuit voltages. Preserve
+the host adapter's existing `{pin, terminal}` contract and reject aliases
+whose electrical topology cannot be represented by one digital latch.
+No Board clock/shaft APIs, CPU implementation, default branch or published
+release changes are part of this lane. Consumer adoption pins the producer SHA.
+
 ## Busch Microtronic Circuits behavioral model — CLAIMED, 2026-11-25
 
 Owner: Brickwright Microtronic implementation lane, requested by CrispStrobe.
