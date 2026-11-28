@@ -98,6 +98,18 @@ describe('labwired chip descriptors', () => {
         assert.deepEqual(PYBADGE_LABWIRED_PINS.stemma_sda, PYBADGE_LABWIRED_PINS.sda);
     });
 
+    it('PyBadge UART GPIOs do not alias the SPI clock or D5', () => {
+        // Independent hardware facts from Adafruit CircuitPython's PyBadge
+        // pins.c (blob 6c81b537c956e3a5081b4609f1ef26adedfe32b1) and the
+        // Arduino variant (blob ebc2c7f48b86a559df69907d564bb7b6da1aa862).
+        assert.deepEqual(PYBADGE_LABWIRED_PINS.rx, { peripheral: 'portb', pin: 17 });
+        assert.deepEqual(PYBADGE_LABWIRED_PINS.tx, { peripheral: 'portb', pin: 16 });
+        assert.deepEqual(PYBADGE_LABWIRED_PINS.sck, { peripheral: 'porta', pin: 17 });
+        assert.deepEqual(PYBADGE_LABWIRED_PINS.d5, { peripheral: 'porta', pin: 16 });
+        assert.notDeepEqual(PYBADGE_LABWIRED_PINS.rx, PYBADGE_LABWIRED_PINS.sck);
+        assert.notDeepEqual(PYBADGE_LABWIRED_PINS.tx, PYBADGE_LABWIRED_PINS.d5);
+    });
+
     it('the classic ESP32 DevKit reuses the catalog descriptor at the wasm PIN', () => {
         // ONE copy of configs/chips/esp32.yaml: the catalog's, regenerated at
         // the build PIN. A second fixture would be a second drawing of it.

@@ -364,7 +364,18 @@ function plainStateCopy(value, budget) {
 function restorePlainState(state, copy) {
   for (const key of Object.keys(state)) if (!(key in copy)) delete state[key];
   const fresh = plainStateCopy(copy, { left: Infinity });
-  for (const key of Object.keys(fresh)) state[key] = fresh[key];
+  for (const key of Object.keys(fresh)) {
+    // These records are also ownership capabilities held by their external
+    // mechanical handles. A transient event probe may mutate their payload,
+    // but replacing the record would invalidate the handle and make its later
+    // identity-guarded release silently leave the port owned forever.
+    const ownedPort = key === 'externalShaft' || key === 'externalServo' || key === 'externalDistance';
+    if (ownedPort && state[key] && fresh[key] && typeof state[key] === 'object' && typeof fresh[key] === 'object') {
+      const owner = state[key];
+      for (const field of Object.keys(owner)) if (!(field in fresh[key])) delete owner[field];
+      Object.assign(owner, fresh[key]);
+    } else state[key] = fresh[key];
+  }
 }
 
 /**
